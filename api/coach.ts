@@ -27,7 +27,10 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ ok: true, text });
   } catch (error: any) {
-    const msg = error?.message || String(error);
-    return res.status(500).json({ error: "SERVER_ERROR", message: msg });
+    return res.status(500).json({
+      ok: false,
+      error: "SERVER_ERROR",
+      message: error?.message || String(error),
+    });
   }
 }
