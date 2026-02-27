@@ -1,0 +1,22 @@
+@import "react-day-picker/dist/style.css";
+
+/* Custom styles for dots in calendar */
+.rdp-day {
+  position: relative;
+}
+
+.rdp-day::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: transparent;
+}
+
+.rdp-day.has-data::after {
+  background-color: #6366f1; /* indigo-500 */
+}

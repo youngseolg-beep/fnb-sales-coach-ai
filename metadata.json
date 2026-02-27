@@ -1,0 +1,5 @@
+{
+  "name": "F&B Sales Coach AI",
+  "description": "An AI-powered sales assistant for restaurant franchise owners that analyzes daily performance and provides actionable growth strategies.",
+  "requestFramePermissions": ["camera"]
+}
