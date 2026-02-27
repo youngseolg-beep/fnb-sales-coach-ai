@@ -1,44 +1,50 @@
-
-import { GoogleGenAI } from "@google/genai";
 import { SalesReportData, CalculationResult, MenuEngineeringResult } from "../types";
 
-export const generateCoachingReport = async (data: SalesReportData, results: CalculationResult, menuEngineeringResult: MenuEngineeringResult | null): Promise<string> => {
-  // Use import.meta.env for Vite environment
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    console.error("GEMINI_API_KEY is missing in environment variables.");
-    return "API 키가 설정되지 않았습니다. AI Studio Secrets에서 GEMINI_API_KEY를 확인해주세요.";
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-
+export const generateCoachingReport = async (
+  data: SalesReportData,
+  results: CalculationResult,
+  menuEngineeringResult: MenuEngineeringResult | null
+): Promise<string> => {
   // Extract top selling items for context
-  const allItems = data.categories.flatMap(c => c.items).filter(i => i.qty > 0);
+  const allItems = data.categories.flatMap((c) => c.items).filter((i) => i.qty > 0);
   const topItems = [...allItems].sort((a, b) => b.qty - a.qty).slice(0, 5);
-  const topItemsText = topItems.map(i => `${i.name}(${i.qty}개)`).join(", ");
+  const topItemsText = topItems.map((i) => `${i.name}(${i.qty}개)`).join(", ");
 
   let menuEngineeringSummary = "";
   if (menuEngineeringResult) {
-    const formatItem = (item: any) => 
-      `${item.name} (판매: ${item.qty_month}개, 매출: $${item.revenue_month.toFixed(2)}, CM: $${item.cm !== null ? item.cm.toFixed(2) : 'N/A'})`;
+    const formatItem = (item: any) =>
+      `${item.name} (판매: ${item.qty_month}개, 매출: $${item.revenue_month.toFixed(
+        2
+      )}, CM: $${item.cm !== null ? item.cm.toFixed(2) : "N/A"})`;
 
     const puzzlesTop3 = menuEngineeringResult.puzzles
-      .filter(item => item.cm !== null && item.revenue_month !== null)
-      .sort((a, b) => (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number))
+      .filter((item) => item.cm !== null && item.revenue_month !== null)
+      .sort(
+        (a, b) =>
+          (b.cm as number) - (a.cm as number) ||
+          (b.revenue_month as number) - (a.revenue_month as number)
+      )
       .slice(0, 3);
 
     const cashCowsTop3 = menuEngineeringResult.cashCows
-      .filter(item => item.cm !== null && item.qty_month !== null)
-      .sort((a, b) => (b.qty_month as number) - (a.qty_month as number) || (a.cm as number) - (b.cm as number))
+      .filter((item) => item.cm !== null && item.qty_month !== null)
+      .sort(
+        (a, b) =>
+          (b.qty_month as number) - (a.qty_month as number) ||
+          (a.cm as number) - (b.cm as number)
+      )
       .slice(0, 3);
 
     const dogsTop3 = menuEngineeringResult.dogs
-      .filter(item => item.revenue_month !== null && item.gp_month !== null)
-      .sort((a, b) => (a.revenue_month as number) - (b.revenue_month as number) || (a.gp_month as number) - (b.gp_month as number))
+      .filter((item) => item.revenue_month !== null && item.gp_month !== null)
+      .sort(
+        (a, b) =>
+          (a.revenue_month as number) - (b.revenue_month as number) ||
+          (a.gp_month as number) - (b.gp_month as number)
+      )
       .slice(0, 3);
 
-    const noCostItemsList = menuEngineeringResult.noCostItems.map(item => item.name).join(", ");
+    const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
 
     menuEngineeringSummary = `
 ※ 아래 메뉴 엔지니어링은 ‘월 누적 기준’입니다.
@@ -47,22 +53,50 @@ export const generateCoachingReport = async (data: SalesReportData, results: Cal
 - 인기도 기준: 월 평균 ${menuEngineeringResult.popularityThreshold.toFixed(1)}개 이상
 - 수익성 기준: 월 평균 CM $${menuEngineeringResult.profitabilityThreshold.toFixed(2)} 이상
 
-- Stars (고인기, 고수익): ${menuEngineeringResult.stars.length > 0 ? menuEngineeringResult.stars.map(formatItem).join(", ") : "없음"}
-- Cash Cows (고인기, 저수익): ${menuEngineeringResult.cashCows.length > 0 ? menuEngineeringResult.cashCows.map(formatItem).join(", ") : "없음"}
-- Puzzles (저인기, 고수익): ${menuEngineeringResult.puzzles.length > 0 ? menuEngineeringResult.puzzles.map(formatItem).join(", ") : "없음"}
-- Dogs (저인기, 저수익): ${menuEngineeringResult.dogs.length > 0 ? menuEngineeringResult.dogs.map(formatItem).join(", ") : "없음"}
+- Stars (고인기, 고수익): ${
+      menuEngineeringResult.stars.length > 0
+        ? menuEngineeringResult.stars.map(formatItem).join(", ")
+        : "없음"
+    }
+- Cash Cows (고인기, 저수익): ${
+      menuEngineeringResult.cashCows.length > 0
+        ? menuEngineeringResult.cashCows.map(formatItem).join(", ")
+        : "없음"
+    }
+- Puzzles (저인기, 고수익): ${
+      menuEngineeringResult.puzzles.length > 0
+        ? menuEngineeringResult.puzzles.map(formatItem).join(", ")
+        : "없음"
+    }
+- Dogs (저인기, 저수익): ${
+      menuEngineeringResult.dogs.length > 0
+        ? menuEngineeringResult.dogs.map(formatItem).join(", ")
+        : "없음"
+    }
 
 [원가 미입력 메뉴]
 ${noCostItemsList || "없음"}
 
 [이번 달 부스트 추천 (Puzzles)]
-${puzzlesTop3.length > 0 ? puzzlesTop3.map(item => `- ${item.name}: 프로모션, 세트 메뉴 구성으로 인지도 높이기`).join("\n") : "없음"}
+${
+      puzzlesTop3.length > 0
+        ? puzzlesTop3.map((item) => `- ${item.name}: 프로모션, 세트 메뉴 구성으로 인지도 높이기`).join("\n")
+        : "없음"
+    }
 
 [마진 개선 추천 (Cash Cows)]
-${cashCowsTop3.length > 0 ? cashCowsTop3.map(item => `- ${item.name}: 원가 절감 방안 모색 또는 가격 인상 검토`).join("\n") : "없음"}
+${
+      cashCowsTop3.length > 0
+        ? cashCowsTop3.map((item) => `- ${item.name}: 원가 절감 방안 모색 또는 가격 인상 검토`).join("\n")
+        : "없음"
+    }
 
 [정리/개편 후보 (Dogs)]
-${dogsTop3.length > 0 ? dogsTop3.map(item => `- ${item.name}: 메뉴 퇴출, 레시피 개선, 재료 변경 고려`).join("\n") : "없음"}
+${
+      dogsTop3.length > 0
+        ? dogsTop3.map((item) => `- ${item.name}: 메뉴 퇴출, 레시피 개선, 재료 변경 고려`).join("\n")
+        : "없음"
+    }
 `;
   }
 
@@ -77,7 +111,7 @@ ${dogsTop3.length > 0 ? dogsTop3.map(item => `- ${item.name}: 메뉴 퇴출, 레
 - 토핑: 주문당 ${results.addonPerOrder}개
 - 현황: ${topItemsText}
 - 월 목표: $${data.monthlyTarget}, 누적: $${data.mtdSales}, 잔여: $${data.monthlyTarget - data.mtdSales - results.calcSales}
-- 메모: ${data.note || '없음'}
+- 메모: ${data.note || "없음"}
 
 ${menuEngineeringSummary}
 
@@ -97,25 +131,28 @@ ${menuEngineeringSummary}
 `;
 
   try {
+    // 모델명은 프론트에서 보내도 되고(공개정보), 서버 env로 써도 됨
     const modelName = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.5-flash";
-    console.log(`[Gemini] Calling model: ${modelName}`);
+    console.log(`[Coach] Calling /api/coach with model: ${modelName}`);
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    const res = await fetch("/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, modelName }),
     });
-    
-    if (!response.text) {
-      throw new Error("EMPTY_RESPONSE");
+
+    const json = await res.json();
+
+    if (!res.ok || !json?.ok) {
+      const msg = json?.message || json?.error || "Unknown server error";
+      throw new Error(msg);
     }
-    
-    return response.text;
+
+    return json.text;
   } catch (error: any) {
-    console.error("Gemini API Error Detail:", {
+    console.error("Coach API Error Detail:", {
       message: error.message,
-      status: error.status,
-      code: error.code,
-      stack: error.stack
+      stack: error.stack,
     });
 
     const errMsg = error.message || "";
@@ -131,7 +168,7 @@ ${menuEngineeringSummary}
     if (errMsg.includes("fetch failed")) {
       return "네트워크 연결 오류가 발생했습니다. 인터넷 연결을 확인해주세요.";
     }
-    
-    return `통신 오류 발생 (${error.message || 'Unknown'}). 데이터를 다시 확인해주세요.`;
+
+    return `통신 오류 발생 (${error.message || "Unknown"}). 데이터를 다시 확인해주세요.`;
   }
 };
