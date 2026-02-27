@@ -1,9 +1,12 @@
-
 import React from 'react';
-import { SalesReportData, MenuCategory, CorrectedItem } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
-import { format, parseISO, isSameDay } from 'date-fns';
+import { SalesReportData, CorrectedItem } from '../types';
+import { format, parseISO } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
+
+// ✅ 서버 OCR 호출로 변경 (프론트에서 Gemini 직접 호출 금지)
+import { callOcr } from "../services/services/ocrService";
+// 만약 네 파일이 services/ocrService.ts 위치라면 위 줄을 아래로 바꿔:
+// import { callOcr } from "../services/ocrService";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -25,13 +28,16 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   // Helper for consistent input styling
-  const inputClasses = "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
+  const inputClasses =
+    "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
   const numericInputClasses = `${inputClasses} text-right pr-12`;
 
   const [ocrFiles, setOcrFiles] = React.useState<File[]>([]);
-  const [ocrFileStatuses, setOcrFileStatuses] = React.useState<Record<string, { status: 'pending' | 'processing' | 'success' | 'failed' | 'retrying', error?: string, retryCount?: number }>>({});
+  const [ocrFileStatuses, setOcrFileStatuses] = React.useState<
+    Record<string, { status: 'pending' | 'processing' | 'success' | 'failed' | 'retrying', error?: string, retryCount?: number }>
+  >({});
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  
+
   const [ocrRawText, setOcrRawText] = React.useState<string>('');
   const [ocrItems, setOcrItems] = React.useState<CorrectedItem[]>([]);
   const [ocrItemsAccumulated, setOcrItemsAccumulated] = React.useState<CorrectedItem[]>([]);
@@ -39,7 +45,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrLoading, setOcrLoading] = React.useState<boolean>(false);
   const [ocrProgress, setOcrProgress] = React.useState<{ current: number, total: number } | null>(null);
   const [ocrOptimizing, setOcrOptimizing] = React.useState<boolean>(false);
-  const [ocrParsing, setOcrParsing] = React.useState<boolean>(false);
+  const [ocrParsing, setOcrParsing] = React.useState<boolean>(false); // UI 문구용(파싱 단계), 서버 호출 구조로 바뀌어도 유지
   const [ocrError, setOcrError] = React.useState<string>('');
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>('');
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
@@ -59,146 +65,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       setPreviewUrl(null);
     }
   }, [ocrFiles]);
-
-  const parseItemsFromText = (text: string): { name: string, qty: number }[] => {
-    const lines = text.split('\n');
-    const itemsMap: Record<string, number> = {};
-
-    // 1. Try Markdown parsing first
-    let nameIdx = -1;
-    let qtyIdx = -1;
-    let isMarkdown = false;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.includes('|')) {
-        const cols = trimmed.split('|').map(c => c.trim()).filter(c => c !== '');
-        const nIdx = cols.findIndex(c => c.includes('상품명') || c.includes('메뉴'));
-        const qIdx = cols.findIndex(c => c.includes('수량'));
-        if (nIdx !== -1 && qIdx !== -1) {
-          nameIdx = nIdx;
-          qtyIdx = qIdx;
-          isMarkdown = true;
-          break;
-        }
-      }
-    }
-
-    if (isMarkdown) {
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.includes('|') && !trimmed.includes('---') && !trimmed.includes('상품명') && !trimmed.includes('메뉴')) {
-          const cols = trimmed.split('|').map(c => c.trim()).filter(c => c !== '');
-          if (cols.length > Math.max(nameIdx, qtyIdx)) {
-            const name = cols[nameIdx];
-            const qtyStr = cols[qtyIdx].replace(/[^0-9]/g, '');
-            const qty = parseInt(qtyStr) || 0;
-            if (name && qty > 0) {
-              itemsMap[name] = (itemsMap[name] || 0) + qty;
-            }
-          }
-        }
-      }
-      if (Object.keys(itemsMap).length > 0) {
-        return Object.entries(itemsMap).map(([name, qty]) => ({ name, qty }));
-      }
-    }
-
-    // 2. Try Plain Text parsing (Space/Tab separated)
-    let headerFound = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if ((line.includes('상품명') || line.includes('메뉴')) && line.includes('수량')) {
-        headerFound = true;
-        // Process subsequent lines
-        for (let j = i + 1; j < lines.length; j++) {
-          const row = lines[j].trim();
-          if (!row || row.includes('---') || row.includes('합계') || row.includes('Total')) continue;
-          
-          // Extract numbers
-          const tokens = row.split(/\s+/);
-          const numbers: { val: number, idx: number }[] = [];
-          tokens.forEach((t, idx) => {
-            const clean = t.replace(/[^0-9]/g, '');
-            const n = parseInt(clean);
-            if (!isNaN(n) && clean.length > 0) {
-              numbers.push({ val: n, idx });
-            }
-          });
-
-          if (numbers.length >= 1) {
-            // Name is everything before the first number
-            const firstNumIdxInRow = row.indexOf(tokens[numbers[0].idx]);
-            const namePart = row.substring(0, firstNumIdxInRow).trim();
-            
-            // Qty logic: use second to last number if available, else last
-            let qty = 0;
-            if (numbers.length >= 2) {
-              qty = numbers[numbers.length - 2].val;
-            } else {
-              qty = numbers[0].val;
-            }
-
-            if (namePart && qty > 0) {
-              itemsMap[namePart] = (itemsMap[namePart] || 0) + qty;
-            }
-          }
-        }
-        break;
-      }
-    }
-
-    return Object.entries(itemsMap).map(([name, qty]) => ({ name, qty }));
-  };
-
-  const compressImage = (file: File, quality: number = 0.6, maxWidth: number = 768): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(img.src);
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxWidth) {
-            width *= maxWidth / height;
-            height = maxWidth;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error("Canvas context not available"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Black image detection (common issue with HEIC on some browsers)
-        try {
-          const pixel = ctx.getImageData(0, 0, 1, 1).data;
-          if (pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0 && pixel[3] === 0) {
-            reject(new Error("Black image detected"));
-            return;
-          }
-        } catch (e) {
-          // Ignore errors from getImageData
-        }
-        
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(dataUrl.split(',')[1]);
-      };
-      img.onerror = () => reject(new Error("Image load failed"));
-    });
-  };
 
   const compressForOcr = async (file: File, maxW = 1024, quality = 0.6): Promise<File> => {
     const img = document.createElement("img");
@@ -236,7 +102,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     });
 
     const newName = file.name.replace(/\.\w+$/, "") + ".jpg";
-    
+
     // Update debug info
     setOcrDebugInfo({
       originalSize: file.size,
@@ -246,16 +112,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     });
 
     return new File([blob], newName, { type: "image/jpeg" });
-  };
-
-  const getGeminiApiKey = () => {
-    const metaEnv = (import.meta as any).env;
-    const key = (metaEnv?.VITE_GEMINI_API_KEY) || 
-                (metaEnv?.VITE_GOOGLE_API_KEY) || 
-                (process.env?.GEMINI_API_KEY) || 
-                (process.env?.GOOGLE_API_KEY) ||
-                (process.env?.NEXT_PUBLIC_GEMINI_API_KEY); // Added for Next.js compatibility
-    return key;
   };
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -274,16 +130,20 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       } catch (err: any) {
         lastErr = err;
         const errMsg = err?.message || "";
-        const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
+        const is429 =
+          errMsg.includes("429") ||
+          errMsg.includes("RESOURCE_EXHAUSTED") ||
+          errMsg.toLowerCase().includes("rate") ||
+          errMsg.toLowerCase().includes("limit");
 
         if (is429 && attempt < maxRetries) {
           const delay = delays[attempt] + Math.random() * 800;
           setOcrFileStatuses(prev => ({
             ...prev,
-            [fileName]: { 
-              ...prev[fileName], 
-              status: 'retrying', 
-              retryCount: attempt + 1 
+            [fileName]: {
+              ...prev[fileName],
+              status: 'retrying',
+              retryCount: attempt + 1
             }
           }));
           await sleep(delay);
@@ -295,128 +155,22 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     throw lastErr;
   };
 
-  const runGeminiOcr = async (file: File): Promise<string> => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      throw new Error("API key missing. Set VITE_GEMINI_API_KEY in environment.");
-    }
-    const ai = new GoogleGenAI({ apiKey });
-    
-    const reader = new FileReader();
-    const base64Data = await new Promise<string>((resolve, reject) => {
+  // ✅ 파일을 base64로 변환 (서버 OCR 호출용)
+  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("File read failed"));
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        const [meta, data] = result.split(",");
+        const mimeMatch = meta.match(/data:(.*);base64/);
+        resolve({
+          base64: data,
+          mimeType: mimeMatch?.[1] || file.type || "image/jpeg",
+        });
+      };
       reader.readAsDataURL(file);
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = reject;
     });
-
-    const modelName = (import.meta as any).env.VITE_GEMINI_OCR_MODEL || "gemini-2.5-flash";
-    console.log("[OCR_MODEL]", modelName);
-
-    try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: file.type || "image/jpeg",
-                },
-              },
-              {
-                text: `Extract all visible text from this receipt image exactly as it appears.
-Keep line breaks.
-Do not summarize or format.
-Do not add anything.`,
-              },
-            ],
-          },
-        ],
-      });
-      return response.text || "";
-    } catch (err: any) {
-      const errMsg = err?.message || "";
-      const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
-      // If it's a 429, we want to bubble it up to callWithRetry
-      throw err;
-    }
-  };
-
-  const runGeminiParse = async (text: string): Promise<string> => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      throw new Error("API key missing. Set VITE_GEMINI_API_KEY in environment.");
-    }
-    const ai = new GoogleGenAI({ apiKey });
-    
-    const modelName = (import.meta as any).env.VITE_GEMINI_PARSE_MODEL || "gemini-2.5-flash";
-    console.log("[PARSE_MODEL]", modelName);
-
-    try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `You will be given raw text extracted from a restaurant receipt.
-
-Convert it to CSV with header: item,unit_price,qty
-
-Rules:
-- Output ONLY CSV.
-- Each menu item should be one row.
-- item: menu name (Korean allowed)
-- unit_price: number only (e.g., 7 or 5.5)
-- qty: integer quantity
-- Ignore totals, tax, date, order number, and any non-menu lines.
-- If a line does not contain a clear menu name, skip it.
-- The input text may be a PARTIAL receipt. Output only what is visible.
-
-Return ONLY CSV.`,
-              },
-              {
-                text: `Input Text:\n${text}`
-              }
-            ],
-          },
-        ],
-      });
-      return response.text || "";
-    } catch (err: any) {
-      throw err;
-    }
-  };
-
-  const parseCsvItems = (csvText: string): { name: string, price: number, qty: number }[] => {
-    const lines = csvText.trim().split('\n');
-    const items: { name: string, price: number, qty: number }[] = [];
-    
-    // Skip header if present
-    const startIndex = lines[0].toLowerCase().includes('item') ? 1 : 0;
-    
-    for (let i = startIndex; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      // Handle potential quotes in CSV
-      const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-      if (parts.length >= 3) {
-        const name = parts[0].replace(/^"|"$/g, '').trim();
-        const priceStr = parts[1].replace(/[^0-9.]/g, '');
-        const price = parseFloat(priceStr) || 0;
-        const qtyStr = parts[2].replace(/[^0-9]/g, '');
-        const qty = parseInt(qtyStr) || 0;
-        
-        if (name && qty > 0) {
-          items.push({ name, price, qty });
-        }
-      }
-    }
-    return items;
   };
 
   const [showCalendar, setShowCalendar] = React.useState(false);
@@ -428,7 +182,7 @@ Return ONLY CSV.`,
       const rect = calendarButtonRef.current.getBoundingClientRect();
       const windowWidth = window.innerWidth;
       const popupWidth = 320;
-      
+
       let left = rect.left;
       // Auto-correction for right boundary
       if (left + popupWidth > windowWidth) {
@@ -450,7 +204,7 @@ Return ONLY CSV.`,
 
     const close = () => setShowCalendar(false);
 
-    window.addEventListener("scroll", close, true);   // true 중요: 내부 스크롤도 잡힘
+    window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
 
     return () => {
@@ -462,10 +216,10 @@ Return ONLY CSV.`,
   const normalizeName = (name: string): string => {
     return name
       .toLowerCase()
-      .replace(/\s+/g, '') // Remove spaces
-      .replace(/[^\wㄱ-ㅎ가-힣0-9]/g, '') // Remove special chars
-      .replace(/\(.*\)/g, '') // Remove content in parentheses
-      .replace(/[0-9]+(원|usd|\$)/g, '') // Remove price notations
+      .replace(/\s+/g, '')
+      .replace(/[^\wㄱ-ㅎ가-힣0-9]/g, '')
+      .replace(/\(.*\)/g, '')
+      .replace(/[0-9]+(원|usd|\$)/g, '')
       .trim();
   };
 
@@ -518,7 +272,7 @@ Return ONLY CSV.`,
   ): CorrectedItem => {
     const originalName = ocrItem.name;
     const normalizedOcrName = normalizeName(originalName);
-    
+
     // 0. Check manual mappings first
     if (manualMappings[originalName]) {
       const matched = allMenus.find(m => m.id === manualMappings[originalName]);
@@ -572,7 +326,7 @@ Return ONLY CSV.`,
     // Price validation
     if (!needsReview && ocrItem.price > 0) {
       const priceDiff = Math.abs(bestMatch.price - ocrItem.price);
-      const priceDiffRatio = priceDiff / bestMatch.price;
+      const priceDiffRatio = bestMatch.price > 0 ? priceDiff / bestMatch.price : 0;
       if (priceDiffRatio > 0.2) {
         needsReview = true;
       }
@@ -595,14 +349,15 @@ Return ONLY CSV.`,
     };
   };
 
+  // ✅ OCR 실행: 서버(/api/ocr)로만 호출
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const filesToProcess = filesToProcessOverride || [...ocrFiles];
     if (filesToProcess.length === 0) return;
-    
+
     setOcrLoading(true);
     setOcrError('');
     setOcrErrorDetail('');
-    
+
     // Initialize statuses for files being processed
     const initialStatuses = { ...ocrFileStatuses };
     filesToProcess.forEach(f => {
@@ -615,7 +370,7 @@ Return ONLY CSV.`,
     for (let i = 0; i < filesToProcess.length; i++) {
       const currentFile = filesToProcess[i];
       setOcrProgress({ current: i + 1, total: filesToProcess.length });
-      
+
       setOcrFileStatuses(prev => ({
         ...prev,
         [currentFile.name]: { status: 'processing' }
@@ -625,43 +380,53 @@ Return ONLY CSV.`,
       if (i > 0) {
         await sleep(1800 + Math.random() * 1000);
       }
-      
+
       try {
         setOcrOptimizing(true);
         setOcrParsing(false);
-        
+
         const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
         setOcrOptimizing(false);
 
-        // Step 1: OCR (Raw Text) with Retry
-        const extractedText = await callWithRetry(
-          () => runGeminiOcr(optimizedFile),
+        // ✅ 서버 OCR 호출 단계 표시용
+        setOcrParsing(true);
+
+        // optimizedFile → base64
+        const { base64, mimeType } = await fileToBase64(optimizedFile);
+
+        // 서버에 OCR 요청 (429/Rate limit이면 retry)
+        const ocrJson: any = await callWithRetry(
+          () => callOcr(base64, mimeType),
           currentFile.name
         );
-        
-        setOcrRawText(prev => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
+
+        const extractedText = String(ocrJson?.rawText || "");
+        setOcrRawText(prev =>
+          prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText
+        );
 
         if (!extractedText) {
           throw new Error("텍스트를 추출하지 못했습니다.");
         }
 
-        // Step 2: Parsing (Raw Text -> CSV) with Retry
-        setOcrParsing(true);
-        const csvResult = await callWithRetry(
-          () => runGeminiParse(extractedText),
-          currentFile.name
-        );
-        
-        // Step 3: Local Parsing (CSV -> Items) & Auto Correction
-        const parsedItems = parseCsvItems(csvResult);
-        const correctedNewItems = parsedItems.map(item => autoCorrectItem(item));
-        
+        // 서버 items → local autoCorrectItem 입력 형태로 변환
+        const serverItems = Array.isArray(ocrJson?.items) ? ocrJson.items : [];
+        const parsedItems = serverItems
+          .map((it: any) => ({
+            name: String(it?.name || it?.item || it?.menu || ""),
+            price: Number(it?.unit_price ?? it?.price ?? it?.unitPrice ?? 0),
+            qty: Number(it?.qty ?? it?.quantity ?? 0),
+          }))
+          .filter((it: any) => it.name && it.qty > 0);
+
+        const correctedNewItems = parsedItems.map((item: any) => autoCorrectItem(item));
+
         setOcrItems(prev => [...prev, ...correctedNewItems]);
 
         setOcrItemsAccumulated(prev => {
           const recentItems = prev.slice(-30);
           const recentKeys = new Set(recentItems.map(item => `${item.item_corrected}||${item.unit_price}||${item.qty}`));
-          
+
           const filteredNew = correctedNewItems.filter(item => {
             const key = `${item.item_corrected}||${item.unit_price}||${item.qty}`;
             return !recentKeys.has(key);
@@ -678,22 +443,28 @@ Return ONLY CSV.`,
       } catch (err: any) {
         console.error(`Error processing file ${currentFile.name}:`, err);
         const errorDetail = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
-        
-        if (errorDetail.includes("API key missing")) {
-          setOcrErrorDetail(errorDetail);
-          setOcrError('API 키가 설정되지 않았습니다.');
+
+        // 서버 에러 메시지 노출
+        setOcrErrorDetail(errorDetail);
+
+        const msg = err?.message || '알 수 없는 오류';
+
+        // 키/서버 설정 관련 메시지
+        if (msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("gemini_api_key")) {
+          setOcrError('API 키가 설정되지 않았거나 서버에서 읽지 못했습니다. (Vercel 환경변수/재배포 확인 필요)');
           setOcrFileStatuses(prev => ({
             ...prev,
-            [currentFile.name]: { status: 'failed', error: 'API 키 누락' }
+            [currentFile.name]: { status: 'failed', error: 'API 키/서버 설정 오류' }
           }));
-          break; 
+          break;
         }
 
         setOcrFileStatuses(prev => ({
           ...prev,
-          [currentFile.name]: { status: 'failed', error: err.message || '알 수 없는 오류' }
+          [currentFile.name]: { status: 'failed', error: msg }
         }));
-        setOcrError(prev => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패`);
+        setOcrError(prev => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패 (${msg})`);
+
       } finally {
         setOcrOptimizing(false);
         setOcrParsing(false);
@@ -724,7 +495,7 @@ Return ONLY CSV.`,
 
   const applyOcr = () => {
     if (ocrItemsAccumulated.length === 0) return;
-    
+
     const newCategories = [...data.categories];
     let matchedCount = 0;
 
@@ -774,7 +545,7 @@ Return ONLY CSV.`,
   // OCR Total Verification Logic
   const extractReceiptTotal = (text: string): number | null => {
     if (!text) return null;
-    
+
     const keywords = ["TOTAL", "Total", "합계", "총액", "Grand Total", "AMOUNT", "NET TOTAL", "G.TOTAL"];
     const lines = text.split('\n');
     let foundTotal: number | null = null;
@@ -782,7 +553,7 @@ Return ONLY CSV.`,
     for (let i = lines.length - 1; i >= 0; i--) {
       const line = lines[i].toUpperCase();
       const hasKeyword = keywords.some(k => line.includes(k.toUpperCase()));
-      
+
       if (hasKeyword) {
         const matches = line.match(/[\d,.]+/g);
         if (matches) {
@@ -796,7 +567,7 @@ Return ONLY CSV.`,
           }
           if (maxInLine > 0) {
             foundTotal = maxInLine;
-            break; 
+            break;
           }
         }
       }
@@ -817,7 +588,7 @@ Return ONLY CSV.`,
   const isTotalMatched = React.useMemo(() => {
     if (receiptTotal === null) return null;
     const diff = Math.abs(scanTotal - receiptTotal);
-    const tolerance = Math.max(receiptTotal * 0.01, 1); 
+    const tolerance = Math.max(receiptTotal * 0.01, 1);
     return diff <= tolerance;
   }, [scanTotal, receiptTotal]);
 
@@ -844,6 +615,7 @@ Return ONLY CSV.`,
             </h2>
             <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Beta</span>
           </div>
+
           <div className="p-6 space-y-4">
             {/* OCR Usage Guide */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-slate-700">
@@ -874,7 +646,7 @@ Return ONLY CSV.`,
                     {ocrFiles.length > 0 && <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>}
                   </label>
                   {ocrItemsAccumulated.length > 0 && (
-                    <button 
+                    <button
                       onClick={resetOcr}
                       className="text-[10px] font-black text-rose-500 hover:text-rose-600 flex items-center gap-1"
                     >
@@ -883,11 +655,12 @@ Return ONLY CSV.`,
                     </button>
                   )}
                 </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+
+                <input
+                  type="file"
+                  accept="image/*"
                   multiple
-                  key={ocrFiles.length > 0 ? 'has-files' : 'no-files'} // Reset input after file selection if needed
+                  key={ocrFiles.length > 0 ? 'has-files' : 'no-files'}
                   onChange={e => {
                     const files = Array.from(e.target.files || []);
                     setOcrFiles(files);
@@ -898,6 +671,7 @@ Return ONLY CSV.`,
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer"
                 />
               </div>
+
               {ocrFiles.length > 0 && !ocrRawText && !ocrLoading && (
                 <div className="flex gap-2 w-full md:w-auto">
                   <button
@@ -933,9 +707,9 @@ Return ONLY CSV.`,
 
                 {previewUrl && !ocrLoading && (
                   <div className="relative w-full max-h-64 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
                       className="w-full h-full object-contain max-h-64"
                     />
                     <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
@@ -969,10 +743,10 @@ Return ONLY CSV.`,
                     ))}
                   </div>
                   <p className="text-xs font-bold text-indigo-600 mt-1">
-                    {ocrOptimizing ? '이미지 최적화 중...' : ocrParsing ? '메뉴 데이터 파싱 중...' : '텍스트 추출 중...'}
+                    {ocrOptimizing ? '이미지 최적화 중...' : ocrParsing ? '서버에서 OCR 처리 중...' : '준비 중...'}
                   </p>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                    {ocrOptimizing ? '고화질 이미지를 가볍게 변환하고 있습니다' : ocrParsing ? '추출된 텍스트에서 메뉴를 분류하고 있습니다' : 'AI가 텍스트를 추출하고 있습니다'}
+                    {ocrOptimizing ? '고화질 이미지를 가볍게 변환하고 있습니다' : ocrParsing ? '서버가 텍스트/메뉴를 추출하고 있습니다' : '잠시만 기다려주세요'}
                   </p>
                 </div>
               </div>
@@ -1036,17 +810,17 @@ Return ONLY CSV.`,
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">영수증 총액 (Total)</p>
                         <p className="text-lg font-black text-slate-800">
-                          {receiptTotal !== null ? receiptTotal.toLocaleString() : "미검출"} 
+                          {receiptTotal !== null ? receiptTotal.toLocaleString() : "미검출"}
                           {receiptTotal !== null && <span className="text-xs font-normal text-slate-400 ml-1">USD</span>}
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       {receiptTotal !== null ? (
                         <div className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black ${
-                          isTotalMatched 
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                          isTotalMatched
+                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                             : "bg-rose-50 text-rose-600 border border-rose-100"
                         }`}>
                           <i className={`fa-solid ${isTotalMatched ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
@@ -1060,7 +834,7 @@ Return ONLY CSV.`,
                       )}
                     </div>
                   </div>
-                  
+
                   {receiptTotal !== null && !isTotalMatched && (
                     <p className="mt-3 text-[10px] text-rose-500 font-medium italic">
                       * 차이: {(scanTotal - receiptTotal).toLocaleString()} USD. 메뉴 수량이나 가격을 다시 확인해 주세요.
@@ -1071,12 +845,13 @@ Return ONLY CSV.`,
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-slate-500">이번 사진 추출 텍스트</label>
-                    <textarea 
+                    <textarea
                       readOnly
                       value={ocrRawText}
                       className="w-full h-48 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-700 font-mono focus:ring-1 focus:ring-indigo-400 outline-none resize-none"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-slate-500">인식된 메뉴 (누적 {ocrItemsAccumulated.length}개)</label>
                     <div className="h-48 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-y-auto space-y-4">
@@ -1141,7 +916,7 @@ Return ONLY CSV.`,
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <span className="text-indigo-600 font-black">{item.qty}</span>
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setOcrItemsAccumulated(prev => {
                                           const next = [...prev];
@@ -1167,6 +942,7 @@ Return ONLY CSV.`,
                     </div>
                   </div>
                 </div>
+
                 <div className="flex flex-wrap justify-center gap-3 mt-6">
                   <button
                     onClick={resetOcr}
@@ -1219,14 +995,14 @@ Return ONLY CSV.`,
                   {data.date}
                   <i className="fa-solid fa-calendar text-slate-400"></i>
                 </button>
-                
+
                 {showCalendar && (
-                  <div 
-                    style={{ 
-                      position: 'fixed', 
-                      top: calendarPos.top - window.scrollY, 
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: calendarPos.top - window.scrollY,
                       left: calendarPos.left,
-                      zIndex: 9999 
+                      zIndex: 9999
                     }}
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
@@ -1250,7 +1026,7 @@ Return ONLY CSV.`,
                   </div>
                 )}
               </div>
-              <button 
+              <button
                 onClick={() => {
                   const today = new Date().toISOString().split('T')[0];
                   updateBaseField('date', today);
@@ -1266,11 +1042,11 @@ Return ONLY CSV.`,
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
             <div className="relative">
-              <input 
-                type="number" 
-                value={data.posSales || ''} 
-                onChange={e => updateBaseField('posSales', Number(e.target.value))} 
-                className={numericInputClasses} 
+              <input
+                type="number"
+                value={data.posSales || ''}
+                onChange={e => updateBaseField('posSales', Number(e.target.value))}
+                className={numericInputClasses}
                 placeholder="0"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">USD</span>
@@ -1281,12 +1057,12 @@ Return ONLY CSV.`,
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
-              <input 
-                type="number" 
-                value={data.visitCount || ''} 
-                onChange={e => updateBaseField('visitCount', Number(e.target.value))} 
-                className={numericInputClasses} 
-                placeholder="0" 
+              <input
+                type="number"
+                value={data.visitCount || ''}
+                onChange={e => updateBaseField('visitCount', Number(e.target.value))}
+                className={numericInputClasses}
+                placeholder="0"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">명</span>
             </div>
@@ -1296,11 +1072,11 @@ Return ONLY CSV.`,
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
             <div className="relative">
-              <input 
-                type="number" 
-                value={data.orders || ''} 
-                onChange={e => updateBaseField('orders', Number(e.target.value))} 
-                className={numericInputClasses} 
+              <input
+                type="number"
+                value={data.orders || ''}
+                onChange={e => updateBaseField('orders', Number(e.target.value))}
+                className={numericInputClasses}
                 placeholder="0"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">건</span>
@@ -1310,12 +1086,12 @@ Return ONLY CSV.`,
           {/* Notes */}
           <div className="lg:col-span-3">
             <label className="block text-xs font-bold text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
-            <input 
-              type="text" 
-              value={data.note} 
-              onChange={e => updateBaseField('note', e.target.value)} 
-              placeholder="예: 비 옴, 짜장면 품절 등" 
-              className={inputClasses} 
+            <input
+              type="text"
+              value={data.note}
+              onChange={e => updateBaseField('note', e.target.value)}
+              placeholder="예: 비 옴, 짜장면 품절 등"
+              className={inputClasses}
             />
           </div>
         </div>
@@ -1342,6 +1118,7 @@ Return ONLY CSV.`,
                       onChange={e => updateQty(catIdx, itemIdx, Number(e.target.value))}
                       className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
                       placeholder="0"
+                      disabled={loading}
                     />
                   </div>
                 </div>
