@@ -1,195 +1,291 @@
-// services/salesStorage.ts
-import type { SalesReportData } from "../types";
-import { supabase, isSupabaseReady } from "./supabaseClient";
+// src/services/salesStorage.ts
+import { createClient } from "@supabase/supabase-js";
+
+/**
+ * ✅ ENV (Vite)
+ * - VITE_SUPABASE_URL
+ * - VITE_SUPABASE_ANON_KEY
+ */
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  // 런타임에서 바로 원인 보이게
+  console.error(
+    "[salesStorage] Missing env: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY"
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const TABLE = "sales_daily";
 
-type SaveResult =
-  | { ok: true }
-  | { ok: false; error: string; code?: string; detail?: any };
-
-function toNumber(v: any): number | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v === "string") {
-    const n = Number(v.replaceAll(",", "").trim());
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}
-
-export async function saveDailyData(
-  date: string,
-  payload: SalesReportData | any
-): Promise<SaveResult> {
-  try {
-    if (!isSupabaseReady || !supabase) {
-      console.error("[Supabase] NOT READY", (window as any).__SUPABASE_ENV__);
-      return { ok: false, code: "SUPABASE_NOT_READY", error: "Supabase env not loaded" };
-    }
-
-    // ✅ 1) total_sales: 여러 후보 키에서 최대한 찾아서 숫자로 저장
-    const totalSales =
-      toNumber(payload?.totalSales) ??
-      toNumber(payload?.total_sales) ??
-      toNumber(payload?.results?.calcSales) ??
-      toNumber(payload?.calcSales) ??
-      toNumber(payload?.summary?.totalSales) ??
-      null;
-
-    // ✅ 2) orders
-    const orders =
-      toNumber(payload?.orders) ??
-      toNumber(payload?.orderCount) ??
-      toNumber(payload?.totalOrders) ??
-      toNumber(payload?.summary?.orders) ??
-      null;
-
-    // ✅ 3) visit_count
-    const visitCount =
-      toNumber(payload?.visitCount) ??
-      toNumber(payload?.visitors) ??
-      toNumber(payload?.visitorCount) ??
-      toNumber(payload?.customerCount) ??
-      toNumber(payload?.summary?.visitCount) ??
-      null;
-
-    // ✅ 4) sold_items: 메뉴/수량 묶음 (객체/배열 둘 다 저장 가능)
-    // - menuCounts: { "짜장면": 3, "짬뽕": 2 } 같은 형태
-    // - items/menus: [{ name:"짜장면", qty:3 }, ...] 같은 형태
-const soldItems = (() => {
-  // 1) 기존 키로 먼저 시도
-  const direct =
-    payload?.soldItems ??
-    payload?.sold_items ??
-    payload?.menuCounts ??
-    payload?.menus ??
-    payload?.items;
-
-  if (direct) return direct;
-
-  // 2) 없으면 payload.categories에서 직접 생성
-  const cats = payload?.categories;
-  if (!Array.isArray(cats)) return null;
-
-  const out: any[] = [];
-  for (const cat of cats) {
-    const items = cat?.items;
-    if (!Array.isArray(items)) continue;
-
-    for (const it of items) {
-      const qty = Number(it?.qty ?? 0);
-      const price = Number(it?.price ?? 0);
-      if (!qty || qty <= 0) continue;
-
-      out.push({
-        id: it?.id ?? null,
-        name: it?.name ?? "",
-        qty,
-        unit_price: Number.isFinite(price) ? price : null,
-        revenue: Number.isFinite(price) ? qty * price : null,
-      });
-    }
-  }
-
-  return out;
-})();
-
-    const rowToUpsert = {
-      date,
-      payload,                 // ✅ 원본 payload 그대로 저장
-      total_sales: totalSales, // ✅ 컬럼 채움
-      orders: orders,          // ✅ 컬럼 채움
-      visit_count: visitCount, // ✅ 컬럼 채움
-      sold_items: soldItems,   // ✅ 컬럼 채움
-    };
-
-    console.log("[Supabase] upsert start", {
-      table: TABLE,
-      date,
-      total_sales: rowToUpsert.total_sales,
-      orders: rowToUpsert.orders,
-      visit_count: rowToUpsert.visit_count,
-      sold_items_type: Array.isArray(soldItems) ? "array" : typeof soldItems,
-    });
-
-    const { error } = await supabase
-      .from(TABLE)
-      .upsert(rowToUpsert, { onConflict: "date" });
-
-    if (error) {
-      console.error("[Supabase] upsert error", error);
-      return { ok: false, code: error.code ?? "SUPABASE_ERROR", error: error.message, detail: error };
-    }
-
-    console.log("[Supabase] upsert success", { date });
-    return { ok: true };
-  } catch (e: any) {
-    console.error("[Supabase] exception", e);
-    return { ok: false, code: "EXCEPTION", error: e?.message ?? "Unknown error", detail: e };
-  }
-}
-
-// (나머지는 아직 미구현이면 그대로 둬도 됨)
-export const listDatesInMonth = async (month: string): Promise<string[]> => {
-  if (!isSupabaseReady || !supabase) {
-    console.error("[Supabase] not ready");
-    return [];
-  }
-
-  // month: "2026-03"
-  const start = `${month}-01`;
-  const end = `${month}-31`; // 간단 처리(달별 말일 계산 안해도 range로 충분)
-
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("date")
-    .gte("date", start)
-    .lte("date", end)
-    .order("date", { ascending: true });
-
-  if (error) {
-    console.error("[Supabase] listDatesInMonth error:", error);
-    return [];
-  }
-
-  return (data ?? []).map((r: any) => r.date);
+/** -----------------------------
+ * Types (앱 payload 기준)
+ * ----------------------------- */
+export type MenuItem = {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+  unitCost?: number;
 };
 
-// services/salesStorage.ts
+export type MenuCategory = {
+  name: string;
+  items: MenuItem[];
+};
 
-export const loadDaily = async (date: string): Promise<any | null> => {
-  if (!isSupabaseReady || !supabase) {
-    console.error("[Supabase] not ready");
-    return null;
+export type DailyPayload = {
+  date: string; // "YYYY-MM-DD"
+  orders: number;
+  visitCount: number;
+  totalSales: number;
+  monthlyTarget?: number;
+  categories: MenuCategory[];
+};
+
+export type SoldItemRow = {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+  revenue: number;
+};
+
+/** -----------------------------
+ * Helpers
+ * ----------------------------- */
+const clampNumber = (n: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, n));
+
+const safeNum = (v: any, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+function buildSoldItems(payload: DailyPayload): SoldItemRow[] {
+  const categories = Array.isArray(payload?.categories) ? payload.categories : [];
+
+  const out: SoldItemRow[] = [];
+  for (const cat of categories) {
+    const items = Array.isArray(cat?.items) ? cat.items : [];
+    for (const it of items) {
+      const qty = safeNum(it?.qty, 0);
+      if (qty > 0) {
+        const price = safeNum(it?.price, 0);
+        out.push({
+          id: String(it?.id ?? ""),
+          name: String(it?.name ?? ""),
+          qty,
+          price,
+          revenue: qty * price,
+        });
+      }
+    }
   }
+
+  // id 없거나 name 없는 이상치 제거
+  return out.filter((x) => x.name && x.qty > 0);
+}
+
+function buildSoldItemsSummary(soldItems: SoldItemRow[], currencySymbol = "$") {
+  if (!soldItems.length) return "";
+  // 예: 짜장면 x1 ($7), 짬뽕 x2 ($14)
+  return soldItems
+    .map((s) => `${s.name} x${s.qty} (${currencySymbol}${s.revenue})`)
+    .join(", ");
+}
+
+/**
+ * loadDaily에서 UI categories 템플릿(전체 메뉴 리스트)이 있을 경우
+ * sold_items의 qty를 categories.items에 반영해주는 유틸
+ */
+function applySoldItemsToCategories(
+  templateCategories: MenuCategory[],
+  soldItems: SoldItemRow[]
+): MenuCategory[] {
+  const mapById = new Map<string, SoldItemRow>();
+  const mapByName = new Map<string, SoldItemRow>();
+
+  for (const s of soldItems) {
+    if (s.id) mapById.set(String(s.id), s);
+    if (s.name) mapByName.set(String(s.name), s);
+  }
+
+  return templateCategories.map((cat) => ({
+    ...cat,
+    items: (cat.items || []).map((it) => {
+      const hit =
+        (it.id && mapById.get(String(it.id))) ||
+        (it.name && mapByName.get(String(it.name)));
+      const qty = hit ? safeNum(hit.qty, 0) : 0;
+      return { ...it, qty };
+    }),
+  }));
+}
+
+/** -----------------------------
+ * ✅ A1 핵심: 저장 (sold_items / summary 생성 포함)
+ * ----------------------------- */
+export async function saveDailyData(payload: DailyPayload) {
+  if (!payload?.date) throw new Error("saveDailyData: payload.date is required");
+
+  const soldItems = buildSoldItems(payload);
+  const soldItemsSummary = buildSoldItemsSummary(soldItems, "$");
+
+  // DB 컬럼 매핑 (snake_case)
+  const rowToUpsert = {
+    date: payload.date,
+    total_sales: safeNum(payload.totalSales, 0),
+    orders: Math.trunc(safeNum(payload.orders, 0)),
+    visit_count: Math.trunc(safeNum(payload.visitCount, 0)),
+    sold_items: soldItems, // ✅ jsonb
+    sold_items_summary: soldItemsSummary, // ✅ text
+  };
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("payload")
-    .eq("date", date)
+    .upsert(rowToUpsert, { onConflict: "date" })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[saveDailyData] supabase error:", error);
+    throw error;
+  }
+
+  return data;
+}
+
+/** -----------------------------
+ * 불러오기 (UI 자동 채움)
+ * - template(현재 화면의 categories)를 넣어주면 qty 반영해서 반환
+ * ----------------------------- */
+export async function loadDaily(dateStr: string, template?: DailyPayload) {
+  if (!dateStr) throw new Error("loadDaily: dateStr is required");
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary")
+    .eq("date", dateStr)
     .maybeSingle();
 
   if (error) {
-    console.error("[Supabase] loadDaily error:", error);
+    console.error("[loadDaily] supabase error:", error);
+    throw error;
+  }
+
+  // 데이터 없으면 template(또는 기본값) 반환
+  if (!data) {
+    if (template) {
+      return {
+        ...template,
+        date: dateStr,
+        orders: 0,
+        visitCount: 0,
+        totalSales: 0,
+        categories: applySoldItemsToCategories(template.categories || [], []),
+      } as DailyPayload;
+    }
     return null;
   }
 
-  // row 없으면 null
-  if (!data) return null;
+  const soldItems: SoldItemRow[] = Array.isArray(data.sold_items)
+    ? (data.sold_items as SoldItemRow[])
+    : [];
 
-  // 우리가 저장한 원본 객체
-  return data.payload ?? null;
-};
+  const base: DailyPayload = {
+    date: data.date,
+    orders: safeNum(data.orders, 0),
+    visitCount: safeNum(data.visit_count, 0),
+    totalSales: safeNum(data.total_sales, 0),
+    monthlyTarget: template?.monthlyTarget,
+    categories: template?.categories
+      ? applySoldItemsToCategories(template.categories, soldItems)
+      : [],
+  };
 
-export const listDatesInRange = async (_start: string, _end: string): Promise<string[]> => {
-  return [];
-};
+  return base;
+}
 
-export const getMonthlyTotal = async (_month: string): Promise<number> => {
-  return 0;
-};
+/** -----------------------------
+ * 날짜 점마킹용: 데이터 있는 날짜 리스트
+ * (캘린더 datesWithData)
+ * ----------------------------- */
+export async function getDatesWithData(
+  startDate: string,
+  endDate: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("date")
+    .gte("date", startDate)
+    .lte("date", endDate);
 
-export const deleteDaily = async (_date: string): Promise<void> => {
-  return;
-};
+  if (error) {
+    console.error("[getDatesWithData] supabase error:", error);
+    throw error;
+  }
+
+  return (data || []).map((r: any) => r.date).filter(Boolean);
+}
+
+/** -----------------------------
+ * A3 리셋용(나중 트랙): 해당 날짜 row 삭제
+ * ----------------------------- */
+export async function deleteDaily(dateStr: string) {
+  const { error } = await supabase.from(TABLE).delete().eq("date", dateStr);
+  if (error) {
+    console.error("[deleteDaily] supabase error:", error);
+    throw error;
+  }
+  return true;
+}
+
+/** -----------------------------
+ * A2 월 누적(나중 트랙): 합계
+ * - SQL SUM을 쓰는 버전(가장 안정)
+ * ----------------------------- */
+export async function getMonthlyTotal(year: number, month1to12: number) {
+  const m = clampNumber(month1to12, 1, 12);
+  const start = `${year}-${String(m).padStart(2, "0")}-01`;
+  const endMonth = m === 12 ? 1 : m + 1;
+  const endYear = m === 12 ? year + 1 : year;
+  const end = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+
+  // PostgREST aggregate: select with sum()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("total_sales.sum()")
+    .gte("date", start)
+    .lt("date", end)
+    .single();
+
+  if (error) {
+    console.error("[getMonthlyTotal] supabase error:", error);
+    throw error;
+  }
+
+  // 형태: { sum: number } 또는 { sum: null }
+  const sumVal = (data as any)?.sum ?? 0;
+  return safeNum(sumVal, 0);
+}
+
+/** -----------------------------
+ * A4 히스토리(나중 트랙): 최근 N일
+ * ----------------------------- */
+export async function fetchPastData(limit = 30) {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary")
+    .order("date", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[fetchPastData] supabase error:", error);
+    throw error;
+  }
+
+  return data || [];
+}
