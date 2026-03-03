@@ -2,7 +2,7 @@ import React from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { format, parseISO } from "date-fns";
 import { DayPicker } from "react-day-picker";
-import { callOcr } from "../services/ocrService";
+import { callOcr } from "../services/services/ocrService";
 
 interface DataInputProps {
   data: SalesReportData;
