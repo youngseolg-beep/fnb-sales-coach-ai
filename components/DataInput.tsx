@@ -395,14 +395,13 @@ const res = await saveDailyData({
   ...data,
 });
     
-    console.log("[SAVE] result", res);
+   await saveDailyData({
+  date: dateStr,
+  ...data,
+});
 
-    if (!res?.ok) {
-      alert("저장 실패: " + (res?.error || "UNKNOWN_ERROR"));
-      return;
-    }
-
-    alert("매출 데이터 저장이 완료되었습니다.");
+alert("매출 데이터 저장이 완료되었습니다.");
+    
   } catch (e: any) {
     console.error("[SAVE] exception", e);
     alert("저장 중 오류: " + (e?.message || String(e)));
