@@ -1,12 +1,8 @@
-import React from 'react';
-import { SalesReportData, CorrectedItem } from '../types';
-import { format, parseISO } from 'date-fns';
-import { DayPicker } from 'react-day-picker';
-
-// ✅ 서버 OCR 호출로 변경 (프론트에서 Gemini 직접 호출 금지)
-import { callOcr } from "../services/services/ocrService";
-// 만약 네 파일이 services/ocrService.ts 위치라면 위 줄을 아래로 바꿔:
-// import { callOcr } from "../services/ocrService";
+import React from "react";
+import { SalesReportData, CorrectedItem } from "../types";
+import { format, parseISO } from "date-fns";
+import { DayPicker } from "react-day-picker";
+import { callOcr } from "../services/ocrService";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -14,6 +10,146 @@ interface DataInputProps {
   loading: boolean;
   datesWithData?: string[];
   onMonthChange?: (month: Date) => void;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 파일을 base64로 변환 */
+function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("File read failed"));
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const [meta, data] = result.split(",");
+      const mimeMatch = meta.match(/data:(.*);base64/);
+      resolve({
+        base64: data,
+        mimeType: mimeMatch?.[1] || file.type || "image/jpeg",
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/** OCR용 이미지 압축 */
+async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<File> {
+  const img = document.createElement("img");
+  const url = URL.createObjectURL(file);
+
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = url;
+  });
+
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+
+  const scale = Math.min(1, maxW / w);
+  const outW = Math.round(w * scale);
+  const outH = Math.round(h * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not supported");
+
+  ctx.drawImage(img, 0, 0, outW, outH);
+  URL.revokeObjectURL(url);
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", quality);
+  });
+
+  const newName = file.name.replace(/\.\w+$/, "") + ".jpg";
+  return new File([blob], newName, { type: "image/jpeg" });
+}
+
+/** OCR rawText에서 메뉴 라인 파싱 (홍콩반점 영수증 패턴 대응)
+ * 예시:
+ *  짜장면 ($7) .......... x2 = $14
+ *  짬뽕 ($7) ............ x4 = $28
+ */
+function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
+  const lines = rawText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const items: { name: string; price: number; qty: number }[] = [];
+
+  // 패턴1: "메뉴 ($7) .... x2 = $14"
+  const r1 = /^(.+?)\s*\(\s*\$?\s*([0-9]+(?:\.[0-9]+)?)\s*\)\s*.*?\bx\s*([0-9]+)\b/i;
+
+  // 패턴2: "메뉴 .... x2"
+  const r2 = /^(.+?)\s+.*?\bx\s*([0-9]+)\b/i;
+
+  // 패턴3: "메뉴 2 $7" 같은 단순형 (혹시 있을 때)
+  const r3 = /^(.+?)\s+([0-9]+)\s+\$?\s*([0-9]+(?:\.[0-9]+)?)$/i;
+
+  // 제외 키워드 (합계/날짜 등)
+  const skipKeywords = [
+    "DATE",
+    "ORDER",
+    "TOTAL",
+    "SUBTOTAL",
+    "TAX",
+    "SERVICE",
+    "AMOUNT",
+    "GRAND",
+    "CASH",
+    "CARD",
+    "CHANGE",
+    "TEL",
+    "ADDRESS",
+  ];
+
+  for (const line of lines) {
+    const up = line.toUpperCase();
+    if (skipKeywords.some((k) => up.includes(k))) continue;
+
+    // 너무 짧으면 패스
+    if (line.length < 2) continue;
+
+    let m = line.match(r1);
+    if (m) {
+      const name = m[1].replace(/\.+/g, " ").trim();
+      const price = parseFloat(m[2] || "0") || 0;
+      const qty = parseInt(m[3] || "0", 10) || 0;
+      if (name && qty > 0) items.push({ name, price, qty });
+      continue;
+    }
+
+    m = line.match(r3);
+    if (m) {
+      const name = m[1].replace(/\.+/g, " ").trim();
+      const qty = parseInt(m[2] || "0", 10) || 0;
+      const price = parseFloat(m[3] || "0") || 0;
+      if (name && qty > 0) items.push({ name, price, qty });
+      continue;
+    }
+
+    // r2는 가격이 없을 수 있음 → price=0으로 넣고, 나중에 메뉴매칭할 때 메뉴 가격으로 보정됨
+    m = line.match(r2);
+    if (m) {
+      const name = m[1].replace(/\.+/g, " ").trim();
+      const qty = parseInt(m[2] || "0", 10) || 0;
+      if (name && qty > 0) items.push({ name, price: 0, qty });
+      continue;
+    }
+  }
+
+  // 중복 합치기 (name+price 기준)
+  const merged: Record<string, { name: string; price: number; qty: number }> = {};
+  for (const it of items) {
+    const key = `${it.name}||${it.price}`;
+    if (!merged[key]) merged[key] = { ...it };
+    else merged[key].qty += it.qty;
+  }
+
+  return Object.values(merged);
 }
 
 const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWithData, onMonthChange }) => {
@@ -27,152 +163,28 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     onChange({ ...data, categories: newCategories });
   };
 
-  // Helper for consistent input styling
   const inputClasses =
     "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
   const numericInputClasses = `${inputClasses} text-right pr-12`;
 
+  // OCR state
   const [ocrFiles, setOcrFiles] = React.useState<File[]>([]);
   const [ocrFileStatuses, setOcrFileStatuses] = React.useState<
-    Record<string, { status: 'pending' | 'processing' | 'success' | 'failed' | 'retrying', error?: string, retryCount?: number }>
+    Record<string, { status: "pending" | "processing" | "success" | "failed" | "retrying"; error?: string; retryCount?: number }>
   >({});
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
-  const [ocrRawText, setOcrRawText] = React.useState<string>('');
-  const [ocrItems, setOcrItems] = React.useState<CorrectedItem[]>([]);
+  const [ocrRawText, setOcrRawText] = React.useState<string>("");
   const [ocrItemsAccumulated, setOcrItemsAccumulated] = React.useState<CorrectedItem[]>([]);
   const [manualMappings, setManualMappings] = React.useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = React.useState<boolean>(false);
-  const [ocrProgress, setOcrProgress] = React.useState<{ current: number, total: number } | null>(null);
+  const [ocrProgress, setOcrProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [ocrOptimizing, setOcrOptimizing] = React.useState<boolean>(false);
-  const [ocrParsing, setOcrParsing] = React.useState<boolean>(false); // UI 문구용(파싱 단계), 서버 호출 구조로 바뀌어도 유지
-  const [ocrError, setOcrError] = React.useState<string>('');
-  const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>('');
+  const [ocrError, setOcrError] = React.useState<string>("");
+  const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
-  const [ocrDebugInfo, setOcrDebugInfo] = React.useState<{
-    originalSize: number;
-    originalRes: string;
-    compressedSize: number;
-    compressedRes: string;
-  } | null>(null);
 
-  React.useEffect(() => {
-    if (ocrFiles.length > 0) {
-      const url = URL.createObjectURL(ocrFiles[0]);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [ocrFiles]);
-
-  const compressForOcr = async (file: File, maxW = 1024, quality = 0.6): Promise<File> => {
-    const img = document.createElement("img");
-    const url = URL.createObjectURL(file);
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Image load failed"));
-      img.src = url;
-    });
-
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-
-    const scale = Math.min(1, maxW / w);
-    const outW = Math.round(w * scale);
-    const outH = Math.round(h * scale);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = outW;
-    canvas.height = outH;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas not supported");
-
-    ctx.drawImage(img, 0, 0, outW, outH);
-
-    URL.revokeObjectURL(url);
-
-    const blob: Blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        b => (b ? resolve(b) : reject(new Error("toBlob failed"))),
-        "image/jpeg",
-        quality
-      );
-    });
-
-    const newName = file.name.replace(/\.\w+$/, "") + ".jpg";
-
-    // Update debug info
-    setOcrDebugInfo({
-      originalSize: file.size,
-      originalRes: `${w}x${h}`,
-      compressedSize: blob.size,
-      compressedRes: `${outW}x${outH}`
-    });
-
-    return new File([blob], newName, { type: "image/jpeg" });
-  };
-
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const callWithRetry = async <T,>(
-    fn: () => Promise<T>,
-    fileName: string,
-    maxRetries = 3
-  ): Promise<T> => {
-    let lastErr: any;
-    const delays = [2000, 5000, 10000];
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await fn();
-      } catch (err: any) {
-        lastErr = err;
-        const errMsg = err?.message || "";
-        const is429 =
-          errMsg.includes("429") ||
-          errMsg.includes("RESOURCE_EXHAUSTED") ||
-          errMsg.toLowerCase().includes("rate") ||
-          errMsg.toLowerCase().includes("limit");
-
-        if (is429 && attempt < maxRetries) {
-          const delay = delays[attempt] + Math.random() * 800;
-          setOcrFileStatuses(prev => ({
-            ...prev,
-            [fileName]: {
-              ...prev[fileName],
-              status: 'retrying',
-              retryCount: attempt + 1
-            }
-          }));
-          await sleep(delay);
-          continue;
-        }
-        throw err;
-      }
-    }
-    throw lastErr;
-  };
-
-  // ✅ 파일을 base64로 변환 (서버 OCR 호출용)
-  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("File read failed"));
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        const [meta, data] = result.split(",");
-        const mimeMatch = meta.match(/data:(.*);base64/);
-        resolve({
-          base64: data,
-          mimeType: mimeMatch?.[1] || file.type || "image/jpeg",
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
+  // Calendar state
   const [showCalendar, setShowCalendar] = React.useState(false);
   const calendarButtonRef = React.useRef<HTMLButtonElement>(null);
   const [calendarPos, setCalendarPos] = React.useState({ top: 0, left: 0 });
@@ -184,16 +196,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       const popupWidth = 320;
 
       let left = rect.left;
-      // Auto-correction for right boundary
-      if (left + popupWidth > windowWidth) {
-        left = windowWidth - popupWidth - 20;
-      }
-      // Auto-correction for left boundary
+      if (left + popupWidth > windowWidth) left = windowWidth - popupWidth - 20;
       if (left < 20) left = 20;
 
       setCalendarPos({
         top: rect.bottom + window.scrollY + 8,
-        left: left
+        left,
       });
     }
     setShowCalendar(!showCalendar);
@@ -201,25 +209,33 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
   React.useEffect(() => {
     if (!showCalendar) return;
-
     const close = () => setShowCalendar(false);
-
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
-
     return () => {
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
   }, [showCalendar]);
 
+  React.useEffect(() => {
+    if (ocrFiles.length > 0) {
+      const url = URL.createObjectURL(ocrFiles[0]);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [ocrFiles]);
+
+  // 메뉴명 정규화/유사도
   const normalizeName = (name: string): string => {
     return name
       .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^\wㄱ-ㅎ가-힣0-9]/g, '')
-      .replace(/\(.*\)/g, '')
-      .replace(/[0-9]+(원|usd|\$)/g, '')
+      .replace(/\s+/g, "")
+      .replace(/[^\wㄱ-ㅎ가-힣0-9]/g, "")
+      .replace(/\(.*\)/g, "")
+      .replace(/[0-9]+(원|usd|\$)/g, "")
       .trim();
   };
 
@@ -227,18 +243,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     const len1 = s1.length;
     const len2 = s2.length;
     const matrix: number[][] = [];
-
     for (let i = 0; i <= len1; i++) matrix[i] = [i];
     for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-
     for (let i = 1; i <= len1; i++) {
       for (let j = 1; j <= len2; j++) {
         const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
+        matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
       }
     }
     return matrix[len1][len2];
@@ -253,221 +263,200 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const allMenus = React.useMemo(() => {
-    const flattened: { id: string, name: string, price: number, normalizedName: string }[] = [];
-    data.categories.forEach(cat => {
-      cat.items.forEach(item => {
+    const flattened: { id: string; name: string; price: number; normalizedName: string }[] = [];
+    data.categories.forEach((cat) => {
+      cat.items.forEach((item) => {
         flattened.push({
           id: item.id,
           name: item.name,
           price: item.price,
-          normalizedName: normalizeName(item.name)
+          normalizedName: normalizeName(item.name),
         });
       });
     });
     return flattened;
   }, [data.categories]);
 
-  const autoCorrectItem = (
-    ocrItem: { name: string, price: number, qty: number }
-  ): CorrectedItem => {
+  /** OCR 파싱 결과(원문명/qty/price)를 실제 메뉴로 자동 교정 */
+  const autoCorrectItem = (ocrItem: { name: string; price: number; qty: number }): CorrectedItem => {
     const originalName = ocrItem.name;
     const normalizedOcrName = normalizeName(originalName);
 
-    // 0. Check manual mappings first
+    // 0) 수동 매핑 우선
     if (manualMappings[originalName]) {
-      const matched = allMenus.find(m => m.id === manualMappings[originalName]);
+      const matched = allMenus.find((m) => m.id === manualMappings[originalName]);
       if (matched) {
         return {
           matched_id: matched.id,
           item_original: originalName,
           item_corrected: matched.name,
-          unit_price: ocrItem.price,
+          unit_price: ocrItem.price || matched.price,
           qty: ocrItem.qty,
           confidence: 1.0,
-          needs_review: false
+          needs_review: false,
         };
       }
     }
 
-    // 1. Exact match (normalized)
-    const exactMatch = allMenus.find(m => m.normalizedName === normalizedOcrName);
+    // 1) 완전 일치
+    const exactMatch = allMenus.find((m) => m.normalizedName === normalizedOcrName);
     if (exactMatch) {
       return {
         matched_id: exactMatch.id,
         item_original: originalName,
         item_corrected: exactMatch.name,
-        unit_price: ocrItem.price,
+        unit_price: ocrItem.price || exactMatch.price,
         qty: ocrItem.qty,
         confidence: 1.0,
-        needs_review: false
+        needs_review: false,
       };
     }
 
-    // 2. Similarity match
-    const scores = allMenus.map(m => ({
-      ...m,
-      score: getSimilarity(normalizedOcrName, m.normalizedName)
-    })).sort((a, b) => b.score - a.score);
+    // 2) 유사도 매칭
+    const scores = allMenus
+      .map((m) => ({
+        ...m,
+        score: getSimilarity(normalizedOcrName, m.normalizedName),
+      }))
+      .sort((a, b) => b.score - a.score);
 
     const bestMatch = scores[0];
     const secondMatch = scores[1];
 
-    let confidence = bestMatch.score;
+    let confidence = bestMatch?.score ?? 0;
     let needsReview = true;
 
-    // Rules for auto-correction
-    if (bestMatch.score >= 0.88) {
-      const scoreGap = secondMatch ? (bestMatch.score - secondMatch.score) : bestMatch.score;
-      if (scoreGap >= 0.08) {
-        needsReview = false;
-      }
+    if (bestMatch && bestMatch.score >= 0.88) {
+      const scoreGap = secondMatch ? bestMatch.score - secondMatch.score : bestMatch.score;
+      if (scoreGap >= 0.08) needsReview = false;
     }
 
-    // Price validation
-    if (!needsReview && ocrItem.price > 0) {
-      const priceDiff = Math.abs(bestMatch.price - ocrItem.price);
-      const priceDiffRatio = bestMatch.price > 0 ? priceDiff / bestMatch.price : 0;
-      if (priceDiffRatio > 0.2) {
-        needsReview = true;
-      }
+    // 가격 검증(있을 때)
+    const usedPrice = ocrItem.price || bestMatch?.price || 0;
+    if (!needsReview && usedPrice > 0 && bestMatch?.price) {
+      const priceDiff = Math.abs(bestMatch.price - usedPrice);
+      const ratio = bestMatch.price > 0 ? priceDiff / bestMatch.price : 0;
+      if (ratio > 0.2) needsReview = true;
     }
 
-    // Qty validation
-    if (ocrItem.qty <= 0) {
-      needsReview = true;
-    }
+    if (ocrItem.qty <= 0) needsReview = true;
 
     return {
-      matched_id: needsReview ? undefined : bestMatch.id,
+      matched_id: needsReview ? undefined : bestMatch?.id,
       item_original: originalName,
-      item_corrected: bestMatch.name,
-      unit_price: ocrItem.price,
+      item_corrected: bestMatch?.name || originalName,
+      unit_price: usedPrice,
       qty: ocrItem.qty,
-      confidence: confidence,
+      confidence,
       needs_review: needsReview,
-      candidates: scores.slice(0, 3).map(s => ({ name: s.name, id: s.id, score: s.score }))
+      candidates: scores.slice(0, 3).map((s) => ({ name: s.name, id: s.id, score: s.score })),
     };
   };
 
-  // ✅ OCR 실행: 서버(/api/ocr)로만 호출
+  /** 서버 OCR 호출 (429 재시도 포함) */
+  const callOcrWithRetry = async (imageBase64: string, mimeType: string, fileName: string) => {
+    const delays = [2000, 5000, 10000];
+    let lastErr: any;
+
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      try {
+        return await callOcr(imageBase64, mimeType);
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || "");
+        const is429 = msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("Rate");
+
+        if (is429 && attempt < 3) {
+          const delay = delays[attempt] + Math.random() * 800;
+          setOcrFileStatuses((prev) => ({
+            ...prev,
+            [fileName]: { ...prev[fileName], status: "retrying", retryCount: attempt + 1 },
+          }));
+          await sleep(delay);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr;
+  };
+
+  /** ✅ OCR 실행: 이제 브라우저에서 Gemini 직접 호출하지 않고, /api/ocr만 호출 */
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const filesToProcess = filesToProcessOverride || [...ocrFiles];
     if (filesToProcess.length === 0) return;
 
     setOcrLoading(true);
-    setOcrError('');
-    setOcrErrorDetail('');
-
-    // Initialize statuses for files being processed
-    const initialStatuses = { ...ocrFileStatuses };
-    filesToProcess.forEach(f => {
-      initialStatuses[f.name] = { status: 'pending' };
-    });
-    setOcrFileStatuses(initialStatuses);
-
+    setOcrError("");
+    setOcrErrorDetail("");
     setOcrProgress({ current: 0, total: filesToProcess.length });
+
+    // 상태 초기화
+    const initialStatuses = { ...ocrFileStatuses };
+    filesToProcess.forEach((f) => (initialStatuses[f.name] = { status: "pending" }));
+    setOcrFileStatuses(initialStatuses);
 
     for (let i = 0; i < filesToProcess.length; i++) {
       const currentFile = filesToProcess[i];
       setOcrProgress({ current: i + 1, total: filesToProcess.length });
 
-      setOcrFileStatuses(prev => ({
+      setOcrFileStatuses((prev) => ({
         ...prev,
-        [currentFile.name]: { status: 'processing' }
+        [currentFile.name]: { status: "processing" },
       }));
 
-      // Throttle: 1.8s - 2.8s random delay
-      if (i > 0) {
-        await sleep(1800 + Math.random() * 1000);
-      }
+      if (i > 0) await sleep(1800 + Math.random() * 1000);
 
       try {
         setOcrOptimizing(true);
-        setOcrParsing(false);
 
+        // 1) 이미지 최적화
         const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
-        setOcrOptimizing(false);
 
-        // ✅ 서버 OCR 호출 단계 표시용
-        setOcrParsing(true);
-
-        // optimizedFile → base64
+        // 2) base64 변환
         const { base64, mimeType } = await fileToBase64(optimizedFile);
 
-        // 서버에 OCR 요청 (429/Rate limit이면 retry)
-        const ocrJson: any = await callWithRetry(
-          () => callOcr(base64, mimeType),
-          currentFile.name
-        );
+        setOcrOptimizing(false);
 
-        const extractedText = String(ocrJson?.rawText || "");
-        setOcrRawText(prev =>
-          prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText
-        );
+        // 3) 서버 OCR 호출
+        const ocrResult = await callOcrWithRetry(base64, mimeType, currentFile.name);
 
-        if (!extractedText) {
-          throw new Error("텍스트를 추출하지 못했습니다.");
+        const extractedText = String(ocrResult?.rawText || "").trim();
+        if (!extractedText) throw new Error("텍스트를 추출하지 못했습니다.");
+
+        // rawText 누적 표시
+        setOcrRawText((prev) => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
+
+        // 4) ✅ rawText → 메뉴 파싱 (여기가 핵심)
+        const parsedItems = extractMenuItemsFromRawText(extractedText);
+        if (parsedItems.length === 0) {
+          // 텍스트는 있는데 메뉴가 0개면, 사용자에게 “패턴 불일치” 안내
+          console.warn("[OCR] parsedItems=0. rawText exists but menu pattern not matched.");
         }
 
-        // 서버 items → local autoCorrectItem 입력 형태로 변환
-        const serverItems = Array.isArray(ocrJson?.items) ? ocrJson.items : [];
-        const parsedItems = serverItems
-          .map((it: any) => ({
-            name: String(it?.name || it?.item || it?.menu || ""),
-            price: Number(it?.unit_price ?? it?.price ?? it?.unitPrice ?? 0),
-            qty: Number(it?.qty ?? it?.quantity ?? 0),
-          }))
-          .filter((it: any) => it.name && it.qty > 0);
+        // 5) 메뉴명 자동교정
+        const correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
 
-        const correctedNewItems = parsedItems.map((item: any) => autoCorrectItem(item));
+        // 누적 반영
+        setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
 
-        setOcrItems(prev => [...prev, ...correctedNewItems]);
-
-        setOcrItemsAccumulated(prev => {
-          const recentItems = prev.slice(-30);
-          const recentKeys = new Set(recentItems.map(item => `${item.item_corrected}||${item.unit_price}||${item.qty}`));
-
-          const filteredNew = correctedNewItems.filter(item => {
-            const key = `${item.item_corrected}||${item.unit_price}||${item.qty}`;
-            return !recentKeys.has(key);
-          });
-
-          return [...prev, ...filteredNew];
-        });
-
-        setOcrFileStatuses(prev => ({
+        setOcrFileStatuses((prev) => ({
           ...prev,
-          [currentFile.name]: { status: 'success' }
+          [currentFile.name]: { status: "success" },
         }));
-
       } catch (err: any) {
         console.error(`Error processing file ${currentFile.name}:`, err);
         const errorDetail = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
 
-        // 서버 에러 메시지 노출
-        setOcrErrorDetail(errorDetail);
-
-        const msg = err?.message || '알 수 없는 오류';
-
-        // 키/서버 설정 관련 메시지
-        if (msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("gemini_api_key")) {
-          setOcrError('API 키가 설정되지 않았거나 서버에서 읽지 못했습니다. (Vercel 환경변수/재배포 확인 필요)');
-          setOcrFileStatuses(prev => ({
-            ...prev,
-            [currentFile.name]: { status: 'failed', error: 'API 키/서버 설정 오류' }
-          }));
-          break;
-        }
-
-        setOcrFileStatuses(prev => ({
+        setOcrFileStatuses((prev) => ({
           ...prev,
-          [currentFile.name]: { status: 'failed', error: msg }
+          [currentFile.name]: { status: "failed", error: err?.message || "알 수 없는 오류" },
         }));
-        setOcrError(prev => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패 (${msg})`);
 
+        setOcrError((prev) => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패`);
+        setOcrErrorDetail(errorDetail);
       } finally {
         setOcrOptimizing(false);
-        setOcrParsing(false);
       }
     }
 
@@ -476,20 +465,17 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const handleRetryFailed = () => {
-    const failedFiles = ocrFiles.filter(f => ocrFileStatuses[f.name]?.status === 'failed');
-    if (failedFiles.length > 0) {
-      handleOcr(failedFiles);
-    }
+    const failedFiles = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status === "failed");
+    if (failedFiles.length > 0) handleOcr(failedFiles);
   };
 
   const resetOcr = () => {
     setOcrFiles([]);
     setOcrFileStatuses({});
-    setOcrRawText('');
-    setOcrItems([]);
+    setOcrRawText("");
     setOcrItemsAccumulated([]);
-    setOcrError('');
-    setOcrErrorDetail('');
+    setOcrError("");
+    setOcrErrorDetail("");
     setOcrProgress(null);
   };
 
@@ -499,11 +485,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     const newCategories = [...data.categories];
     let matchedCount = 0;
 
-    ocrItemsAccumulated.forEach(ocrItem => {
+    ocrItemsAccumulated.forEach((ocrItem) => {
       if (ocrItem.needs_review || !ocrItem.matched_id) return;
 
-      newCategories.forEach(cat => {
-        cat.items.forEach(menuItem => {
+      newCategories.forEach((cat) => {
+        cat.items.forEach((menuItem) => {
           if (menuItem.id === ocrItem.matched_id) {
             menuItem.qty = (menuItem.qty || 0) + ocrItem.qty;
             matchedCount++;
@@ -517,71 +503,59 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const handleConfirmCorrection = (idx: number, matchedId: string) => {
-    setOcrItemsAccumulated(prev => {
+    setOcrItemsAccumulated((prev) => {
       const next = [...prev];
       const item = next[idx];
-      const matched = allMenus.find(m => m.id === matchedId);
+      const matched = allMenus.find((m) => m.id === matchedId);
       if (matched) {
         next[idx] = {
           ...item,
           matched_id: matched.id,
           item_corrected: matched.name,
           needs_review: false,
-          confidence: 1.0
+          confidence: 1.0,
         };
-        // Cache manual mapping
-        setManualMappings(prevMap => ({
+        setManualMappings((prevMap) => ({
           ...prevMap,
-          [item.item_original]: matched.id
+          [item.item_original]: matched.id,
         }));
       }
       return next;
     });
   };
 
-  const needsReviewItems = ocrItemsAccumulated.filter(item => item.needs_review);
-  const confirmedItems = ocrItemsAccumulated.filter(item => !item.needs_review);
+  const needsReviewItems = ocrItemsAccumulated.filter((item) => item.needs_review);
+  const confirmedItems = ocrItemsAccumulated.filter((item) => !item.needs_review);
 
-  // OCR Total Verification Logic
-  const extractReceiptTotal = (text: string): number | null => {
-    if (!text) return null;
-
-    const keywords = ["TOTAL", "Total", "합계", "총액", "Grand Total", "AMOUNT", "NET TOTAL", "G.TOTAL"];
-    const lines = text.split('\n');
-    let foundTotal: number | null = null;
-
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].toUpperCase();
-      const hasKeyword = keywords.some(k => line.includes(k.toUpperCase()));
-
-      if (hasKeyword) {
-        const matches = line.match(/[\d,.]+/g);
-        if (matches) {
-          let maxInLine = 0;
-          for (const match of matches) {
-            const cleaned = match.replace(/,/g, '');
-            const val = parseFloat(cleaned);
-            if (!isNaN(val) && val > 0) {
-              if (val > maxInLine) maxInLine = val;
-            }
-          }
-          if (maxInLine > 0) {
-            foundTotal = maxInLine;
-            break;
-          }
-        }
-      }
-    }
-    return foundTotal;
-  };
-
+  // 합계 비교 (메뉴 가격은 매칭된 메뉴 가격 우선)
   const scanTotal = React.useMemo(() => {
     return ocrItemsAccumulated.reduce((sum, item) => {
-      const menuPrice = item.matched_id ? allMenus.find(m => m.id === item.matched_id)?.price : null;
+      const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
       const priceToUse = menuPrice !== null && menuPrice !== undefined ? menuPrice : item.unit_price;
-      return sum + (priceToUse * item.qty);
+      return sum + priceToUse * item.qty;
     }, 0);
   }, [ocrItemsAccumulated, allMenus]);
+
+  // 영수증 TOTAL 추출
+  const extractReceiptTotal = (text: string): number | null => {
+    if (!text) return null;
+    const keywords = ["TOTAL", "합계", "총액", "GRAND TOTAL", "AMOUNT", "NET TOTAL", "G.TOTAL"];
+    const lines = text.split("\n");
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].toUpperCase();
+      if (!keywords.some((k) => line.includes(k))) continue;
+      const matches = line.match(/[\d,.]+/g);
+      if (!matches) continue;
+      let maxInLine = 0;
+      for (const match of matches) {
+        const cleaned = match.replace(/,/g, "");
+        const val = parseFloat(cleaned);
+        if (!isNaN(val) && val > maxInLine) maxInLine = val;
+      }
+      if (maxInLine > 0) return maxInLine;
+    }
+    return null;
+  };
 
   const receiptTotal = React.useMemo(() => extractReceiptTotal(ocrRawText), [ocrRawText]);
 
@@ -617,11 +591,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
           </div>
 
           <div className="p-6 space-y-4">
-            {/* OCR Usage Guide */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-slate-700">
-              <p className="font-bold text-sm mb-2 flex items-center gap-2">
-                📌 OCR 사용 안내
-              </p>
+              <p className="font-bold text-sm mb-2 flex items-center gap-2">📌 OCR 사용 안내</p>
               <ul className="text-xs space-y-1.5">
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">📄</span>
@@ -629,7 +600,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">🔁</span>
-                  <span>여러 장 처리 시 인식된 중복 항목은 자동으로 처리됩니다.</span>
+                  <span>여러 장 처리 시 인식된 중복 항목이 있을 수 있어요(최종 확인 필수).</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">⚠️</span>
@@ -643,8 +614,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 <div className="flex justify-between items-end mb-1">
                   <label className="block text-xs font-bold text-slate-500">
                     영수증 사진 선택 (카메라/갤러리)
-                    {ocrFiles.length > 0 && <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>}
+                    {ocrFiles.length > 0 && (
+                      <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>
+                    )}
                   </label>
+
                   {ocrItemsAccumulated.length > 0 && (
                     <button
                       onClick={resetOcr}
@@ -660,13 +634,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   type="file"
                   accept="image/*"
                   multiple
-                  key={ocrFiles.length > 0 ? 'has-files' : 'no-files'}
-                  onChange={e => {
+                  key={ocrFiles.length > 0 ? "has-files" : "no-files"}
+                  onChange={(e) => {
                     const files = Array.from(e.target.files || []);
                     setOcrFiles(files);
                     setOcrFileStatuses({});
-                    setOcrRawText('');
-                    setOcrItems([]);
+                    setOcrRawText("");
+                    setOcrItemsAccumulated([]);
                   }}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer"
                 />
@@ -685,39 +659,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               )}
             </div>
 
-            {ocrFiles.length > 0 && !ocrRawText && !ocrLoading && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                {/* Debug Info Box */}
-                {ocrDebugInfo && (
-                  <div className="p-3 bg-slate-900/5 rounded-xl border border-slate-200 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-mono text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-400">LAST FILE ORIGINAL:</span>
-                      <span>{(ocrDebugInfo.originalSize / 1024).toFixed(1)}KB</span>
-                      <span className="opacity-30">|</span>
-                      <span>{ocrDebugInfo.originalRes}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-indigo-500">LAST FILE OPTIMIZED:</span>
-                      <span className="text-indigo-600">{(ocrDebugInfo.compressedSize / 1024).toFixed(1)}KB</span>
-                      <span className="opacity-30">|</span>
-                      <span className="text-indigo-600">{ocrDebugInfo.compressedRes}</span>
-                    </div>
-                  </div>
-                )}
-
-                {previewUrl && !ocrLoading && (
-                  <div className="relative w-full max-h-64 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-full object-contain max-h-64"
-                    />
-                    <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
-                    {ocrFiles.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg font-bold">
-                        첫 번째 사진 미리보기 (총 {ocrFiles.length}장)
-                      </div>
-                    )}
+            {previewUrl && !ocrLoading && ocrFiles.length > 0 && (
+              <div className="relative w-full max-h-64 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-contain max-h-64" />
+                <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
+                {ocrFiles.length > 1 && (
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg font-bold">
+                    첫 번째 사진 미리보기 (총 {ocrFiles.length}장)
                   </div>
                 )}
               </div>
@@ -731,28 +679,23 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-black text-slate-800">
-                    {ocrProgress ? `${ocrProgress.current}/${ocrProgress.total} 사진 분석 중...` : '준비 중...'}
+                    {ocrProgress ? `${ocrProgress.current}/${ocrProgress.total} 사진 분석 중...` : "준비 중..."}
                   </p>
                   <div className="mt-2 space-y-1">
-                    {Object.entries(ocrFileStatuses).map(([name, status]: [string, any]) => (
-                      status.status === 'retrying' && (
+                    {Object.entries(ocrFileStatuses).map(([name, status]: [string, any]) =>
+                      status.status === "retrying" ? (
                         <p key={name} className="text-[10px] font-bold text-amber-600 animate-pulse">
                           {name}: 레이트리밋으로 대기 후 재시도 중... (시도 {status.retryCount}/3)
                         </p>
-                      )
-                    ))}
+                      ) : null
+                    )}
                   </div>
-                  <p className="text-xs font-bold text-indigo-600 mt-1">
-                    {ocrOptimizing ? '이미지 최적화 중...' : ocrParsing ? '서버에서 OCR 처리 중...' : '준비 중...'}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                    {ocrOptimizing ? '고화질 이미지를 가볍게 변환하고 있습니다' : ocrParsing ? '서버가 텍스트/메뉴를 추출하고 있습니다' : '잠시만 기다려주세요'}
-                  </p>
+                  <p className="text-xs font-bold text-indigo-600 mt-1">{ocrOptimizing ? "이미지 최적화 중..." : "서버 OCR 호출 중..."}</p>
                 </div>
               </div>
             )}
 
-            {Object.values(ocrFileStatuses).some((s: any) => s.status === 'failed') && !ocrLoading && (
+            {Object.values(ocrFileStatuses).some((s: any) => s.status === "failed") && !ocrLoading && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black text-rose-600 flex items-center gap-2">
@@ -767,13 +710,15 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   </button>
                 </div>
                 <ul className="space-y-1">
-                  {Object.entries(ocrFileStatuses).filter(([_, s]: [string, any]) => s.status === 'failed').map(([name, s]: [string, any]) => (
-                    <li key={name} className="text-[10px] text-rose-500 flex items-center gap-2">
-                      <span className="font-bold truncate max-w-[200px]">{name}</span>
-                      <span className="opacity-50">|</span>
-                      <span>{s.error}</span>
-                    </li>
-                  ))}
+                  {Object.entries(ocrFileStatuses)
+                    .filter(([_, s]: [string, any]) => s.status === "failed")
+                    .map(([name, s]: [string, any]) => (
+                      <li key={name} className="text-[10px] text-rose-500 flex items-center gap-2">
+                        <span className="font-bold truncate max-w-[200px]">{name}</span>
+                        <span className="opacity-50">|</span>
+                        <span>{s.error}</span>
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}
@@ -787,9 +732,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 {ocrErrorDetail && (
                   <div className="p-3 bg-rose-900/5 border border-rose-200 rounded-xl">
                     <p className="text-[10px] font-bold text-rose-800 mb-1 uppercase tracking-wider">Error Details:</p>
-                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">
-                      {ocrErrorDetail}
-                    </pre>
+                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">{ocrErrorDetail}</pre>
                   </div>
                 )}
               </div>
@@ -797,7 +740,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
             {ocrRawText && (
               <div className="space-y-4">
-                {/* Total Verification Box */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="flex-1 grid grid-cols-2 gap-4">
@@ -818,11 +760,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
                     <div className="flex items-center">
                       {receiptTotal !== null ? (
-                        <div className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black ${
-                          isTotalMatched
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            : "bg-rose-50 text-rose-600 border border-rose-100"
-                        }`}>
+                        <div
+                          className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black ${
+                            isTotalMatched ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
+                          }`}
+                        >
                           <i className={`fa-solid ${isTotalMatched ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
                           {isTotalMatched ? "총액 일치 (정확 가능성 높음)" : "총액 불일치 (재확인 필요)"}
                         </div>
@@ -873,7 +815,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                   <span className="text-[9px] font-bold text-rose-400">{(item.confidence * 100).toFixed(0)}%</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                  {item.candidates?.map(cand => (
+                                  {item.candidates?.map((cand) => (
                                     <button
                                       key={cand.id}
                                       onClick={() => handleConfirmCorrection(idx, cand.id)}
@@ -887,9 +829,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                     className="px-2 py-1 bg-white border border-rose-200 rounded-md text-[9px] font-bold text-rose-600 outline-none"
                                     value=""
                                   >
-                                    <option value="" disabled>직접 선택...</option>
-                                    {allMenus.map(m => (
-                                      <option key={m.id} value={m.id}>{m.name}</option>
+                                    <option value="" disabled>
+                                      직접 선택...
+                                    </option>
+                                    {allMenus.map((m) => (
+                                      <option key={m.id} value={m.id}>
+                                        {m.name}
+                                      </option>
                                     ))}
                                   </select>
                                 </div>
@@ -918,7 +864,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                     <span className="text-indigo-600 font-black">{item.qty}</span>
                                     <button
                                       onClick={() => {
-                                        setOcrItemsAccumulated(prev => {
+                                        setOcrItemsAccumulated((prev) => {
                                           const next = [...prev];
                                           next[idx].needs_review = true;
                                           return next;
@@ -937,7 +883,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       )}
 
                       {ocrItemsAccumulated.length === 0 && (
-                        <p className="text-xs text-slate-400 text-center mt-10">인식된 메뉴가 없습니다.</p>
+                        <p className="text-xs text-slate-400 text-center mt-10">인식된 메뉴가 없습니다. (영수증 형식이 다르면 파싱 규칙을 추가해야 함)</p>
                       )}
                     </div>
                   </div>
@@ -951,6 +897,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     <i className="fa-solid fa-trash-can"></i>
                     🧹 OCR 데이터 초기화
                   </button>
+
                   <button
                     onClick={applyOcr}
                     disabled={ocrItemsAccumulated.length === 0}
@@ -959,12 +906,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     <i className="fa-solid fa-check"></i>
                     ✅ 데이터 입력창에 적용하기
                   </button>
+
                   <button
                     onClick={() => setShowOcr(false)}
                     className="px-4 py-3 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-sm font-black hover:bg-slate-200 transition-all flex items-center gap-2"
                   >
-                    <i className="fa-solid fa-xmark"></i>
-                    ✕ OCR 닫기
+                    <i className="fa-solid fa-xmark"></i>✕ OCR 닫기
                   </button>
                 </div>
               </div>
@@ -981,6 +928,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             기본 정보 및 목표
           </h2>
         </div>
+
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Date Field */}
           <div className="lg:col-span-1 relative">
@@ -999,10 +947,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 {showCalendar && (
                   <div
                     style={{
-                      position: 'fixed',
+                      position: "fixed",
                       top: calendarPos.top - window.scrollY,
                       left: calendarPos.left,
-                      zIndex: 9999
+                      zIndex: 9999,
                     }}
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
@@ -1011,25 +959,26 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       selected={parseISO(data.date)}
                       onSelect={(date) => {
                         if (date) {
-                          updateBaseField('date', format(date, 'yyyy-MM-dd'));
+                          updateBaseField("date", format(date, "yyyy-MM-dd"));
                           setShowCalendar(false);
                         }
                       }}
                       onMonthChange={onMonthChange}
                       modifiers={{
-                        hasData: (datesWithData || []).map(d => parseISO(d))
+                        hasData: (datesWithData || []).map((d) => parseISO(d)),
                       }}
                       modifiersClassNames={{
-                        hasData: "has-data"
+                        hasData: "has-data",
                       }}
                     />
                   </div>
                 )}
               </div>
+
               <button
                 onClick={() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  updateBaseField('date', today);
+                  const today = new Date().toISOString().split("T")[0];
+                  updateBaseField("date", today);
                 }}
                 className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-colors uppercase"
               >
@@ -1044,12 +993,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             <div className="relative">
               <input
                 type="number"
-                value={data.posSales || ''}
-                onChange={e => updateBaseField('posSales', Number(e.target.value))}
+                value={data.posSales || ""}
+                onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
                 className={numericInputClasses}
                 placeholder="0"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">USD</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                USD
+              </span>
             </div>
           </div>
 
@@ -1059,12 +1010,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             <div className="relative">
               <input
                 type="number"
-                value={data.visitCount || ''}
-                onChange={e => updateBaseField('visitCount', Number(e.target.value))}
+                value={data.visitCount || ""}
+                onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
                 className={numericInputClasses}
                 placeholder="0"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">명</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                명
+              </span>
             </div>
           </div>
 
@@ -1074,12 +1027,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             <div className="relative">
               <input
                 type="number"
-                value={data.orders || ''}
-                onChange={e => updateBaseField('orders', Number(e.target.value))}
+                value={data.orders || ""}
+                onChange={(e) => updateBaseField("orders", Number(e.target.value))}
                 className={numericInputClasses}
                 placeholder="0"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">건</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                건
+              </span>
             </div>
           </div>
 
@@ -1089,7 +1044,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             <input
               type="text"
               value={data.note}
-              onChange={e => updateBaseField('note', e.target.value)}
+              onChange={(e) => updateBaseField("note", e.target.value)}
               placeholder="예: 비 옴, 짜장면 품절 등"
               className={inputClasses}
             />
@@ -1114,11 +1069,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     <input
                       type="number"
                       min="0"
-                      value={item.qty || ''}
-                      onChange={e => updateQty(catIdx, itemIdx, Number(e.target.value))}
+                      value={item.qty || ""}
+                      onChange={(e) => updateQty(catIdx, itemIdx, Number(e.target.value))}
                       className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
                       placeholder="0"
-                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -1127,7 +1081,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
           </div>
         ))}
       </div>
-
     </div>
   );
 };
