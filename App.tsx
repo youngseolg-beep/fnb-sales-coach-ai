@@ -1,4 +1,5 @@
 
+import { saveDailyData } from "./services/salesStorage";
 import React, { useState, useMemo, useEffect } from 'react';
 import { SalesReportData, CalculationResult, MenuCategory, MenuEngineeringResult } from './types';
 import { generateCoachingReport } from './services/geminiService';
