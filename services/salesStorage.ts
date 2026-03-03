@@ -135,8 +135,30 @@ export const listDatesInMonth = async (_month: string): Promise<string[]> => {
   return [];
 };
 
-export const loadDaily = async (_date: string): Promise<any> => {
-  return null;
+// services/salesStorage.ts
+
+export const loadDaily = async (date: string): Promise<any | null> => {
+  if (!isSupabaseReady || !supabase) {
+    console.error("[Supabase] not ready");
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("payload")
+    .eq("date", date)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[Supabase] loadDaily error:", error);
+    return null;
+  }
+
+  // row 없으면 null
+  if (!data) return null;
+
+  // 우리가 저장한 원본 객체
+  return data.payload ?? null;
 };
 
 export const listDatesInRange = async (_start: string, _end: string): Promise<string[]> => {
