@@ -390,8 +390,11 @@ const handleSave = async () => {
     console.log("[SAVE] dateStr", dateStr);
 
     // 2) Supabase 저장
-    const res = await saveDailyData(dateStr, data);
-
+const res = await saveDailyData({
+  date: dateStr,
+  ...data,
+});
+    
     console.log("[SAVE] result", res);
 
     if (!res?.ok) {
