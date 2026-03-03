@@ -57,15 +57,43 @@ export async function saveDailyData(
     // ✅ 4) sold_items: 메뉴/수량 묶음 (객체/배열 둘 다 저장 가능)
     // - menuCounts: { "짜장면": 3, "짬뽕": 2 } 같은 형태
     // - items/menus: [{ name:"짜장면", qty:3 }, ...] 같은 형태
-    const soldItems =
-      payload?.soldItems ??
-      payload?.sold_items ??
-      payload?.menuCounts ??
-      payload?.menu_counts ??
-      payload?.menus ??
-      payload?.items ??
-      payload?.menuItems ??
-      null;
+const soldItems = (() => {
+  // 1) 기존 키로 먼저 시도
+  const direct =
+    payload?.soldItems ??
+    payload?.sold_items ??
+    payload?.menuCounts ??
+    payload?.menus ??
+    payload?.items;
+
+  if (direct) return direct;
+
+  // 2) 없으면 payload.categories에서 직접 생성
+  const cats = payload?.categories;
+  if (!Array.isArray(cats)) return null;
+
+  const out: any[] = [];
+  for (const cat of cats) {
+    const items = cat?.items;
+    if (!Array.isArray(items)) continue;
+
+    for (const it of items) {
+      const qty = Number(it?.qty ?? 0);
+      const price = Number(it?.price ?? 0);
+      if (!qty || qty <= 0) continue;
+
+      out.push({
+        id: it?.id ?? null,
+        name: it?.name ?? "",
+        qty,
+        unit_price: Number.isFinite(price) ? price : null,
+        revenue: Number.isFinite(price) ? qty * price : null,
+      });
+    }
+  }
+
+  return out;
+})();
 
     const rowToUpsert = {
       date,
