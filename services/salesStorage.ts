@@ -289,3 +289,41 @@ export async function fetchPastData(limit = 30) {
 
   return data || [];
 }
+// ✅ 날짜 유틸: YYYY-MM-DD 문자열 생성
+const toDateStr = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+/**
+ * listDatesInRange
+ * - startDateStr ~ endDateStr (둘 다 포함)
+ * - "YYYY-MM-DD" 배열 반환
+ */
+export function listDatesInRange(startDateStr: string, endDateStr: string): string[] {
+  const start = new Date(`${startDateStr}T00:00:00`);
+  const end = new Date(`${endDateStr}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+
+  const out: string[] = [];
+  const cur = new Date(start);
+
+  while (cur.getTime() <= end.getTime()) {
+    out.push(toDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+/**
+ * listDatesInMonth
+ * - year, month1to12 입력하면 해당 월의 모든 날짜 "YYYY-MM-DD" 반환
+ */
+export function listDatesInMonth(year: number, month1to12: number): string[] {
+  const m = Math.max(1, Math.min(12, month1to12));
+  const first = new Date(year, m - 1, 1);
+  const last = new Date(year, m, 0); // 해당 월 마지막 날
+  return listDatesInRange(toDateStr(first), toDateStr(last));
+}
