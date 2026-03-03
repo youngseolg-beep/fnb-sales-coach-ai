@@ -557,8 +557,8 @@ const App: React.FC = () => {
         totalSales: results.calcSales // explicitly save totalSales
       };
 
-      await saveDaily(data.date, payload);
-
+await saveDailyData(data.date, payload);
+      
       if (!silent) {
         setSaveStatus('저장 완료');
         setToastMsg("매출 데이터 저장이 완료 되었습니다");
