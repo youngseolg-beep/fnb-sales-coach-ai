@@ -43,3 +43,10 @@ export const loadDaily = async (_date: string): Promise<any> => {
 export const listDatesInRange = async (_start: string, _end: string): Promise<string[]> => {
   return [];
 };
+export const getMonthlyTotal = async (_month: string): Promise<number> => {
+  return 0;
+};
+
+export const deleteDaily = async (_date: string): Promise<void> => {
+  return;
+};
