@@ -381,7 +381,30 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }
     throw lastErr;
   };
+// ✅ 매출 데이터 저장 (Supabase upsert)
+const handleSave = async () => {
+  try {
+    // 1) 날짜 문자열 (너 코드에 data.date가 이미 있음)
+    const dateStr = data.date;
 
+    console.log("[SAVE] dateStr", dateStr);
+
+    // 2) Supabase 저장
+    const res = await saveDailyData(dateStr, data);
+
+    console.log("[SAVE] result", res);
+
+    if (!res?.ok) {
+      alert("저장 실패: " + (res?.error || "UNKNOWN_ERROR"));
+      return;
+    }
+
+    alert("매출 데이터 저장이 완료되었습니다.");
+  } catch (e: any) {
+    console.error("[SAVE] exception", e);
+    alert("저장 중 오류: " + (e?.message || String(e)));
+  }
+};
   /** ✅ OCR 실행: 이제 브라우저에서 Gemini 직접 호출하지 않고, /api/ocr만 호출 */
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const filesToProcess = filesToProcessOverride || [...ocrFiles];
