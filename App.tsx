@@ -4,10 +4,10 @@ import { SalesReportData, CalculationResult, MenuCategory, MenuEngineeringResult
 import { generateCoachingReport } from './services/geminiService';
 import { calculateMenuEngineering, calculateMenuEngineeringForRange } from './services/menuEngineeringService';
 import { format, parseISO, subDays } from 'date-fns';
-import { 
-  loadDaily, 
-  saveDaily, 
-  getMonthlyTotal, 
+import {
+  loadDaily,
+  saveDailyData,
+  getMonthlyTotal,
   listDatesInMonth,
   deleteDaily
 } from './services/salesStorage';
