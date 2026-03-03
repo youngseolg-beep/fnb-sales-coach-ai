@@ -1,55 +1,35 @@
+// services/salesStorage.ts
 import type { SalesReportData } from "../types";
 import { supabase, isSupabaseReady } from "./supabaseClient";
 
 const TABLE = "sales_daily";
 
-// ✅ 저장 (같은 date면 업데이트 / 없으면 insert)
-export async function saveDailyData(date: string, payload: SalesReportData) {
-  if (!isSupabaseReady || !supabase) {
-    console.error("[Supabase] not ready. Check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY");
-    return { ok: false, error: "SUPABASE_NOT_READY" as const };
+type SaveResult =
+  | { ok: true }
+  | { ok: false; error: string; code?: string; detail?: any };
+
+export async function saveDailyData(date: string, payload: SalesReportData): Promise<SaveResult> {
+  try {
+    if (!isSupabaseReady || !supabase) {
+      console.error("[Supabase] NOT READY", (window as any).__SUPABASE_ENV__);
+      return { ok: false, code: "SUPABASE_NOT_READY", error: "Supabase env not loaded" };
+    }
+
+    console.log("[Supabase] upsert start", { table: TABLE, date });
+
+    const { error } = await supabase
+      .from(TABLE)
+      .upsert({ date, payload }, { onConflict: "date" });
+
+    if (error) {
+      console.error("[Supabase] upsert error", error);
+      return { ok: false, code: error.code ?? "SUPABASE_ERROR", error: error.message, detail: error };
+    }
+
+    console.log("[Supabase] upsert success", { date });
+    return { ok: true };
+  } catch (e: any) {
+    console.error("[Supabase] exception", e);
+    return { ok: false, code: "EXCEPTION", error: e?.message ?? "Unknown error", detail: e };
   }
-
-  const { error } = await supabase
-    .from(TABLE)
-    .upsert({ date, payload }, { onConflict: "date" });
-
-  if (error) {
-    console.error("[Supabase] save error:", error);
-    return { ok: false, error: error.message };
-  }
-
-  return { ok: true as const };
-}
-
-// ✅ 불러오기
-export async function loadDailyData(date: string) {
-  if (!isSupabaseReady || !supabase) {
-    console.error("[Supabase] not ready. Check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY");
-    return { ok: false, data: null as SalesReportData | null, error: "SUPABASE_NOT_READY" as const };
-  }
-
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("payload")
-    .eq("date", date)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[Supabase] load error:", error);
-    return { ok: false, data: null, error: error.message };
-  }
-
-  return { ok: true as const, data: (data?.payload ?? null) as SalesReportData | null };
-}
-
-// ✅ (선택) 삭제: 해당 날짜 데이터 삭제하고 싶을 때
-export async function deleteDailyData(date: string) {
-  if (!isSupabaseReady || !supabase) {
-    return { ok: false, error: "SUPABASE_NOT_READY" as const };
-  }
-
-  const { error } = await supabase.from(TABLE).delete().eq("date", date);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true as const };
 }
