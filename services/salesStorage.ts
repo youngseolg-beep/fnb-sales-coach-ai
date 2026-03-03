@@ -131,8 +131,29 @@ const soldItems = (() => {
 }
 
 // (나머지는 아직 미구현이면 그대로 둬도 됨)
-export const listDatesInMonth = async (_month: string): Promise<string[]> => {
-  return [];
+export const listDatesInMonth = async (month: string): Promise<string[]> => {
+  if (!isSupabaseReady || !supabase) {
+    console.error("[Supabase] not ready");
+    return [];
+  }
+
+  // month: "2026-03"
+  const start = `${month}-01`;
+  const end = `${month}-31`; // 간단 처리(달별 말일 계산 안해도 range로 충분)
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("date")
+    .gte("date", start)
+    .lte("date", end)
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("[Supabase] listDatesInMonth error:", error);
+    return [];
+  }
+
+  return (data ?? []).map((r: any) => r.date);
 };
 
 // services/salesStorage.ts
