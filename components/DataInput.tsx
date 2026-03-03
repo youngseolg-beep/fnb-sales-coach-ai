@@ -3,6 +3,7 @@ import { SalesReportData, CorrectedItem } from "../types";
 import { format, parseISO } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/services/ocrService";
+import { saveDailyData } from "../services/salesStorage";
 
 interface DataInputProps {
   data: SalesReportData;
