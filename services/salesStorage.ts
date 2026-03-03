@@ -33,3 +33,6 @@ export async function saveDailyData(date: string, payload: SalesReportData): Pro
     return { ok: false, code: "EXCEPTION", error: e?.message ?? "Unknown error", detail: e };
   }
 }
+export const listDatesInMonth = async (_month: string): Promise<string[]> => {
+  return [];
+};
