@@ -36,3 +36,10 @@ export async function saveDailyData(date: string, payload: SalesReportData): Pro
 export const listDatesInMonth = async (_month: string): Promise<string[]> => {
   return [];
 };
+export const loadDaily = async (_date: string): Promise<any> => {
+  return null;
+};
+
+export const listDatesInRange = async (_start: string, _end: string): Promise<string[]> => {
+  return [];
+};
