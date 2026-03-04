@@ -192,3 +192,24 @@ export async function getMonthlyTotal(yearMonth: string) {
   for (const r of (data ?? []) as any[]) sum += Number(r.total_sales ?? 0);
   return sum;
 }
+// ✅ 날짜 범위 내 날짜 리스트 반환 (YYYY-MM-DD 배열)
+export const listDatesInRange = async (startDate: string, endDate: string): Promise<string[]> => {
+  // startDate/endDate: "2026-03-01" 형태 가정
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+
+  const dates: string[] = [];
+  const cur = new Date(start);
+
+  while (cur.getTime() <= end.getTime()) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, "0");
+    const d = String(cur.getDate()).padStart(2, "0");
+    dates.push(`${y}-${m}-${d}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return dates;
+};
