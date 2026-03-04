@@ -95,36 +95,26 @@ export const calculateMenuEngineering = async (yearMonth: string, initialCategor
     };
   }
 
-  // Calculate thresholds
-  const totalQtySold = menuEngineeringItems.reduce((sum, item) => sum + item.qty_month, 0);
-  const averageQtyPerItem = totalQtySold / menuEngineeringItems.length;
+ // Calculate thresholds
+const itemsWithQty = menuEngineeringItems
+  .map((it) => Number(it.qty_month || 0))
+  .filter((v) => Number.isFinite(v));
 
-  const itemsWithCm = menuEngineeringItems.filter(item => item.cm !== null);
-  const totalCm = itemsWithCm.reduce((sum, item) => sum + (item.cm as number), 0);
-  const averageCmPerItem = itemsWithCm.length > 0 ? totalCm / itemsWithCm.length : 0;
-  // ✅ thresholds + counts (없으면 ReferenceError 터짐)
-  const datesCount = Array.isArray(dates) ? dates.length : 0;
+const itemsWithCm = menuEngineeringItems
+  .map((it) => Number(it.cm || 0))
+  .filter((v) => Number.isFinite(v));
 
-  // itemQtyMonth / cm 기준으로 임계값 계산
-  const itemsWithQty = menuEngineeringItems
-    .map((it) => Number(it.qty_month || 0))
-    .filter((v) => Number.isFinite(v));
+// 인기도 기준 (평균 판매량)
+const popularityThreshold =
+  itemsWithQty.length > 0
+    ? itemsWithQty.reduce((a, b) => a + b, 0) / itemsWithQty.length
+    : 0;
 
-  const itemsWithCm = menuEngineeringItems
-    .map((it) => Number(it.cm || 0))
-    .filter((v) => Number.isFinite(v));
-
-  // 인기도 기준: 평균 판매량(0이면 0)
-  const popularityThreshold =
-    itemsWithQty.length > 0
-      ? itemsWithQty.reduce((a, b) => a + b, 0) / itemsWithQty.length
-      : 0;
-
-  // 수익성 기준: 평균 CM(0이면 0)
-  const profitabilityThreshold =
-    itemsWithCm.length > 0
-      ? itemsWithCm.reduce((a, b) => a + b, 0) / itemsWithCm.length
-      : 0;
+// 수익성 기준 (평균 CM)
+const profitabilityThreshold =
+  itemsWithCm.length > 0
+    ? itemsWithCm.reduce((a, b) => a + b, 0) / itemsWithCm.length
+    : 0;
   // Classify items
   const stars: MenuEngineeringItem[] = [];
   const cashCows: MenuEngineeringItem[] = [];
