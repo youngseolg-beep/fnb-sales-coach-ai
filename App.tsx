@@ -561,7 +561,7 @@ const handleSave = async (silent = false) => {
 
 const res = await saveDailyData({ date: data.date, ...payload });
     if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
-    
+    alert("SAVE_RES=" + JSON.stringify(res));
       if (!silent) {
         setSaveStatus('저장 완료');
         setToastMsg("매출 데이터 저장이 완료 되었습니다");
