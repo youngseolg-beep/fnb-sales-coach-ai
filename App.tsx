@@ -549,8 +549,9 @@ const App: React.FC = () => {
     return (monthlyStats.total / data.monthlyTarget) * 100;
   }, [monthlyStats.total, data.monthlyTarget]);
 
-  const handleSave = async (silent = false) => {
-    try {
+const handleSave = async (silent = false) => {
+  alert("APP_SAVE_CLICKED");
+  try {
       if (!silent) setSaveStatus('데이터 저장 중...');
       
       const payload = {
