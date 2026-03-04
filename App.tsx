@@ -597,31 +597,19 @@ const handleDelete = async () => {
   const targetDate = data.date;
 
   try {
-    setSaveStatus("데이터 리셋 중...");
+    setSaveStatus("데이터 삭제 중...");
     setDbLoading(true);
 
-    const resetCats = data.categories.map((cat: any) => ({
+    // ✅ 1) Supabase row 진짜 삭제
+    await deleteDaily(targetDate);
+
+    // ✅ 2) 화면 즉시 초기화
+    const resetCats = INITIAL_CATEGORIES.map((cat) => ({
       ...cat,
-      items: cat.items.map((it: any) => ({ ...it, qty: 0 })),
+      items: cat.items.map((it) => ({ ...it, qty: 0 })),
     }));
 
-    // DB에 0으로 저장 + 삭제 플래그
-    const res = await saveDailyData({
-      date: targetDate,
-      posSales: 0,
-      orders: 0,
-      visitCount: 0,
-      note: "",
-      monthlyTarget: data.monthlyTarget ?? "",
-      categories: resetCats,
-      totalSales: 0,
-      deleted: true,
-    } as any);
-
-    if ((res as any)?.ok === false) throw new Error("RESET_FAILED");
-
-    // 화면도 0으로
-    setData((prev: any) => ({
+    setData((prev) => ({
       ...prev,
       posSales: 0,
       orders: 0,
@@ -629,16 +617,18 @@ const handleDelete = async () => {
       note: "",
       categories: resetCats,
     }));
-
     setReport("");
 
+    // ✅ 3) 점(.) / 월간 / 최근 데이터 갱신
     await refreshMonthlyStats(targetDate.substring(0, 7));
     await fetchPastData();
 
-    setToastMsg("데이터가 리셋되었습니다.");
-  } catch (error) {
-    console.error("Reset Error:", error);
-    setToastMsg("리셋 중 오류 발생");
+    setSaveStatus("데이터 삭제됨");
+    setToastMsg("데이터가 삭제되었습니다.");
+  } catch (error: any) {
+    console.error("Delete Error:", error);
+    setSaveStatus(`삭제 오류: ${error?.message || "알 수 없는 오류"}`);
+    setToastMsg("삭제 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
   } finally {
     setDbLoading(false);
   }
