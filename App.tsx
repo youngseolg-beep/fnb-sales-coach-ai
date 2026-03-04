@@ -391,59 +391,34 @@ const App: React.FC = () => {
     localStorage.removeItem(AUTH_KEY);
   };
 
- useEffect(() => {
-  let alive = true;
-
-  const dateStr = data.date;
-
-  loadDaily(dateStr).then((loaded) => {
-    if (!alive) return;
-
-    setData((prev) => ({
-      ...loaded,
-      categories:
-        loaded.categories && loaded.categories.length > 0
-          ? loaded.categories
-          : prev.categories
-    }));
-  });
-
-  return () => {
-    alive = false;
-  };
-}, [data.date]);
-
   const fetchData = async () => {
     setDbLoading(true);
     setSaveStatus('');
     try {
       // 1. Load Daily Data
-      const dbData = await loadDaily(data.date);
-      if (dbData) {
-        setData(prev => ({
-          ...prev,
-          posSales: dbData.posSales,
-          orders: dbData.orders,
-          visitCount: dbData.visitCount,
-          monthlyTarget: dbData.monthlyTarget,
-          note: dbData.note,
-          categories: dbData.categories,
-          mtdSales: prev.mtdSales // Keep current MTD until stats refresh
-        }));
-      } else {
-        setData(prev => ({
-          ...prev,
-          posSales: 0,
-          orders: 0,
-          visitCount: 0,
-          note: '',
-          categories: INITIAL_CATEGORIES.map(cat => ({
-            ...cat,
-            items: cat.items.map(item => ({ ...item, qty: 0 }))
-          }))
-        }));
-      }
+const dbData = await loadDaily(data.date);
 
+setData((prev) => ({
+  ...prev,
+
+  // 숫자 필드: 있으면 로드, 없으면 0 유지
+  posSales: dbData?.posSales ?? 0,
+  orders: dbData?.orders ?? 0,
+  visitCount: dbData?.visitCount ?? 0,
+
+  // 텍스트/옵션 필드: 있으면 로드, 없으면 빈값
+  monthlyTarget: dbData?.monthlyTarget ?? "",
+  note: dbData?.note ?? "",
+
+  // 핵심: 데이터 없을 때도 categories는 절대 비우지 않음
+  categories:
+    dbData?.categories && dbData.categories.length > 0
+      ? dbData.categories
+      : prev.categories,
+
+  // 기존 정책 유지
+  mtdSales: prev.mtdSales,
+}));
       // 2. Load Monthly Stats
       await refreshMonthlyStats(data.date.substring(0, 7));
 
