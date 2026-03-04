@@ -1,126 +1,118 @@
 import { MenuCategory, MenuItem, MenuEngineeringItem, MenuEngineeringResult } from "../types";
 import { listDatesInMonth, loadDaily, listDatesInRange } from "./salesStorage";
+
+// 이름 정규화(필요하면 나중에 매칭에 사용)
+const normalizeName = (name: string): string => {
+  return (name || "").toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
+};
+
+// ─────────────────────────────────────────────────────────────
+// 월 단위 (현재 프로젝트에서 거의 안 써도 되지만 유지)
+// ─────────────────────────────────────────────────────────────
+export const calculateMenuEngineering = async (
+  yearMonth: string,
+  initialCategories: MenuCategory[]
+): Promise<MenuEngineeringResult | null> => {
+  const dates = await listDatesInMonth(yearMonth);
+  return internalCalculate(dates, initialCategories);
+};
+
+// ─────────────────────────────────────────────────────────────
+// 기간 단위 (코칭리포트용: 기본 최근 7일만)
+// ─────────────────────────────────────────────────────────────
 export const calculateMenuEngineeringForRange = async (
   startDate: string,
   endDate: string,
   initialCategories: MenuCategory[],
-  options?: { maxDays?: number }
+  options?: { maxDays?: number; excludedMenuNames?: string[] }
 ): Promise<MenuEngineeringResult | null> => {
-  const EXCLUDED_MENU_NAMES = new Set([
-    "참이슬 프레쉬 360ml",
-    "처음처럼 360ml",
-    "진로이즈백 360ml",
-    "막걸리",
-    "앙코르 맥주 S 330ml",
-    "앙코르 맥주 L 640ml",
-    "앙코르 생맥주 250ml",
-    "앙코르 생맥주 500ml",
-    "하이네켄 생맥주 250ml",
-    "콜라 330ml",
-    "스프라이트 330ml",
-    "소다 330ml",
-    "봉봉 238ml",
-    "쌕쌕 238ml",
-    "쿨피스 250ml",
-    "밀키스 250ml",
-    "이과두주 100ml",
-    "이과두주 500ml",
-    "보건주 125ml",
-    "보건주 520ml",
-    "노주교 500ml",
-  ]);
-
-  const isExcluded = (name: string) => EXCLUDED_MENU_NAMES.has((name || "").trim());
+  const excluded = new Set((options?.excludedMenuNames ?? []).map((s) => (s || "").trim()));
 
   let dates = await listDatesInRange(startDate, endDate);
 
-  // ✅ 너무 오래 걸리면 최근 maxDays만 분석 (기본: 7일)
+  // ✅ 너무 오래 걸리면 최근 maxDays만 분석 (기본 7일)
   const maxDays = options?.maxDays ?? 7;
   if (maxDays > 0 && dates.length > maxDays) {
     dates = dates.slice(-maxDays);
   }
 
-  // 7일 미만이면 분석 불가(너희 UI 룰 유지)
-  if (dates.length < 7) {
-    return {
-      items: [],
-      popularityThreshold: 0,
-      profitabilityThreshold: 0,
-      stars: [],
-      cashCows: [],
-      puzzles: [],
-      dogs: [],
-      noCostItems: [],
-      analyzedDatesCount: dates.length,
-      debugStats: {
-        datesCount: dates.length,
-        loadedCount: 0,
-        categoriesCountTotal: 0,
-        itemsCountTotal: 0,
-        qtyPositiveItemsCount: 0,
-        aggregatedIdsCount: 0,
-      },
-    };
-  }
+  return internalCalculate(dates, initialCategories, excluded);
+};
+
+// ─────────────────────────────────────────────────────────────
+// 내부 공통 계산
+// ─────────────────────────────────────────────────────────────
+const internalCalculate = async (
+  dates: string[],
+  initialCategories: MenuCategory[],
+  excludedMenuNames?: Set<string>
+): Promise<MenuEngineeringResult | null> => {
+  const datesCount = Array.isArray(dates) ? dates.length : 0;
 
   // Debug counters
-  const datesCount = dates.length;
   let loadedCount = 0;
   let categoriesCountTotal = 0;
   let itemsCountTotal = 0;
   let qtyPositiveItemsCount = 0;
 
-  const aggregatedQuantities: { [id: string]: number } = {};
+  // id별 판매량 누적
+  const aggregatedQuantities: Record<string, number> = {};
 
   for (const date of dates) {
     const dailyData = await loadDaily(date);
     if (!dailyData) continue;
 
     loadedCount++;
-    if (!dailyData.categories) continue;
 
-    categoriesCountTotal += dailyData.categories.length;
+    const cats = dailyData.categories;
+    if (!Array.isArray(cats)) continue;
 
-    dailyData.categories.forEach((cat) => {
-      if (!cat.items) return;
+    categoriesCountTotal += cats.length;
+
+    for (const cat of cats) {
+      if (!cat?.items || !Array.isArray(cat.items)) continue;
 
       itemsCountTotal += cat.items.length;
 
-      cat.items.forEach((item) => {
-        if (isExcluded(item.name)) return;
+      for (const item of cat.items) {
+        if (!item) continue;
 
-        if (item.qty > 0) {
+        // ✅ 제외 메뉴는 집계에서 제외
+        if (excludedMenuNames && excludedMenuNames.has((item.name || "").trim())) continue;
+
+        const q = Number(item.qty || 0);
+        if (q > 0) {
           qtyPositiveItemsCount++;
-          aggregatedQuantities[item.id] = (aggregatedQuantities[item.id] || 0) + item.qty;
+          aggregatedQuantities[item.id] = (aggregatedQuantities[item.id] || 0) + q;
         }
-      });
-    });
+      }
+    }
   }
 
   const aggregatedIdsCount = Object.keys(aggregatedQuantities).length;
 
-  // 모든 메뉴 마스터
-  const allMenuItems: { [id: string]: MenuItem } = {};
-  initialCategories.forEach((cat) => {
-    cat.items.forEach((item) => {
+  // 메뉴 마스터(초기 카테고리)에서 id→item 매핑
+  const allMenuItems: Record<string, MenuItem> = {};
+  for (const cat of initialCategories) {
+    for (const item of cat.items) {
       allMenuItems[item.id] = item;
-    });
-  });
+    }
+  }
 
-  // Calculate metrics for each item
+  // item별 ME metrics 생성
   const menuEngineeringItems: MenuEngineeringItem[] = [];
-  for (const itemId in aggregatedQuantities) {
+  for (const itemId of Object.keys(aggregatedQuantities)) {
     const item = allMenuItems[itemId];
     if (!item) continue;
 
-    const qty_month = aggregatedQuantities[itemId];
-    const revenue_month = (Number(item.price) || 0) * qty_month;
+    const qty_month = Number(aggregatedQuantities[itemId] || 0);
+    const revenue_month = Number(item.price || 0) * qty_month;
 
     const hasCost = item.unitCost !== undefined && item.unitCost !== null;
     const unitCost = hasCost ? Number(item.unitCost) : null;
 
-    const cogs_month = unitCost !== null ? unitCost * qty_month : null;
-    const cm = unitCost !== null ? Number(item.price) - unitCost : null;
+    const cogs_month = hasCost ? unitCost! * qty_month : null;
+    const cm = hasCost ? Number(item.price || 0) - unitCost! : null;
     const gp_month = cogs_month !== null ? revenue_month - cogs_month : null;
 
     menuEngineeringItems.push({
@@ -136,6 +128,7 @@ export const calculateMenuEngineeringForRange = async (
     });
   }
 
+  // 데이터가 없으면 빈 결과 반환
   if (menuEngineeringItems.length === 0) {
     return {
       items: [],
@@ -158,37 +151,37 @@ export const calculateMenuEngineeringForRange = async (
     };
   }
 
-  // ✅ thresholds (ReferenceError 안 나게 여기서 확정)
-  const itemsWithQty = menuEngineeringItems
+  // ✅ thresholds (평균 기반)
+  const qtyList = menuEngineeringItems
     .map((it) => Number(it.qty_month || 0))
     .filter((v) => Number.isFinite(v));
 
-  const itemsWithCm = menuEngineeringItems
-    .map((it) => (it.cm === null ? NaN : Number(it.cm)))
+  const cmList = menuEngineeringItems
+    .map((it) => Number(it.cm ?? 0))
     .filter((v) => Number.isFinite(v));
 
   const popularityThreshold =
-    itemsWithQty.length > 0 ? itemsWithQty.reduce((a, b) => a + b, 0) / itemsWithQty.length : 0;
+    qtyList.length > 0 ? qtyList.reduce((a, b) => a + b, 0) / qtyList.length : 0;
 
   const profitabilityThreshold =
-    itemsWithCm.length > 0 ? itemsWithCm.reduce((a, b) => a + b, 0) / itemsWithCm.length : 0;
+    cmList.length > 0 ? cmList.reduce((a, b) => a + b, 0) / cmList.length : 0;
 
-  // Classify items
-  const starsArr: MenuEngineeringItem[] = [];
-  const cashCowsArr: MenuEngineeringItem[] = [];
-  const puzzlesArr: MenuEngineeringItem[] = [];
-  const dogsArr: MenuEngineeringItem[] = [];
-  const noCostItemsArr: MenuEngineeringItem[] = [];
+  // 분류
+  const stars: MenuEngineeringItem[] = [];
+  const cashCows: MenuEngineeringItem[] = [];
+  const puzzles: MenuEngineeringItem[] = [];
+  const dogs: MenuEngineeringItem[] = [];
+  const noCostItems: MenuEngineeringItem[] = [];
 
-  menuEngineeringItems.forEach((item) => {
-    // 원가 없는 건 별도
+  for (const item of menuEngineeringItems) {
+    // 원가 없는 메뉴는 별도 분리
     if (item.unitCost === undefined || item.unitCost === null) {
-      noCostItemsArr.push(item);
-      return;
+      noCostItems.push(item);
+      continue;
     }
 
     const qty = Number(item.qty_month || 0);
-    const cm = Number(item.cm || 0);
+    const cm = Number(item.cm ?? 0);
 
     const isPopular = qty >= popularityThreshold;
     const isProfitable = cm >= profitabilityThreshold;
@@ -198,62 +191,34 @@ export const calculateMenuEngineeringForRange = async (
 
     if (isPopular && isProfitable) {
       item.category = "Stars";
-      starsArr.push(item);
+      stars.push(item);
     } else if (isPopular && !isProfitable) {
       item.category = "Cash Cows";
-      cashCowsArr.push(item);
+      cashCows.push(item);
     } else if (!isPopular && isProfitable) {
       item.category = "Puzzles";
-      puzzlesArr.push(item);
+      puzzles.push(item);
     } else {
       item.category = "Dogs";
-      dogsArr.push(item);
+      dogs.push(item);
     }
-  });
+  }
 
-  // ✅ 각 그룹 TOP3 정렬
-  const starsTop3 = [...starsArr]
-    .sort((a, b) => Number(b.revenue_month || 0) - Number(a.revenue_month || 0))
-    .slice(0, 3);
-
-  const cashCowsTop3 = [...cashCowsArr]
-    .sort((a, b) => Number(b.qty_month || 0) - Number(a.qty_month || 0))
-    .slice(0, 3);
-
-  const puzzlesTop3 = [...puzzlesArr]
-    .sort((a, b) => Number(b.cm || 0) - Number(a.cm || 0))
-    .slice(0, 3);
-
-  const dogsTop3 = [...dogsArr]
-    .sort((a, b) => Number(a.revenue_month || 0) - Number(b.revenue_month || 0))
-    .slice(0, 3);
-
-  // ✅ 최소 3개 채우기(데이터 적어서 1개만 보이는 문제 방지)
-  const ensureMinItems = (target: MenuEngineeringItem[], source: MenuEngineeringItem[], n = 3) => {
-    if (target.length >= n) return target;
-
-    const pool = source.filter((it) => !target.some((t) => t.id === it.id));
-    const sorted = [...pool].sort(
-      (a, b) => Number(b.revenue_month || 0) - Number(a.revenue_month || 0)
-    );
-
-    return [...target, ...sorted.slice(0, n - target.length)];
-  };
-
-  const starsFinal = ensureMinItems(starsTop3, menuEngineeringItems, 3);
-  const cashCowsFinal = ensureMinItems(cashCowsTop3, menuEngineeringItems, 3);
-  const puzzlesFinal = ensureMinItems(puzzlesTop3, menuEngineeringItems, 3);
-  const dogsFinal = ensureMinItems(dogsTop3, menuEngineeringItems, 3);
+  // ✅ TOP3 정렬 (각 그룹이 3개 미만이면 있는 만큼만)
+  const starsTop3 = [...stars].sort((a, b) => Number(b.revenue_month || 0) - Number(a.revenue_month || 0)).slice(0, 3);
+  const cashCowsTop3 = [...cashCows].sort((a, b) => Number(b.qty_month || 0) - Number(a.qty_month || 0)).slice(0, 3);
+  const puzzlesTop3 = [...puzzles].sort((a, b) => Number(b.cm ?? 0) - Number(a.cm ?? 0)).slice(0, 3);
+  const dogsTop3 = [...dogs].sort((a, b) => Number(a.revenue_month || 0) - Number(b.revenue_month || 0)).slice(0, 3);
 
   return {
     items: menuEngineeringItems,
     popularityThreshold,
     profitabilityThreshold,
-    stars: starsFinal,
-    cashCows: cashCowsFinal,
-    puzzles: puzzlesFinal,
-    dogs: dogsFinal,
-    noCostItems: noCostItemsArr,
+    stars: starsTop3,
+    cashCows: cashCowsTop3,
+    puzzles: puzzlesTop3,
+    dogs: dogsTop3,
+    noCostItems,
     analyzedDatesCount: datesCount,
     debugStats: {
       datesCount,
