@@ -9,7 +9,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE = "sales_daily";
 
 type DailyRow = {
-  date: string; // yyyy-mm-dd
+  date: string;
   total_sales: number | null;
   orders: number | null;
   visit_count: number | null;
@@ -39,7 +39,7 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
     monthlyTarget: input.monthlyTarget ?? "",
     categories: input.categories ?? null,
     totalSales: Number(input.totalSales || 0),
-    deleted: input.deleted === true, // ✅ 소프트 삭제 플래그
+    deleted: input.deleted === true,
   };
 
   const row: DailyRow = {
@@ -52,19 +52,18 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
     payload,
   };
 
-  // update → 없으면 insert
   const { data: updated, error: updateErr } = await supabase
     .from(TABLE)
     .update(row)
     .eq("date", input.date)
     .select("date");
 
-  if (updateErr) return { ok: false, error: updateErr.message, raw: updateErr };
+  if (updateErr) return { ok: false, error: updateErr.message };
 
   if (updated && updated.length > 0) return { ok: true };
 
   const { error: insertErr } = await supabase.from(TABLE).insert(row);
-  if (insertErr) return { ok: false, error: insertErr.message, raw: insertErr };
+  if (insertErr) return { ok: false, error: insertErr.message };
 
   return { ok: true };
 }
@@ -72,7 +71,7 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
 export async function loadDaily(dateStr: string) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary,payload")
+    .select("date,total_sales,orders,visit_count,sold_items,payload")
     .eq("date", dateStr)
     .limit(1)
     .maybeSingle();
@@ -81,12 +80,13 @@ export async function loadDaily(dateStr: string) {
     console.error("[loadDaily] supabase error:", error);
     return null;
   }
+
   if (!data) return null;
 
   const row = data as DailyRow;
 
-  // ✅ payload가 string으로 저장된 케이스(옛날 데이터)까지 방어
   let p: any = row.payload ?? {};
+
   if (typeof p === "string") {
     try {
       p = JSON.parse(p);
@@ -94,10 +94,11 @@ export async function loadDaily(dateStr: string) {
       p = {};
     }
   }
+
   if (p?.deleted === true) return null;
 
-  // ✅ categories가 깨졌거나(객체/문자열/null) items가 없으면 무조건 null로
   const rawCats = p?.categories ?? row.sold_items ?? null;
+
   const catsOk =
     Array.isArray(rawCats) &&
     rawCats.length > 0 &&
@@ -114,7 +115,7 @@ export async function loadDaily(dateStr: string) {
     visitCount: Number(p.visitCount ?? row.visit_count ?? 0),
     note: String(p.note ?? ""),
     monthlyTarget: p.monthlyTarget ?? "",
-    categories: safeCategories, // ✅ 깨진 날은 null로 보내서 App.tsx가 INITIAL_CATEGORIES로 대체함
+    categories: safeCategories,
   };
 }
 
@@ -142,7 +143,6 @@ export async function listDatesInMonth(yearMonth: string) {
 
   const rows = (data ?? []) as any[];
 
-  // ✅ deleted=true 인 날은 점에서 제외
   const filtered = rows.filter((r) => {
     let p = r.payload ?? {};
     if (typeof p === "string") {
@@ -161,7 +161,7 @@ export async function listDatesInMonth(yearMonth: string) {
 export async function listDatesInRange(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date")
+    .select("date,payload")
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true });
@@ -170,7 +170,22 @@ export async function listDatesInRange(startDate: string, endDate: string) {
     console.error("[listDatesInRange] supabase error:", error);
     return [];
   }
-  return (data ?? []).map((r: any) => r.date as string);
+
+  const rows = (data ?? []) as any[];
+
+  const filtered = rows.filter((r) => {
+    let p = r.payload ?? {};
+    if (typeof p === "string") {
+      try {
+        p = JSON.parse(p);
+      } catch {
+        p = {};
+      }
+    }
+    return !(p && typeof p === "object" && p.deleted === true);
+  });
+
+  return filtered.map((r) => r.date as string);
 }
 
 export async function getMonthlyTotal(yearMonth: string) {
@@ -189,27 +204,9 @@ export async function getMonthlyTotal(yearMonth: string) {
   }
 
   let sum = 0;
-  for (const r of (data ?? []) as any[]) sum += Number(r.total_sales ?? 0);
-  return sum;
-}
-// ✅ 날짜 범위 내 날짜 리스트 반환 (YYYY-MM-DD 배열)
-export const listDatesInRange = async (startDate: string, endDate: string): Promise<string[]> => {
-  // startDate/endDate: "2026-03-01" 형태 가정
-  const start = new Date(startDate + "T00:00:00");
-  const end = new Date(endDate + "T00:00:00");
-
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
-
-  const dates: string[] = [];
-  const cur = new Date(start);
-
-  while (cur.getTime() <= end.getTime()) {
-    const y = cur.getFullYear();
-    const m = String(cur.getMonth() + 1).padStart(2, "0");
-    const d = String(cur.getDate()).padStart(2, "0");
-    dates.push(`${y}-${m}-${d}`);
-    cur.setDate(cur.getDate() + 1);
+  for (const r of (data ?? []) as any[]) {
+    sum += Number(r.total_sales ?? 0);
   }
 
-  return dates;
-};
+  return sum;
+}
