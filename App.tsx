@@ -230,18 +230,34 @@ const App: React.FC = () => {
       return friedKeywords.some((keyword) => itemName.includes(keyword));
     };
 
-   const calculateDailyTargetAndReason = (itemQtyMonth: number, analyzedDatesCount: number) => {
-  const qty = Number(itemQtyMonth);
-  const days = Math.max(1, Number(analyzedDatesCount) || 1);
+const calculateDailyTargetAndReason = (
+  itemQty: number,
+  analyzedDays: number,
+  type: "MENU_BOARD" | "STAFF_UPSELL" | "SET_DISCOUNT"
+) => {
+  const qty = Math.max(0, Number(itemQty) || 0);
+  const days = Math.max(1, Number(analyzedDays) || 1);
 
-  const avg = Math.max(0, qty / days);
+  const avgDaily = qty / days;
 
-  // ✅ 현실적 목표: 평균의 1.2배, 최소 1, 최대 8로 캡
-  const target = Math.min(8, Math.max(1, Math.ceil(avg * 1.2)));
+  // ✅ 성장률: 잘 팔리는 건 소폭, 퍼즐은 공격적으로
+  const growth =
+    type === "SET_DISCOUNT" ? 0.3 :
+    type === "MENU_BOARD"   ? 0.1 :
+    0.15; // STAFF_UPSELL 중간
+
+  let target = Math.ceil(avgDaily * (1 + growth));
+
+  // ✅ 현실 캡: 목표가 평균의 2배를 넘지 않게 + 절대 상한 8
+  const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
+
+  target = Math.max(1, Math.min(target, cap));
 
   return {
     dailyTargetQty: target,
-    dailyTargetReason: `최근 ${days}일 평균 ${avg.toFixed(1)}개/일 → 목표 ${target}개`,
+    dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
+      growth * 100
+    )}% 목표 ${target}개 (상한 ${cap}개)`,
   };
 };
 
@@ -296,7 +312,7 @@ const App: React.FC = () => {
 
     if (menuBoardTarget) {
       usedItemIds.add(menuBoardTarget.id);
-      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(menuBoardTarget.qty_month || 0, analyzedDatesCount);
+      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(menuBoardTarget.qty_month || 0, analyzedDatesCount, "MENU_BOARD");
       const reason = `판매량이 높고 인기가 많은 메뉴입니다. 대표 메뉴로 노출을 강화하여 전체 매출을 견인해야 합니다. ${dailyTargetReason}`;
       plans.push({
         puzzleItemName: menuBoardTarget.name,
@@ -316,7 +332,7 @@ const App: React.FC = () => {
     if (staffUpsellTarget) {
       usedItemIds.add(staffUpsellTarget.id);
       const randomSoftDrink = SOFT_DRINKS[Math.floor(Math.random() * SOFT_DRINKS.length)];
-      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(staffUpsellTarget.qty_month || 0, analyzedDatesCount);
+      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(staffUpsellTarget.qty_month || 0, analyzedDatesCount, "STAFF_UPSELL");
       const reason = `판매량이 높은 메뉴에 무료 ${randomSoftDrink}를 제공하여 객단가를 높이고 고객 만족도를 향상시킬 수 있습니다. ${dailyTargetReason}`;
       plans.push({
         puzzleItemName: staffUpsellTarget.name,
@@ -364,14 +380,15 @@ if (setDiscountTarget) {
       if (discountPercentage < 10) discountPercentage = 0;
 
       // ✅ 할인금액 (5% 단위)
-      const finalDiscountAmount =
-        discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
+     const finalDiscountAmount =
+  discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
 
-      if (finalDiscountAmount > 0) {
-        const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-          setDiscountTarget.qty_month || 0,
-          analyzedDatesCount
-        );
+if (finalDiscountAmount > 0) {
+  const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
+    setDiscountTarget.qty_month || 0,
+    analyzedDatesCount,
+    "SET_DISCOUNT"
+  );
 
         const reason = `수익성(GP)과 판매량(인기도)을 기준으로 할인율을 결정했습니다. 현재 GP ${(gp * 100).toFixed(
           1
