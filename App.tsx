@@ -1,19 +1,22 @@
-
-import { saveDailyData } from "./services/salesStorage";
-import React, { useState, useMemo, useEffect } from 'react';
-import { SalesReportData, CalculationResult, MenuCategory, MenuEngineeringResult } from './types';
-import { generateCoachingReport } from './services/geminiService';
-import { calculateMenuEngineering, calculateMenuEngineeringForRange } from './services/menuEngineeringService';
-import { format, parseISO, subDays } from 'date-fns';
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  SalesReportData,
+  CalculationResult,
+  MenuCategory,
+  MenuEngineeringResult,
+} from "./types";
+import { generateCoachingReport } from "./services/geminiService";
+import { calculateMenuEngineering, calculateMenuEngineeringForRange } from "./services/menuEngineeringService";
+import { format, parseISO, subDays } from "date-fns";
 import {
   loadDaily,
   saveDailyData,
   getMonthlyTotal,
   listDatesInMonth,
-  deleteDaily
-} from './services/salesStorage';
-import DataInput from './components/DataInput';
-import ReportDisplay from './components/ReportDisplay';
+  deleteDaily,
+} from "./services/salesStorage";
+import DataInput from "./components/DataInput";
+import ReportDisplay from "./components/ReportDisplay";
 
 const STORE_ID = "hongkongbanjeom-cambodia";
 const AUTH_KEY = "fb_coach_auth";
@@ -28,114 +31,115 @@ const clamp = (num: number, min: number, max: number): number => {
 };
 
 const SOFT_DRINKS = [
-  '콜라 330ml',
-  '스프라이트 330ml',
-  '소다 330ml',
-  '밀키스 250ml',
-  '쿨피스 250ml',
-  '봉봉 238ml',
-  '쌕쌕 238ml',
+  "콜라 330ml",
+  "스프라이트 330ml",
+  "소다 330ml",
+  "밀키스 250ml",
+  "쿨피스 250ml",
+  "봉봉 238ml",
+  "쌕쌕 238ml",
 ];
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
   {
     name: "음식 메뉴 (Main Dishes)",
     items: [
-      { id: 'f1', name: '짜장면', price: 7, qty: 0, unitCost: 1.42 },
-      { id: 'f2', name: '짬뽕', price: 7, qty: 0, unitCost: 2.24 },
-      { id: 'f3', name: '짬뽕밥', price: 8, qty: 0, unitCost: 2.34 },
-      { id: 'f4', name: '백짬뽕', price: 7, qty: 0, unitCost: 2.13 },
-      { id: 'f5', name: '백짬뽕밥', price: 8, qty: 0, unitCost: 2.08 },
-      { id: 'f6', name: '볶음짬뽕', price: 9, qty: 0, unitCost: 2.94 },
-      { id: 'f7', name: '고추짜장', price: 9, qty: 0, unitCost: 1.57 },
-      { id: 'f8', name: '고추짬뽕', price: 10, qty: 0, unitCost: 2.51 },
-      { id: 'f9', name: '고추짬뽕밥', price: 12, qty: 0, unitCost: 2.61 },
-      { id: 'f10', name: '짜장밥', price: 5, qty: 0, unitCost: 1.67 },
-      { id: 'f11', name: '잡채밥', price: 10, qty: 0, unitCost: 3.35 },
-      { id: 'f12', name: '야채볶음밥', price: 5, qty: 0, unitCost: 1.69 },
-      { id: 'f13', name: '소고기볶음밥', price: 7, qty: 0, unitCost: 2.36 },
-      { id: 'f14', name: '마파두부', price: 12, qty: 0, unitCost: 2.24 },
-      { id: 'f15', name: '마파두부덮밥', price: 9, qty: 0, unitCost: 1.72 },
-      { id: 'f16', name: '깐풍기', price: 15, qty: 0, unitCost: 2.97 },
-      { id: 'f17', name: '고추유린기', price: 15, qty: 0, unitCost: 3.71 },
-      { id: 'f18', name: '쟁반짜장', price: 18, qty: 0, unitCost: 4.38 },
-      { id: 'f19', name: '돌짜장', price: 18, qty: 0, unitCost: 5.32 },
-      { id: 'f20', name: '해물육교자', price: 5.5, qty: 0, unitCost: 2.42 },
-    ]
+      { id: "f1", name: "짜장면", price: 7, qty: 0, unitCost: 1.42 },
+      { id: "f2", name: "짬뽕", price: 7, qty: 0, unitCost: 2.24 },
+      { id: "f3", name: "짬뽕밥", price: 8, qty: 0, unitCost: 2.34 },
+      { id: "f4", name: "백짬뽕", price: 7, qty: 0, unitCost: 2.13 },
+      { id: "f5", name: "백짬뽕밥", price: 8, qty: 0, unitCost: 2.08 },
+      { id: "f6", name: "볶음짬뽕", price: 9, qty: 0, unitCost: 2.94 },
+      { id: "f7", name: "고추짜장", price: 9, qty: 0, unitCost: 1.57 },
+      { id: "f8", name: "고추짬뽕", price: 10, qty: 0, unitCost: 2.51 },
+      { id: "f9", name: "고추짬뽕밥", price: 12, qty: 0, unitCost: 2.61 },
+      { id: "f10", name: "짜장밥", price: 5, qty: 0, unitCost: 1.67 },
+      { id: "f11", name: "잡채밥", price: 10, qty: 0, unitCost: 3.35 },
+      { id: "f12", name: "야채볶음밥", price: 5, qty: 0, unitCost: 1.69 },
+      { id: "f13", name: "소고기볶음밥", price: 7, qty: 0, unitCost: 2.36 },
+      { id: "f14", name: "마파두부", price: 12, qty: 0, unitCost: 2.24 },
+      { id: "f15", name: "마파두부덮밥", price: 9, qty: 0, unitCost: 1.72 },
+      { id: "f16", name: "깐풍기", price: 15, qty: 0, unitCost: 2.97 },
+      { id: "f17", name: "고추유린기", price: 15, qty: 0, unitCost: 3.71 },
+      { id: "f18", name: "쟁반짜장", price: 18, qty: 0, unitCost: 4.38 },
+      { id: "f19", name: "돌짜장", price: 18, qty: 0, unitCost: 5.32 },
+      { id: "f20", name: "해물육교자", price: 5.5, qty: 0, unitCost: 2.42 },
+    ],
   },
   {
     name: "탕수육 (Tangsuyuk)",
     items: [
-      { id: 't1', name: '탕수육 S', price: 12, qty: 0, unitCost: 2.70 },
-      { id: 't2', name: '탕수육 M', price: 15, qty: 0, unitCost: 3.23 },
-      { id: 't3', name: '탕수육 L', price: 18, qty: 0, unitCost: 4.50 },
-    ]
+      { id: "t1", name: "탕수육 S", price: 12, qty: 0, unitCost: 2.7 },
+      { id: "t2", name: "탕수육 M", price: 15, qty: 0, unitCost: 3.23 },
+      { id: "t3", name: "탕수육 L", price: 18, qty: 0, unitCost: 4.5 },
+    ],
   },
   {
     name: "토핑 (Add-ons)",
     items: [
-      { id: 'a1', name: '토핑 해시브라운', price: 2, qty: 0, unitCost: 0.28 },
-      { id: 'a2', name: '토핑 계란프라이', price: 1, qty: 0, unitCost: 0.141 },
-      { id: 'a3', name: '토핑 슬라이스치즈', price: 1, qty: 0, unitCost: 0.29 },
-    ]
+      { id: "a1", name: "토핑 해시브라운", price: 2, qty: 0, unitCost: 0.28 },
+      { id: "a2", name: "토핑 계란프라이", price: 1, qty: 0, unitCost: 0.141 },
+      { id: "a3", name: "토핑 슬라이스치즈", price: 1, qty: 0, unitCost: 0.29 },
+    ],
   },
   {
     name: "음료 및 주류 (Beverages)",
     items: [
-      { id: 'b1', name: '참이슬 프레쉬 360ml', price: 5, qty: 0 },
-      { id: 'b2', name: '처음처럼 360ml', price: 5, qty: 0 },
-      { id: 'b3', name: '진로이즈백 360ml', price: 5, qty: 0 },
-      { id: 'b4', name: '막걸리', price: 6, qty: 0 },
-      { id: 'b5', name: '앙코르 맥주 S 330ml', price: 2.5, qty: 0 },
-      { id: 'b6', name: '앙코르 맥주 L 640ml', price: 4.5, qty: 0 },
-      { id: 'b7', name: '앙코르 생맥주 250ml', price: 2, qty: 0 },
-      { id: 'b8', name: '앙코르 생맥주 500ml', price: 3, qty: 0 },
-      { id: 'b9', name: '하이네켄 생맥주 250ml', price: 2.5, qty: 0 },
-      { id: 'b10', name: '콜라 330ml', price: 1, qty: 0 },
-      { id: 'b11', name: '스프라이트 330ml', price: 1, qty: 0 },
-      { id: 'b12', name: '소다 330ml', price: 1, qty: 0 },
-      { id: 'b13', name: '봉봉 238ml', price: 2, qty: 0 },
-      { id: 'b14', name: '쌕쌕 238ml', price: 2, qty: 0 },
-      { id: 'b15', name: '쿨피스 250ml', price: 2, qty: 0 },
-      { id: 'b16', name: '밀키스 250ml', price: 2, qty: 0 },
-    ]
+      { id: "b1", name: "참이슬 프레쉬 360ml", price: 5, qty: 0 },
+      { id: "b2", name: "처음처럼 360ml", price: 5, qty: 0 },
+      { id: "b3", name: "진로이즈백 360ml", price: 5, qty: 0 },
+      { id: "b4", name: "막걸리", price: 6, qty: 0 },
+      { id: "b5", name: "앙코르 맥주 S 330ml", price: 2.5, qty: 0 },
+      { id: "b6", name: "앙코르 맥주 L 640ml", price: 4.5, qty: 0 },
+      { id: "b7", name: "앙코르 생맥주 250ml", price: 2, qty: 0 },
+      { id: "b8", name: "앙코르 생맥주 500ml", price: 3, qty: 0 },
+      { id: "b9", name: "하이네켄 생맥주 250ml", price: 2.5, qty: 0 },
+      { id: "b10", name: "콜라 330ml", price: 1, qty: 0 },
+      { id: "b11", name: "스프라이트 330ml", price: 1, qty: 0 },
+      { id: "b12", name: "소다 330ml", price: 1, qty: 0 },
+      { id: "b13", name: "봉봉 238ml", price: 2, qty: 0 },
+      { id: "b14", name: "쌕쌕 238ml", price: 2, qty: 0 },
+      { id: "b15", name: "쿨피스 250ml", price: 2, qty: 0 },
+      { id: "b16", name: "밀키스 250ml", price: 2, qty: 0 },
+    ],
   },
   {
     name: "고량주 (Liquors)",
     items: [
-      { id: 'l1', name: '이과두주 100ml', price: 4, qty: 0 },
-      { id: 'l2', name: '이과두주 500ml', price: 8, qty: 0 },
-      { id: 'l3', name: '보건주 125ml', price: 6, qty: 0 },
-      { id: 'l4', name: '보건주 520ml', price: 18, qty: 0 },
-      { id: 'l5', name: '노주교 500ml', price: 60, qty: 0 },
-    ]
-  }
+      { id: "l1", name: "이과두주 100ml", price: 4, qty: 0 },
+      { id: "l2", name: "이과두주 500ml", price: 8, qty: 0 },
+      { id: "l3", name: "보건주 125ml", price: 6, qty: 0 },
+      { id: "l4", name: "보건주 520ml", price: 18, qty: 0 },
+      { id: "l5", name: "노주교 500ml", price: 60, qty: 0 },
+    ],
+  },
 ];
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(AUTH_KEY) === 'true';
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(AUTH_KEY) === "true";
     }
     return false;
   });
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
 
   const [data, setData] = useState<SalesReportData>({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().split("T")[0],
     posSales: 0,
     orders: 0,
     visitCount: 0,
-    note: '',
+    note: "",
     monthlyTarget: 15000,
     mtdSales: 0,
-    categories: INITIAL_CATEGORIES
+    categories: INITIAL_CATEGORIES,
   });
-  const [report, setReport] = useState<string>('');
+
+  const [report, setReport] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [dbLoading, setDbLoading] = useState<boolean>(false);
-  const [saveStatus, setSaveStatus] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<string>("");
   const [showResetModal, setShowResetModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
@@ -144,11 +148,11 @@ const App: React.FC = () => {
   const [monthlyStats, setMonthlyStats] = useState({
     total: 0,
     avg: 0,
-    rate: 0
+    rate: 0,
   });
   const [periodRange, setPeriodRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
+    end: new Date().toISOString().split("T")[0],
   });
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
@@ -157,15 +161,18 @@ const App: React.FC = () => {
   const sortedMenuEngineering = useMemo(() => {
     if (!menuEngineeringResult) return null;
 
-    const totalRevenueForRange = menuEngineeringResult.items?.reduce((sum: number, it: any) => sum + (Number(it.revenue_month) || 0), 0) || 0;
+    const totalRevenueForRange =
+      menuEngineeringResult.items?.reduce((sum: number, it: any) => sum + (Number(it.revenue_month) || 0), 0) || 0;
 
     const formatItem = (item: any, totalRevenueForRange: number) => {
-      const unitCost = item.unitCost !== null ? item.unitCost.toFixed(2) : 'N/A';
-      const costRate = (item.price > 0 && item.unitCost !== null) ? ((item.unitCost / item.price) * 100).toFixed(1) : 'N/A';
-      const gp_month = (item.revenue_month !== null && item.cogs_month !== null) ? (item.revenue_month - item.cogs_month).toFixed(2) : 'N/A';
-      const revenueText = item.revenue_month !== null ? item.revenue_month.toFixed(2) : 'N/A';
+      const unitCost = item.unitCost !== null ? item.unitCost.toFixed(2) : "N/A";
+      const costRate =
+        item.price > 0 && item.unitCost !== null ? ((item.unitCost / item.price) * 100).toFixed(1) : "N/A";
+      const gp_month =
+        item.revenue_month !== null && item.cogs_month !== null ? (item.revenue_month - item.cogs_month).toFixed(2) : "N/A";
+      const revenueText = item.revenue_month !== null ? item.revenue_month.toFixed(2) : "N/A";
 
-      let revenueContribution = 'N/A';
+      let revenueContribution = "N/A";
       if (item.revenue_month !== null && totalRevenueForRange > 0) {
         revenueContribution = ((item.revenue_month / totalRevenueForRange) * 100).toFixed(1);
       }
@@ -174,26 +181,33 @@ const App: React.FC = () => {
     };
 
     const starsTop3 = menuEngineeringResult.stars
-      .filter(item => item.revenue_month !== null)
+      .filter((item) => item.revenue_month !== null)
       .sort((a, b) => (b.revenue_month as number) - (a.revenue_month as number))
-      .slice(0, 3).map((item) => formatItem(item, totalRevenueForRange));
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
     const cashCowsTop3 = menuEngineeringResult.cashCows
-      .filter(item => item.qty_month !== null)
+      .filter((item) => item.qty_month !== null)
       .sort((a, b) => (b.qty_month as number) - (a.qty_month as number))
-      .slice(0, 3).map((item) => formatItem(item, totalRevenueForRange));
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
     const puzzlesTop3 = menuEngineeringResult.puzzles
-      .filter(item => item.cm !== null && item.revenue_month !== null)
-      .sort((a, b) => (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number))
-      .slice(0, 3).map((item) => formatItem(item, totalRevenueForRange));
+      .filter((item) => item.cm !== null && item.revenue_month !== null)
+      .sort(
+        (a, b) =>
+          (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number)
+      )
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
     const dogsTop3 = menuEngineeringResult.dogs
-      .filter(item => item.revenue_month !== null)
+      .filter((item) => item.revenue_month !== null)
       .sort((a, b) => (a.revenue_month as number) - (b.revenue_month as number))
-      .slice(0, 3).map((item) => formatItem(item, totalRevenueForRange));
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
-    const noCostItemsList = menuEngineeringResult.noCostItems.map(item => item.name).join(", ");
+    const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
 
     return {
       starsTop3,
@@ -209,16 +223,16 @@ const App: React.FC = () => {
   const boostPlans = useMemo(() => {
     if (!menuEngineeringResult || !sortedMenuEngineering) return [];
 
-    const allMenuItemsFlat = INITIAL_CATEGORIES.flatMap(cat => cat.items);
+    const allMenuItemsFlat = INITIAL_CATEGORIES.flatMap((cat) => cat.items);
 
     const isFriedDish = (itemName: string) => {
-      const friedKeywords = ['탕수육', '깐풍기', '유린기', '치킨', '튀김'];
-      return friedKeywords.some(keyword => itemName.includes(keyword));
+      const friedKeywords = ["탕수육", "깐풍기", "유린기", "치킨", "튀김"];
+      return friedKeywords.some((keyword) => itemName.includes(keyword));
     };
 
     const calculateDailyTargetAndReason = (itemQtyMonth: number, analyzedDatesCount: number) => {
       const baseline = Math.max(1, Math.round((itemQtyMonth || 0) / analyzedDatesCount));
-      const target = baseline + (Math.random() > 0.5 ? 1 : 2); // Add 1 or 2
+      const target = baseline + (Math.random() > 0.5 ? 1 : 2);
       return {
         dailyTargetQty: target,
         dailyTargetReason: `최근 7일 평균 1일 ${baseline}개 → 목표 ${target}개`,
@@ -226,62 +240,53 @@ const App: React.FC = () => {
     };
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
-      // Soft drinks are always compatible
-      const availableSoftDrinks = allMenuItemsFlat.filter(item =>
-        SOFT_DRINKS.includes(item.name) && item.id !== mainItem.id && item.unitCost !== undefined && item.unitCost !== null
+      const availableSoftDrinks = allMenuItemsFlat.filter(
+        (item) =>
+          SOFT_DRINKS.includes(item.name) &&
+          item.id !== mainItem.id &&
+          item.unitCost !== undefined &&
+          item.unitCost !== null
       );
       if (availableSoftDrinks.length > 0) {
         return availableSoftDrinks[Math.floor(Math.random() * availableSoftDrinks.length)];
       }
 
-      // For other items, apply compatibility rules
-      const compatibleItems = allMenuItemsFlat.filter(item => {
-        if (item.id === mainItem.id || item.unitCost === undefined || item.unitCost === null) return false;
+      const compatibleItems = allMenuItemsFlat
+        .filter((item) => {
+          if (item.id === mainItem.id || item.unitCost === undefined || item.unitCost === null) return false;
+          if (isFriedDish(mainItem.name) && item.name.includes("토핑")) return false;
+          if (item.name.includes("해물육교자")) return true;
+          return item.price < 10;
+        })
+        .sort((a, b) => a.price - b.price);
 
-        // If main item is fried, exclude toppings
-        if (isFriedDish(mainItem.name) && item.name.includes('토핑')) return false;
-
-        // Side dishes like '해물육교자' are always compatible
-        if (item.name.includes('해물육교자')) return true;
-
-        // General low-price items (e.g., small sides, other main dishes that could form a set)
-        return item.price < 10; // Example: price < $10 for a second item
-      }).sort((a, b) => a.price - b.price); // Sort by price ascending
-
-      if (compatibleItems.length > 0) {
-        return compatibleItems[0];
-      }
-
-      return null; // No suitable second item found
+      if (compatibleItems.length > 0) return compatibleItems[0];
+      return null;
     };
 
     const targetablePuzzles = menuEngineeringResult.puzzles
-      .filter(item => item.unitCost !== undefined && item.unitCost !== null) // unitCost 없는 메뉴 제외
+      .filter((item) => item.unitCost !== undefined && item.unitCost !== null)
       .sort((a, b) => (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number));
 
     const targetableStars = menuEngineeringResult.stars
-      .filter(item => item.unitCost !== undefined && item.unitCost !== null)
+      .filter((item) => item.unitCost !== undefined && item.unitCost !== null)
       .sort((a, b) => (b.revenue_month as number) - (a.revenue_month as number));
 
     const targetableCashCows = menuEngineeringResult.cashCows
-      .filter(item => item.unitCost !== undefined && item.unitCost !== null)
+      .filter((item) => item.unitCost !== undefined && item.unitCost !== null)
       .sort((a, b) => (b.qty_month as number) - (a.qty_month as number));
 
     const analyzedDatesCount = menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
 
-    const plans = [];
-    const usedItemIds = new Set<string>(); // Track used item IDs across all categories
+    const plans: any[] = [];
+    const usedItemIds = new Set<string>();
 
-    // Helper to get a target item from a list, ensuring it hasn't been used
     const getUnusedTargetItem = (list: any[]) => {
-      return list.find(item => !usedItemIds.has(item.id));
+      return list.find((item) => !usedItemIds.has(item.id));
     };
 
-    // 1. MENU_BOARD (노출/추천 강화) - Stars 또는 Cash Cows
     let menuBoardTarget = getUnusedTargetItem(targetableStars);
-    if (!menuBoardTarget) {
-      menuBoardTarget = getUnusedTargetItem(targetableCashCows);
-    }
+    if (!menuBoardTarget) menuBoardTarget = getUnusedTargetItem(targetableCashCows);
 
     if (menuBoardTarget) {
       usedItemIds.add(menuBoardTarget.id);
@@ -293,17 +298,14 @@ const App: React.FC = () => {
         setComposition: `메뉴판 상단 배치, POP 부착, 카운터 추천 멘트`,
         discount: "NO DISCOUNT",
         dailyTargetQty,
-        staffComment: `메뉴판 1번 위치, 카운터에서 ${menuBoardTarget.name} 적극 추천!`, 
-        type: 'MENU_BOARD',
+        staffComment: `메뉴판 1번 위치, 카운터에서 ${menuBoardTarget.name} 적극 추천!`,
+        type: "MENU_BOARD",
         reason,
       });
     }
 
-    // 2. STAFF_UPSELL (무료 음료 제공) - Stars 또는 Cash Cows
     let staffUpsellTarget = getUnusedTargetItem(targetableStars);
-    if (!staffUpsellTarget) {
-      staffUpsellTarget = getUnusedTargetItem(targetableCashCows);
-    }
+    if (!staffUpsellTarget) staffUpsellTarget = getUnusedTargetItem(targetableCashCows);
 
     if (staffUpsellTarget) {
       usedItemIds.add(staffUpsellTarget.id);
@@ -316,13 +318,12 @@ const App: React.FC = () => {
         setComposition: `${staffUpsellTarget.name} (혜택) + ${randomSoftDrink} 1개 무료`,
         discount: "FREE DRINK",
         dailyTargetQty,
-        staffComment: `손님께 ${staffUpsellTarget.name} 추천 시 ${randomSoftDrink} 무료 제공 안내.`, 
-        type: 'STAFF_UPSELL',
+        staffComment: `손님께 ${staffUpsellTarget.name} 추천 시 ${randomSoftDrink} 무료 제공 안내.`,
+        type: "STAFF_UPSELL",
         reason,
       });
     }
 
-    // 3. SET_DISCOUNT (마진 50% 유지 할인) - Puzzles
     const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
     if (setDiscountTarget) {
       const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
@@ -331,28 +332,27 @@ const App: React.FC = () => {
         const setUnitCost = (setDiscountTarget.unitCost || 0) + (secondItem.unitCost || 0);
         const setUnitProfit = setPrice - setUnitCost;
 
-        // Calculate max discount to maintain 50% margin
-        const maxDiscountToMaintainMargin = setPrice - (setUnitCost / 0.5); // (Price - Discount - UnitCost) / Price >= 0.5
-        const minDiscount = setPrice * 0.1; // Minimum 10% discount
+        const maxDiscountToMaintainMargin = setPrice - setUnitCost / 0.5;
+        const minDiscount = setPrice * 0.1;
 
         let finalDiscountAmount = 0;
         if (maxDiscountToMaintainMargin > minDiscount) {
-          // Round to nearest 5% for better user experience
-          const maxDiscountPercentage = Math.floor((maxDiscountToMaintainMargin / setPrice) * 100 / 5) * 5;
-          const chosenDiscountPercentage = clamp(maxDiscountPercentage, 10, maxDiscountPercentage); // Ensure at least 10%
+          const maxDiscountPercentage = Math.floor(((maxDiscountToMaintainMargin / setPrice) * 100) / 5) * 5;
+          const chosenDiscountPercentage = clamp(maxDiscountPercentage, 10, maxDiscountPercentage);
           finalDiscountAmount = roundTo0_5(setPrice * (chosenDiscountPercentage / 100));
         } else {
-          // If 50% margin cannot be maintained with 10% discount, just apply 10% if profit allows
           finalDiscountAmount = roundTo0_5(setPrice * 0.1);
-          if ((setPrice - setUnitCost - finalDiscountAmount) < setUnitProfit * 0.5) {
-            finalDiscountAmount = 0; // No discount if margin breaks even with 10%
+          if (setPrice - setUnitCost - finalDiscountAmount < setUnitProfit * 0.5) {
+            finalDiscountAmount = 0;
           }
         }
 
         if (finalDiscountAmount > 0) {
-          const discountPercentage = Math.round((finalDiscountAmount / setPrice) * 100 / 5) * 5; // Round to nearest 5%
+          const discountPercentage = Math.round(((finalDiscountAmount / setPrice) * 100) / 5) * 5;
           const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(setDiscountTarget.qty_month || 0, analyzedDatesCount);
-          const reason = `수익성이 높지만 판매량이 낮은 메뉴입니다. ${setDiscountTarget.name}의 평균 이익은 $${setDiscountTarget.cm?.toFixed(2)}이며, 최근 7일 평균 판매량은 ${setDiscountTarget.qty_month}개입니다. 세트 할인 ${discountPercentage}%를 통해 판매량을 늘리고 객단가를 높여야 합니다. ${dailyTargetReason}`;
+          const reason = `수익성이 높지만 판매량이 낮은 메뉴입니다. ${setDiscountTarget.name}의 평균 이익은 $${setDiscountTarget.cm?.toFixed(
+            2
+          )}이며, 최근 7일 평균 판매량은 ${setDiscountTarget.qty_month}개입니다. 세트 할인 ${discountPercentage}%를 통해 판매량을 늘리고 객단가를 높여야 합니다. ${dailyTargetReason}`;
 
           plans.push({
             puzzleItemName: setDiscountTarget.name,
@@ -361,7 +361,7 @@ const App: React.FC = () => {
             discount: `${discountPercentage}% OFF`,
             dailyTargetQty,
             staffComment: `세트 할인 프로모션: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 할인 적용. 마진 50% 유지 확인 필수!`,
-            type: 'SET_DISCOUNT',
+            type: "SET_DISCOUNT",
             reason,
           });
         }
@@ -369,7 +369,7 @@ const App: React.FC = () => {
     }
 
     return plans.slice(0, 3);
-  }, [menuEngineeringResult, sortedMenuEngineering, INITIAL_CATEGORIES]);
+  }, [menuEngineeringResult, sortedMenuEngineering]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -380,7 +380,7 @@ const App: React.FC = () => {
     }
     if (password === correctPassword) {
       setIsLoggedIn(true);
-      localStorage.setItem(AUTH_KEY, 'true');
+      localStorage.setItem(AUTH_KEY, "true");
     } else {
       setAuthError("비밀번호가 일치하지 않습니다.");
     }
@@ -391,35 +391,42 @@ const App: React.FC = () => {
     localStorage.removeItem(AUTH_KEY);
   };
 
-const fetchData = async (dateStr: string) => {    setDbLoading(true);
-    setSaveStatus('');
+  const refreshMonthlyStats = async (yearMonth: string) => {
+    const total = await getMonthlyTotal(yearMonth);
+    const dates = await listDatesInMonth(yearMonth);
+
+    setMonthlyStats({
+      total,
+      avg: dates.length > 0 ? total / dates.length : 0,
+      rate: data.monthlyTarget > 0 ? (total / data.monthlyTarget) * 100 : 0,
+    });
+
+    setDatesWithData(dates);
+    setData((prev) => ({ ...prev, mtdSales: total }));
+  };
+
+  const fetchData = async (dateStr: string) => {
+    setDbLoading(true);
+    setSaveStatus("");
     try {
-      // 1. Load Daily Data
-const dbData = await loadDaily(dateStr);
-setData((prev) => ({
-  ...prev,
+      const dbData = await loadDaily(dateStr);
 
-  // 숫자 필드: 있으면 로드, 없으면 0 유지
-  posSales: dbData?.posSales ?? 0,
-  orders: dbData?.orders ?? 0,
-  visitCount: dbData?.visitCount ?? 0,
+      setData((prev) => ({
+        ...prev,
+        date: dateStr,
+        posSales: dbData?.posSales ?? 0,
+        orders: dbData?.orders ?? 0,
+        visitCount: dbData?.visitCount ?? 0,
+        monthlyTarget: (dbData as any)?.monthlyTarget ?? prev.monthlyTarget ?? 0,
+        note: (dbData as any)?.note ?? "",
+        categories:
+          dbData?.categories && dbData.categories.length > 0
+            ? dbData.categories
+            : prev.categories,
+        mtdSales: prev.mtdSales,
+      }));
 
-  // 텍스트/옵션 필드: 있으면 로드, 없으면 빈값
-  monthlyTarget: dbData?.monthlyTarget ?? "",
-  note: dbData?.note ?? "",
-
-  // 핵심: 데이터 없을 때도 categories는 절대 비우지 않음
-  categories:
-    dbData?.categories && dbData.categories.length > 0
-      ? dbData.categories
-      : prev.categories,
-
-  // 기존 정책 유지
-  mtdSales: prev.mtdSales,
-}));
-      // 2. Load Monthly Stats
-      await refreshMonthlyStats(data.date.substring(0, 7));
-
+      await refreshMonthlyStats(dateStr.substring(0, 7));
     } catch (err) {
       console.error("Fetch Error:", err);
     } finally {
@@ -427,24 +434,10 @@ setData((prev) => ({
     }
   };
 
-  const refreshMonthlyStats = async (yearMonth: string) => {
-    const total = await getMonthlyTotal(yearMonth);
-    const dates = await listDatesInMonth(yearMonth);
-    
-    setMonthlyStats({
-      total,
-      avg: dates.length > 0 ? total / dates.length : 0,
-      rate: data.monthlyTarget > 0 ? (total / data.monthlyTarget) * 100 : 0
-    });
-    setDatesWithData(dates);
-    setData(prev => ({ ...prev, mtdSales: total }));
-  };
-
   const fetchPastData = async () => {
-    // Simulate fetching past 30 days from LocalStorage
     const yearMonth = data.date.substring(0, 7);
     const dates = await listDatesInMonth(yearMonth);
-    const list = [];
+    const list: any[] = [];
     for (const d of dates) {
       const item = await loadDaily(d);
       if (item) {
@@ -452,7 +445,7 @@ setData((prev) => ({
           date: d,
           total_sales: item.posSales,
           orders: item.orders,
-          guests: item.visitCount
+          guests: item.visitCount,
         });
       }
     }
@@ -461,17 +454,15 @@ setData((prev) => ({
 
   const fetchPeriodStats = async () => {
     setPeriodLoading(true);
-    // Simulate period stats from LocalStorage
-    const list = [];
+    const list: any[] = [];
     const start = periodRange.start;
     const end = periodRange.end;
-    
-    // This is inefficient but works for LocalStorage demo
-    const STORAGE_PREFIX = 'sales-coach-ai::hongkongbanjeom-cambodia::';
+
+    const STORAGE_PREFIX = "sales-coach-ai::hongkongbanjeom-cambodia::";
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith(STORAGE_PREFIX)) {
-        const d = key.replace(STORAGE_PREFIX, '');
+        const d = key.replace(STORAGE_PREFIX, "");
         if (d >= start && d <= end) {
           const item = await loadDaily(d);
           if (item) {
@@ -479,7 +470,7 @@ setData((prev) => ({
               date: d,
               total_sales: item.posSales,
               orders: item.orders,
-              guests: item.visitCount
+              guests: item.visitCount,
             });
           }
         }
@@ -490,22 +481,27 @@ setData((prev) => ({
       const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales), 0);
       const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders), 0);
       const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests), 0);
-      setPeriodStats({ totalSales, totalOrders, totalVisitors, list: list.sort((a, b) => a.date.localeCompare(b.date)) });
+      setPeriodStats({
+        totalSales,
+        totalOrders,
+        totalVisitors,
+        list: list.sort((a, b) => a.date.localeCompare(b.date)),
+      });
     }
     setPeriodLoading(false);
   };
 
   const handleMonthChange = async (month: Date) => {
-    const yearMonth = format(month, 'yyyy-MM');
+    const yearMonth = format(month, "yyyy-MM");
     await refreshMonthlyStats(yearMonth);
   };
 
   const results = useMemo((): CalculationResult => {
     let calcSales = 0;
     let addonSum = 0;
-    
-    data.categories.forEach(cat => {
-      cat.items.forEach(item => {
+
+    data.categories.forEach((cat) => {
+      cat.items.forEach((item) => {
         calcSales += item.price * (item.qty || 0);
         if (cat.name.includes("토핑")) {
           addonSum += item.qty || 0;
@@ -516,10 +512,10 @@ setData((prev) => ({
     const gapUsd = data.posSales - calcSales;
     const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
     const absGapRate = Math.abs(gapRate);
-    
-    let status: '✅' | '🟡' | '🔴' = '✅';
-    if (absGapRate > 3) status = '🔴';
-    else if (absGapRate > 1) status = '🟡';
+
+    let status: "✅" | "🟡" | "🔴" = "✅";
+    if (absGapRate > 3) status = "🔴";
+    else if (absGapRate > 1) status = "🟡";
 
     return {
       calcSales: Math.round(calcSales * 100) / 100,
@@ -528,7 +524,7 @@ setData((prev) => ({
       status,
       aov: data.orders > 0 ? Math.round((calcSales / data.orders) * 100) / 100 : 0,
       conversionRate: data.visitCount > 0 ? Math.round((data.orders / data.visitCount) * 1000) / 10 : 0,
-      addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0
+      addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0,
     };
   }, [data]);
 
@@ -537,73 +533,66 @@ setData((prev) => ({
     return (monthlyStats.total / data.monthlyTarget) * 100;
   }, [monthlyStats.total, data.monthlyTarget]);
 
-const handleSave = async (silent = false) => {
-  try {
-    if (!silent) setSaveStatus("데이터 저장 중...");
-
-    const payload = {
-      ...data,
-      totalSales: results.calcSales,
-    };
-
-    const res = await saveDailyData({ date: data.date, ...payload });
-
-    // saveDailyData가 {ok:false,...}를 줄 수도 있음
-    if ((res as any)?.ok === false) {
-      throw new Error((res as any)?.error || "SAVE_FAILED");
-    }
-
-    // ✅ 저장 성공 처리
-    setSaveStatus("저장 완료");
-    if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
-
-    // ✅ 후처리는 실패해도 저장 실패로 만들지 않음
+  const handleSave = async (silent = false) => {
     try {
-      await refreshMonthlyStats(data.date.substring(0, 7));
-    } catch (e) {
-      console.warn("refreshMonthlyStats failed (ignored):", e);
+      if (!silent) setSaveStatus("데이터 저장 중...");
+
+      const payload: any = {
+        ...data,
+        totalSales: results.calcSales,
+      };
+
+      const res = await saveDailyData({ date: data.date, ...payload });
+
+      if ((res as any)?.ok === false) {
+        throw new Error((res as any)?.error || "SAVE_FAILED");
+      }
+
+      setSaveStatus("저장 완료");
+      if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
+
+      try {
+        await refreshMonthlyStats(data.date.substring(0, 7));
+      } catch (e) {
+        console.warn("refreshMonthlyStats failed (ignored):", e);
+      }
+
+      try {
+        await fetchPastData();
+      } catch (e) {
+        console.warn("fetchPastData failed (ignored):", e);
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Save Error:", error);
+      setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
+      if (!silent) setToastMsg("저장/갱신 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+      return false;
     }
-
-    try {
-      await fetchPastData();
-    } catch (e) {
-      console.warn("fetchPastData failed (ignored):", e);
-    }
-
-    return true;
-  } catch (error: any) {
-    console.error("Save Error:", error);
-
-    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-    if (!silent) setToastMsg("저장/갱신 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
-
-    return false;
-  }
-};
+  };
 
   const handleDelete = async () => {
     try {
       await deleteDaily(data.date);
-      
-      // Reset local state
-      setData(prev => ({
+
+      setData((prev) => ({
         ...prev,
         posSales: 0,
         orders: 0,
         visitCount: 0,
-        note: '',
-        categories: INITIAL_CATEGORIES.map(cat => ({
+        note: "",
+        categories: INITIAL_CATEGORIES.map((cat) => ({
           ...cat,
-          items: cat.items.map(item => ({ ...item, qty: 0 }))
-        }))
+          items: cat.items.map((item) => ({ ...item, qty: 0 })),
+        })),
       }));
-      setReport('');
-      setSaveStatus('데이터 삭제됨');
+      setReport("");
+      setSaveStatus("데이터 삭제됨");
 
-      // Refresh UI components
       await refreshMonthlyStats(data.date.substring(0, 7));
       await fetchPastData();
-      
+
       setToastMsg("데이터가 삭제되었습니다.");
     } catch (error: any) {
       console.error("Delete Error:", error);
@@ -614,13 +603,12 @@ const handleSave = async (silent = false) => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      await handleSave(true); // 조용히 자동 저장
-      const yearMonth = data.date.substring(0, 7);
+      await handleSave(true);
       const selectedDate = data.date;
       const end = parseISO(selectedDate);
       const start = subDays(end, 6);
-      const startDate = format(start, 'yyyy-MM-dd');
-      const endDate = format(end, 'yyyy-MM-dd');
+      const startDate = format(start, "yyyy-MM-dd");
+      const endDate = format(end, "yyyy-MM-dd");
 
       const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES);
       setMenuEngineeringResult(meResult);
@@ -631,9 +619,26 @@ const handleSave = async (silent = false) => {
       console.error("Process Error:", error);
     } finally {
       setLoading(false);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
   };
+
+  // ✅ 날짜 바뀌면 DB에서 다시 로드 (반드시 return 위에 있어야 함)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetchData(data.date);
+    fetchPastData();
+  }, [data.date, isLoggedIn]);
+
+  // ✅ 토스트 자동 제거
+  useEffect(() => {
+    if (toastMsg) {
+      const timer = setTimeout(() => {
+        setToastMsg(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMsg]);
 
   if (!isLoggedIn) {
     return (
@@ -672,7 +677,6 @@ const handleSave = async (silent = false) => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-
       <nav className="bg-indigo-600 px-6 py-4 sticky top-0 z-50 shadow-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -689,7 +693,7 @@ const handleSave = async (silent = false) => {
               {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
               {data.date}
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="text-white/60 hover:text-white transition-colors"
               title="로그아웃"
@@ -710,14 +714,16 @@ const handleSave = async (silent = false) => {
             <div className="flex items-center gap-3">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">월 목표</label>
               <div className="relative w-32">
-                <input 
-                  type="number" 
-                  value={data.monthlyTarget || ''} 
-                  onChange={e => setData(prev => ({ ...prev, monthlyTarget: Number(e.target.value) }))} 
+                <input
+                  type="number"
+                  value={data.monthlyTarget || ""}
+                  onChange={(e) => setData((prev) => ({ ...prev, monthlyTarget: Number(e.target.value) }))}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1 text-right text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none"
                   placeholder="0"
                 />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400 pointer-events-none">USD</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400 pointer-events-none">
+                  USD
+                </span>
               </div>
             </div>
           </div>
@@ -735,8 +741,8 @@ const handleSave = async (silent = false) => {
               <div className="flex items-end gap-2">
                 <p className="text-3xl font-black text-indigo-600">{monthlyRate.toFixed(1)}%</p>
                 <div className="flex-1 h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-indigo-500 transition-all duration-1000" 
+                  <div
+                    className="h-full bg-indigo-500 transition-all duration-1000"
                     style={{ width: `${Math.min(monthlyRate, 100)}%` }}
                   ></div>
                 </div>
@@ -773,7 +779,15 @@ const handleSave = async (silent = false) => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">POS 오차</p>
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black text-slate-900">${results.gapUsd}</span>
-                <span className={`text-sm font-bold ${results.status === '🔴' ? 'text-rose-500' : results.status === '🟡' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                <span
+                  className={`text-sm font-bold ${
+                    results.status === "🔴"
+                      ? "text-rose-500"
+                      : results.status === "🟡"
+                      ? "text-amber-500"
+                      : "text-emerald-500"
+                  }`}
+                >
                   {results.status}
                 </span>
               </div>
@@ -789,30 +803,34 @@ const handleSave = async (silent = false) => {
         </header>
 
         <div className="relative">
-          <DataInput 
-            data={data} 
-            onChange={setData} 
+          <DataInput
+            data={data}
+            onChange={setData}
             loading={loading}
             datesWithData={datesWithData}
             onMonthChange={handleMonthChange}
           />
-          
+
           {saveStatus && (
             <div className="mt-4 text-center">
-              <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                saveStatus === '저장 완료' ? 'bg-emerald-50 text-emerald-600' : 
-                saveStatus.startsWith('저장 실패') ? 'bg-rose-50 text-rose-600' : 
-                'bg-slate-100 text-slate-500'
-              }`}>
+              <span
+                className={`text-xs font-bold px-3 py-1 rounded-full ${
+                  saveStatus === "저장 완료"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : saveStatus.startsWith("저장 실패")
+                    ? "bg-rose-50 text-rose-600"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
                 {saveStatus}
               </span>
             </div>
           )}
         </div>
 
-        <ReportDisplay 
-          report={report} 
-          loading={loading} 
+        <ReportDisplay
+          report={report}
+          loading={loading}
           menuEngineeringResult={menuEngineeringResult}
           sortedMenuEngineering={sortedMenuEngineering}
           boostPlans={boostPlans}
@@ -838,12 +856,12 @@ const handleSave = async (silent = false) => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {pastData.map((row) => (
-                  <tr 
-                    key={row.date} 
+                  <tr
+                    key={row.date}
                     className="hover:bg-indigo-50/30 transition-colors cursor-pointer group"
                     onClick={() => {
-                      setData(prev => ({ ...prev, date: row.date }));
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setData((prev) => ({ ...prev, date: row.date }));
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
                     <td className="px-8 py-4 font-bold text-slate-700">{row.date}</td>
@@ -851,7 +869,9 @@ const handleSave = async (silent = false) => {
                     <td className="px-8 py-4 text-slate-600 font-medium">{row.orders}건</td>
                     <td className="px-8 py-4 text-slate-600 font-medium">{row.guests}명</td>
                     <td className="px-8 py-4 text-right">
-                      <span className="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs uppercase tracking-widest">수정하기</span>
+                      <span className="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs uppercase tracking-widest">
+                        수정하기
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -867,20 +887,20 @@ const handleSave = async (silent = false) => {
               기간별 성과 분석
             </h3>
             <div className="flex items-center gap-2">
-              <input 
-                type="date" 
-                value={periodRange.start} 
-                onChange={e => setPeriodRange(prev => ({ ...prev, start: e.target.value }))}
+              <input
+                type="date"
+                value={periodRange.start}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
                 className="bg-white border border-slate-200 rounded-xl px-3 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400"
               />
               <span className="text-slate-400">~</span>
-              <input 
-                type="date" 
-                value={periodRange.end} 
-                onChange={e => setPeriodRange(prev => ({ ...prev, end: e.target.value }))}
+              <input
+                type="date"
+                value={periodRange.end}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
                 className="bg-white border border-slate-200 rounded-xl px-3 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400"
               />
-              <button 
+              <button
                 onClick={fetchPeriodStats}
                 disabled={periodLoading}
                 className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -924,7 +944,6 @@ const handleSave = async (silent = false) => {
         </section>
       </main>
 
-      {/* Floating CTA - Moved to App root for better clickability */}
       <div className="fixed bottom-6 left-0 right-0 z-[9999] flex flex-col md:flex-row justify-center gap-4 px-6 pointer-events-none">
         <button
           type="button"
@@ -959,15 +978,14 @@ const handleSave = async (silent = false) => {
         </button>
       </div>
 
-      {/* Reset Confirmation Modal */}
       {showResetModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]"
-          onClick={() => setShowResetModal(false)} // Close on backdrop click
+          onClick={() => setShowResetModal(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4"
-            onClick={e => e.stopPropagation()} // Prevent modal from closing when clicking inside
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-black text-slate-900 text-xl">일 데이터 리셋</h3>
             <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
@@ -995,7 +1013,6 @@ const handleSave = async (silent = false) => {
         </div>
       )}
 
-      {/* Toast Message */}
       {toastMsg && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-full shadow-lg z-[10001] animate-fade-in-up">
           {toastMsg}
@@ -1003,22 +1020,6 @@ const handleSave = async (silent = false) => {
       )}
     </div>
   );
-useEffect(() => {
-  if (!isLoggedIn) return;
-
-  fetchData(data.date);
-  fetchPastData();
-
-}, [data.date, isLoggedIn]);
-  useEffect(() => {
-    if (toastMsg) {
-      const timer = setTimeout(() => {
-        setToastMsg(null);
-      }, 3000); // 3 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [toastMsg]);
-
 };
 
 export default App;
