@@ -5,133 +5,85 @@ export const generateCoachingReport = async (
   results: CalculationResult,
   menuEngineeringResult: MenuEngineeringResult | null
 ): Promise<string> => {
-  // Extract top selling items for context
-  const allItems = data.categories.flatMap((c) => c.items).filter((i) => i.qty > 0);
-  const topItems = [...allItems].sort((a, b) => b.qty - a.qty).slice(0, 5);
-  const topItemsText = topItems.map((i) => `${i.name}(${i.qty}개)`).join(", ");
+  // Top items (today) — keep short
+  const allItems = data.categories.flatMap((c) => c.items).filter((i) => (i.qty || 0) > 0);
+  const topItems = [...allItems].sort((a, b) => (b.qty || 0) - (a.qty || 0)).slice(0, 5);
+  const topItemsText = topItems.length
+    ? topItems.map((i) => `${i.name}(${i.qty}개)`).join(", ")
+    : "없음";
 
+  // Menu engineering summary — TOP3 only (very important for speed)
   let menuEngineeringSummary = "";
   if (menuEngineeringResult) {
-    const formatItem = (item: any) =>
-      `${item.name} (판매: ${item.qty_month}개, 매출: $${item.revenue_month.toFixed(
-        2
-      )}, CM: $${item.cm !== null ? item.cm.toFixed(2) : "N/A"})`;
+    const safeNum = (v: any) => (typeof v === "number" && isFinite(v) ? v : 0);
 
-    const puzzlesTop3 = menuEngineeringResult.puzzles
-      .filter((item) => item.cm !== null && item.revenue_month !== null)
-      .sort(
-        (a, b) =>
-          (b.cm as number) - (a.cm as number) ||
-          (b.revenue_month as number) - (a.revenue_month as number)
-      )
-      .slice(0, 3);
+    const fmt = (it: any) => {
+      const qty = safeNum(it.qty_month);
+      const rev = safeNum(it.revenue_month);
+      const cm = it.cm === null || it.cm === undefined ? null : safeNum(it.cm);
+      return `${it.name} | 판매 ${qty}개 | 매출 $${rev.toFixed(0)} | CM ${cm === null ? "N/A" : `$${cm.toFixed(2)}`}`;
+    };
 
-    const cashCowsTop3 = menuEngineeringResult.cashCows
-      .filter((item) => item.cm !== null && item.qty_month !== null)
-      .sort(
-        (a, b) =>
-          (b.qty_month as number) - (a.qty_month as number) ||
-          (a.cm as number) - (b.cm as number)
-      )
-      .slice(0, 3);
+    const top3 = (arr: any[], sortFn: (a: any, b: any) => number) =>
+      [...arr].filter(Boolean).sort(sortFn).slice(0, 3);
 
-    const dogsTop3 = menuEngineeringResult.dogs
-      .filter((item) => item.revenue_month !== null && item.gp_month !== null)
-      .sort(
-        (a, b) =>
-          (a.revenue_month as number) - (b.revenue_month as number) ||
-          (a.gp_month as number) - (b.gp_month as number)
-      )
-      .slice(0, 3);
-
-    const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
+    const starsTop3 = top3(
+      menuEngineeringResult.stars || [],
+      (a, b) => safeNum(b.revenue_month) - safeNum(a.revenue_month)
+    );
+    const cashCowsTop3 = top3(
+      menuEngineeringResult.cashCows || [],
+      (a, b) => safeNum(b.qty_month) - safeNum(a.qty_month)
+    );
+    const puzzlesTop3 = top3(
+      menuEngineeringResult.puzzles || [],
+      (a, b) => safeNum(b.cm) - safeNum(a.cm)
+    );
+    const dogsTop3 = top3(
+      menuEngineeringResult.dogs || [],
+      (a, b) => safeNum(a.revenue_month) - safeNum(b.revenue_month)
+    );
 
     menuEngineeringSummary = `
-※ 아래 메뉴 엔지니어링은 ‘월 누적 기준’입니다.
-
-[메뉴 엔지니어링 요약]
-- 인기도 기준: 월 평균 ${menuEngineeringResult.popularityThreshold.toFixed(1)}개 이상
-- 수익성 기준: 월 평균 CM $${menuEngineeringResult.profitabilityThreshold.toFixed(2)} 이상
-
-- Stars (고인기, 고수익): ${
-      menuEngineeringResult.stars.length > 0
-        ? menuEngineeringResult.stars.map(formatItem).join(", ")
-        : "없음"
-    }
-- Cash Cows (고인기, 저수익): ${
-      menuEngineeringResult.cashCows.length > 0
-        ? menuEngineeringResult.cashCows.map(formatItem).join(", ")
-        : "없음"
-    }
-- Puzzles (저인기, 고수익): ${
-      menuEngineeringResult.puzzles.length > 0
-        ? menuEngineeringResult.puzzles.map(formatItem).join(", ")
-        : "없음"
-    }
-- Dogs (저인기, 저수익): ${
-      menuEngineeringResult.dogs.length > 0
-        ? menuEngineeringResult.dogs.map(formatItem).join(", ")
-        : "없음"
-    }
-
-[원가 미입력 메뉴]
-${noCostItemsList || "없음"}
-
-[이번 달 부스트 추천 (Puzzles)]
-${
-      puzzlesTop3.length > 0
-        ? puzzlesTop3.map((item) => `- ${item.name}: 프로모션, 세트 메뉴 구성으로 인지도 높이기`).join("\n")
-        : "없음"
-    }
-
-[마진 개선 추천 (Cash Cows)]
-${
-      cashCowsTop3.length > 0
-        ? cashCowsTop3.map((item) => `- ${item.name}: 원가 절감 방안 모색 또는 가격 인상 검토`).join("\n")
-        : "없음"
-    }
-
-[정리/개편 후보 (Dogs)]
-${
-      dogsTop3.length > 0
-        ? dogsTop3.map((item) => `- ${item.name}: 메뉴 퇴출, 레시피 개선, 재료 변경 고려`).join("\n")
-        : "없음"
-    }
+[메뉴 엔지니어링 TOP3 (월 누적 기준)]
+- Stars: ${starsTop3.length ? starsTop3.map(fmt).join(" / ") : "없음"}
+- CashCows: ${cashCowsTop3.length ? cashCowsTop3.map(fmt).join(" / ") : "없음"}
+- Puzzles: ${puzzlesTop3.length ? puzzlesTop3.map(fmt).join(" / ") : "없음"}
+- Dogs: ${dogsTop3.length ? dogsTop3.map(fmt).join(" / ") : "없음"}
 `;
   }
 
+  // Prompt — shorter + stricter headings
   const prompt = `
-너는 홍콩반점(캄보디아 매장, 통화 USD)의 “매출 코치 AI”다.
-아래 데이터를 바탕으로 점주가 바로 행동할 수 있는 “짧고 명확한 데일리 코칭 리포트”를 작성하라.
+너는 홍콩반점(캄보디아, USD)의 “매출 코치 AI”다.
+아래 데이터를 바탕으로 점주가 바로 실행할 “짧고 명확한 데일리 코칭 리포트”만 작성하라.
 
-[데이터 요약]
-- 오늘 매출: $${results.calcSales} (메뉴 합계)
-- POS 입력값: $${data.posSales} (오차: $${results.gapUsd} / ${results.status})
-- 지표: 주문 ${data.orders}건, 방문 ${data.visitCount}명, 객단가 $${results.aov}, 전환율 ${results.conversionRate}%
-- 토핑: 주문당 ${results.addonPerOrder}개
-- 현황: ${topItemsText}
-- 월 목표: $${data.monthlyTarget}, 누적: $${data.mtdSales}, 잔여: $${data.monthlyTarget - data.mtdSales - results.calcSales}
+[오늘 데이터]
+- 메뉴 합계 매출: $${Math.round(results.calcSales)}
+- POS 입력값: $${Math.round(data.posSales)} (오차 $${Math.round(results.gapUsd)} / ${results.status})
+- 주문 ${data.orders}건, 방문 ${data.visitCount}명, 객단가 $${results.aov.toFixed(2)}, 전환율 ${results.conversionRate.toFixed(1)}%
+- TOP 메뉴: ${topItemsText}
+- 월 목표 $${Math.round(data.monthlyTarget)} / 누적 $${Math.round(data.mtdSales)} / 잔여 $${Math.round(
+    (data.monthlyTarget || 0) - (data.mtdSales || 0) - results.calcSales
+  )}
 - 메모: ${data.note || "없음"}
 
 ${menuEngineeringSummary}
 
-[중요 규칙]
-- 통화 단위는 반드시 USD로 표기.
-- 숫자는 반올림하여 간결하게.
-- 인사말, 감탄, 서술형 설명 절대 금지.
-- 각 섹션 최대 2~3줄.
-- “숫자 + 행동 지시” 위주로 작성.
+[규칙]
+- 인사말/감탄/설명 금지. “숫자 + 행동”만.
+- 각 섹션 1~2줄 (짧게).
+- 반드시 아래 5개 제목을 그대로 포함해서 출력.
 
-[출력 형식 - 반드시 이 구조만 사용]
-1) 오늘 요약 (매출, 객단가, 전환율 위주 성과 요약)
-2) 핵심 포인트 (잘한 점/아쉬운 점 중 2개, 각 1줄, 숫자 포함)
-3) 월 목표 관점 (남은 목표액 대비 현재 페이스 진단 및 한 줄 조언)
-4) 내일 액션 플랜 (Puzzles/Stars 그룹의 추천 메뉴와 추가 목표 수량 4~6개. 예: 깐풍기 +3, 마파두부 +2)
-5) 실행 체크리스트 (3줄, 매우 구체적인 현장 행동 지침)
+[출력 형식]
+1) 오늘 요약
+2) 핵심 포인트
+3) 월 목표 관점
+4) 내일 액션 플랜 (메뉴 +추가목표 4~6개: 예 “깐풍기 +3”)
+5) 실행 체크리스트 (3줄)
 `;
 
   try {
-    // 모델명은 프론트에서 보내도 되고(공개정보), 서버 env로 써도 됨
     const modelName = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.5-flash";
     console.log(`[Coach] Calling /api/coach with model: ${modelName}`);
 
