@@ -157,10 +157,10 @@ export async function saveDailyData(dateOrPayload: any, maybeData?: any) {
     .select()
     .single();
 
-  if (error) {
-    console.error(error);
-    return { ok: false, error: error.message };
-  }
+if (error) {
+  console.error("[saveDailyData] supabase error:", error);
+  return { ok: false, error: JSON.stringify(error) };
+}
 
   return { ok: true, data };
 }
