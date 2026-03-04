@@ -128,34 +128,41 @@ function applySoldItemsToCategories(
 /** -----------------------------
  * ✅ A1 핵심: 저장 (sold_items / summary 생성 포함)
  * ----------------------------- */
-export async function saveDailyData(payload: DailyPayload) {
-  if (!payload?.date) throw new Error("saveDailyData: payload.date is required");
+export async function saveDailyData(dateOrPayload: any, maybeData?: any) {
+  const payload =
+    typeof dateOrPayload === "string"
+      ? { ...(maybeData ?? {}), date: dateOrPayload }
+      : dateOrPayload;
+
+  if (!payload?.date) {
+    console.error("date missing");
+    return { ok: false, error: "DATE_MISSING" };
+  }
 
   const soldItems = buildSoldItems(payload);
   const soldItemsSummary = buildSoldItemsSummary(soldItems, "$");
 
-  // DB 컬럼 매핑 (snake_case)
   const rowToUpsert = {
     date: payload.date,
-    total_sales: safeNum(payload.totalSales, 0),
-    orders: Math.trunc(safeNum(payload.orders, 0)),
-    visit_count: Math.trunc(safeNum(payload.visitCount, 0)),
-    sold_items: soldItems, // ✅ jsonb
-    sold_items_summary: soldItemsSummary, // ✅ text
+    total_sales: Number(payload.totalSales ?? 0),
+    orders: Number(payload.orders ?? 0),
+    visit_count: Number(payload.visitCount ?? 0),
+    sold_items: soldItems,
+    sold_items_summary: soldItemsSummary,
   };
 
   const { data, error } = await supabase
     .from(TABLE)
     .upsert(rowToUpsert, { onConflict: "date" })
-    .select("*")
+    .select()
     .single();
 
   if (error) {
-    console.error("[saveDailyData] supabase error:", error);
-    throw error;
+    console.error(error);
+    return { ok: false, error: error.message };
   }
 
-  return data;
+  return { ok: true, data };
 }
 
 /** -----------------------------
