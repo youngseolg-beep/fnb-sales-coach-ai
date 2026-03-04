@@ -44,12 +44,9 @@ export const generateCoachingReport = async (
       (a, b) => safeNum(a.revenue_month) - safeNum(b.revenue_month)
     );
 
-    menuEngineeringSummary = `
-[메뉴 엔지니어링 TOP3 (월 누적 기준)]
-- Stars: ${starsTop3.length ? starsTop3.map(fmt).join(" / ") : "없음"}
-- CashCows: ${cashCowsTop3.length ? cashCowsTop3.map(fmt).join(" / ") : "없음"}
+menuEngineeringSummary = `
+[메뉴 엔지니어링 핵심 (Puzzles TOP3)]
 - Puzzles: ${puzzlesTop3.length ? puzzlesTop3.map(fmt).join(" / ") : "없음"}
-- Dogs: ${dogsTop3.length ? dogsTop3.map(fmt).join(" / ") : "없음"}
 `;
   }
 
