@@ -230,14 +230,24 @@ const App: React.FC = () => {
       return friedKeywords.some((keyword) => itemName.includes(keyword));
     };
 
-    const calculateDailyTargetAndReason = (itemQtyMonth: number, analyzedDatesCount: number) => {
-      const baseline = Math.max(1, Math.round((itemQtyMonth || 0) / analyzedDatesCount));
-      const target = baseline + (Math.random() > 0.5 ? 1 : 2);
-      return {
-        dailyTargetQty: target,
-        dailyTargetReason: `최근 7일 평균 1일 ${baseline}개 → 목표 ${target}개`,
-      };
-    };
+    const calculateDailyTargetAndReason = (
+  itemQtyInRange: number,
+  analyzedDatesCount: number,
+  cap: number
+) => {
+  const days = Math.max(1, analyzedDatesCount);
+  const avgPerDay = (Number(itemQtyInRange || 0) / days);
+
+  // ✅ 목표는 "현실적 캡"을 강제 (대표추천/업셀은 6~10 사이가 적당)
+  // - 평균이 낮으면: 최소 1~2
+  // - 평균이 높아도: cap 이상은 절대 안 올림
+  const target = clamp(Math.ceil(avgPerDay * 1.1), avgPerDay > 0 ? 1 : 1, cap);
+
+  return {
+    dailyTargetQty: target,
+    dailyTargetReason: `최근 ${days}일 평균 ${avgPerDay.toFixed(1)}개/일 → 목표 ${target}개 (현실적 상한 적용)`,
+  };
+};
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
       const availableSoftDrinks = allMenuItemsFlat.filter(
