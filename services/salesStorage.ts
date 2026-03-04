@@ -130,7 +130,7 @@ export async function listDatesInMonth(yearMonth: string) {
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date")
+    .select("date,payload")
     .gte("date", start)
     .lte("date", end)
     .order("date", { ascending: true });
@@ -139,7 +139,23 @@ export async function listDatesInMonth(yearMonth: string) {
     console.error("[listDatesInMonth] supabase error:", error);
     return [];
   }
-  return (data ?? []).map((r: any) => r.date as string);
+
+  const rows = (data ?? []) as any[];
+
+  // ✅ deleted=true 인 날은 점에서 제외
+  const filtered = rows.filter((r) => {
+    let p = r.payload ?? {};
+    if (typeof p === "string") {
+      try {
+        p = JSON.parse(p);
+      } catch {
+        p = {};
+      }
+    }
+    return !(p && typeof p === "object" && p.deleted === true);
+  });
+
+  return filtered.map((r) => r.date as string);
 }
 
 export async function listDatesInRange(startDate: string, endDate: string) {
