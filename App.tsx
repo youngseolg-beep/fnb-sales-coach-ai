@@ -412,22 +412,25 @@ const fetchData = async (dateStr: string) => {
   try {
     const dbData = await loadDaily(dateStr);
 
-    if (!dbData) {
-      // ✅ 데이터 없는 날짜 클릭해도 "입력 UI 유지" (백지/화이트스크린 방지)
-      setData((prev) => ({
-        ...prev,
-        date: dateStr,
-        posSales: 0,
-        orders: 0,
-        visitCount: 0,
-        note: "",
-        // monthlyTarget은 기존 값 유지
-        monthlyTarget: prev.monthlyTarget,
-        // categories는 절대 비우지 않음 (초기 템플릿 유지)
-        categories: INITIAL_CATEGORIES,
-        mtdSales: prev.mtdSales,
-      }));
-    } else {
+   if (!dbData) {
+  // ✅ 데이터 없는 날짜는 화면을 "완전 초기화" (이전 날짜 값이 남지 않게)
+  const resetCats = INITIAL_CATEGORIES.map((cat) => ({
+    ...cat,
+    items: cat.items.map((it) => ({ ...it, qty: 0 })),
+  }));
+
+  setData((prev) => ({
+    ...prev,
+    date: dateStr,
+    posSales: 0,
+    orders: 0,
+    visitCount: 0,
+    note: "",
+    monthlyTarget: prev.monthlyTarget, // 목표는 유지
+    categories: resetCats,             // ✅ qty까지 0으로 강제
+    mtdSales: prev.mtdSales,
+  }));
+} else {
       setData((prev) => ({
         ...prev,
         date: dateStr,
