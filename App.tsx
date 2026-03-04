@@ -180,32 +180,27 @@ const App: React.FC = () => {
       return `${item.name} — 원가 $${unitCost} (${costRate}%) / 판매 ${item.qty_month} / 매출 $${revenueText} / 이익 $${gp_month} / 매출 기여도 ${revenueContribution}%`;
     };
 
-    const starsTop3 = menuEngineeringResult.stars
-      .filter((item) => item.revenue_month !== null)
-      .sort((a, b) => (b.revenue_month as number) - (a.revenue_month as number))
-      .slice(0, 3)
-      .map((item) => formatItem(item, totalRevenueForRange));
+    const safeNum = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
-    const cashCowsTop3 = menuEngineeringResult.cashCows
-      .filter((item) => item.qty_month !== null)
-      .sort((a, b) => (b.qty_month as number) - (a.qty_month as number))
-      .slice(0, 3)
-      .map((item) => formatItem(item, totalRevenueForRange));
+const starsTop3 = [...menuEngineeringResult.stars]
+  .sort((a, b) => safeNum(b.revenue_month) - safeNum(a.revenue_month))
+  .slice(0, 3)
+  .map((item) => formatItem(item, totalRevenueForRange));
 
-    const puzzlesTop3 = menuEngineeringResult.puzzles
-      .filter((item) => item.cm !== null && item.revenue_month !== null)
-      .sort(
-        (a, b) =>
-          (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number)
-      )
-      .slice(0, 3)
-      .map((item) => formatItem(item, totalRevenueForRange));
+const cashCowsTop3 = [...menuEngineeringResult.cashCows]
+  .sort((a, b) => safeNum(b.qty_month) - safeNum(a.qty_month))
+  .slice(0, 3)
+  .map((item) => formatItem(item, totalRevenueForRange));
 
-    const dogsTop3 = menuEngineeringResult.dogs
-      .filter((item) => item.revenue_month !== null)
-      .sort((a, b) => (a.revenue_month as number) - (b.revenue_month as number))
-      .slice(0, 3)
-      .map((item) => formatItem(item, totalRevenueForRange));
+const puzzlesTop3 = [...menuEngineeringResult.puzzles]
+  .sort((a, b) => safeNum(b.cm) - safeNum(a.cm) || safeNum(b.revenue_month) - safeNum(a.revenue_month))
+  .slice(0, 3)
+  .map((item) => formatItem(item, totalRevenueForRange));
+
+const dogsTop3 = [...menuEngineeringResult.dogs]
+  .sort((a, b) => safeNum(a.revenue_month) - safeNum(b.revenue_month))
+  .slice(0, 3)
+  .map((item) => formatItem(item, totalRevenueForRange));
 
     const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
 
