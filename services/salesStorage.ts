@@ -29,7 +29,7 @@ export type DailyPayload = {
   totalSales?: number;
 };
 
-export async function saveDailyData(input: DailyPayload) {
+export async function saveDailyData(input: DailyPayload & { deleted?: boolean }) {
   const payload = {
     date: input.date,
     posSales: Number(input.posSales || 0),
@@ -39,6 +39,7 @@ export async function saveDailyData(input: DailyPayload) {
     monthlyTarget: input.monthlyTarget ?? "",
     categories: input.categories ?? null,
     totalSales: Number(input.totalSales || 0),
+    deleted: input.deleted === true, // ✅ 소프트 삭제 플래그
   };
 
   const row: DailyRow = {
@@ -51,26 +52,19 @@ export async function saveDailyData(input: DailyPayload) {
     payload,
   };
 
-  // ✅ onConflict/unique 제약에 의존하지 않고 "update → 없으면 insert"로 처리
+  // update → 없으면 insert
   const { data: updated, error: updateErr } = await supabase
     .from(TABLE)
     .update(row)
     .eq("date", input.date)
     .select("date");
 
-  if (updateErr) {
-    return { ok: false, error: updateErr.message, raw: updateErr };
-  }
+  if (updateErr) return { ok: false, error: updateErr.message, raw: updateErr };
 
-  if (updated && updated.length > 0) {
-    return { ok: true };
-  }
+  if (updated && updated.length > 0) return { ok: true };
 
   const { error: insertErr } = await supabase.from(TABLE).insert(row);
-
-  if (insertErr) {
-    return { ok: false, error: insertErr.message, raw: insertErr };
-  }
+  if (insertErr) return { ok: false, error: insertErr.message, raw: insertErr };
 
   return { ok: true };
 }
@@ -100,6 +94,7 @@ export async function loadDaily(dateStr: string) {
       p = {};
     }
   }
+  if (p?.deleted === true) return null;
 
   // ✅ categories가 깨졌거나(객체/문자열/null) items가 없으면 무조건 null로
   const rawCats = p?.categories ?? row.sold_items ?? null;
