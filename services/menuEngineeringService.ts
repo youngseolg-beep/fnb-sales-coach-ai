@@ -320,39 +320,68 @@ export const calculateMenuEngineeringForRange = async (
   const totalCm = itemsWithCm.reduce((sum, item) => sum + (item.cm as number), 0);
   const averageCmPerItem = itemsWithCm.length > 0 ? totalCm / itemsWithCm.length : 0;
 
-  // Classify items
-  const stars: MenuEngineeringItem[] = [];
-  const cashCows: MenuEngineeringItem[] = [];
-  const puzzles: MenuEngineeringItem[] = [];
-  const dogs: MenuEngineeringItem[] = [];
-  const noCostItems: MenuEngineeringItem[] = [];
+   // Classify items
+  const starsArr: MenuEngineeringItem[] = [];
+  const cashCowsArr: MenuEngineeringItem[] = [];
+  const puzzlesArr: MenuEngineeringItem[] = [];
+  const dogsArr: MenuEngineeringItem[] = [];
+  const noCostItemsArr: MenuEngineeringItem[] = [];
 
-  menuEngineeringItems.forEach(item => {
+  menuEngineeringItems.forEach((item) => {
+    // 원가 없는 건 별도
     if (item.unitCost === undefined || item.unitCost === null) {
-      noCostItems.push(item);
-      return; // Exclude from classification
+      noCostItemsArr.push(item);
+      return;
     }
 
-    const popularity = item.qty_month >= averageQtyPerItem ? 'High' : 'Low';
-    const profitability = item.cm !== null && item.cm >= averageCmPerItem ? 'High' : 'Low';
+    const qty = Number(item.qty_month || 0);
+    const cm = Number(item.cm || 0);
 
-    item.popularity = popularity;
-    item.profitability = profitability;
+    const isPopular = qty >= popularityThreshold;
+    const isProfitable = cm >= profitabilityThreshold;
 
-    if (popularity === 'High' && profitability === 'High') {
-      item.category = 'Stars';
-      stars.push(item);
-    } else if (popularity === 'High' && profitability === 'Low') {
-      item.category = 'Cash Cows';
-      cashCows.push(item);
-    } else if (popularity === 'Low' && profitability === 'High') {
-      item.category = 'Puzzles';
-      puzzles.push(item);
-    } else {
-      item.category = 'Dogs';
-      dogs.push(item);
-    }
+    if (isPopular && isProfitable) starsArr.push(item);
+    else if (isPopular && !isProfitable) cashCowsArr.push(item);
+    else if (!isPopular && isProfitable) puzzlesArr.push(item);
+    else dogsArr.push(item);
   });
+
+  // ✅ 정렬 + TOP3 (중요: const 재대입 금지)
+  const starsTop3 = [...starsArr]
+    .sort((a, b) => (Number(b.revenue_month || 0) - Number(a.revenue_month || 0)))
+    .slice(0, 3);
+
+  const cashCowsTop3 = [...cashCowsArr]
+    .sort((a, b) => (Number(b.qty_month || 0) - Number(a.qty_month || 0)))
+    .slice(0, 3);
+
+  const puzzlesTop3 = [...puzzlesArr]
+    .sort((a, b) => (Number(b.cm || 0) - Number(a.cm || 0)))
+    .slice(0, 3);
+
+  const dogsTop3 = [...dogsArr]
+    .sort((a, b) => (Number(a.revenue_month || 0) - Number(b.revenue_month || 0)))
+    .slice(0, 3);
+
+  return {
+    items: menuEngineeringItems,
+    popularityThreshold,
+    profitabilityThreshold,
+    stars: starsTop3,
+    cashCows: cashCowsTop3,
+    puzzles: puzzlesTop3,
+    dogs: dogsTop3,
+    noCostItems: noCostItemsArr,
+    analyzedDatesCount: datesCount,
+    debugStats: {
+      datesCount,
+      loadedCount,
+      categoriesCount,
+      itemsCountTotal,
+      qtyPositiveItemsCount,
+      aggregatedIdsCount,
+    },
+  };
 // ✅ 최소 3개씩 보이도록 보정 (UI에서 1개만 나오는 문제 방지)
 const ensureMinItems = (target: any[], source: any[], n = 3) => {
   if (target.length >= n) return target;
