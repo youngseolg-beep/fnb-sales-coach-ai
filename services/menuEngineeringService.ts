@@ -158,7 +158,12 @@ export const calculateMenuEngineering = async (yearMonth: string, initialCategor
   };
 };
 
-export const calculateMenuEngineeringForRange = async (startDate: string, endDate: string, initialCategories: MenuCategory[]): Promise<MenuEngineeringResult | null> => {
+export const calculateMenuEngineeringForRange = async (
+  startDate: string,
+  endDate: string,
+  initialCategories: MenuCategory[],
+  options?: { maxDays?: number }
+): Promise<MenuEngineeringResult | null> => {
   const EXCLUDED_MENU_NAMES = new Set([
     '참이슬 프레쉬 360ml',
     '처음처럼 360ml',
@@ -182,7 +187,18 @@ export const calculateMenuEngineeringForRange = async (startDate: string, endDat
     '보건주 520ml',
     '노주교 500ml',
   ]);
-  const dates = await listDatesInRange(startDate, endDate);
+
+  const isExcluded = (name: string) => EXCLUDED_MENU_NAMES.has((name || '').trim());
+
+  let dates = await listDatesInRange(startDate, endDate);
+
+  // ✅ 너무 오래 걸리면 최근 maxDays만 분석 (기본: 7일)
+  const maxDays = options?.maxDays ?? 7;
+  if (maxDays > 0 && dates.length > maxDays) {
+    dates = dates.slice(-maxDays);
+  }
+
+  // ---- 아래 기존 로직은 그대로 유지 ----
 
   // If less than 7 days of data, return a minimal object indicating analysis is not possible.
   if (dates.length < 7) {
