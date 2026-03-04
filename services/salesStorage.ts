@@ -148,7 +148,6 @@ export async function saveDailyData(dateOrPayload: any, maybeData?: any) {
     orders: Number(payload.orders ?? 0),
     visit_count: Number(payload.visitCount ?? 0),
     sold_items: soldItems,
-    sold_items_summary: soldItemsSummary,
   };
 
   const { data, error } = await supabase
