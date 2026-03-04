@@ -160,3 +160,19 @@ export async function getMonthlyTotal(yearMonth: string) {
   }
   return sum;
 }
+export async function listDatesInRange(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("date")
+    .eq("store_id", STORE_ID)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("[listDatesInRange] supabase error:", error);
+    return [];
+  }
+
+  return (data ?? []).map((r: any) => r.date as string);
+}
