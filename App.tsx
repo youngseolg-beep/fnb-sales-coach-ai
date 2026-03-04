@@ -550,36 +550,43 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.monthlyTarget]);
 
 const handleSave = async (silent = false) => {
- 
+  alert("CHK1: handleSave entered");
   try {
-      if (!silent) setSaveStatus('데이터 저장 중...');
-      
-      const payload = {
-        ...data,
-        totalSales: results.calcSales // explicitly save totalSales
-      };
+    alert("CHK2: try entered");
 
-const res = await saveDailyData({ date: data.date, ...payload });
+    if (!silent) setSaveStatus("데이터 저장 중...");
+
+    const payload = {
+      ...data,
+      totalSales: results.calcSales,
+    };
+
+    alert("CHK3: before saveDailyData, date=" + String(data?.date));
+
+    const res = await saveDailyData({ date: data.date, ...payload });
+
+    alert("CHK4: after saveDailyData -> " + JSON.stringify(res));
+
     if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
-    alert("SAVE_RES=" + JSON.stringify(res));
-      if (!silent) {
-        setSaveStatus('저장 완료');
-        setToastMsg("매출 데이터 저장이 완료 되었습니다");
-      }
-      
-      // Refresh monthly stats after save
-      await refreshMonthlyStats(data.date.substring(0, 7));
-      await fetchPastData(); // Also refresh the history table
-      return true;
-    } catch (error: any) {
-      console.error("Save Error:", error);
-      if (!silent) {
-        setSaveStatus(`저장 실패: ${error.message || '알 수 없는 오류'}`);
-        setToastMsg("저장에 실패했습니다. 다시 시도해 주세요.");
-      }
-      return false;
+
+    if (!silent) {
+      setSaveStatus("저장 완료");
+      setToastMsg("매출 데이터 저장이 완료되었습니다!");
     }
-  };
+
+    await refreshMonthlyStats(data.date.substring(0, 7));
+    await fetchPastData();
+    return true;
+  } catch (error: any) {
+    alert("CHK_ERR: " + (error?.message || JSON.stringify(error)));
+    console.error("Save Error:", error);
+    if (!silent) {
+      setSaveStatus(`저장 실패: ${error.message || "알 수 없는 오류"}`);
+      setToastMsg("저장이 실패했습니다. 다시 시도해 주세요.");
+    }
+    return false;
+  }
+};
 
   const handleDelete = async () => {
     try {
