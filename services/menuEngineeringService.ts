@@ -353,7 +353,25 @@ export const calculateMenuEngineeringForRange = async (
       dogs.push(item);
     }
   });
+// ✅ 최소 3개씩 보이도록 보정 (UI에서 1개만 나오는 문제 방지)
+const ensureMinItems = (target: any[], source: any[], n = 3) => {
+  if (target.length >= n) return target;
 
+  const pool = source.filter(
+    (it) => !target.some((t) => t.name === it.name)
+  );
+
+  const sorted = [...pool].sort(
+    (a, b) => (b.revenue_month || 0) - (a.revenue_month || 0)
+  );
+
+  return [...target, ...sorted.slice(0, n - target.length)];
+};
+
+stars = ensureMinItems(stars, menuEngineeringItems, 3);
+cashCows = ensureMinItems(cashCows, menuEngineeringItems, 3);
+puzzles = ensureMinItems(puzzles, menuEngineeringItems, 3);
+dogs = ensureMinItems(dogs, menuEngineeringItems, 3);
   return {
     items: menuEngineeringItems,
     popularityThreshold: averageQtyPerItem,
