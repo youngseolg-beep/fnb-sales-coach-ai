@@ -230,22 +230,18 @@ const App: React.FC = () => {
       return friedKeywords.some((keyword) => itemName.includes(keyword));
     };
 
-    const calculateDailyTargetAndReason = (
-  itemQtyInRange: number,
-  analyzedDatesCount: number,
-  cap: number
-) => {
-  const days = Math.max(1, analyzedDatesCount);
-  const avgPerDay = (Number(itemQtyInRange || 0) / days);
+   const calculateDailyTargetAndReason = (itemQtyMonth: number, analyzedDatesCount: number) => {
+  const qty = Number(itemQtyMonth);
+  const days = Math.max(1, Number(analyzedDatesCount) || 1);
 
-  // ✅ 목표는 "현실적 캡"을 강제 (대표추천/업셀은 6~10 사이가 적당)
-  // - 평균이 낮으면: 최소 1~2
-  // - 평균이 높아도: cap 이상은 절대 안 올림
-  const target = clamp(Math.ceil(avgPerDay * 1.1), avgPerDay > 0 ? 1 : 1, cap);
+  const avg = Math.max(0, qty / days);
+
+  // ✅ 현실적 목표: 평균의 1.2배, 최소 1, 최대 8로 캡
+  const target = Math.min(8, Math.max(1, Math.ceil(avg * 1.2)));
 
   return {
     dailyTargetQty: target,
-    dailyTargetReason: `최근 ${days}일 평균 ${avgPerDay.toFixed(1)}개/일 → 목표 ${target}개 (현실적 상한 적용)`,
+    dailyTargetReason: `최근 ${days}일 평균 ${avg.toFixed(1)}개/일 → 목표 ${target}개`,
   };
 };
 
@@ -676,8 +672,7 @@ const handleDelete = async () => {
       const startDate = format(start, "yyyy-MM-dd");
       const endDate = format(end, "yyyy-MM-dd");
 
-      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES);
-      setMenuEngineeringResult(meResult);
+const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES, { maxDays: 7 });      setMenuEngineeringResult(meResult);
 
       const result = await generateCoachingReport(data, results, meResult);
       setReport(result);
