@@ -391,12 +391,27 @@ const App: React.FC = () => {
     localStorage.removeItem(AUTH_KEY);
   };
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    setReport('');
-    fetchData();
-    fetchPastData();
-  }, [data.date, isLoggedIn]);
+ useEffect(() => {
+  let alive = true;
+
+  const dateStr = data.date;
+
+  loadDaily(dateStr).then((loaded) => {
+    if (!alive) return;
+
+    setData((prev) => ({
+      ...loaded,
+      categories:
+        loaded.categories && loaded.categories.length > 0
+          ? loaded.categories
+          : prev.categories
+    }));
+  });
+
+  return () => {
+    alive = false;
+  };
+}, [data.date]);
 
   const fetchData = async () => {
     setDbLoading(true);
