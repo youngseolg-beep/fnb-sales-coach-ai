@@ -550,10 +550,7 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.monthlyTarget]);
 
 const handleSave = async (silent = false) => {
-  alert("CHK1: handleSave entered");
   try {
-    alert("CHK2: try entered");
-
     if (!silent) setSaveStatus("데이터 저장 중...");
 
     const payload = {
@@ -561,43 +558,37 @@ const handleSave = async (silent = false) => {
       totalSales: results.calcSales,
     };
 
-    alert("CHK3: before saveDailyData, date=" + String(data?.date));
-
     const res = await saveDailyData({ date: data.date, ...payload });
 
-    alert("CHK4: after saveDailyData -> " + JSON.stringify(res));
-
-    if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
-
-    if (!silent) {
-      setSaveStatus("저장 완료");
-      setToastMsg("매출 데이터 저장이 완료되었습니다!");
+    // saveDailyData가 {ok:false,...}를 줄 수도 있음
+    if ((res as any)?.ok === false) {
+      throw new Error((res as any)?.error || "SAVE_FAILED");
     }
 
-// ✅ 저장 성공 처리
-setSaveStatus("저장 완료");
-if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
-}
+    // ✅ 저장 성공 처리
+    setSaveStatus("저장 완료");
+    if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
 
-// ✅ 후처리는 실패해도 저장 실패로 만들지 않음
-try {
-  await refreshMonthlyStats(data.date.substring(0, 7));
-} catch (e) {
-  console.warn("refreshMonthlyStats failed (ignored):", e);
-}
+    // ✅ 후처리는 실패해도 저장 실패로 만들지 않음
+    try {
+      await refreshMonthlyStats(data.date.substring(0, 7));
+    } catch (e) {
+      console.warn("refreshMonthlyStats failed (ignored):", e);
+    }
 
-try {
-  await fetchPastData();
-} catch (e) {
-  console.warn("fetchPastData failed (ignored):", e);
-}
+    try {
+      await fetchPastData();
+    } catch (e) {
+      console.warn("fetchPastData failed (ignored):", e);
+    }
 
-return true;
+    return true;
   } catch (error: any) {
     console.error("Save Error:", error);
-    if (!silent) {
-     setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-if (!silent) setToastMsg("저장/갱신 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+
+    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
+    if (!silent) setToastMsg("저장/갱신 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+
     return false;
   }
 };
