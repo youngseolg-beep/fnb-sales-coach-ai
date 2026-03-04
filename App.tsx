@@ -405,34 +405,52 @@ const App: React.FC = () => {
     setData((prev) => ({ ...prev, mtdSales: total }));
   };
 
-  const fetchData = async (dateStr: string) => {
-    setDbLoading(true);
-    setSaveStatus("");
-    try {
-      const dbData = await loadDaily(dateStr);
+const fetchData = async (dateStr: string) => {
+  setDbLoading(true);
+  setSaveStatus("");
 
+  try {
+    const dbData = await loadDaily(dateStr);
+
+    if (!dbData) {
+      // ✅ 데이터 없는 날짜 클릭해도 "입력 UI 유지" (백지/화이트스크린 방지)
       setData((prev) => ({
         ...prev,
         date: dateStr,
-        posSales: dbData?.posSales ?? 0,
-        orders: dbData?.orders ?? 0,
-        visitCount: dbData?.visitCount ?? 0,
-        monthlyTarget: (dbData as any)?.monthlyTarget ?? prev.monthlyTarget ?? 0,
-        note: (dbData as any)?.note ?? "",
-        categories:
-          dbData?.categories && dbData.categories.length > 0
-            ? dbData.categories
-            : prev.categories,
+        posSales: 0,
+        orders: 0,
+        visitCount: 0,
+        note: "",
+        // monthlyTarget은 기존 값 유지
+        monthlyTarget: prev.monthlyTarget,
+        // categories는 절대 비우지 않음 (초기 템플릿 유지)
+        categories: INITIAL_CATEGORIES,
         mtdSales: prev.mtdSales,
       }));
-
-      await refreshMonthlyStats(dateStr.substring(0, 7));
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setDbLoading(false);
+    } else {
+      setData((prev) => ({
+        ...prev,
+        date: dateStr,
+        posSales: dbData.posSales ?? 0,
+        orders: dbData.orders ?? 0,
+        visitCount: dbData.visitCount ?? 0,
+        monthlyTarget: (dbData as any).monthlyTarget ?? prev.monthlyTarget,
+        note: (dbData as any).note ?? "",
+        categories:
+          dbData.categories && dbData.categories.length > 0
+            ? dbData.categories
+            : INITIAL_CATEGORIES,
+        mtdSales: prev.mtdSales,
+      }));
     }
-  };
+
+    await refreshMonthlyStats(dateStr.substring(0, 7));
+  } catch (err) {
+    console.error("Fetch Error:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const fetchPastData = async () => {
     const yearMonth = data.date.substring(0, 7);
