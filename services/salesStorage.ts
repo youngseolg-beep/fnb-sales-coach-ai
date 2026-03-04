@@ -207,9 +207,10 @@ export async function loadDaily(dateStr: string, template?: DailyPayload) {
     visitCount: safeNum(data.visit_count, 0),
     totalSales: safeNum(data.total_sales, 0),
     monthlyTarget: template?.monthlyTarget,
-    categories: template?.categories
-      ? applySoldItemsToCategories(template.categories, soldItems)
-      : [],
+  categories: applySoldItemsToCategories(
+  (template?.categories ?? payload?.categories ?? data?.categories ?? []) as any,
+  soldItems
+),
   };
 
   return base;
