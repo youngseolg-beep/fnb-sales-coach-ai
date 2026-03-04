@@ -90,7 +90,27 @@ export async function loadDaily(dateStr: string) {
   if (!data) return null;
 
   const row = data as DailyRow;
-  const p = (row.payload ?? {}) as any;
+
+  // ✅ payload가 string으로 저장된 케이스(옛날 데이터)까지 방어
+  let p: any = row.payload ?? {};
+  if (typeof p === "string") {
+    try {
+      p = JSON.parse(p);
+    } catch {
+      p = {};
+    }
+  }
+
+  // ✅ categories가 깨졌거나(객체/문자열/null) items가 없으면 무조건 null로
+  const rawCats = p?.categories ?? row.sold_items ?? null;
+  const catsOk =
+    Array.isArray(rawCats) &&
+    rawCats.length > 0 &&
+    rawCats.every(
+      (c: any) => c && typeof c === "object" && typeof c.name === "string" && Array.isArray(c.items)
+    );
+
+  const safeCategories = catsOk ? (rawCats as MenuCategory[]) : null;
 
   return {
     date: row.date,
@@ -99,7 +119,7 @@ export async function loadDaily(dateStr: string) {
     visitCount: Number(p.visitCount ?? row.visit_count ?? 0),
     note: String(p.note ?? ""),
     monthlyTarget: p.monthlyTarget ?? "",
-    categories: (p.categories ?? row.sold_items ?? null) as MenuCategory[] | null,
+    categories: safeCategories, // ✅ 깨진 날은 null로 보내서 App.tsx가 INITIAL_CATEGORIES로 대체함
   };
 }
 
