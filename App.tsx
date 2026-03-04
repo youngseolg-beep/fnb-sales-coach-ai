@@ -593,33 +593,46 @@ const fetchData = async (dateStr: string) => {
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await deleteDaily(data.date);
+const handleDelete = async () => {
+  const targetDate = data.date;
 
-      setData((prev) => ({
-        ...prev,
-        posSales: 0,
-        orders: 0,
-        visitCount: 0,
-        note: "",
-        categories: INITIAL_CATEGORIES.map((cat) => ({
-          ...cat,
-          items: cat.items.map((item) => ({ ...item, qty: 0 })),
-        })),
-      }));
-      setReport("");
-      setSaveStatus("데이터 삭제됨");
+  try {
+    setSaveStatus("데이터 삭제 중...");
+    setDbLoading(true);
 
-      await refreshMonthlyStats(data.date.substring(0, 7));
-      await fetchPastData();
+    // ✅ 1) DB에서 해당 날짜 데이터 삭제
+    await deleteDaily(targetDate);
 
-      setToastMsg("데이터가 삭제되었습니다.");
-    } catch (error: any) {
-      console.error("Delete Error:", error);
-      setToastMsg("삭제 중 오류가 발생했습니다.");
-    }
-  };
+    // ✅ 2) 화면도 즉시 초기화(0으로)
+    const resetCats = INITIAL_CATEGORIES.map((cat) => ({
+      ...cat,
+      items: cat.items.map((it) => ({ ...it, qty: 0 })),
+    }));
+
+    setData((prev) => ({
+      ...prev,
+      posSales: 0,
+      orders: 0,
+      visitCount: 0,
+      note: "",
+      categories: resetCats,
+    }));
+
+    setReport("");
+    setSaveStatus("데이터 삭제됨");
+    setToastMsg("데이터가 삭제되었습니다.");
+
+    // ✅ 3) 캘린더 점(.) / 월간합계 / 최근데이터 즉시 갱신
+    await refreshMonthlyStats(targetDate.substring(0, 7));
+    await fetchPastData();
+  } catch (error: any) {
+    console.error("Delete Error:", error);
+    setSaveStatus(`삭제 중 오류: ${error?.message || "알 수 없는 오류"}`);
+    setToastMsg("삭제 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const handleGenerate = async () => {
     setLoading(true);
