@@ -391,13 +391,11 @@ const App: React.FC = () => {
     localStorage.removeItem(AUTH_KEY);
   };
 
-  const fetchData = async () => {
-    setDbLoading(true);
+const fetchData = async (dateStr: string) => {    setDbLoading(true);
     setSaveStatus('');
     try {
       // 1. Load Daily Data
-const dbData = await loadDaily(data.date);
-
+const dbData = await loadDaily(dateStr);
 setData((prev) => ({
   ...prev,
 
@@ -1005,7 +1003,13 @@ const handleSave = async (silent = false) => {
       )}
     </div>
   );
+useEffect(() => {
+  if (!isLoggedIn) return;
 
+  fetchData(data.date);
+  fetchPastData();
+
+}, [data.date, isLoggedIn]);
   useEffect(() => {
     if (toastMsg) {
       const timer = setTimeout(() => {
