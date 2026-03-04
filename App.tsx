@@ -550,7 +550,7 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.monthlyTarget]);
 
 const handleSave = async (silent = false) => {
-  alert("APP_SAVE_CLICKED");
+ 
   try {
       if (!silent) setSaveStatus('데이터 저장 중...');
       
@@ -559,8 +559,9 @@ const handleSave = async (silent = false) => {
         totalSales: results.calcSales // explicitly save totalSales
       };
 
-await saveDailyData(data.date, payload);
-      
+const res = await saveDailyData({ date: data.date, ...payload });
+    if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
+    
       if (!silent) {
         setSaveStatus('저장 완료');
         setToastMsg("매출 데이터 저장이 완료 되었습니다");
