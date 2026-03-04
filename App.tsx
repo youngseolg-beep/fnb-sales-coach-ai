@@ -333,50 +333,72 @@ const App: React.FC = () => {
         reason,
       });
     }
+// ✅ 아래 블록 전체를 "통째로" 삭제하고, 이 코드로 그대로 복붙하세요.
+// (할인율: 10~25% / 5% 단위 / 판매량(인기도) + 마진 기반 / 할인 후 GP 최소 35% 유지)
 
-    const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
-    if (setDiscountTarget) {
-      const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
-      if (secondItem) {
-        const setPrice = setDiscountTarget.price + secondItem.price;
-        const setUnitCost = (setDiscountTarget.unitCost || 0) + (secondItem.unitCost || 0);
-        const setUnitProfit = setPrice - setUnitCost;
+const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
+if (setDiscountTarget) {
+  const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
+  if (secondItem) {
+    const setPrice = Number(setDiscountTarget.price || 0) + Number(secondItem.price || 0);
+    const setUnitCost =
+      Number(setDiscountTarget.unitCost || 0) + Number((secondItem as any).unitCost || 0);
 
-        const maxDiscountToMaintainMargin = setPrice - setUnitCost / 0.5;
-        const minDiscount = setPrice * 0.1;
+    // ✅ 기본 가드
+    if (setPrice > 0 && setUnitCost >= 0) {
+      const gp = (setPrice - setUnitCost) / setPrice; // 현재 GP%
+      const minGPAfter = 0.35; // ✅ 할인 후 최소 GP 35%
+      const maxDiscountByMargin = Math.max(0, Math.floor(((gp - minGPAfter) * 100) / 5) * 5);
 
-        let finalDiscountAmount = 0;
-        if (maxDiscountToMaintainMargin > minDiscount) {
-          const maxDiscountPercentage = Math.floor(((maxDiscountToMaintainMargin / setPrice) * 100) / 5) * 5;
-          const chosenDiscountPercentage = clamp(maxDiscountPercentage, 10, maxDiscountPercentage);
-          finalDiscountAmount = roundTo0_5(setPrice * (chosenDiscountPercentage / 100));
-        } else {
-          finalDiscountAmount = roundTo0_5(setPrice * 0.1);
-          if (setPrice - setUnitCost - finalDiscountAmount < setUnitProfit * 0.5) {
-            finalDiscountAmount = 0;
-          }
-        }
+      // ✅ 판매량(인기도) 기반: 덜 팔릴수록 할인↑, 잘 팔릴수록 할인↓
+      // qty_month가 7일 범위/월 범위 혼재여도 "상대적"으로만 쓰므로 OK
+      const popularity = Number(setDiscountTarget.qty_month || 0);
 
-        if (finalDiscountAmount > 0) {
-          const discountPercentage = Math.round(((finalDiscountAmount / setPrice) * 100) / 5) * 5;
-          const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(setDiscountTarget.qty_month || 0, analyzedDatesCount);
-          const reason = `수익성이 높지만 판매량이 낮은 메뉴입니다. ${setDiscountTarget.name}의 평균 이익은 $${setDiscountTarget.cm?.toFixed(
-            2
-          )}이며, 최근 7일 평균 판매량은 ${setDiscountTarget.qty_month}개입니다. 세트 할인 ${discountPercentage}%를 통해 판매량을 늘리고 객단가를 높여야 합니다. ${dailyTargetReason}`;
+      let base = 15; // 기본 15%
+      if (popularity <= 3) base = 25;
+      else if (popularity <= 7) base = 20;
+      else if (popularity <= 12) base = 15;
+      else base = 10;
 
-          plans.push({
-            puzzleItemName: setDiscountTarget.name,
-            setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
-            setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
-            discount: `${discountPercentage}% OFF`,
-            dailyTargetQty,
-            staffComment: `세트 할인 프로모션: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 할인 적용. 마진 50% 유지 확인 필수!`,
-            type: "SET_DISCOUNT",
-            reason,
-          });
-        }
+      // ✅ 최종 할인율: (1) 10~25 상한/하한 (2) 마진 기준 초과 못함
+      let discountPercentage = Math.min(base, 25, maxDiscountByMargin);
+      discountPercentage = Math.max(0, Math.min(25, discountPercentage));
+
+      // ✅ 10%도 못 주면(마진이 너무 낮으면) 할인 안함
+      if (discountPercentage < 10) discountPercentage = 0;
+
+      // ✅ 할인금액 (5% 단위)
+      const finalDiscountAmount =
+        discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
+
+      if (finalDiscountAmount > 0) {
+        const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
+          setDiscountTarget.qty_month || 0,
+          analyzedDatesCount
+        );
+
+        const reason = `수익성(GP)과 판매량(인기도)을 기준으로 할인율을 결정했습니다. 현재 GP ${(gp * 100).toFixed(
+          1
+        )}%이며, 할인 후에도 최소 GP ${(minGPAfter * 100).toFixed(
+          0
+        )}%를 유지하도록 ${discountPercentage}%로 제한했습니다. 최근 판매량 기준(낮을수록 할인↑) 적용. ${dailyTargetReason}`;
+
+        plans.push({
+          puzzleItemName: setDiscountTarget.name,
+          setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
+          setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
+          discount: `${discountPercentage}% OFF`,
+          dailyTargetQty,
+          staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${(minGPAfter * 100).toFixed(
+            0
+          )}% 이상 유지).`,
+          type: "SET_DISCOUNT",
+          reason,
+        });
       }
     }
+  }
+}
 
     return plans.slice(0, 3);
   }, [menuEngineeringResult, sortedMenuEngineering]);
