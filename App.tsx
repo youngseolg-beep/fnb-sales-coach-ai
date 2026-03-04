@@ -240,18 +240,21 @@ const calculateDailyTargetAndReason = (
 
   const avgDaily = qty / days;
 
-  // ✅ 성장률: 잘 팔리는 건 소폭, 퍼즐은 공격적으로
   const growth =
     type === "SET_DISCOUNT" ? 0.3 :
     type === "MENU_BOARD"   ? 0.1 :
-    0.15; // STAFF_UPSELL 중간
+    0.15; // STAFF_UPSELL
 
   let target = Math.ceil(avgDaily * (1 + growth));
 
-  // ✅ 현실 캡: 목표가 평균의 2배를 넘지 않게 + 절대 상한 8
+  // ✅ 현실 캡: 평균의 2배를 넘지 않게 + 절대 상한 8
   const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
-
   target = Math.max(1, Math.min(target, cap));
+
+  // ✅ 핵심: SET_DISCOUNT는 "데이터가 0이 아닌데도" 1개면 너무 소극적 → 최소 2개
+  if (type === "SET_DISCOUNT" && avgDaily > 0) {
+    target = Math.max(2, target);
+  }
 
   return {
     dailyTargetQty: target,
