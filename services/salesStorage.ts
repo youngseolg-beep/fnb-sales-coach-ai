@@ -51,11 +51,27 @@ export async function saveDailyData(input: DailyPayload) {
     payload,
   };
 
-  const { error } = await supabase
+  // ✅ onConflict/unique 제약에 의존하지 않고 "update → 없으면 insert"로 처리
+  const { data: updated, error: updateErr } = await supabase
     .from(TABLE)
-    .upsert(row, { onConflict: "date" }); // ✅ store_id 제거, date만 유니크라고 가정
+    .update(row)
+    .eq("date", input.date)
+    .select("date");
 
-  if (error) return { ok: false, error: error.message, raw: error };
+  if (updateErr) {
+    return { ok: false, error: updateErr.message, raw: updateErr };
+  }
+
+  if (updated && updated.length > 0) {
+    return { ok: true };
+  }
+
+  const { error: insertErr } = await supabase.from(TABLE).insert(row);
+
+  if (insertErr) {
+    return { ok: false, error: insertErr.message, raw: insertErr };
+  }
+
   return { ok: true };
 }
 
@@ -64,6 +80,7 @@ export async function loadDaily(dateStr: string) {
     .from(TABLE)
     .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary,payload")
     .eq("date", dateStr)
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -92,7 +109,6 @@ export async function deleteDaily(dateStr: string) {
   return true;
 }
 
-// ✅ 캘린더 점 표시용(월)
 export async function listDatesInMonth(yearMonth: string) {
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
@@ -111,7 +127,6 @@ export async function listDatesInMonth(yearMonth: string) {
   return (data ?? []).map((r: any) => r.date as string);
 }
 
-// ✅ 기간 범위 날짜 리스트
 export async function listDatesInRange(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from(TABLE)
@@ -127,7 +142,6 @@ export async function listDatesInRange(startDate: string, endDate: string) {
   return (data ?? []).map((r: any) => r.date as string);
 }
 
-// ✅ 월합계: aggregate(sum) 안 쓰고 JS로 합산
 export async function getMonthlyTotal(yearMonth: string) {
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
