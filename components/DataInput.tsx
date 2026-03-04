@@ -394,6 +394,7 @@ const res = await saveDailyData({
   date: dateStr,
   ...data,
 });
+    alert(JSON.stringify(res));
     
    await saveDailyData({
   date: dateStr,
