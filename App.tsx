@@ -789,6 +789,9 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+             <div className="hidden md:block text-[10px] font-black tracking-widest text-indigo-200/90 uppercase">
+    Powered by <span className="text-white">YOUNGSEOL</span>
+  </div>
             <div className="text-white font-bold text-sm bg-indigo-500/50 px-3 py-1 rounded-full border border-indigo-400 flex items-center gap-2">
               {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
               {data.date}
