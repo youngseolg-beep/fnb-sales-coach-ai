@@ -9,7 +9,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE = "sales_daily";
 
 type DailyRow = {
-  date: string;
+  date: string; // yyyy-mm-dd
   total_sales: number | null;
   orders: number | null;
   visit_count: number | null;
@@ -29,6 +29,24 @@ export type DailyPayload = {
   totalSales?: number;
 };
 
+const safeParsePayload = (payload: any) => {
+  if (!payload) return {};
+  if (typeof payload === "string") {
+    try {
+      return JSON.parse(payload);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof payload === "object") return payload;
+  return {};
+};
+
+const isDeletedPayload = (payload: any) => {
+  const p = safeParsePayload(payload);
+  return p && typeof p === "object" && p.deleted === true;
+};
+
 export async function saveDailyData(input: DailyPayload & { deleted?: boolean }) {
   const payload = {
     date: input.date,
@@ -39,7 +57,7 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
     monthlyTarget: input.monthlyTarget ?? "",
     categories: input.categories ?? null,
     totalSales: Number(input.totalSales || 0),
-    deleted: input.deleted === true,
+    deleted: input.deleted === true, // ✅ soft delete flag
   };
 
   const row: DailyRow = {
@@ -52,18 +70,18 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
     payload,
   };
 
+  // update → 없으면 insert
   const { data: updated, error: updateErr } = await supabase
     .from(TABLE)
     .update(row)
     .eq("date", input.date)
     .select("date");
 
-  if (updateErr) return { ok: false, error: updateErr.message };
-
+  if (updateErr) return { ok: false, error: updateErr.message, raw: updateErr };
   if (updated && updated.length > 0) return { ok: true };
 
   const { error: insertErr } = await supabase.from(TABLE).insert(row);
-  if (insertErr) return { ok: false, error: insertErr.message };
+  if (insertErr) return { ok: false, error: insertErr.message, raw: insertErr };
 
   return { ok: true };
 }
@@ -71,7 +89,7 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
 export async function loadDaily(dateStr: string) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,total_sales,orders,visit_count,sold_items,payload")
+    .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary,payload")
     .eq("date", dateStr)
     .limit(1)
     .maybeSingle();
@@ -80,30 +98,26 @@ export async function loadDaily(dateStr: string) {
     console.error("[loadDaily] supabase error:", error);
     return null;
   }
-
   if (!data) return null;
 
   const row = data as DailyRow;
+  const p: any = safeParsePayload(row.payload);
 
-  let p: any = row.payload ?? {};
-
-  if (typeof p === "string") {
-    try {
-      p = JSON.parse(p);
-    } catch {
-      p = {};
-    }
-  }
-
+  // ✅ deleted=true면 “없는 날”로 처리
   if (p?.deleted === true) return null;
 
+  // ✅ categories가 깨졌으면 null로 내려서 App.tsx에서 INITIAL_CATEGORIES로 대체하게
   const rawCats = p?.categories ?? row.sold_items ?? null;
 
   const catsOk =
     Array.isArray(rawCats) &&
     rawCats.length > 0 &&
     rawCats.every(
-      (c: any) => c && typeof c === "object" && typeof c.name === "string" && Array.isArray(c.items)
+      (c: any) =>
+        c &&
+        typeof c === "object" &&
+        typeof c.name === "string" &&
+        Array.isArray(c.items)
     );
 
   const safeCategories = catsOk ? (rawCats as MenuCategory[]) : null;
@@ -143,22 +157,18 @@ export async function listDatesInMonth(yearMonth: string) {
 
   const rows = (data ?? []) as any[];
 
-  const filtered = rows.filter((r) => {
-    let p = r.payload ?? {};
-    if (typeof p === "string") {
-      try {
-        p = JSON.parse(p);
-      } catch {
-        p = {};
-      }
-    }
-    return !(p && typeof p === "object" && p.deleted === true);
-  });
+  // ✅ deleted=true 인 날은 점에서 제외
+  const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
 
   return filtered.map((r) => r.date as string);
 }
 
-export async function listDatesInRange(startDate: string, endDate: string) {
+/**
+ * ✅ SaaS 기준: “DB에 존재하는 날짜만” 리턴
+ * - deleted=true 제외
+ * - (중요) 이 함수는 이 파일에 "딱 1번만" 존재해야 함
+ */
+export async function listDatesInRange(startDate: string, endDate: string): Promise<string[]> {
   const { data, error } = await supabase
     .from(TABLE)
     .select("date,payload")
@@ -172,19 +182,7 @@ export async function listDatesInRange(startDate: string, endDate: string) {
   }
 
   const rows = (data ?? []) as any[];
-
-  const filtered = rows.filter((r) => {
-    let p = r.payload ?? {};
-    if (typeof p === "string") {
-      try {
-        p = JSON.parse(p);
-      } catch {
-        p = {};
-      }
-    }
-    return !(p && typeof p === "object" && p.deleted === true);
-  });
-
+  const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
   return filtered.map((r) => r.date as string);
 }
 
@@ -194,7 +192,7 @@ export async function getMonthlyTotal(yearMonth: string) {
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("total_sales")
+    .select("total_sales,payload")
     .gte("date", start)
     .lte("date", end);
 
@@ -203,10 +201,11 @@ export async function getMonthlyTotal(yearMonth: string) {
     return 0;
   }
 
+  // ✅ deleted=true 제외하고 합산
   let sum = 0;
   for (const r of (data ?? []) as any[]) {
+    if (isDeletedPayload(r.payload)) continue;
     sum += Number(r.total_sales ?? 0);
   }
-
   return sum;
 }
