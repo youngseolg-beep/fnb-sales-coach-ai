@@ -141,6 +141,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [dbLoading, setDbLoading] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<string>("");
+  const [lastSavedAt, setLastSavedAt] = useState<string>("");
   const [showResetModal, setShowResetModal] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
@@ -639,6 +640,8 @@ const App: React.FC = () => {
       }
 
       setSaveStatus("저장 완료");
+      setLastSavedAt(new Date().toLocaleString());
+     
       if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
 
       try {
@@ -913,19 +916,20 @@ const App: React.FC = () => {
             onMonthChange={handleMonthChange}
           />
 
-          {saveStatus && (
-            <div className="mt-4 text-center">
-              <span
-                className={`text-xs font-bold px-3 py-1 rounded-full ${saveStatus === "저장 완료"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : saveStatus.startsWith("저장 실패")
-                    ? "bg-rose-50 text-rose-600"
-                    : "bg-slate-100 text-slate-500"
-                  }`}
-              >
-                {saveStatus}
-              </span>
-            </div>
+{saveStatus && (
+  <div className="mt-4 text-center">
+    <span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
+      {saveStatus}
+    </span>
+  </div>
+)}
+
+{lastSavedAt && (
+  <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
+    마지막 저장: {lastSavedAt}
+  </div>
+)}
+      
           )}
         </div>
 
