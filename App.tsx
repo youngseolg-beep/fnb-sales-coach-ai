@@ -21,6 +21,24 @@ import ReportDisplay from "./components/ReportDisplay";
 
 const AUTH_KEY = "fb_coach_auth";
 
+/** ✅ 월 목표를 '월(yyyy-MM) 단위'로 유지 (localStorage) */
+const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
+const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
+
+const loadMonthlyTarget = (yearMonth: string, fallback = 15000) => {
+  if (typeof window === "undefined") return fallback;
+  const raw = localStorage.getItem(MONTHLY_TARGET_PREFIX + yearMonth);
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
+const saveMonthlyTarget = (yearMonth: string, value: number) => {
+  if (typeof window === "undefined") return;
+  const v = Number(value);
+  if (!Number.isFinite(v) || v <= 0) return;
+  localStorage.setItem(MONTHLY_TARGET_PREFIX + yearMonth, String(v));
+};
+
 // Helper functions for boost plans
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 
@@ -118,15 +136,21 @@ const App: React.FC = () => {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const [data, setData] = useState<SalesReportData>({
-    date: new Date().toISOString().split("T")[0],
-    posSales: 0,
-    orders: 0,
-    visitCount: 0,
-    note: "",
-    monthlyTarget: 15000,
-    mtdSales: 0,
-    categories: INITIAL_CATEGORIES,
+  const [data, setData] = useState<SalesReportData>(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const ym = getMonthKey(today);
+    const monthTarget = loadMonthlyTarget(ym, 15000);
+
+    return {
+      date: today,
+      posSales: 0,
+      orders: 0,
+      visitCount: 0,
+      note: "",
+      monthlyTarget: monthTarget,
+      mtdSales: 0,
+      categories: INITIAL_CATEGORIES,
+    };
   });
 
   const [report, setReport] = useState<string>("");
@@ -412,14 +436,23 @@ const App: React.FC = () => {
     const total = await getMonthlyTotal(yearMonth);
     const dates = await listDatesInMonth(yearMonth);
 
+    // ✅ 월별 목표는 localStorage 기준
+    const target = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
+
     setMonthlyStats({
       total,
       avg: dates.length > 0 ? total / dates.length : 0,
-      rate: data.monthlyTarget > 0 ? (total / data.monthlyTarget) * 100 : 0,
+      rate: target > 0 ? (total / target) * 100 : 0,
     });
 
     setDatesWithData(dates);
-    setData((prev) => ({ ...prev, mtdSales: total }));
+
+    // ✅ 현재 보고있는 월이라면 data.monthlyTarget도 동기화
+    if (getMonthKey(data.date) === yearMonth) {
+      setData((prev) => ({ ...prev, mtdSales: total, monthlyTarget: target }));
+    } else {
+      setData((prev) => ({ ...prev, mtdSales: total }));
+    }
   };
 
   const fetchData = async (dateStr: string) => {
@@ -428,6 +461,10 @@ const App: React.FC = () => {
 
     try {
       const dbData = await loadDaily(dateStr);
+
+      // ✅ 이 날짜의 월 목표는 localStorage에서 불러와 고정
+      const yearMonth = getMonthKey(dateStr);
+      const monthTargetFromLocal = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
 
       if (!dbData) {
         const resetCats = INITIAL_CATEGORIES.map((cat) => ({
@@ -442,7 +479,7 @@ const App: React.FC = () => {
           orders: 0,
           visitCount: 0,
           note: "",
-          monthlyTarget: prev.monthlyTarget,
+          monthlyTarget: monthTargetFromLocal,
           categories: resetCats,
           mtdSales: prev.mtdSales,
         }));
@@ -453,10 +490,9 @@ const App: React.FC = () => {
           posSales: dbData.posSales ?? 0,
           orders: dbData.orders ?? 0,
           visitCount: dbData.visitCount ?? 0,
-          monthlyTarget: (dbData as any).monthlyTarget ?? prev.monthlyTarget,
+          monthlyTarget: monthTargetFromLocal,
           note: (dbData as any).note ?? "",
-          categories:
-            dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
+          categories: dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
           mtdSales: prev.mtdSales,
         }));
       }
@@ -574,9 +610,11 @@ const App: React.FC = () => {
   }, [data]);
 
   const monthlyRate = useMemo(() => {
-    if (!data.monthlyTarget || data.monthlyTarget <= 0) return 0;
-    return (monthlyStats.total / data.monthlyTarget) * 100;
-  }, [monthlyStats.total, data.monthlyTarget]);
+    const ym = getMonthKey(data.date);
+    const target = loadMonthlyTarget(ym, data.monthlyTarget || 15000);
+    if (!target || target <= 0) return 0;
+    return (monthlyStats.total / target) * 100;
+  }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
   const handleSave = async (silent = false) => {
     try {
@@ -760,7 +798,12 @@ const App: React.FC = () => {
                 <input
                   type="number"
                   value={data.monthlyTarget || ""}
-                  onChange={(e) => setData((prev) => ({ ...prev, monthlyTarget: Number(e.target.value) }))}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    const ym = getMonthKey(data.date);
+                    setData((prev) => ({ ...prev, monthlyTarget: v }));
+                    saveMonthlyTarget(ym, v);
+                  }}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1 text-right text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none"
                   placeholder="0"
                 />
@@ -872,9 +915,7 @@ const App: React.FC = () => {
           )}
 
           {lastSavedAt && (
-            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
-              마지막 저장: {lastSavedAt}
-            </div>
+            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>
           )}
         </div>
 
@@ -951,7 +992,10 @@ const App: React.FC = () => {
                 ) : (
                   <div className="space-y-2">
                     {periodStats.list.map((row: any) => (
-                      <div key={row.date} className="flex items-center justify-between py-2 border-b border-slate-50 text-sm">
+                      <div
+                        key={row.date}
+                        className="flex items-center justify-between py-2 border-b border-slate-50 text-sm"
+                      >
                         <span className="font-bold text-slate-600">{row.date}</span>
                         <div className="flex items-center gap-8">
                           <span className="font-black text-slate-900">
@@ -967,7 +1011,9 @@ const App: React.FC = () => {
 
               {/* 기간 메뉴 Top10 */}
               <div className="space-y-4">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">기간 중 메뉴 판매량 (Top 10)</h4>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  기간 중 메뉴 판매량 (Top 10)
+                </h4>
 
                 {periodMenuTop.length === 0 ? (
                   <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
