@@ -918,7 +918,15 @@ const App: React.FC = () => {
 
 {saveStatus && (
   <div className="mt-4 text-center">
-    <span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
+    <span
+      className={`text-xs font-bold px-3 py-1 rounded-full ${
+        saveStatus === "저장 완료"
+          ? "bg-emerald-50 text-emerald-600"
+          : saveStatus.startsWith("저장 실패") || saveStatus.startsWith("저장 중 오류")
+          ? "bg-rose-50 text-rose-600"
+          : "bg-slate-100 text-slate-500"
+      }`}
+    >
       {saveStatus}
     </span>
   </div>
@@ -929,9 +937,6 @@ const App: React.FC = () => {
     마지막 저장: {lastSavedAt}
   </div>
 )}
-      
-          )}
-        </div>
 
         <ReportDisplay
           report={report}
