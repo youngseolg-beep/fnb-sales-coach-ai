@@ -138,8 +138,6 @@ const App: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
 
-  // 최근 30일 표 (진짜 최근 30일로)
-  const [pastData, setPastData] = useState<any[]>([]);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
@@ -162,7 +160,8 @@ const App: React.FC = () => {
 
     const formatItem = (item: any, totalRevenueForRange2: number) => {
       const unitCost = item.unitCost !== null ? item.unitCost.toFixed(2) : "N/A";
-      const costRate = item.price > 0 && item.unitCost !== null ? ((item.unitCost / item.price) * 100).toFixed(1) : "N/A";
+      const costRate =
+        item.price > 0 && item.unitCost !== null ? ((item.unitCost / item.price) * 100).toFixed(1) : "N/A";
       const gp_month =
         item.revenue_month !== null && item.cogs_month !== null
           ? (item.revenue_month - item.cogs_month).toFixed(2)
@@ -241,7 +240,9 @@ const App: React.FC = () => {
 
       return {
         dailyTargetQty: target,
-        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(growth * 100)}% 목표 ${target}개 (상한 ${cap}개)`,
+        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
+          growth * 100
+        )}% 목표 ${target}개 (상한 ${cap}개)`,
       };
     };
 
@@ -267,7 +268,10 @@ const App: React.FC = () => {
 
     const targetablePuzzles = menuEngineeringResult.puzzles
       .filter((item) => item.unitCost != null)
-      .sort((a, b) => (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number));
+      .sort(
+        (a, b) =>
+          (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number)
+      );
 
     const targetableStars = menuEngineeringResult.stars
       .filter((item) => item.unitCost != null)
@@ -277,7 +281,8 @@ const App: React.FC = () => {
       .filter((item) => item.unitCost != null)
       .sort((a, b) => (b.qty_month as number) - (a.qty_month as number));
 
-    const analyzedDatesCount = menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
+    const analyzedDatesCount =
+      menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
 
     const plans: any[] = [];
     const usedItemIds = new Set<string>();
@@ -348,7 +353,8 @@ const App: React.FC = () => {
           discountPercentage = Math.max(0, Math.min(25, discountPercentage));
           if (discountPercentage < 10) discountPercentage = 0;
 
-          const finalDiscountAmount = discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
+          const finalDiscountAmount =
+            discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
 
           if (finalDiscountAmount > 0) {
             const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
@@ -363,7 +369,9 @@ const App: React.FC = () => {
               setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
               discount: `${discountPercentage}% OFF`,
               dailyTargetQty,
-              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${Math.round(minGPAfter * 100)}%+ 유지).`,
+              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${Math.round(
+                minGPAfter * 100
+              )}%+ 유지).`,
               type: "SET_DISCOUNT",
               reason: `마진(GP) + 판매량(인기도) 기반으로 ${discountPercentage}% 산정. 현재 GP ${(gp * 100).toFixed(
                 1
@@ -447,7 +455,8 @@ const App: React.FC = () => {
           visitCount: dbData.visitCount ?? 0,
           monthlyTarget: (dbData as any).monthlyTarget ?? prev.monthlyTarget,
           note: (dbData as any).note ?? "",
-          categories: dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
+          categories:
+            dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
           mtdSales: prev.mtdSales,
         }));
       }
@@ -458,27 +467,6 @@ const App: React.FC = () => {
     } finally {
       setDbLoading(false);
     }
-  };
-
-  // ✅ 최근 30일: “이번달”이 아니라 “오늘 기준 30일”
-  const fetchPastData = async () => {
-    const end = data.date;
-    const start = format(subDays(parseISO(end), 29), "yyyy-MM-dd");
-    const dates = await listDatesInRange(start, end);
-
-    const list: any[] = [];
-    for (const d of dates) {
-      const item = await loadDaily(d);
-      if (item) {
-        list.push({
-          date: d,
-          total_sales: Number(item.posSales || 0),
-          orders: Number(item.orders || 0),
-          guests: Number(item.visitCount || 0),
-        });
-      }
-    }
-    setPastData(list.sort((a, b) => b.date.localeCompare(a.date)));
   };
 
   // ✅ 기간별 성과 분석 (Supabase 기준 + 메뉴 Top10)
@@ -609,12 +597,6 @@ const App: React.FC = () => {
         console.warn("refreshMonthlyStats failed (ignored):", e);
       }
 
-      try {
-        await fetchPastData();
-      } catch (e) {
-        console.warn("fetchPastData failed (ignored):", e);
-      }
-
       return true;
     } catch (error: any) {
       console.error("Save Error:", error);
@@ -649,7 +631,6 @@ const App: React.FC = () => {
       setReport("");
 
       await refreshMonthlyStats(targetDate.substring(0, 7));
-      await fetchPastData();
 
       setSaveStatus("데이터 삭제됨");
       setToastMsg("데이터가 삭제되었습니다.");
@@ -690,7 +671,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     fetchData(data.date);
-    fetchPastData();
   }, [data.date, isLoggedIn]);
 
   // ✅ 토스트 자동 제거
@@ -804,7 +784,10 @@ const App: React.FC = () => {
               <div className="flex items-end gap-2">
                 <p className="text-3xl font-black text-indigo-600">{monthlyRate.toFixed(1)}%</p>
                 <div className="flex-1 h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
-                  <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${Math.min(monthlyRate, 100)}%` }} />
+                  <div
+                    className="h-full bg-indigo-500 transition-all duration-1000"
+                    style={{ width: `${Math.min(monthlyRate, 100)}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -842,7 +825,11 @@ const App: React.FC = () => {
                 <span className="text-2xl font-black text-slate-900">${results.gapUsd}</span>
                 <span
                   className={`text-sm font-bold ${
-                    results.status === "🔴" ? "text-rose-500" : results.status === "🟡" ? "text-amber-500" : "text-emerald-500"
+                    results.status === "🔴"
+                      ? "text-rose-500"
+                      : results.status === "🟡"
+                      ? "text-amber-500"
+                      : "text-emerald-500"
                   }`}
                 >
                   {results.status}
@@ -859,9 +846,14 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* ✅ 여기 div 닫힘이 빌드 에러 핵심 포인트 */}
         <div className="relative">
-          <DataInput data={data} onChange={setData} loading={loading} datesWithData={datesWithData} onMonthChange={handleMonthChange} />
+          <DataInput
+            data={data}
+            onChange={setData}
+            loading={loading}
+            datesWithData={datesWithData}
+            onMonthChange={handleMonthChange}
+          />
 
           {saveStatus && (
             <div className="mt-4 text-center">
@@ -893,59 +885,6 @@ const App: React.FC = () => {
           sortedMenuEngineering={sortedMenuEngineering}
           boostPlans={boostPlans}
         />
-
-        {/* 최근 30일 */}
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-8 py-4">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-              <i className="fa-solid fa-history text-indigo-500"></i>
-              최근 30일 데이터 보기
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">날짜</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">매출</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">주문</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">방문</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {pastData.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-8 py-8 text-center text-slate-500 text-sm">
-                      최근 30일 데이터가 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  pastData.map((row) => (
-                    <tr
-                      key={row.date}
-                      className="hover:bg-indigo-50/30 transition-colors cursor-pointer group"
-                      onClick={() => {
-                        setData((prev) => ({ ...prev, date: row.date }));
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      <td className="px-8 py-4 font-bold text-slate-700">{row.date}</td>
-                      <td className="px-8 py-4 font-black text-slate-900">${Number(row.total_sales || 0).toLocaleString()}</td>
-                      <td className="px-8 py-4 text-slate-600 font-medium">{row.orders}건</td>
-                      <td className="px-8 py-4 text-slate-600 font-medium">{row.guests}명</td>
-                      <td className="px-8 py-4 text-right">
-                        <span className="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs uppercase tracking-widest">
-                          수정하기
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
 
         {/* 기간별 성과 분석 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -984,15 +923,21 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 매출</p>
-                  <p className="text-2xl font-black text-slate-900">${Number(periodStats.totalSales || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-black text-slate-900">
+                    ${Number(periodStats.totalSales || 0).toLocaleString()}
+                  </p>
                 </div>
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 주문</p>
-                  <p className="text-2xl font-black text-slate-900">{Number(periodStats.totalOrders || 0).toLocaleString()}건</p>
+                  <p className="text-2xl font-black text-slate-900">
+                    {Number(periodStats.totalOrders || 0).toLocaleString()}건
+                  </p>
                 </div>
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 방문</p>
-                  <p className="text-2xl font-black text-slate-900">{Number(periodStats.totalVisitors || 0).toLocaleString()}명</p>
+                  <p className="text-2xl font-black text-slate-900">
+                    {Number(periodStats.totalVisitors || 0).toLocaleString()}명
+                  </p>
                 </div>
               </div>
 
@@ -1009,7 +954,9 @@ const App: React.FC = () => {
                       <div key={row.date} className="flex items-center justify-between py-2 border-b border-slate-50 text-sm">
                         <span className="font-bold text-slate-600">{row.date}</span>
                         <div className="flex items-center gap-8">
-                          <span className="font-black text-slate-900">${Number(row.total_sales || 0).toLocaleString()}</span>
+                          <span className="font-black text-slate-900">
+                            ${Number(row.total_sales || 0).toLocaleString()}
+                          </span>
                           <span className="text-slate-400 text-xs w-16 text-right">{row.orders}건</span>
                         </div>
                       </div>
@@ -1080,8 +1027,14 @@ const App: React.FC = () => {
 
       {/* 리셋 모달 */}
       {showResetModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]" onClick={() => setShowResetModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]"
+          onClick={() => setShowResetModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-black text-slate-900 text-xl">일 데이터 리셋</h3>
             <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
             <div className="flex justify-end gap-3">
