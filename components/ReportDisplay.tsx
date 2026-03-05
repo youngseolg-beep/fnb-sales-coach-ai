@@ -89,15 +89,17 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, loading, menuEngi
           </div>
         ) : (
           menuEngineeringResult && (
-            <div className="mt-6 bg-white rounded-xl border border-slate-200">
-              <button 
-                onClick={() => setIsMeSummaryOpen(!isMeSummaryOpen)}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-t-xl border-b border-slate-200 text-slate-800 font-black text-sm uppercase tracking-tight"
-              >
-                <span className="flex items-center gap-2">
-                  <i className="fa-solid fa-utensils text-indigo-500"></i>
-                  메뉴 엔지니어링 요약 (최근 7일)
-                </span>
+           <div className="flex flex-col gap-1">
+  <span className="flex items-center gap-2">
+    <i className="fa-solid fa-utensils text-indigo-500"></i>
+    메뉴 엔지니어링 요약 (최근 7일)
+  </span>
+
+  <p style={{ fontSize: "12px", color: "#6b7280" }}>
+    최근 7일 판매 데이터를 기준으로 분석합니다. 판매된 메뉴 종류가 적을 경우 일부 그룹은 "없음"으로 표시될 수 있습니다.
+  </p>
+</div>
+)
                 <i className={`fa-solid ${isMeSummaryOpen ? 'fa-chevron-up' : 'fa-chevron-down'} text-xs text-slate-500`}></i>
               </button>
               {isMeSummaryOpen && (
