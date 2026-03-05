@@ -14,7 +14,7 @@ import {
   getMonthlyTotal,
   listDatesInMonth,
   deleteDaily,
-  listDatesInRange, // ✅ Supabase 기준: 기간 조회
+  listDatesInRange,
 } from "./services/salesStorage";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
@@ -129,7 +129,8 @@ const INITIAL_CATEGORIES: MenuCategory[] = [
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
+    if (typeof window !== "undefined")
+      return localStorage.getItem(AUTH_KEY) === "true";
     return false;
   });
 
@@ -159,48 +160,71 @@ const App: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<string>("");
   const [lastSavedAt, setLastSavedAt] = useState<string>("");
   const [showResetModal, setShowResetModal] = useState(false);
+
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
+  const [toastSeq, setToastSeq] = useState<number>(0);
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setToastSeq((s) => s + 1);
+  };
+
+  const [menuEngineeringResult, setMenuEngineeringResult] =
+    useState<MenuEngineeringResult | null>(null);
 
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
   // 기간별 성과 분석
   const [periodRange, setPeriodRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
+    start: new Date(new Date().setDate(new Date().getDate() - 7))
+      .toISOString()
+      .split("T")[0],
     end: new Date().toISOString().split("T")[0],
   });
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
 
   // ✅ 기간 메뉴 판매량 Top10
-  const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+  const [periodMenuTop, setPeriodMenuTop] =
+    useState<{ name: string; qty: number }[]>([]);
 
   const sortedMenuEngineering = useMemo(() => {
     if (!menuEngineeringResult) return null;
 
     const totalRevenueForRange =
-      menuEngineeringResult.items?.reduce((sum: number, it: any) => sum + (Number(it.revenue_month) || 0), 0) || 0;
+      menuEngineeringResult.items?.reduce(
+        (sum: number, it: any) => sum + (Number(it.revenue_month) || 0),
+        0
+      ) || 0;
 
     const formatItem = (item: any, totalRevenueForRange2: number) => {
       const unitCost = item.unitCost !== null ? item.unitCost.toFixed(2) : "N/A";
       const costRate =
-        item.price > 0 && item.unitCost !== null ? ((item.unitCost / item.price) * 100).toFixed(1) : "N/A";
+        item.price > 0 && item.unitCost !== null
+          ? ((item.unitCost / item.price) * 100).toFixed(1)
+          : "N/A";
       const gp_month =
         item.revenue_month !== null && item.cogs_month !== null
           ? (item.revenue_month - item.cogs_month).toFixed(2)
           : "N/A";
-      const revenueText = item.revenue_month !== null ? item.revenue_month.toFixed(2) : "N/A";
+      const revenueText =
+        item.revenue_month !== null ? item.revenue_month.toFixed(2) : "N/A";
 
       let revenueContribution = "N/A";
       if (item.revenue_month !== null && totalRevenueForRange2 > 0) {
-        revenueContribution = ((item.revenue_month / totalRevenueForRange2) * 100).toFixed(1);
+        revenueContribution = (
+          (item.revenue_month / totalRevenueForRange2) *
+          100
+        ).toFixed(1);
       }
 
-      return `${item.name} — 원가 $${unitCost} (${costRate}%) / 판매 ${item.qty_month} / 매출 $${revenueText} / 이익 $${gp_month} / 매출 기여도 ${revenueContribution}%`;
+      return `${item.name} — 원가 $${unitCost} (${costRate}%) / 판매 ${
+        item.qty_month
+      } / 매출 $${revenueText} / 이익 $${gp_month} / 매출 기여도 ${revenueContribution}%`;
     };
 
-    const safeNum = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+    const safeNum = (v: any) =>
+      typeof v === "number" && Number.isFinite(v) ? v : 0;
 
     const starsTop3 = [...menuEngineeringResult.stars]
       .sort((a, b) => safeNum(b.revenue_month) - safeNum(a.revenue_month))
@@ -213,7 +237,11 @@ const App: React.FC = () => {
       .map((item) => formatItem(item, totalRevenueForRange));
 
     const puzzlesTop3 = [...menuEngineeringResult.puzzles]
-      .sort((a, b) => safeNum(b.cm) - safeNum(a.cm) || safeNum(b.revenue_month) - safeNum(a.revenue_month))
+      .sort(
+        (a, b) =>
+          safeNum(b.cm) - safeNum(a.cm) ||
+          safeNum(b.revenue_month) - safeNum(a.revenue_month)
+      )
       .slice(0, 3)
       .map((item) => formatItem(item, totalRevenueForRange));
 
@@ -222,7 +250,9 @@ const App: React.FC = () => {
       .slice(0, 3)
       .map((item) => formatItem(item, totalRevenueForRange));
 
-    const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
+    const noCostItemsList = menuEngineeringResult.noCostItems
+      .map((item) => item.name)
+      .join(", ");
 
     return {
       starsTop3,
@@ -259,20 +289,22 @@ const App: React.FC = () => {
       let target = Math.ceil(avgDaily * (1 + growth));
       const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
       target = Math.max(1, Math.min(target, cap));
-
       if (type === "SET_DISCOUNT" && avgDaily > 0) target = Math.max(2, target);
 
       return {
         dailyTargetQty: target,
-        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
-          growth * 100
-        )}% 목표 ${target}개 (상한 ${cap}개)`,
+        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(
+          1
+        )}개/일 → +${Math.round(growth * 100)}% 목표 ${target}개 (상한 ${cap}개)`,
       };
     };
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
       const availableSoftDrinks = allMenuItemsFlat.filter(
-        (item) => SOFT_DRINKS.includes(item.name) && item.id !== mainItem.id && item.unitCost != null
+        (item) =>
+          SOFT_DRINKS.includes(item.name) &&
+          item.id !== mainItem.id &&
+          item.unitCost != null
       );
       if (availableSoftDrinks.length > 0) {
         return availableSoftDrinks[Math.floor(Math.random() * availableSoftDrinks.length)];
@@ -294,7 +326,8 @@ const App: React.FC = () => {
       .filter((item) => item.unitCost != null)
       .sort(
         (a, b) =>
-          (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number)
+          (b.cm as number) - (a.cm as number) ||
+          (b.revenue_month as number) - (a.revenue_month as number)
       );
 
     const targetableStars = menuEngineeringResult.stars
@@ -305,8 +338,7 @@ const App: React.FC = () => {
       .filter((item) => item.unitCost != null)
       .sort((a, b) => (b.qty_month as number) - (a.qty_month as number));
 
-    const analyzedDatesCount =
-      menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
+    const analyzedDatesCount = menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
 
     const plans: any[] = [];
     const usedItemIds = new Set<string>();
@@ -411,8 +443,6 @@ const App: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ✅ Vite 환경변수 규칙: VITE_ 접두어 + import.meta.env 사용
     const correctPassword = (import.meta as any).env?.VITE_APP_PASSWORD;
 
     if (!correctPassword) {
@@ -435,8 +465,6 @@ const App: React.FC = () => {
   const refreshMonthlyStats = async (yearMonth: string) => {
     const total = await getMonthlyTotal(yearMonth);
     const dates = await listDatesInMonth(yearMonth);
-
-    // ✅ 월별 목표는 localStorage 기준
     const target = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
 
     setMonthlyStats({
@@ -447,7 +475,6 @@ const App: React.FC = () => {
 
     setDatesWithData(dates);
 
-    // ✅ 현재 보고있는 월이라면 data.monthlyTarget도 동기화
     if (getMonthKey(data.date) === yearMonth) {
       setData((prev) => ({ ...prev, mtdSales: total, monthlyTarget: target }));
     } else {
@@ -461,10 +488,11 @@ const App: React.FC = () => {
 
     try {
       const dbData = await loadDaily(dateStr);
-
-      // ✅ 이 날짜의 월 목표는 localStorage에서 불러와 고정
       const yearMonth = getMonthKey(dateStr);
-      const monthTargetFromLocal = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
+      const monthTargetFromLocal = loadMonthlyTarget(
+        yearMonth,
+        data.monthlyTarget || 15000
+      );
 
       if (!dbData) {
         const resetCats = INITIAL_CATEGORIES.map((cat) => ({
@@ -492,7 +520,10 @@ const App: React.FC = () => {
           visitCount: dbData.visitCount ?? 0,
           monthlyTarget: monthTargetFromLocal,
           note: (dbData as any).note ?? "",
-          categories: dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
+          categories:
+            dbData.categories && dbData.categories.length > 0
+              ? dbData.categories
+              : INITIAL_CATEGORIES,
           mtdSales: prev.mtdSales,
         }));
       }
@@ -546,9 +577,18 @@ const App: React.FC = () => {
       }
 
       if (list.length > 0) {
-        const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
-        const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
-        const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+        const totalSales = list.reduce(
+          (acc, curr) => acc + Number(curr.total_sales || 0),
+          0
+        );
+        const totalOrders = list.reduce(
+          (acc, curr) => acc + Number(curr.orders || 0),
+          0
+        );
+        const totalVisitors = list.reduce(
+          (acc, curr) => acc + Number(curr.guests || 0),
+          0
+        );
 
         setPeriodStats({
           totalSales,
@@ -627,7 +667,7 @@ const App: React.FC = () => {
 
       setSaveStatus("저장 완료");
       setLastSavedAt(new Date().toLocaleString());
-      if (!silent) setToastMsg("매출 데이터 저장이 완료되었습니다!");
+      if (!silent) showToast("데이터가 저장되었습니다.");
 
       try {
         await refreshMonthlyStats(data.date.substring(0, 7));
@@ -639,7 +679,7 @@ const App: React.FC = () => {
     } catch (error: any) {
       console.error("Save Error:", error);
       setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-      if (!silent) setToastMsg("저장/갱신 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+      if (!silent) showToast("저장 중 오류가 발생했습니다.");
       return false;
     }
   };
@@ -671,11 +711,11 @@ const App: React.FC = () => {
       await refreshMonthlyStats(targetDate.substring(0, 7));
 
       setSaveStatus("데이터 삭제됨");
-      setToastMsg("데이터가 삭제되었습니다.");
+      showToast("데이터가 삭제되었습니다.");
     } catch (error: any) {
       console.error("Delete Error:", error);
       setSaveStatus(`삭제 오류: ${error?.message || "알 수 없는 오류"}`);
-      setToastMsg("삭제 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+      showToast("삭제 중 오류가 발생했습니다.");
     } finally {
       setDbLoading(false);
     }
@@ -692,7 +732,12 @@ const App: React.FC = () => {
       const startDate = format(start, "yyyy-MM-dd");
       const endDate = format(end, "yyyy-MM-dd");
 
-      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES, { maxDays: 7 });
+      const meResult = await calculateMenuEngineeringForRange(
+        startDate,
+        endDate,
+        INITIAL_CATEGORIES,
+        { maxDays: 7 }
+      );
       setMenuEngineeringResult(meResult);
 
       const result = await generateCoachingReport(data, results, meResult);
@@ -705,18 +750,16 @@ const App: React.FC = () => {
     }
   };
 
-  // ✅ 날짜 바뀌면 DB에서 다시 로드
   useEffect(() => {
     if (!isLoggedIn) return;
     fetchData(data.date);
   }, [data.date, isLoggedIn]);
 
-  // ✅ 토스트 자동 제거
   useEffect(() => {
     if (!toastMsg) return;
-    const timer = setTimeout(() => setToastMsg(null), 3000);
-    return () => clearTimeout(timer);
-  }, [toastMsg]);
+    const timer = window.setTimeout(() => setToastMsg(null), 1200);
+    return () => window.clearTimeout(timer);
+  }, [toastSeq, toastMsg]);
 
   if (!isLoggedIn) {
     return (
@@ -726,8 +769,12 @@ const App: React.FC = () => {
             <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
               <i className="fa-solid fa-lock text-white text-2xl"></i>
             </div>
-            <h1 className="text-white font-black text-2xl uppercase tracking-tight">Sales Coach AI</h1>
-            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">비밀번호를 입력하세요</p>
+            <h1 className="text-white font-black text-2xl uppercase tracking-tight">
+              Sales Coach AI
+            </h1>
+            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">
+              비밀번호를 입력하세요
+            </p>
           </div>
           <form onSubmit={handleLogin} className="p-8 space-y-6">
             <div>
@@ -739,7 +786,11 @@ const App: React.FC = () => {
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
                 autoFocus
               />
-              {authError && <p className="text-rose-500 text-xs font-bold mt-3 text-center">{authError}</p>}
+              {authError && (
+                <p className="text-rose-500 text-xs font-bold mt-3 text-center">
+                  {authError}
+                </p>
+              )}
             </div>
             <button
               type="submit"
@@ -754,47 +805,57 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
-      <nav className="bg-indigo-600 px-6 py-4 sticky top-0 z-50 shadow-md">
+    <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
+      <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
               <i className="fa-solid fa-store font-black"></i>
             </div>
             <div>
-              <h1 className="text-white font-black text-lg leading-none uppercase tracking-tight">홍콩반점 캄보디아</h1>
-              <p className="text-indigo-200 text-[10px] font-bold uppercase mt-1 tracking-widest">Sales Coach AI (USD)</p>
+              <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
+                홍콩반점 캄보디아
+              </h1>
+              <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
+                Sales Coach AI (USD)
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <div className="hidden md:block text-[10px] font-black tracking-widest text-indigo-200/90 uppercase">
               POWERED BY <span className="text-white">YOUNGSEOL</span>
             </div>
 
-            <div className="text-white font-bold text-sm bg-indigo-500/50 px-3 py-1 rounded-full border border-indigo-400 flex items-center gap-2">
+            <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex items-center gap-2">
               {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
               {data.date}
             </div>
 
-            <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
+            <button
+              onClick={handleLogout}
+              className="text-white/60 hover:text-white transition-colors"
+              title="로그아웃"
+            >
               <i className="fa-solid fa-right-from-bracket"></i>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6 mt-10 space-y-12">
+      <main className="max-w-6xl mx-auto px-4 md:px-6 mt-6 md:mt-10 space-y-8 md:space-y-12">
         {/* 월간 요약 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-8 py-4 flex items-center justify-between">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
+            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
               <i className="fa-solid fa-chart-line text-indigo-500"></i>
               {data.date.substring(0, 7)} 월간 요약
             </h3>
-            <div className="flex items-center gap-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">월 목표</label>
-              <div className="relative w-32">
+            <div className="flex items-center gap-2 md:gap-3">
+              <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                월 목표
+              </label>
+              <div className="relative w-28 md:w-32">
                 <input
                   type="number"
                   value={data.monthlyTarget || ""}
@@ -804,7 +865,7 @@ const App: React.FC = () => {
                     setData((prev) => ({ ...prev, monthlyTarget: v }));
                     saveMonthlyTarget(ym, v);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1 text-right text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-right text-xs md:text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none"
                   placeholder="0"
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400 pointer-events-none">
@@ -813,19 +874,32 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          <div className="p-5 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">이번 달 누적 매출</p>
-              <p className="text-3xl font-black text-slate-900">${monthlyStats.total.toLocaleString()}</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                이번 달 누적 매출
+              </p>
+              <p className="text-2xl md:text-3xl font-black text-slate-900">
+                ${monthlyStats.total.toLocaleString()}
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">일평균 매출</p>
-              <p className="text-3xl font-black text-slate-900">${Math.round(monthlyStats.avg).toLocaleString()}</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                일평균 매출
+              </p>
+              <p className="text-2xl md:text-3xl font-black text-slate-900">
+                ${Math.round(monthlyStats.avg).toLocaleString()}
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">목표 달성률</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                목표 달성률
+              </p>
               <div className="flex items-end gap-2">
-                <p className="text-3xl font-black text-indigo-600">{monthlyRate.toFixed(1)}%</p>
+                <p className="text-2xl md:text-3xl font-black text-indigo-600">
+                  {monthlyRate.toFixed(1)}%
+                </p>
                 <div className="flex-1 h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
                   <div
                     className="h-full bg-indigo-500 transition-all duration-1000"
@@ -839,35 +913,55 @@ const App: React.FC = () => {
 
         {/* 오늘 요약 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-8 py-4">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4">
+            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
               <i className="fa-solid fa-calendar-check text-indigo-500"></i>
               오늘의 성과 요약 ({data.date})
             </h3>
           </div>
-          <div className="p-8 grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="p-5 md:p-8 grid grid-cols-2 md:grid-cols-5 gap-5 md:gap-8">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">오늘 매출</p>
-              <p className="text-2xl font-black text-slate-900">${results.calcSales.toLocaleString()}</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                오늘 매출
+              </p>
+              <p className="text-xl md:text-2xl font-black text-slate-900">
+                ${results.calcSales.toLocaleString()}
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">오늘 주문수</p>
-              <p className="text-2xl font-black text-slate-900">{data.orders.toLocaleString()}건</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                오늘 주문수
+              </p>
+              <p className="text-xl md:text-2xl font-black text-slate-900">
+                {data.orders.toLocaleString()}건
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">오늘 방문객</p>
-              <p className="text-2xl font-black text-slate-900">{data.visitCount.toLocaleString()}명</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                오늘 방문객
+              </p>
+              <p className="text-xl md:text-2xl font-black text-slate-900">
+                {data.visitCount.toLocaleString()}명
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">주문당 매출 (AOV)</p>
-              <p className="text-2xl font-black text-slate-900">${results.aov.toFixed(2)}</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                주문당 매출 (AOV)
+              </p>
+              <p className="text-xl md:text-2xl font-black text-slate-900">
+                ${results.aov.toFixed(2)}
+              </p>
             </div>
-            <div className="space-y-1 border-l border-slate-100 pl-8">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">POS 오차</p>
+            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                POS 오차
+              </p>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-slate-900">${results.gapUsd}</span>
+                <span className="text-xl md:text-2xl font-black text-slate-900">
+                  ${results.gapUsd}
+                </span>
                 <span
-                  className={`text-sm font-bold ${
+                  className={`text-xs md:text-sm font-bold ${
                     results.status === "🔴"
                       ? "text-rose-500"
                       : results.status === "🟡"
@@ -882,10 +976,14 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">매출 코치 리포트</h2>
-            <p className="text-slate-500 font-medium">분석을 통해 객단가와 전환율을 높이는 부스트 전략을 제안합니다.</p>
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4">
+          <div className="space-y-1 md:space-y-2">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              매출 코치 리포트
+            </h2>
+            <p className="text-slate-500 text-sm md:text-base font-medium">
+              분석을 통해 객단가와 전환율을 높이는 부스트 전략을 제안합니다.
+            </p>
           </div>
         </header>
 
@@ -904,7 +1002,8 @@ const App: React.FC = () => {
                 className={`text-xs font-bold px-3 py-1 rounded-full ${
                   saveStatus === "저장 완료"
                     ? "bg-emerald-50 text-emerald-600"
-                    : saveStatus.startsWith("저장 실패") || saveStatus.startsWith("저장 중 오류")
+                    : saveStatus.startsWith("저장 실패") ||
+                      saveStatus.startsWith("저장 중 오류")
                     ? "bg-rose-50 text-rose-600"
                     : "bg-slate-100 text-slate-500"
                 }`}
@@ -915,7 +1014,9 @@ const App: React.FC = () => {
           )}
 
           {lastSavedAt && (
-            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>
+            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
+              마지막 저장: {lastSavedAt}
+            </div>
           )}
         </div>
 
@@ -929,8 +1030,8 @@ const App: React.FC = () => {
 
         {/* 기간별 성과 분석 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
               <i className="fa-solid fa-magnifying-glass-chart text-indigo-500"></i>
               기간별 성과 분석
             </h3>
@@ -939,14 +1040,18 @@ const App: React.FC = () => {
               <input
                 type="date"
                 value={periodRange.start}
-                onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, start: e.target.value }))
+                }
                 className="bg-white border border-slate-200 rounded-xl px-3 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400"
               />
               <span className="text-slate-400">~</span>
               <input
                 type="date"
                 value={periodRange.end}
-                onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, end: e.target.value }))
+                }
                 className="bg-white border border-slate-200 rounded-xl px-3 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-400"
               />
               <button
@@ -954,39 +1059,51 @@ const App: React.FC = () => {
                 disabled={periodLoading}
                 className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-50"
               >
-                {periodLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : "조회"}
+                {periodLoading ? (
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                ) : (
+                  "조회"
+                )}
               </button>
             </div>
           </div>
 
           {periodStats && (
-            <div className="p-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 매출</p>
-                  <p className="text-2xl font-black text-slate-900">
+            <div className="p-5 md:p-8 space-y-6 md:space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+                <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    기간 총 매출
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">
                     ${Number(periodStats.totalSales || 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 주문</p>
-                  <p className="text-2xl font-black text-slate-900">
+                <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    기간 총 주문
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">
                     {Number(periodStats.totalOrders || 0).toLocaleString()}건
                   </p>
                 </div>
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">기간 총 방문</p>
-                  <p className="text-2xl font-black text-slate-900">
+                <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    기간 총 방문
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">
                     {Number(periodStats.totalVisitors || 0).toLocaleString()}명
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">일별 추이</h4>
+              <div className="space-y-3 md:space-y-4">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  일별 추이
+                </h4>
 
                 {periodStats.list?.length === 0 ? (
-                  <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                  <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-4 md:p-6">
                     해당 기간 데이터가 없습니다.
                   </div>
                 ) : (
@@ -997,11 +1114,13 @@ const App: React.FC = () => {
                         className="flex items-center justify-between py-2 border-b border-slate-50 text-sm"
                       >
                         <span className="font-bold text-slate-600">{row.date}</span>
-                        <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-6 md:gap-8">
                           <span className="font-black text-slate-900">
                             ${Number(row.total_sales || 0).toLocaleString()}
                           </span>
-                          <span className="text-slate-400 text-xs w-16 text-right">{row.orders}건</span>
+                          <span className="text-slate-400 text-xs w-16 text-right">
+                            {row.orders}건
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -1010,13 +1129,13 @@ const App: React.FC = () => {
               </div>
 
               {/* 기간 메뉴 Top10 */}
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   기간 중 메뉴 판매량 (Top 10)
                 </h4>
 
                 {periodMenuTop.length === 0 ? (
-                  <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                  <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-4 md:p-6">
                     해당 기간에 판매된 메뉴 데이터가 없습니다.
                   </div>
                 ) : (
@@ -1024,12 +1143,14 @@ const App: React.FC = () => {
                     {periodMenuTop.map((x, idx) => (
                       <div
                         key={`${x.name}-${idx}`}
-                        className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center justify-between"
+                        className="bg-slate-50 border border-slate-100 rounded-2xl p-3 md:p-4 flex items-center justify-between"
                       >
                         <div className="font-bold text-slate-700 text-sm">
                           {idx + 1}. {x.name}
                         </div>
-                        <div className="font-black text-indigo-600 text-sm">{x.qty}개</div>
+                        <div className="font-black text-indigo-600 text-sm">
+                          {x.qty}개
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1041,34 +1162,42 @@ const App: React.FC = () => {
       </main>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-6 left-0 right-0 z-[9999] flex flex-col md:flex-row justify-center gap-4 px-6 pointer-events-none">
-        <button
-          type="button"
-          onClick={() => setShowResetModal(true)}
-          className="bg-white text-rose-600 border-2 border-rose-200 px-6 py-4 rounded-2xl font-black text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-3 active:scale-95 ring-2 ring-red-400 pointer-events-auto"
-        >
-          <i className="fa-solid fa-trash-can"></i>
-          일 데이터 리셋
-        </button>
+      <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
+        <div className="max-w-6xl mx-auto pointer-events-auto">
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4">
+            <button
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
+            >
+              <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
+              일 데이터 리셋
+            </button>
 
-        <button
-          type="button"
-          onClick={() => handleSave(false)}
-          className="bg-white text-slate-900 border-2 border-slate-900 px-8 py-4 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3 active:scale-95 pointer-events-auto"
-        >
-          <i className="fa-solid fa-floppy-disk"></i>
-          매출 데이터 저장
-        </button>
+            <button
+              type="button"
+              onClick={() => handleSave(false)}
+              className="bg-white text-slate-900 border-2 border-slate-900 px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95"
+            >
+              <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
+              매출 데이터 저장
+            </button>
 
-        <button
-          type="button"
-          onClick={() => handleGenerate()}
-          disabled={loading}
-          className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-2xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:bg-slate-300 pointer-events-auto"
-        >
-          {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-wand-magic-sparkles"></i>}
-          코칭 리포트 생성
-        </button>
+            <button
+              type="button"
+              onClick={() => handleGenerate()}
+              disabled={loading}
+              className="col-span-2 md:col-span-1 bg-slate-900 text-white px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 disabled:bg-slate-300"
+            >
+              {loading ? (
+                <i className="fa-solid fa-spinner fa-spin text-sm md:text-base"></i>
+              ) : (
+                <i className="fa-solid fa-wand-magic-sparkles text-sm md:text-base"></i>
+              )}
+              코칭 리포트 생성
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 리셋 모달 */}
@@ -1108,7 +1237,7 @@ const App: React.FC = () => {
 
       {/* 토스트 */}
       {toastMsg && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-full shadow-lg z-[10001] animate-fade-in-up">
+        <div className="fixed bottom-28 md:bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-[10001] text-sm font-bold pointer-events-none">
           {toastMsg}
         </div>
       )}
