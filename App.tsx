@@ -14,6 +14,7 @@ import {
   getMonthlyTotal,
   listDatesInMonth,
   deleteDaily,
+  listDatesInRange, // ✅ 추가
 } from "./services/salesStorage";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
@@ -158,6 +159,9 @@ const App: React.FC = () => {
   const [periodLoading, setPeriodLoading] = useState(false);
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
+  // ✅ 추가: 기간 메뉴 판매량 Top10
+  const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+
   const sortedMenuEngineering = useMemo(() => {
     if (!menuEngineeringResult) return null;
 
@@ -182,25 +186,25 @@ const App: React.FC = () => {
 
     const safeNum = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
-const starsTop3 = [...menuEngineeringResult.stars]
-  .sort((a, b) => safeNum(b.revenue_month) - safeNum(a.revenue_month))
-  .slice(0, 3)
-  .map((item) => formatItem(item, totalRevenueForRange));
+    const starsTop3 = [...menuEngineeringResult.stars]
+      .sort((a, b) => safeNum(b.revenue_month) - safeNum(a.revenue_month))
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
-const cashCowsTop3 = [...menuEngineeringResult.cashCows]
-  .sort((a, b) => safeNum(b.qty_month) - safeNum(a.qty_month))
-  .slice(0, 3)
-  .map((item) => formatItem(item, totalRevenueForRange));
+    const cashCowsTop3 = [...menuEngineeringResult.cashCows]
+      .sort((a, b) => safeNum(b.qty_month) - safeNum(a.qty_month))
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
-const puzzlesTop3 = [...menuEngineeringResult.puzzles]
-  .sort((a, b) => safeNum(b.cm) - safeNum(a.cm) || safeNum(b.revenue_month) - safeNum(a.revenue_month))
-  .slice(0, 3)
-  .map((item) => formatItem(item, totalRevenueForRange));
+    const puzzlesTop3 = [...menuEngineeringResult.puzzles]
+      .sort((a, b) => safeNum(b.cm) - safeNum(a.cm) || safeNum(b.revenue_month) - safeNum(a.revenue_month))
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
-const dogsTop3 = [...menuEngineeringResult.dogs]
-  .sort((a, b) => safeNum(a.revenue_month) - safeNum(b.revenue_month))
-  .slice(0, 3)
-  .map((item) => formatItem(item, totalRevenueForRange));
+    const dogsTop3 = [...menuEngineeringResult.dogs]
+      .sort((a, b) => safeNum(a.revenue_month) - safeNum(b.revenue_month))
+      .slice(0, 3)
+      .map((item) => formatItem(item, totalRevenueForRange));
 
     const noCostItemsList = menuEngineeringResult.noCostItems.map((item) => item.name).join(", ");
 
@@ -225,39 +229,39 @@ const dogsTop3 = [...menuEngineeringResult.dogs]
       return friedKeywords.some((keyword) => itemName.includes(keyword));
     };
 
-const calculateDailyTargetAndReason = (
-  itemQty: number,
-  analyzedDays: number,
-  type: "MENU_BOARD" | "STAFF_UPSELL" | "SET_DISCOUNT"
-) => {
-  const qty = Math.max(0, Number(itemQty) || 0);
-  const days = Math.max(1, Number(analyzedDays) || 1);
+    const calculateDailyTargetAndReason = (
+      itemQty: number,
+      analyzedDays: number,
+      type: "MENU_BOARD" | "STAFF_UPSELL" | "SET_DISCOUNT"
+    ) => {
+      const qty = Math.max(0, Number(itemQty) || 0);
+      const days = Math.max(1, Number(analyzedDays) || 1);
 
-  const avgDaily = qty / days;
+      const avgDaily = qty / days;
 
-  const growth =
-    type === "SET_DISCOUNT" ? 0.3 :
-    type === "MENU_BOARD"   ? 0.1 :
-    0.15; // STAFF_UPSELL
+      const growth =
+        type === "SET_DISCOUNT" ? 0.3 :
+          type === "MENU_BOARD" ? 0.1 :
+            0.15; // STAFF_UPSELL
 
-  let target = Math.ceil(avgDaily * (1 + growth));
+      let target = Math.ceil(avgDaily * (1 + growth));
 
-  // ✅ 현실 캡: 평균의 2배를 넘지 않게 + 절대 상한 8
-  const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
-  target = Math.max(1, Math.min(target, cap));
+      // ✅ 현실 캡: 평균의 2배를 넘지 않게 + 절대 상한 8
+      const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
+      target = Math.max(1, Math.min(target, cap));
 
-  // ✅ 핵심: SET_DISCOUNT는 "데이터가 0이 아닌데도" 1개면 너무 소극적 → 최소 2개
-  if (type === "SET_DISCOUNT" && avgDaily > 0) {
-    target = Math.max(2, target);
-  }
+      // ✅ SET_DISCOUNT는 평균>0이면 최소 2개
+      if (type === "SET_DISCOUNT" && avgDaily > 0) {
+        target = Math.max(2, target);
+      }
 
-  return {
-    dailyTargetQty: target,
-    dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
-      growth * 100
-    )}% 목표 ${target}개 (상한 ${cap}개)`,
-  };
-};
+      return {
+        dailyTargetQty: target,
+        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
+          growth * 100
+        )}% 목표 ${target}개 (상한 ${cap}개)`,
+      };
+    };
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
       const availableSoftDrinks = allMenuItemsFlat.filter(
@@ -343,73 +347,65 @@ const calculateDailyTargetAndReason = (
         reason,
       });
     }
-// ✅ 아래 블록 전체를 "통째로" 삭제하고, 이 코드로 그대로 복붙하세요.
-// (할인율: 10~25% / 5% 단위 / 판매량(인기도) + 마진 기반 / 할인 후 GP 최소 35% 유지)
 
-const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
-if (setDiscountTarget) {
-  const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
-  if (secondItem) {
-    const setPrice = Number(setDiscountTarget.price || 0) + Number(secondItem.price || 0);
-    const setUnitCost =
-      Number(setDiscountTarget.unitCost || 0) + Number((secondItem as any).unitCost || 0);
+    // ✅ SET_DISCOUNT
+    const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
+    if (setDiscountTarget) {
+      const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
+      if (secondItem) {
+        const setPrice = Number(setDiscountTarget.price || 0) + Number(secondItem.price || 0);
+        const setUnitCost =
+          Number(setDiscountTarget.unitCost || 0) + Number((secondItem as any).unitCost || 0);
 
-    // ✅ 기본 가드
-    if (setPrice > 0 && setUnitCost >= 0) {
-      const gp = (setPrice - setUnitCost) / setPrice; // 현재 GP%
-      const minGPAfter = 0.35; // ✅ 할인 후 최소 GP 35%
-      const maxDiscountByMargin = Math.max(0, Math.floor(((gp - minGPAfter) * 100) / 5) * 5);
+        if (setPrice > 0 && setUnitCost >= 0) {
+          const gp = (setPrice - setUnitCost) / setPrice;
+          const minGPAfter = 0.35;
+          const maxDiscountByMargin = Math.max(0, Math.floor(((gp - minGPAfter) * 100) / 5) * 5);
 
-      // ✅ 판매량(인기도) 기반: 덜 팔릴수록 할인↑, 잘 팔릴수록 할인↓
-      // qty_month가 7일 범위/월 범위 혼재여도 "상대적"으로만 쓰므로 OK
-      const popularity = Number(setDiscountTarget.qty_month || 0);
+          const popularity = Number(setDiscountTarget.qty_month || 0);
 
-      let base = 15; // 기본 15%
-      if (popularity <= 3) base = 25;
-      else if (popularity <= 7) base = 20;
-      else if (popularity <= 12) base = 15;
-      else base = 10;
+          let base = 15;
+          if (popularity <= 3) base = 25;
+          else if (popularity <= 7) base = 20;
+          else if (popularity <= 12) base = 15;
+          else base = 10;
 
-      // ✅ 최종 할인율: (1) 10~25 상한/하한 (2) 마진 기준 초과 못함
-      let discountPercentage = Math.min(base, 25, maxDiscountByMargin);
-      discountPercentage = Math.max(0, Math.min(25, discountPercentage));
+          let discountPercentage = Math.min(base, 25, maxDiscountByMargin);
+          discountPercentage = Math.max(0, Math.min(25, discountPercentage));
+          if (discountPercentage < 10) discountPercentage = 0;
 
-      // ✅ 10%도 못 주면(마진이 너무 낮으면) 할인 안함
-      if (discountPercentage < 10) discountPercentage = 0;
+          const finalDiscountAmount =
+            discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
 
-      // ✅ 할인금액 (5% 단위)
-     const finalDiscountAmount =
-  discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
+          if (finalDiscountAmount > 0) {
+            const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
+              setDiscountTarget.qty_month || 0,
+              analyzedDatesCount,
+              "SET_DISCOUNT"
+            );
 
-if (finalDiscountAmount > 0) {
-  const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-    setDiscountTarget.qty_month || 0,
-    analyzedDatesCount,
-    "SET_DISCOUNT"
-  );
+            const reason = `수익성(GP)과 판매량(인기도)을 기준으로 할인율을 결정했습니다. 현재 GP ${(gp * 100).toFixed(
+              1
+            )}%이며, 할인 후에도 최소 GP ${(minGPAfter * 100).toFixed(
+              0
+            )}%를 유지하도록 ${discountPercentage}%로 제한했습니다. 최근 판매량 기준(낮을수록 할인↑) 적용. ${dailyTargetReason}`;
 
-        const reason = `수익성(GP)과 판매량(인기도)을 기준으로 할인율을 결정했습니다. 현재 GP ${(gp * 100).toFixed(
-          1
-        )}%이며, 할인 후에도 최소 GP ${(minGPAfter * 100).toFixed(
-          0
-        )}%를 유지하도록 ${discountPercentage}%로 제한했습니다. 최근 판매량 기준(낮을수록 할인↑) 적용. ${dailyTargetReason}`;
-
-        plans.push({
-          puzzleItemName: setDiscountTarget.name,
-          setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
-          setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
-          discount: `${discountPercentage}% OFF`,
-          dailyTargetQty,
-          staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${(minGPAfter * 100).toFixed(
-            0
-          )}% 이상 유지).`,
-          type: "SET_DISCOUNT",
-          reason,
-        });
+            plans.push({
+              puzzleItemName: setDiscountTarget.name,
+              setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
+              setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
+              discount: `${discountPercentage}% OFF`,
+              dailyTargetQty,
+              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${(minGPAfter * 100).toFixed(
+                0
+              )}% 이상 유지).`,
+              type: "SET_DISCOUNT",
+              reason,
+            });
+          }
+        }
       }
     }
-  }
-}
 
     return plans.slice(0, 3);
   }, [menuEngineeringResult, sortedMenuEngineering]);
@@ -448,55 +444,54 @@ if (finalDiscountAmount > 0) {
     setData((prev) => ({ ...prev, mtdSales: total }));
   };
 
-const fetchData = async (dateStr: string) => {
-  setDbLoading(true);
-  setSaveStatus("");
+  const fetchData = async (dateStr: string) => {
+    setDbLoading(true);
+    setSaveStatus("");
 
-  try {
-    const dbData = await loadDaily(dateStr);
+    try {
+      const dbData = await loadDaily(dateStr);
 
-   if (!dbData) {
-  // ✅ 데이터 없는 날짜는 화면을 "완전 초기화" (이전 날짜 값이 남지 않게)
-  const resetCats = INITIAL_CATEGORIES.map((cat) => ({
-    ...cat,
-    items: cat.items.map((it) => ({ ...it, qty: 0 })),
-  }));
+      if (!dbData) {
+        const resetCats = INITIAL_CATEGORIES.map((cat) => ({
+          ...cat,
+          items: cat.items.map((it) => ({ ...it, qty: 0 })),
+        }));
 
-  setData((prev) => ({
-    ...prev,
-    date: dateStr,
-    posSales: 0,
-    orders: 0,
-    visitCount: 0,
-    note: "",
-    monthlyTarget: prev.monthlyTarget, // 목표는 유지
-    categories: resetCats,             // ✅ qty까지 0으로 강제
-    mtdSales: prev.mtdSales,
-  }));
-} else {
-      setData((prev) => ({
-        ...prev,
-        date: dateStr,
-        posSales: dbData.posSales ?? 0,
-        orders: dbData.orders ?? 0,
-        visitCount: dbData.visitCount ?? 0,
-        monthlyTarget: (dbData as any).monthlyTarget ?? prev.monthlyTarget,
-        note: (dbData as any).note ?? "",
-        categories:
-          dbData.categories && dbData.categories.length > 0
-            ? dbData.categories
-            : INITIAL_CATEGORIES,
-        mtdSales: prev.mtdSales,
-      }));
+        setData((prev) => ({
+          ...prev,
+          date: dateStr,
+          posSales: 0,
+          orders: 0,
+          visitCount: 0,
+          note: "",
+          monthlyTarget: prev.monthlyTarget,
+          categories: resetCats,
+          mtdSales: prev.mtdSales,
+        }));
+      } else {
+        setData((prev) => ({
+          ...prev,
+          date: dateStr,
+          posSales: dbData.posSales ?? 0,
+          orders: dbData.orders ?? 0,
+          visitCount: dbData.visitCount ?? 0,
+          monthlyTarget: (dbData as any).monthlyTarget ?? prev.monthlyTarget,
+          note: (dbData as any).note ?? "",
+          categories:
+            dbData.categories && dbData.categories.length > 0
+              ? dbData.categories
+              : INITIAL_CATEGORIES,
+          mtdSales: prev.mtdSales,
+        }));
+      }
+
+      await refreshMonthlyStats(dateStr.substring(0, 7));
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setDbLoading(false);
     }
-
-    await refreshMonthlyStats(dateStr.substring(0, 7));
-  } catch (err) {
-    console.error("Fetch Error:", err);
-  } finally {
-    setDbLoading(false);
-  }
-};
+  };
 
   const fetchPastData = async () => {
     const yearMonth = data.date.substring(0, 7);
@@ -516,43 +511,74 @@ const fetchData = async (dateStr: string) => {
     setPastData(list.sort((a, b) => b.date.localeCompare(a.date)));
   };
 
+  // ✅ 기간별 성과 분석 (Supabase 기준 통일 + 메뉴 판매량 Top10 추가)
   const fetchPeriodStats = async () => {
     setPeriodLoading(true);
-    const list: any[] = [];
-    const start = periodRange.start;
-    const end = periodRange.end;
 
-    const STORAGE_PREFIX = "sales-coach-ai::hongkongbanjeom-cambodia::";
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(STORAGE_PREFIX)) {
-        const d = key.replace(STORAGE_PREFIX, "");
-        if (d >= start && d <= end) {
-          const item = await loadDaily(d);
-          if (item) {
-            list.push({
-              date: d,
-              total_sales: item.posSales,
-              orders: item.orders,
-              guests: item.visitCount,
-            });
+    try {
+      const start = periodRange.start;
+      const end = periodRange.end;
+
+      const dates = await listDatesInRange(start, end);
+
+      const list: any[] = [];
+      const menuMap = new Map<string, number>();
+
+      for (const d of dates) {
+        const item = await loadDaily(d);
+        if (!item) continue;
+
+        list.push({
+          date: d,
+          total_sales: Number(item.posSales || 0),
+          orders: Number(item.orders || 0),
+          guests: Number(item.visitCount || 0),
+        });
+
+        if (Array.isArray(item.categories)) {
+          for (const cat of item.categories) {
+            if (!cat?.items || !Array.isArray(cat.items)) continue;
+            for (const it of cat.items) {
+              const qty = Number((it as any)?.qty || 0);
+              if (qty <= 0) continue;
+
+              const name = String((it as any)?.name || "").trim();
+              if (!name) continue;
+
+              menuMap.set(name, (menuMap.get(name) || 0) + qty);
+            }
           }
         }
       }
-    }
 
-    if (list.length > 0) {
-      const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales), 0);
-      const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders), 0);
-      const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests), 0);
-      setPeriodStats({
-        totalSales,
-        totalOrders,
-        totalVisitors,
-        list: list.sort((a, b) => a.date.localeCompare(b.date)),
-      });
+      if (list.length > 0) {
+        const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
+        const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
+        const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+
+        setPeriodStats({
+          totalSales,
+          totalOrders,
+          totalVisitors,
+          list: list.sort((a, b) => a.date.localeCompare(b.date)),
+        });
+      } else {
+        setPeriodStats(null);
+      }
+
+      const top10 = Array.from(menuMap.entries())
+        .map(([name, qty]) => ({ name, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 10);
+
+      setPeriodMenuTop(top10);
+    } catch (e) {
+      console.error("fetchPeriodStats error:", e);
+      setPeriodStats(null);
+      setPeriodMenuTop([]);
+    } finally {
+      setPeriodLoading(false);
     }
-    setPeriodLoading(false);
   };
 
   const handleMonthChange = async (month: Date) => {
@@ -636,46 +662,43 @@ const fetchData = async (dateStr: string) => {
     }
   };
 
-const handleDelete = async () => {
-  const targetDate = data.date;
+  const handleDelete = async () => {
+    const targetDate = data.date;
 
-  try {
-    setSaveStatus("데이터 삭제 중...");
-    setDbLoading(true);
+    try {
+      setSaveStatus("데이터 삭제 중...");
+      setDbLoading(true);
 
-    // ✅ 1) Supabase row 진짜 삭제
-    await deleteDaily(targetDate);
+      await deleteDaily(targetDate);
 
-    // ✅ 2) 화면 즉시 초기화
-    const resetCats = INITIAL_CATEGORIES.map((cat) => ({
-      ...cat,
-      items: cat.items.map((it) => ({ ...it, qty: 0 })),
-    }));
+      const resetCats = INITIAL_CATEGORIES.map((cat) => ({
+        ...cat,
+        items: cat.items.map((it) => ({ ...it, qty: 0 })),
+      }));
 
-    setData((prev) => ({
-      ...prev,
-      posSales: 0,
-      orders: 0,
-      visitCount: 0,
-      note: "",
-      categories: resetCats,
-    }));
-    setReport("");
+      setData((prev) => ({
+        ...prev,
+        posSales: 0,
+        orders: 0,
+        visitCount: 0,
+        note: "",
+        categories: resetCats,
+      }));
+      setReport("");
 
-    // ✅ 3) 점(.) / 월간 / 최근 데이터 갱신
-    await refreshMonthlyStats(targetDate.substring(0, 7));
-    await fetchPastData();
+      await refreshMonthlyStats(targetDate.substring(0, 7));
+      await fetchPastData();
 
-    setSaveStatus("데이터 삭제됨");
-    setToastMsg("데이터가 삭제되었습니다.");
-  } catch (error: any) {
-    console.error("Delete Error:", error);
-    setSaveStatus(`삭제 오류: ${error?.message || "알 수 없는 오류"}`);
-    setToastMsg("삭제 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
-  } finally {
-    setDbLoading(false);
-  }
-};
+      setSaveStatus("데이터 삭제됨");
+      setToastMsg("데이터가 삭제되었습니다.");
+    } catch (error: any) {
+      console.error("Delete Error:", error);
+      setSaveStatus(`삭제 오류: ${error?.message || "알 수 없는 오류"}`);
+      setToastMsg("삭제 중 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+    } finally {
+      setDbLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -687,7 +710,8 @@ const handleDelete = async () => {
       const startDate = format(start, "yyyy-MM-dd");
       const endDate = format(end, "yyyy-MM-dd");
 
-const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES, { maxDays: 7 });      setMenuEngineeringResult(meResult);
+      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES, { maxDays: 7 });
+      setMenuEngineeringResult(meResult);
 
       const result = await generateCoachingReport(data, results, meResult);
       setReport(result);
@@ -699,7 +723,7 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
     }
   };
 
-  // ✅ 날짜 바뀌면 DB에서 다시 로드 (반드시 return 위에 있어야 함)
+  // ✅ 날짜 바뀌면 DB에서 다시 로드
   useEffect(() => {
     if (!isLoggedIn) return;
     fetchData(data.date);
@@ -856,13 +880,12 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black text-slate-900">${results.gapUsd}</span>
                 <span
-                  className={`text-sm font-bold ${
-                    results.status === "🔴"
-                      ? "text-rose-500"
-                      : results.status === "🟡"
+                  className={`text-sm font-bold ${results.status === "🔴"
+                    ? "text-rose-500"
+                    : results.status === "🟡"
                       ? "text-amber-500"
                       : "text-emerald-500"
-                  }`}
+                    }`}
                 >
                   {results.status}
                 </span>
@@ -890,13 +913,12 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
           {saveStatus && (
             <div className="mt-4 text-center">
               <span
-                className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  saveStatus === "저장 완료"
-                    ? "bg-emerald-50 text-emerald-600"
-                    : saveStatus.startsWith("저장 실패")
+                className={`text-xs font-bold px-3 py-1 rounded-full ${saveStatus === "저장 완료"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : saveStatus.startsWith("저장 실패")
                     ? "bg-rose-50 text-rose-600"
                     : "bg-slate-100 text-slate-500"
-                }`}
+                  }`}
               >
                 {saveStatus}
               </span>
@@ -985,6 +1007,7 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
               </button>
             </div>
           </div>
+
           {periodStats && (
             <div className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -1001,6 +1024,7 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
                   <p className="text-2xl font-black text-slate-900">{periodStats.totalVisitors.toLocaleString()}명</p>
                 </div>
               </div>
+
               <div className="space-y-4">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">일별 추이</h4>
                 <div className="space-y-2">
@@ -1014,6 +1038,33 @@ const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INIT
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* ✅ 기간 중 메뉴 판매량 Top10 */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  기간 중 메뉴 판매량 (Top 10)
+                </h4>
+
+                {periodMenuTop.length === 0 ? (
+                  <div className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                    해당 기간에 판매된 메뉴 데이터가 없습니다.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {periodMenuTop.map((x, idx) => (
+                      <div
+                        key={`${x.name}-${idx}`}
+                        className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center justify-between"
+                      >
+                        <div className="font-bold text-slate-700 text-sm">
+                          {idx + 1}. {x.name}
+                        </div>
+                        <div className="font-black text-indigo-600 text-sm">{x.qty}개</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
