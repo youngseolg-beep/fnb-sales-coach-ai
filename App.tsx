@@ -778,7 +778,7 @@ const App: React.FC = () => {
                 {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
                 {data.date}
               </div>
-              <div className="text-[9px] font-black tracking-widest text-indigo-200/90 uppercase">
+              <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
                 POWERED BY <span className="text-white">YOUNGSEOL</span>
               </div>
             </div>
