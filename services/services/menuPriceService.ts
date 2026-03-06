@@ -1,4 +1,4 @@
-import { supabase } from "./salesStorage";
+import { supabase } from "../salesStorage";
 
 export type MenuPriceRow = {
   menu_id: string;
