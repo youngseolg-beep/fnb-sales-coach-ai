@@ -152,34 +152,46 @@ const persistMenuPriceHistory = async (
   categories: MenuCategory[],
   effectiveDate: string
 ) => {
-
+  const historyMap = await getMenuPricesForDate(effectiveDate);
   const jobs: Promise<any>[] = [];
 
   for (const cat of categories) {
     for (const item of cat.items) {
-
       if (!item.id) continue;
 
-      const history = await getMenuPricesForDate(effectiveDate);
-      const prev = history.get(item.id);
+      const prev = historyMap.get(item.id);
+
+      const prevPrice =
+        prev?.price !== null && prev?.price !== undefined
+          ? Number(prev.price)
+          : undefined;
+
+      const prevUnitCost =
+        prev?.unit_cost !== null && prev?.unit_cost !== undefined
+          ? Number(prev.unit_cost)
+          : undefined;
+
+      const nextPrice = Number(item.price ?? 0);
+      const nextUnitCost =
+        item.unitCost !== null && item.unitCost !== undefined
+          ? Number(item.unitCost)
+          : undefined;
 
       const priceChanged =
-        prev && Number(prev.price) !== Number(item.price);
+        prevPrice === undefined || prevPrice !== nextPrice;
 
-      const costChanged =
-        prev && Number(prev.unit_cost) !== Number(item.unitCost);
+      const unitCostChanged =
+        prevUnitCost === undefined || prevUnitCost !== nextUnitCost;
 
-      if (priceChanged || costChanged) {
-
+      if (priceChanged || unitCostChanged) {
         jobs.push(
           saveMenuPriceHistory(
             item.id,
             effectiveDate,
-            Number(item.price),
-            item.unitCost != null ? Number(item.unitCost) : undefined
+            nextPrice,
+            nextUnitCost
           )
         );
-
       }
     }
   }
