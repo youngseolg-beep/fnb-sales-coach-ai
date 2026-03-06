@@ -261,7 +261,7 @@ const App: React.FC = () => {
   const boostPlans = useMemo(() => {
     if (!menuEngineeringResult || !sortedMenuEngineering) return [];
 
-    const allMenuItemsFlat = INITIAL_CATEGORIES.flatMap((cat) => cat.items);
+    const allMenuItemsFlat = data.categories.flatMap((cat) => cat.items);
 
     const isFriedDish = (itemName: string) => {
       const friedKeywords = ["탕수육", "깐풍기", "유린기", "치킨", "튀김"];
@@ -376,7 +376,6 @@ const App: React.FC = () => {
       });
     }
 
-    // SET_DISCOUNT
     const setDiscountTarget = getUnusedTargetItem(targetablePuzzles);
     if (setDiscountTarget) {
       const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
@@ -430,7 +429,7 @@ const App: React.FC = () => {
     }
 
     return plans.slice(0, 3);
-  }, [menuEngineeringResult, sortedMenuEngineering]);
+  }, [menuEngineeringResult, sortedMenuEngineering, data.categories]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -537,7 +536,6 @@ const App: React.FC = () => {
     }
   };
 
-  // ✅ 기간별 성과 분석 (Supabase 기준 + 메뉴 Top10)
   const fetchPeriodStats = async () => {
     setPeriodLoading(true);
     setPeriodStats(null);
@@ -648,7 +646,6 @@ const App: React.FC = () => {
     return (monthlyStats.total / target) * 100;
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
-  // ✅ DataInput 변경 시 UX 상태 정리
   const handleDataChange = (newData: SalesReportData) => {
     const categoriesChanged = JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
     const baseFieldsChanged =
@@ -668,48 +665,48 @@ const App: React.FC = () => {
   };
 
   const handleSave = async (silent = false) => {
-  try {
-    if (!silent) setSaveStatus("데이터 저장 중...");
-
-    let calcSales = 0;
-    data.categories.forEach((cat) => {
-      cat.items.forEach((item) => {
-        calcSales += item.price * (item.qty || 0);
-      });
-    });
-
-    const payload: any = {
-      ...data,
-      totalSales: Math.round(calcSales * 100) / 100,
-    };
-
-    const res = await saveDailyData({ date: data.date, ...payload });
-
-    if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
-
-    setSaveStatus("저장 완료");
-    setLastSavedAt(new Date().toLocaleString());
-    setDataSaved(true);
-    setReportGenerated(false);
-
-    if (!silent) {
-      showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
-    }
-
     try {
-      await refreshMonthlyStats(data.date.substring(0, 7));
-    } catch (e) {
-      console.warn("refreshMonthlyStats failed (ignored):", e);
-    }
+      if (!silent) setSaveStatus("데이터 저장 중...");
 
-    return true;
-  } catch (error: any) {
-    console.error("Save Error:", error);
-    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-    if (!silent) showToast("저장 중 오류가 발생했습니다.");
-    return false;
-  }
-};
+      let calcSales = 0;
+      data.categories.forEach((cat) => {
+        cat.items.forEach((item) => {
+          calcSales += item.price * (item.qty || 0);
+        });
+      });
+
+      const payload: any = {
+        ...data,
+        totalSales: Math.round(calcSales * 100) / 100,
+      };
+
+      const res = await saveDailyData({ date: data.date, ...payload });
+
+      if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
+
+      setSaveStatus("저장 완료");
+      setLastSavedAt(new Date().toLocaleString());
+      setDataSaved(true);
+      setReportGenerated(false);
+
+      if (!silent) {
+        showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
+      }
+
+      try {
+        await refreshMonthlyStats(data.date.substring(0, 7));
+      } catch (e) {
+        console.warn("refreshMonthlyStats failed (ignored):", e);
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Save Error:", error);
+      setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
+      if (!silent) showToast("저장 중 오류가 발생했습니다.");
+      return false;
+    }
+  };
 
   const handleDelete = async () => {
     const targetDate = data.date;
@@ -764,7 +761,7 @@ const App: React.FC = () => {
       const startDate = format(start, "yyyy-MM-dd");
       const endDate = format(end, "yyyy-MM-dd");
 
-      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, INITIAL_CATEGORIES, { maxDays: 7 });
+      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, data.categories, { maxDays: 7 });
       setMenuEngineeringResult(meResult);
 
       const result = await generateCoachingReport(data, results, meResult);
