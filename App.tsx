@@ -880,9 +880,6 @@ const App: React.FC = () => {
             if ((res as any)?.ok === false) {
               throw new Error((res as any)?.error || "AUTO_SAVE_FAILED");
             }
-
-            await persistMenuPriceHistory(currentData.categories, currentData.date);
-
             setLastSavedAt(new Date().toLocaleString());
             setSaveStatus("자동 저장 완료");
             setDataSaved(true);
