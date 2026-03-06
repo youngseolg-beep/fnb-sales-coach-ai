@@ -166,7 +166,10 @@ const mergeCategoriesWithInitial = (loaded?: MenuCategory[] | null): MenuCategor
     const loadedCategory = loadedCategoryMap.get(baseCategory.name);
 
     if (!loadedCategory || !Array.isArray(loadedCategory.items)) {
-      return baseCategory;
+      return {
+        ...baseCategory,
+        items: baseCategory.items.map((item) => ({ ...item })),
+      };
     }
 
     const loadedItemMap = new Map(
@@ -179,7 +182,7 @@ const mergeCategoriesWithInitial = (loaded?: MenuCategory[] | null): MenuCategor
         const loadedItem: any = loadedItemMap.get(baseItem.id);
 
         if (!loadedItem) {
-          return baseItem;
+          return { ...baseItem };
         }
 
         return {
@@ -234,6 +237,10 @@ const App: React.FC = () => {
 
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
 
   const [data, setData] = useState<SalesReportData>(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -562,11 +569,12 @@ const App: React.FC = () => {
 
     setDatesWithData(dates);
 
-    if (getMonthKey(data.date) === yearMonth) {
-      setData((prev) => ({ ...prev, mtdSales: total, monthlyTarget: target }));
-    } else {
-      setData((prev) => ({ ...prev, mtdSales: total }));
-    }
+    setData((prev) => {
+      if (getMonthKey(prev.date) === yearMonth) {
+        return { ...prev, mtdSales: total, monthlyTarget: target };
+      }
+      return { ...prev, mtdSales: total };
+    });
   };
 
   const fetchData = async (dateStr: string) => {
@@ -749,6 +757,18 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
   const handleDataChange = (newData: SalesReportData) => {
+    const dateChanged = String(newData.date || "") !== String(data.date || "");
+
+    if (dateChanged) {
+      const nextDate = String(newData.date || "");
+      setSelectedDate(nextDate);
+      setData((prev) => ({
+        ...prev,
+        date: nextDate,
+      }));
+      return;
+    }
+
     const categoriesChanged = JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
 
     const baseFieldsChanged =
@@ -757,7 +777,6 @@ const App: React.FC = () => {
       Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
       String(newData.note || "") !== String(data.note || "");
 
-    const dateChanged = String(newData.date || "") !== String(data.date || "");
     const monthlyTargetChanged =
       Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
 
@@ -766,10 +785,6 @@ const App: React.FC = () => {
     if (monthlyTargetChanged) {
       const ym = getMonthKey(newData.date);
       saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
-    }
-
-    if (dateChanged) {
-      return;
     }
 
     if (categoriesChanged || baseFieldsChanged) {
@@ -868,8 +883,8 @@ const App: React.FC = () => {
       const saved = await handleSave(true);
       if (!saved) return;
 
-      const selectedDate = data.date;
-      const end = parseISO(selectedDate);
+      const targetDate = data.date;
+      const end = parseISO(targetDate);
       const start = subDays(end, 6);
       const startDate = format(start, "yyyy-MM-dd");
       const endDate = format(end, "yyyy-MM-dd");
@@ -891,9 +906,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    fetchData(data.date);
+    fetchData(selectedDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.date, isLoggedIn]);
+  }, [selectedDate, isLoggedIn]);
 
   useEffect(() => {
     if (!toastMsg) return;
