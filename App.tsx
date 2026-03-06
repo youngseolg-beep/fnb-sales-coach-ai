@@ -976,20 +976,6 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* ✅ 단계 안내 배너 */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 text-sm font-bold text-indigo-700 flex items-center gap-2 shadow-sm">
-          <i className="fa-solid fa-route text-indigo-500"></i>
-          <span>
-            {reportGenerated
-              ? "✔ 리포트가 생성되었습니다. 아래 결과를 확인하세요."
-              : dataSaved
-              ? "3️⃣ 매출 데이터 저장 완료. AI 코칭 리포트를 생성하세요."
-              : ocrApplied
-              ? "2️⃣ 메뉴 데이터가 반영되었습니다. 매출 데이터를 저장하세요."
-              : "1️⃣ 영수증을 업로드하거나 메뉴 데이터를 입력하세요."}
-          </span>
-        </div>
-
         <div className="relative">
           <DataInput
             data={data}
