@@ -127,6 +127,105 @@ const INITIAL_CATEGORIES: MenuCategory[] = [
   },
 ];
 
+const cloneInitialCategories = (): MenuCategory[] =>
+  INITIAL_CATEGORIES.map((category) => ({
+    ...category,
+    items: category.items.map((item) => ({ ...item })),
+  }));
+
+const createEmptyCategories = (): MenuCategory[] =>
+  INITIAL_CATEGORIES.map((category) => ({
+    ...category,
+    items: category.items.map((item) => ({
+      ...item,
+      qty: 0,
+    })),
+  }));
+
+const toSafeNumber = (value: any, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/**
+ * 저장된 categories를 우선 사용하되,
+ * INITIAL_CATEGORIES의 최신 구조와 merge
+ */
+const mergeCategoriesWithInitial = (loaded?: MenuCategory[] | null): MenuCategory[] => {
+  const base = cloneInitialCategories();
+
+  if (!Array.isArray(loaded) || loaded.length === 0) {
+    return base;
+  }
+
+  const loadedCategoryMap = new Map(
+    loaded.map((category) => [String(category.name), category])
+  );
+
+  const mergedBase = base.map((baseCategory) => {
+    const loadedCategory = loadedCategoryMap.get(baseCategory.name);
+
+    if (!loadedCategory || !Array.isArray(loadedCategory.items)) {
+      return baseCategory;
+    }
+
+    const loadedItemMap = new Map(
+      loadedCategory.items.map((item: any) => [String(item.id), item])
+    );
+
+    return {
+      ...baseCategory,
+      items: baseCategory.items.map((baseItem) => {
+        const loadedItem: any = loadedItemMap.get(baseItem.id);
+
+        if (!loadedItem) {
+          return baseItem;
+        }
+
+        return {
+          ...baseItem,
+          name: String(loadedItem.name ?? baseItem.name),
+          price: toSafeNumber(loadedItem.price, toSafeNumber(baseItem.price, 0)),
+          qty: toSafeNumber(loadedItem.qty, 0),
+          unitCost:
+            loadedItem.unitCost === undefined ||
+            loadedItem.unitCost === null ||
+            loadedItem.unitCost === ""
+              ? baseItem.unitCost
+              : toSafeNumber(loadedItem.unitCost, toSafeNumber(baseItem.unitCost, 0)),
+        };
+      }),
+    };
+  });
+
+  const baseCategoryNames = new Set(base.map((category) => category.name));
+
+  const extraCategories = loaded
+    .filter(
+      (category) =>
+        category &&
+        typeof category === "object" &&
+        typeof category.name === "string" &&
+        Array.isArray(category.items) &&
+        !baseCategoryNames.has(category.name)
+    )
+    .map((category) => ({
+      name: String(category.name),
+      items: category.items.map((item: any) => ({
+        id: String(item.id),
+        name: String(item.name),
+        price: toSafeNumber(item.price, 0),
+        qty: toSafeNumber(item.qty, 0),
+        unitCost:
+          item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
+            ? undefined
+            : toSafeNumber(item.unitCost, 0),
+      })),
+    }));
+
+  return [...mergedBase, ...extraCategories];
+};
+
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
@@ -149,7 +248,7 @@ const App: React.FC = () => {
       note: "",
       monthlyTarget: monthTarget,
       mtdSales: 0,
-      categories: INITIAL_CATEGORIES,
+      categories: cloneInitialCategories(),
     };
   });
 
@@ -167,7 +266,6 @@ const App: React.FC = () => {
     setToastSeq((s) => s + 1);
   };
 
-  // ✅ UX flow state
   const [ocrApplied, setOcrApplied] = useState(false);
   const [dataSaved, setDataSaved] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
@@ -177,15 +275,12 @@ const App: React.FC = () => {
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
-  // 기간별 성과 분석
   const [periodRange, setPeriodRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
     end: new Date().toISOString().split("T")[0],
   });
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
-
-  // ✅ 기간 메뉴 판매량 Top10
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
   const hasMeaningfulInput = (v: SalesReportData) => {
@@ -277,7 +372,7 @@ const App: React.FC = () => {
       const days = Math.max(1, Number(analyzedDays) || 1);
       const avgDaily = qty / days;
 
-      const growth = type === "SET_DISCOUNT" ? 0.3 : type === "MENU_BOARD" ? 0.1 : type === "STAFF_UPSELL" ? 0.15 : 0.1;
+      const growth = type === "SET_DISCOUNT" ? 0.3 : type === "MENU_BOARD" ? 0.1 : 0.15;
 
       let target = Math.ceil(avgDaily * (1 + growth));
       const cap = Math.min(8, Math.max(2, Math.ceil(avgDaily * 2)));
@@ -457,7 +552,7 @@ const App: React.FC = () => {
     const total = await getMonthlyTotal(yearMonth);
     const dates = await listDatesInMonth(yearMonth);
 
-    const target = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
+    const target = loadMonthlyTarget(yearMonth, Number(data.monthlyTarget) || 15000);
 
     setMonthlyStats({
       total,
@@ -480,55 +575,62 @@ const App: React.FC = () => {
 
     try {
       const dbData = await loadDaily(dateStr);
-
       const yearMonth = getMonthKey(dateStr);
-      const monthTargetFromLocal = loadMonthlyTarget(yearMonth, data.monthlyTarget || 15000);
+
+      setData((prev) => {
+        const monthTargetFromLocal = loadMonthlyTarget(
+          yearMonth,
+          Number(prev.monthlyTarget) || 15000
+        );
+
+        if (!dbData) {
+          return {
+            ...prev,
+            date: dateStr,
+            posSales: 0,
+            orders: 0,
+            visitCount: 0,
+            note: "",
+            monthlyTarget: monthTargetFromLocal,
+            categories: createEmptyCategories(),
+          };
+        }
+
+        return {
+          ...prev,
+          date: dateStr,
+          posSales: toSafeNumber(dbData.posSales, 0),
+          orders: toSafeNumber(dbData.orders, 0),
+          visitCount: toSafeNumber(dbData.visitCount, 0),
+          note: String((dbData as any).note ?? ""),
+          monthlyTarget: monthTargetFromLocal,
+          categories: mergeCategoriesWithInitial(dbData.categories),
+        };
+      });
+
+      setOcrApplied(false);
 
       if (!dbData) {
-        const resetCats = INITIAL_CATEGORIES.map((cat) => ({
-          ...cat,
-          items: cat.items.map((it) => ({ ...it, qty: 0 })),
-        }));
-
-        const nextData = {
-          ...data,
-          date: dateStr,
-          posSales: 0,
-          orders: 0,
-          visitCount: 0,
-          note: "",
-          monthlyTarget: monthTargetFromLocal,
-          categories: resetCats,
-          mtdSales: data.mtdSales,
-        };
-
-        setData(nextData);
-        setOcrApplied(false);
         setDataSaved(false);
-        setReportGenerated(false);
       } else {
-        const loadedData = {
-          ...data,
-          date: dateStr,
-          posSales: dbData.posSales ?? 0,
-          orders: dbData.orders ?? 0,
-          visitCount: dbData.visitCount ?? 0,
-          monthlyTarget: monthTargetFromLocal,
-          note: (dbData as any).note ?? "",
-          categories: dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
-          mtdSales: data.mtdSales,
+        const loadedForCheck: SalesReportData = {
+          date: dbData.date ?? dateStr,
+          posSales: toSafeNumber(dbData.posSales, 0),
+          orders: toSafeNumber(dbData.orders, 0),
+          visitCount: toSafeNumber(dbData.visitCount, 0),
+          note: String((dbData as any).note ?? ""),
+          monthlyTarget: loadMonthlyTarget(yearMonth, 15000),
+          mtdSales: 0,
+          categories: mergeCategoriesWithInitial(dbData.categories),
         };
-
-        setData(loadedData);
-        setOcrApplied(false);
-        setDataSaved(hasMeaningfulInput(loadedData));
-        setReportGenerated(false);
+        setDataSaved(hasMeaningfulInput(loadedForCheck));
       }
 
+      setReportGenerated(false);
       setReport("");
       setMenuEngineeringResult(null);
 
-      await refreshMonthlyStats(dateStr.substring(0, 7));
+      await refreshMonthlyStats(yearMonth);
     } catch (err) {
       console.error("Fetch Error:", err);
     } finally {
@@ -641,20 +743,34 @@ const App: React.FC = () => {
 
   const monthlyRate = useMemo(() => {
     const ym = getMonthKey(data.date);
-    const target = loadMonthlyTarget(ym, data.monthlyTarget || 15000);
+    const target = loadMonthlyTarget(ym, Number(data.monthlyTarget) || 15000);
     if (!target || target <= 0) return 0;
     return (monthlyStats.total / target) * 100;
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
   const handleDataChange = (newData: SalesReportData) => {
     const categoriesChanged = JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
+
     const baseFieldsChanged =
       Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
       Number(newData.orders || 0) !== Number(data.orders || 0) ||
       Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
       String(newData.note || "") !== String(data.note || "");
 
+    const dateChanged = String(newData.date || "") !== String(data.date || "");
+    const monthlyTargetChanged =
+      Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
+
     setData(newData);
+
+    if (monthlyTargetChanged) {
+      const ym = getMonthKey(newData.date);
+      saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
+    }
+
+    if (dateChanged) {
+      return;
+    }
 
     if (categoriesChanged || baseFieldsChanged) {
       setOcrApplied(true);
@@ -717,10 +833,7 @@ const App: React.FC = () => {
 
       await deleteDaily(targetDate);
 
-      const resetCats = INITIAL_CATEGORIES.map((cat) => ({
-        ...cat,
-        items: cat.items.map((it) => ({ ...it, qty: 0 })),
-      }));
+      const resetCats = createEmptyCategories();
 
       setData((prev) => ({
         ...prev,
@@ -860,7 +973,6 @@ const App: React.FC = () => {
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 mt-6 md:mt-10 space-y-8 md:space-y-12">
-        {/* 월간 요약 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
             <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
@@ -922,7 +1034,6 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        {/* 오늘 요약 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4">
             <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
@@ -1022,13 +1133,132 @@ const App: React.FC = () => {
           boostPlans={boostPlans}
         />
 
-        {/* 기간별 성과 분석 */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* ... (이하 동일) ... */}
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
+              <i className="fa-solid fa-chart-column text-indigo-500"></i>
+              기간별 성과 분석
+            </h3>
+
+            <div className="flex flex-col md:flex-row gap-2 md:items-center">
+              <input
+                type="date"
+                value={periodRange.start}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+              <span className="text-slate-400 text-center text-sm font-bold">~</span>
+              <input
+                type="date"
+                value={periodRange.end}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={fetchPeriodStats}
+                disabled={periodLoading}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
+              >
+                {periodLoading ? "분석 중..." : "기간 분석"}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  ${Number(periodStats?.totalSales || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 주문</p>
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {Number(periodStats?.totalOrders || 0).toLocaleString()}건
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 방문객</p>
+                <p className="mt-2 text-2xl font-black text-slate-900">
+                  {Number(periodStats?.totalVisitors || 0).toLocaleString()}명
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                  <h4 className="font-black text-slate-800 text-sm">일별 추이</h4>
+                </div>
+                <div className="max-h-80 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white sticky top-0">
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left px-4 py-3 font-black text-slate-500">날짜</th>
+                        <th className="text-right px-4 py-3 font-black text-slate-500">매출</th>
+                        <th className="text-right px-4 py-3 font-black text-slate-500">주문</th>
+                        <th className="text-right px-4 py-3 font-black text-slate-500">방문객</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(periodStats?.list || []).length > 0 ? (
+                        (periodStats?.list || []).map((row: any) => (
+                          <tr key={row.date} className="border-b border-slate-100">
+                            <td className="px-4 py-3 font-bold text-slate-700">{row.date}</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900">
+                              ${Number(row.total_sales || 0).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right text-slate-700">
+                              {Number(row.orders || 0).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right text-slate-700">
+                              {Number(row.guests || 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-bold">
+                            기간 분석 데이터를 불러오면 여기에 표시됩니다.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                  <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {periodMenuTop.length > 0 ? (
+                    periodMenuTop.map((item, idx) => (
+                      <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <span className="font-bold text-slate-800">{item.name}</span>
+                        </div>
+                        <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-8 text-center text-slate-400 font-bold">
+                      기간 분석 데이터를 불러오면 Top10이 표시됩니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
 
-      {/* 하단 고정 버튼 */}
       <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
         <div className="max-w-6xl mx-auto pointer-events-auto">
           <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4">
@@ -1075,7 +1305,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* 리셋 모달 */}
       {showResetModal && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]"
@@ -1107,7 +1336,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 토스트 */}
       {toastMsg && (
         <div className="fixed bottom-28 md:bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-[10001] text-sm font-bold pointer-events-none">
           {toastMsg}
