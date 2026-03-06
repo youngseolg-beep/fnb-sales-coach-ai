@@ -47,41 +47,109 @@ const isDeletedPayload = (payload: any) => {
   return p && typeof p === "object" && p.deleted === true;
 };
 
+const toNumber = (value: any, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const normalizeCategories = (raw: any): MenuCategory[] | null => {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const normalized: MenuCategory[] = raw
+    .filter(
+      (category: any) =>
+        category &&
+        typeof category === "object" &&
+        typeof category.name === "string" &&
+        Array.isArray(category.items)
+    )
+    .map((category: any) => ({
+      name: String(category.name),
+      items: (category.items ?? [])
+        .filter(
+          (item: any) =>
+            item &&
+            typeof item === "object" &&
+            typeof item.id === "string" &&
+            typeof item.name === "string"
+        )
+        .map((item: any) => ({
+          id: String(item.id),
+          name: String(item.name),
+          price: toNumber(item.price, 0),
+          qty: toNumber(item.qty, 0),
+          unitCost:
+            item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
+              ? undefined
+              : toNumber(item.unitCost, 0),
+        })),
+    }))
+    .filter((category) => Array.isArray(category.items));
+
+  return normalized.length > 0 ? normalized : null;
+};
+
+const calcTotalSalesFromCategories = (categories?: MenuCategory[] | null) => {
+  if (!Array.isArray(categories)) return 0;
+
+  return categories.reduce((sum, category) => {
+    const categorySum = (category.items ?? []).reduce((itemSum, item) => {
+      return itemSum + toNumber(item.price, 0) * toNumber(item.qty, 0);
+    }, 0);
+
+    return sum + categorySum;
+  }, 0);
+};
+
 export async function saveDailyData(input: DailyPayload & { deleted?: boolean }) {
+  const normalizedCategories = normalizeCategories(input.categories ?? null);
+
+  const computedTotalSales =
+    input.totalSales !== undefined && input.totalSales !== null
+      ? toNumber(input.totalSales, 0)
+      : calcTotalSalesFromCategories(normalizedCategories);
+
   const payload = {
     date: input.date,
-    posSales: Number(input.posSales || 0),
-    orders: Number(input.orders || 0),
-    visitCount: Number(input.visitCount || 0),
+    posSales: toNumber(input.posSales, 0),
+    orders: toNumber(input.orders, 0),
+    visitCount: toNumber(input.visitCount, 0),
     note: input.note ?? "",
     monthlyTarget: input.monthlyTarget ?? "",
-    categories: input.categories ?? null,
-    totalSales: Number(input.totalSales || 0),
-    deleted: input.deleted === true, // ✅ soft delete flag
+    categories: normalizedCategories,
+    totalSales: computedTotalSales,
+    deleted: input.deleted === true,
   };
 
   const row: DailyRow = {
     date: input.date,
-    total_sales: Number(input.totalSales ?? input.posSales ?? 0),
-    orders: Number(input.orders ?? 0),
-    visit_count: Number(input.visitCount ?? 0),
-    sold_items: input.categories ?? null,
+    total_sales: computedTotalSales,
+    orders: toNumber(input.orders, 0),
+    visit_count: toNumber(input.visitCount, 0),
+    sold_items: normalizedCategories,
     sold_items_summary: "",
     payload,
   };
 
-  // update → 없으면 insert
   const { data: updated, error: updateErr } = await supabase
     .from(TABLE)
     .update(row)
     .eq("date", input.date)
     .select("date");
 
-  if (updateErr) return { ok: false, error: updateErr.message, raw: updateErr };
-  if (updated && updated.length > 0) return { ok: true };
+  if (updateErr) {
+    return { ok: false, error: updateErr.message, raw: updateErr };
+  }
+
+  if (updated && updated.length > 0) {
+    return { ok: true };
+  }
 
   const { error: insertErr } = await supabase.from(TABLE).insert(row);
-  if (insertErr) return { ok: false, error: insertErr.message, raw: insertErr };
+
+  if (insertErr) {
+    return { ok: false, error: insertErr.message, raw: insertErr };
+  }
 
   return { ok: true };
 }
@@ -98,44 +166,45 @@ export async function loadDaily(dateStr: string) {
     console.error("[loadDaily] supabase error:", error);
     return null;
   }
+
   if (!data) return null;
 
   const row = data as DailyRow;
   const p: any = safeParsePayload(row.payload);
 
-  // ✅ deleted=true면 “없는 날”로 처리
   if (p?.deleted === true) return null;
 
-  // ✅ categories가 깨졌으면 null로 내려서 App.tsx에서 INITIAL_CATEGORIES로 대체하게
-  const rawCats = p?.categories ?? row.sold_items ?? null;
-
-  const catsOk =
-    Array.isArray(rawCats) &&
-    rawCats.length > 0 &&
-    rawCats.every(
-      (c: any) =>
-        c &&
-        typeof c === "object" &&
-        typeof c.name === "string" &&
-        Array.isArray(c.items)
-    );
-
-  const safeCategories = catsOk ? (rawCats as MenuCategory[]) : null;
+  const rawCategories = p?.categories ?? row.sold_items ?? null;
+  const safeCategories = normalizeCategories(rawCategories);
 
   return {
     date: row.date,
-    posSales: Number(p.posSales ?? row.total_sales ?? 0),
-    orders: Number(p.orders ?? row.orders ?? 0),
-    visitCount: Number(p.visitCount ?? row.visit_count ?? 0),
-    note: String(p.note ?? ""),
-    monthlyTarget: p.monthlyTarget ?? "",
+    posSales: toNumber(p?.posSales ?? row.total_sales ?? 0, 0),
+    orders: toNumber(p?.orders ?? row.orders ?? 0, 0),
+    visitCount: toNumber(p?.visitCount ?? row.visit_count ?? 0, 0),
+    note: String(p?.note ?? ""),
+    monthlyTarget: p?.monthlyTarget ?? "",
     categories: safeCategories,
   };
 }
 
 export async function deleteDaily(dateStr: string) {
-  const { error } = await supabase.from(TABLE).delete().eq("date", dateStr);
-  if (error) throw error;
+  const existing = await loadDaily(dateStr);
+
+  if (!existing) {
+    return true;
+  }
+
+  const result = await saveDailyData({
+    ...existing,
+    totalSales: calcTotalSalesFromCategories(existing.categories ?? null),
+    deleted: true,
+  });
+
+  if (!result.ok) {
+    throw result.raw ?? new Error(result.error || "Failed to delete daily data");
+  }
+
   return true;
 }
 
@@ -156,18 +225,11 @@ export async function listDatesInMonth(yearMonth: string) {
   }
 
   const rows = (data ?? []) as any[];
-
-  // ✅ deleted=true 인 날은 점에서 제외
   const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
 
   return filtered.map((r) => r.date as string);
 }
 
-/**
- * ✅ SaaS 기준: “DB에 존재하는 날짜만” 리턴
- * - deleted=true 제외
- * - (중요) 이 함수는 이 파일에 "딱 1번만" 존재해야 함
- */
 export async function listDatesInRange(startDate: string, endDate: string): Promise<string[]> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -183,6 +245,7 @@ export async function listDatesInRange(startDate: string, endDate: string): Prom
 
   const rows = (data ?? []) as any[];
   const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
+
   return filtered.map((r) => r.date as string);
 }
 
@@ -201,11 +264,12 @@ export async function getMonthlyTotal(yearMonth: string) {
     return 0;
   }
 
-  // ✅ deleted=true 제외하고 합산
   let sum = 0;
+
   for (const r of (data ?? []) as any[]) {
     if (isDeletedPayload(r.payload)) continue;
-    sum += Number(r.total_sales ?? 0);
+    sum += toNumber(r.total_sales, 0);
   }
+
   return sum;
 }
