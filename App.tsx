@@ -601,84 +601,98 @@ const App: React.FC = () => {
   };
 
   const fetchData = async (dateStr: string) => {
-    setDbLoading(true);
-    setSaveStatus("");
+  setDbLoading(true);
+  setSaveStatus("");
 
-    try {
-      const dbData = await loadDaily(dateStr);
-      const yearMonth = getMonthKey(dateStr);
+  try {
+    const dbData = await loadDaily(dateStr);
+    const yearMonth = getMonthKey(dateStr);
+    const priceMap = await getMenuPricesForDate(dateStr);
 
-      let nextCategories: MenuCategory[];
-      let nextPosSales = 0;
-      let nextOrders = 0;
-      let nextVisitCount = 0;
-      let nextNote = "";
+    let nextCategories: MenuCategory[];
+    let nextPosSales = 0;
+    let nextOrders = 0;
+    let nextVisitCount = 0;
+    let nextNote = "";
 
-      if (dbData) {
-        nextCategories = mergeCategoriesWithInitial(dbData.categories);
-        nextPosSales = toSafeNumber(dbData.posSales, 0);
-        nextOrders = toSafeNumber(dbData.orders, 0);
-        nextVisitCount = toSafeNumber(dbData.visitCount, 0);
-        nextNote = String((dbData as any).note ?? "");
-      } else {
-        const priceMap = await getMenuPricesForDate(dateStr);
-        const cats = createEmptyCategories();
-
-        cats.forEach((cat) => {
-          cat.items.forEach((item) => {
-            const history = priceMap.get(item.id);
-            if (history) {
-              if (history.price != null) item.price = Number(history.price);
-              if (history.unit_cost != null) item.unitCost = Number(history.unit_cost);
-            }
-          });
-        });
-
-        nextCategories = cats;
-      }
-
-      const monthTargetFromLocal = loadMonthlyTarget(
-        yearMonth,
-        Number(data.monthlyTarget) || 15000
-      );
-
-      setData((prev) => ({
-        ...prev,
-        date: dateStr,
-        posSales: nextPosSales,
-        orders: nextOrders,
-        visitCount: nextVisitCount,
-        note: nextNote,
-        monthlyTarget: monthTargetFromLocal,
-        categories: nextCategories,
-      }));
-
-      setOcrApplied(false);
-
-      const loadedForCheck: SalesReportData = {
-        date: dateStr,
-        posSales: nextPosSales,
-        orders: nextOrders,
-        visitCount: nextVisitCount,
-        note: nextNote,
-        monthlyTarget: monthTargetFromLocal,
-        mtdSales: 0,
-        categories: nextCategories,
-      };
-
-      setDataSaved(dbData ? hasMeaningfulInput(loadedForCheck) : false);
-
-      setReportGenerated(false);
-      setReport("");
-      setMenuEngineeringResult(null);
-
-      await refreshMonthlyStats(yearMonth);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setDbLoading(false);
+    if (dbData) {
+      // 1) 기존 저장된 snapshot 불러오기
+      nextCategories = mergeCategoriesWithInitial(dbData.categories);
+      nextPosSales = toSafeNumber(dbData.posSales, 0);
+      nextOrders = toSafeNumber(dbData.orders, 0);
+      nextVisitCount = toSafeNumber(dbData.visitCount, 0);
+      nextNote = String((dbData as any).note ?? "");
+    } else {
+      // 2) 저장된 일 데이터가 없으면 빈 qty + 가격이력 기준으로 생성
+      nextCategories = createEmptyCategories();
     }
-  };
+
+    // 3) 핵심: snapshot이 있든 없든, 가격/원가는 "해당 날짜 기준 history"로 덮어쓰기
+    nextCategories = nextCategories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((item) => {
+        const history = priceMap.get(item.id);
+
+        if (!history) {
+          return { ...item };
+        }
+
+        return {
+          ...item,
+          price:
+            history.price != null
+              ? Number(history.price)
+              : Number(item.price ?? 0),
+          unitCost:
+            history.unit_cost != null
+              ? Number(history.unit_cost)
+              : item.unitCost,
+        };
+      }),
+    }));
+
+    const monthTargetFromLocal = loadMonthlyTarget(
+      yearMonth,
+      Number(data.monthlyTarget) || 15000
+    );
+
+    setData((prev) => ({
+      ...prev,
+      date: dateStr,
+      posSales: nextPosSales,
+      orders: nextOrders,
+      visitCount: nextVisitCount,
+      note: nextNote,
+      monthlyTarget: monthTargetFromLocal,
+      categories: nextCategories,
+    }));
+
+    setOcrApplied(false);
+
+    const loadedForCheck: SalesReportData = {
+      date: dateStr,
+      posSales: nextPosSales,
+      orders: nextOrders,
+      visitCount: nextVisitCount,
+      note: nextNote,
+      monthlyTarget: monthTargetFromLocal,
+      mtdSales: 0,
+      categories: nextCategories,
+    };
+
+    setDataSaved(dbData ? hasMeaningfulInput(loadedForCheck) : false);
+
+    setReportGenerated(false);
+    setReport("");
+    setMenuEngineeringResult(null);
+
+    await refreshMonthlyStats(yearMonth);
+  } catch (err) {
+    console.error("Fetch Error:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const fetchPeriodStats = async () => {
     setPeriodLoading(true);
