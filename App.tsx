@@ -16,7 +16,7 @@ import {
   deleteDaily,
   listDatesInRange,
 } from "./services/salesStorage";
-import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/menuPriceService";
+import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 
