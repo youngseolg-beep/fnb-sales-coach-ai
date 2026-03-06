@@ -1,3 +1,4 @@
+// src/components/DataInput.tsx
 import React from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { format, parseISO } from "date-fns";
@@ -68,11 +69,7 @@ async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<F
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
-/** OCR rawText에서 메뉴 라인 파싱 (홍콩반점 영수증 패턴 대응)
- * 예시:
- *  짜장면 ($7) .......... x2 = $14
- *  짬뽕 ($7) ............ x4 = $28
- */
+/** OCR rawText에서 메뉴 라인 파싱 (홍콩반점 영수증 패턴 대응) */
 function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
   const lines = rawText
     .split("\n")
@@ -83,14 +80,11 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
 
   // 패턴1: "메뉴 ($7) .... x2 = $14"
   const r1 = /^(.+?)\s*\(\s*\$?\s*([0-9]+(?:\.[0-9]+)?)\s*\)\s*.*?\bx\s*([0-9]+)\b/i;
-
   // 패턴2: "메뉴 .... x2"
   const r2 = /^(.+?)\s+.*?\bx\s*([0-9]+)\b/i;
-
-  // 패턴3: "메뉴 2 $7" 같은 단순형 (혹시 있을 때)
+  // 패턴3: "메뉴 2 $7"
   const r3 = /^(.+?)\s+([0-9]+)\s+\$?\s*([0-9]+(?:\.[0-9]+)?)$/i;
 
-  // 제외 키워드 (합계/날짜 등)
   const skipKeywords = [
     "DATE",
     "ORDER",
@@ -110,8 +104,6 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
   for (const line of lines) {
     const up = line.toUpperCase();
     if (skipKeywords.some((k) => up.includes(k))) continue;
-
-    // 너무 짧으면 패스
     if (line.length < 2) continue;
 
     let m = line.match(r1);
@@ -132,7 +124,6 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
       continue;
     }
 
-    // r2는 가격이 없을 수 있음 → price=0으로 넣고, 나중에 메뉴매칭할 때 메뉴 가격으로 보정됨
     m = line.match(r2);
     if (m) {
       const name = m[1].replace(/\.+/g, " ").trim();
@@ -171,7 +162,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   // OCR state
   const [ocrFiles, setOcrFiles] = React.useState<File[]>([]);
   const [ocrFileStatuses, setOcrFileStatuses] = React.useState<
-    Record<string, { status: "pending" | "processing" | "success" | "failed" | "retrying"; error?: string; retryCount?: number }>
+    Record<
+      string,
+      {
+        status: "pending" | "processing" | "success" | "failed" | "retrying";
+        error?: string;
+        retryCount?: number;
+      }
+    >
   >({});
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
@@ -184,6 +182,35 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrError, setOcrError] = React.useState<string>("");
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
+
+  // ✅ OCR input ref (촬영/갤러리 버튼으로 누적 추가)
+  const ocrInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const addOcrFiles = (newFiles: File[]) => {
+    if (newFiles.length === 0) return;
+
+    // ✅ 기존 덮어쓰기 X → 누적(add)
+    setOcrFiles((prev) => {
+      const merged = [...prev, ...newFiles];
+      const uniq: File[] = [];
+      const seen = new Set<string>();
+      for (const f of merged) {
+        const key = `${f.name}_${f.size}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        uniq.push(f);
+      }
+      return uniq;
+    });
+
+    // ✅ 새 파일 들어오면 OCR 결과/상태 초기화 (기존 행동 유지)
+    setOcrFileStatuses({});
+    setOcrRawText("");
+    setOcrItemsAccumulated([]);
+    setOcrError("");
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
 
   // Calendar state
   const [showCalendar, setShowCalendar] = React.useState(false);
@@ -381,34 +408,32 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }
     throw lastErr;
   };
-// ✅ 매출 데이터 저장 (Supabase upsert)
-const handleSave = async () => {
-  try {
-    // 1) 날짜 문자열 (너 코드에 data.date가 이미 있음)
-    const dateStr = data.date;
 
-    console.log("[SAVE] dateStr", dateStr);
+  // ✅ 매출 데이터 저장 (Supabase upsert) - (현재 파일에서 쓰이지 않아도, 기존 코드 유지)
+  const handleSave = async () => {
+    try {
+      const dateStr = data.date;
+      console.log("[SAVE] dateStr", dateStr);
 
-    // 2) Supabase 저장
-const res = await saveDailyData({
-  date: dateStr,
-  ...data,
-});
-    alert(JSON.stringify(res));
-    
-   await saveDailyData({
-  date: dateStr,
-  ...data,
-});
+      const res = await saveDailyData({
+        date: dateStr,
+        ...data,
+      });
+      alert(JSON.stringify(res));
 
-alert("매출 데이터 저장이 완료되었습니다.");
-    
-  } catch (e: any) {
-    console.error("[SAVE] exception", e);
-    alert("저장 중 오류: " + (e?.message || String(e)));
-  }
-};
-  /** ✅ OCR 실행: 이제 브라우저에서 Gemini 직접 호출하지 않고, /api/ocr만 호출 */
+      await saveDailyData({
+        date: dateStr,
+        ...data,
+      });
+
+      alert("매출 데이터 저장이 완료되었습니다.");
+    } catch (e: any) {
+      console.error("[SAVE] exception", e);
+      alert("저장 중 오류: " + (e?.message || String(e)));
+    }
+  };
+
+  /** ✅ OCR 실행: /api/ocr만 호출 */
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const filesToProcess = filesToProcessOverride || [...ocrFiles];
     if (filesToProcess.length === 0) return;
@@ -454,10 +479,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
         // rawText 누적 표시
         setOcrRawText((prev) => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
 
-        // 4) ✅ rawText → 메뉴 파싱 (여기가 핵심)
+        // 4) rawText → 메뉴 파싱
         const parsedItems = extractMenuItemsFromRawText(extractedText);
         if (parsedItems.length === 0) {
-          // 텍스트는 있는데 메뉴가 0개면, 사용자에게 “패턴 불일치” 안내
           console.warn("[OCR] parsedItems=0. rawText exists but menu pattern not matched.");
         }
 
@@ -636,54 +660,66 @@ alert("매출 데이터 저장이 완료되었습니다.");
               </ul>
             </div>
 
+            {/* ✅ 숨김 input + 누적(add) 방식 */}
+            <input
+              ref={ocrInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                addOcrFiles(files);
+                // ✅ 같은 파일/촬영 반복해도 change 이벤트 발생하도록 리셋
+                e.currentTarget.value = "";
+              }}
+            />
+
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
               <div className="flex-1 w-full">
                 <div className="flex justify-between items-end mb-1">
                   <label className="block text-xs font-bold text-slate-500">
-                    영수증 사진 선택 (카메라/갤러리)
+                    영수증 사진 추가 (카메라/갤러리)
                     {ocrFiles.length > 0 && (
                       <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>
                     )}
                   </label>
 
-                  {ocrItemsAccumulated.length > 0 && (
+                  {ocrFiles.length > 0 && (
                     <button
                       onClick={resetOcr}
                       className="text-[10px] font-black text-rose-500 hover:text-rose-600 flex items-center gap-1"
                     >
                       <i className="fa-solid fa-trash-can"></i>
-                      🧹 OCR 데이터 초기화
+                      🧹 전체 삭제
                     </button>
                   )}
                 </div>
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  key={ocrFiles.length > 0 ? "has-files" : "no-files"}
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    setOcrFiles(files);
-                    setOcrFileStatuses({});
-                    setOcrRawText("");
-                    setOcrItemsAccumulated([]);
-                  }}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer"
-                />
-              </div>
-
-              {ocrFiles.length > 0 && !ocrRawText && !ocrLoading && (
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
-                    onClick={() => handleOcr()}
-                    className="flex-1 md:flex-none px-6 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-900 transition-all flex items-center justify-center gap-2"
+                    type="button"
+                    onClick={() => ocrInputRef.current?.click()}
+                    className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                   >
-                    <i className="fa-solid fa-magnifying-glass"></i>
-                    {ocrItemsAccumulated.length > 0 ? "사진 추가 분석" : "그대로 분석"}
+                    <i className="fa-solid fa-camera"></i>
+                    사진 추가(촬영/갤러리)
                   </button>
+
+                  {ocrFiles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOcr()}
+                      disabled={ocrLoading}
+                      className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300"
+                    >
+                      <i className="fa-solid fa-magnifying-glass"></i>
+                      {ocrRawText ? "추가 사진까지 재분석" : "그대로 분석"}
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             {previewUrl && !ocrLoading && ocrFiles.length > 0 && (
@@ -717,7 +753,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                       ) : null
                     )}
                   </div>
-                  <p className="text-xs font-bold text-indigo-600 mt-1">{ocrOptimizing ? "이미지 최적화 중..." : "서버 OCR 호출 중..."}</p>
+                  <p className="text-xs font-bold text-indigo-600 mt-1">
+                    {ocrOptimizing ? "이미지 최적화 중..." : "서버 OCR 호출 중..."}
+                  </p>
                 </div>
               </div>
             )}
@@ -759,7 +797,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                 {ocrErrorDetail && (
                   <div className="p-3 bg-rose-900/5 border border-rose-200 rounded-xl">
                     <p className="text-[10px] font-bold text-rose-800 mb-1 uppercase tracking-wider">Error Details:</p>
-                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">{ocrErrorDetail}</pre>
+                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">
+                      {ocrErrorDetail}
+                    </pre>
                   </div>
                 )}
               </div>
@@ -771,13 +811,17 @@ alert("매출 데이터 저장이 완료되었습니다.");
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">스캔 합계 (메뉴 합계)</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          스캔 합계 (메뉴 합계)
+                        </p>
                         <p className="text-lg font-black text-indigo-600">
                           {scanTotal.toLocaleString()} <span className="text-xs font-normal text-slate-400">USD</span>
                         </p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">영수증 총액 (Total)</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          영수증 총액 (Total)
+                        </p>
                         <p className="text-lg font-black text-slate-800">
                           {receiptTotal !== null ? receiptTotal.toLocaleString() : "미검출"}
                           {receiptTotal !== null && <span className="text-xs font-normal text-slate-400 ml-1">USD</span>}
@@ -789,7 +833,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                       {receiptTotal !== null ? (
                         <div
                           className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black ${
-                            isTotalMatched ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
+                            isTotalMatched
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : "bg-rose-50 text-rose-600 border border-rose-100"
                           }`}
                         >
                           <i className={`fa-solid ${isTotalMatched ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
@@ -822,7 +868,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-500">인식된 메뉴 (누적 {ocrItemsAccumulated.length}개)</label>
+                    <label className="block text-xs font-bold text-slate-500">
+                      인식된 메뉴 (누적 {ocrItemsAccumulated.length}개)
+                    </label>
                     <div className="h-48 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-y-auto space-y-4">
                       {needsReviewItems.length > 0 && (
                         <div className="space-y-2">
@@ -839,7 +887,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                                     <p className="text-[9px] text-rose-400 font-bold">인식 원문: {item.item_original}</p>
                                     <p className="text-xs font-black text-slate-700">추천: {item.item_corrected}</p>
                                   </div>
-                                  <span className="text-[9px] font-bold text-rose-400">{(item.confidence * 100).toFixed(0)}%</span>
+                                  <span className="text-[9px] font-bold text-rose-400">
+                                    {(item.confidence * 100).toFixed(0)}%
+                                  </span>
                                 </div>
                                 <div className="flex flex-wrap gap-1">
                                   {item.candidates?.map((cand) => (
@@ -910,7 +960,9 @@ alert("매출 데이터 저장이 완료되었습니다.");
                       )}
 
                       {ocrItemsAccumulated.length === 0 && (
-                        <p className="text-xs text-slate-400 text-center mt-10">인식된 메뉴가 없습니다. (영수증 형식이 다르면 파싱 규칙을 추가해야 함)</p>
+                        <p className="text-xs text-slate-400 text-center mt-10">
+                          인식된 메뉴가 없습니다. (영수증 형식이 다르면 파싱 규칙을 추가해야 함)
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1088,7 +1140,10 @@ alert("매출 데이터 저장이 완료되었습니다.");
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
               {cat.items.map((item, itemIdx) => (
-                <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0"
+                >
                   <span className="text-sm font-medium text-slate-700 truncate flex-1">
                     {item.name} <span className="text-[10px] text-slate-400 font-normal">(${item.price})</span>
                   </span>
