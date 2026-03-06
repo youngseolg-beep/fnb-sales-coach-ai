@@ -151,8 +151,32 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const updateQty = (catIdx: number, itemIdx: number, qty: number) => {
-    const newCategories = [...data.categories];
-    newCategories[catIdx].items[itemIdx].qty = qty;
+    const newCategories = data.categories.map((cat, cIdx) => ({
+      ...cat,
+      items: cat.items.map((item, iIdx) =>
+        cIdx === catIdx && iIdx === itemIdx ? { ...item, qty } : { ...item }
+      ),
+    }));
+    onChange({ ...data, categories: newCategories });
+  };
+
+  const updateItemField = (
+    catIdx: number,
+    itemIdx: number,
+    field: "price" | "unitCost",
+    value: number
+  ) => {
+    const safeValue = Number.isFinite(value) ? value : 0;
+
+    const newCategories = data.categories.map((cat, cIdx) => ({
+      ...cat,
+      items: cat.items.map((item, iIdx) =>
+        cIdx === catIdx && iIdx === itemIdx
+          ? { ...item, [field]: safeValue }
+          : { ...item }
+      ),
+    }));
+
     onChange({ ...data, categories: newCategories });
   };
 
@@ -174,6 +198,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrError, setOcrError] = React.useState<string>("");
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
+  const [showMenuSettings, setShowMenuSettings] = React.useState<boolean>(false);
 
   const addInputRef = React.useRef<HTMLInputElement>(null);
   const replaceInputRef = React.useRef<HTMLInputElement>(null);
@@ -217,14 +242,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
   // 썸네일 URL 관리
   React.useEffect(() => {
-    // 새로 생긴 파일만 URL 생성
     const next: Record<string, string> = { ...thumbUrls };
     for (const f of ocrFiles) {
       const k = fileKey(f);
       if (!next[k]) next[k] = URL.createObjectURL(f);
     }
 
-    // 제거된 파일 URL revoke
     for (const k of Object.keys(next)) {
       const stillExists = ocrFiles.some((f) => fileKey(f) === k);
       if (!stillExists) {
@@ -398,14 +421,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
       for (const f of files) {
         const k = fileKey(f);
-        if (prevKeys.has(k)) continue; // 완전 동일 파일(이름/사이즈/시간) 중복 방지
+        if (prevKeys.has(k)) continue;
         next.push(f);
         prevKeys.add(k);
       }
       return next;
     });
 
-    // 신규 파일 status만 pending 추가
     setOcrFileStatuses((prev) => {
       const next = { ...prev };
       for (const f of files) {
@@ -422,7 +444,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     files.forEach((f) => (nextStatus[f.name] = { status: "pending" }));
     setOcrFileStatuses(nextStatus);
 
-    // 교체는 “새로 시작”으로 간주 → OCR 결과 초기화
     setOcrRawText("");
     setOcrItemsAccumulated([]);
     setOcrError("");
@@ -435,7 +456,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     const statuses = ocrFileStatuses || {};
     const defaultTargets = ocrFiles.filter((f) => {
       const s = statuses[f.name]?.status;
-      return s !== "success"; // 성공한 건 재스캔 안 함
+      return s !== "success";
     });
 
     const filesToProcess = filesToProcessOverride || defaultTargets;
@@ -446,7 +467,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrErrorDetail("");
     setOcrProgress({ current: 0, total: filesToProcess.length });
 
-    // 상태 초기화(대상만)
     setOcrFileStatuses((prev) => {
       const next = { ...prev };
       filesToProcess.forEach((f) => (next[f.name] = { status: "pending" }));
@@ -477,16 +497,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         const extractedText = String(ocrResult?.rawText || "").trim();
         if (!extractedText) throw new Error("텍스트를 추출하지 못했습니다.");
 
-        // rawText 누적 표시
         setOcrRawText((prev) => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
 
-        // 메뉴 파싱
         const parsedItems = extractMenuItemsFromRawText(extractedText);
-
-        // 메뉴명 자동교정
         const correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
 
-        // ✅ 누적 반영(중복 누적은 “apply 단계에서 해결” / 현재 단계는 raw 인식 누적)
         setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
 
         setOcrFileStatuses((prev) => ({
@@ -528,9 +543,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrProgress(null);
   };
 
-  // ✅ apply 시 “중복 메뉴 방지”는 이미 해결한 버전 기준(‘최대값’ 적용 로직)
-  // - 같은 메뉴가 여러 장에서 반복되면 합산이 아니라 "최대값"으로 반영
-  //   (영수증 분할 촬영에서 동일 라인이 겹쳐 찍히는 케이스 대비)
   const applyOcr = () => {
     if (ocrItemsAccumulated.length === 0) return;
 
@@ -539,7 +551,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       items: cat.items.map((it) => ({ ...it })),
     }));
 
-    // ✅ 메뉴별 qty를 “최대값”으로 결정
     const qtyMaxById = new Map<string, number>();
 
     for (const item of ocrItemsAccumulated) {
@@ -553,7 +564,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       cat.items.forEach((menuItem) => {
         const v = qtyMaxById.get(menuItem.id);
         if (v !== undefined && v > 0) {
-          menuItem.qty = v; // ✅ 최대값으로 “세팅”
+          menuItem.qty = v;
           appliedCount++;
         }
       });
@@ -588,7 +599,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const needsReviewItems = ocrItemsAccumulated.filter((item) => item.needs_review);
   const confirmedItems = ocrItemsAccumulated.filter((item) => !item.needs_review);
 
-  // 합계 비교
   const scanTotal = React.useMemo(() => {
     return ocrItemsAccumulated.reduce((sum, item) => {
       const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
@@ -597,7 +607,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }, 0);
   }, [ocrItemsAccumulated, allMenus]);
 
-  // 영수증 TOTAL 추출
   const extractReceiptTotal = (text: string): number | null => {
     if (!text) return null;
     const keywords = ["TOTAL", "합계", "총액", "GRAND TOTAL", "AMOUNT", "NET TOTAL", "G.TOTAL"];
@@ -627,7 +636,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return diff <= tolerance;
   }, [scanTotal, receiptTotal]);
 
-  // ✅ 상태 배지 텍스트
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
     if (st === "success") return { text: "성공", cls: "bg-emerald-600" };
@@ -682,7 +690,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </ul>
             </div>
 
-            {/* Hidden inputs */}
             <input
               ref={addInputRef}
               type="file"
@@ -691,7 +698,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               onChange={(e) => {
                 const files = Array.from(e.target.files || []);
                 appendFiles(files);
-                // 같은 파일 다시 선택 가능하도록 reset
                 e.currentTarget.value = "";
               }}
               className="hidden"
@@ -774,7 +780,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </div>
             </div>
 
-            {/* Thumbnail list */}
             {ocrFiles.length > 0 && (
               <div className="mt-3">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
@@ -1146,6 +1151,99 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             />
           </div>
         </div>
+      </div>
+
+      {/* 1.5 Menu Settings */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowMenuSettings((prev) => !prev)}
+          className="w-full bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-gear text-indigo-500"></i>
+            <h2 className="text-lg font-bold text-slate-800">메뉴 가격 / 원가 설정</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {showMenuSettings ? "Close" : "Open"}
+            </span>
+            <i
+              className={`fa-solid fa-chevron-${showMenuSettings ? "up" : "down"} text-slate-400 text-sm`}
+            ></i>
+          </div>
+        </button>
+
+        {showMenuSettings && (
+          <div className="p-6 space-y-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-slate-700">
+              <p className="font-bold text-sm mb-1 flex items-center gap-2">
+                <i className="fa-solid fa-circle-info text-amber-500"></i>
+                메뉴 설정 안내
+              </p>
+              <p className="text-xs leading-relaxed">
+                점주가 실제 판매가와 원가를 수정하면, 이후 KPI / 메뉴 엔지니어링 / AI 리포트 계산에 바로 반영됩니다.
+              </p>
+            </div>
+
+            {data.categories.map((cat, catIdx) => (
+              <div key={`settings-${cat.name}`} className="border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="bg-indigo-50/50 border-b border-indigo-100 px-5 py-3">
+                  <h3 className="font-bold text-indigo-900 text-sm">{cat.name}</h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <div className="min-w-[640px]">
+                    <div className="grid grid-cols-[2fr_1fr_1fr] bg-slate-50 border-b border-slate-200 px-5 py-3 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                      <div>메뉴명</div>
+                      <div className="text-right">판매가 (USD)</div>
+                      <div className="text-right">원가 (USD)</div>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                      {cat.items.map((item, itemIdx) => (
+                        <div
+                          key={`settings-item-${item.id}`}
+                          className="grid grid-cols-[2fr_1fr_1fr] gap-3 px-5 py-3 items-center"
+                        >
+                          <div className="text-sm font-medium text-slate-700">{item.name}</div>
+
+                          <div>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.price ?? ""}
+                              onChange={(e) =>
+                                updateItemField(catIdx, itemIdx, "price", Number(e.target.value))
+                              }
+                              className="w-full bg-white text-[#111827] border border-slate-200 rounded-lg px-3 py-2 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
+                              placeholder="0.00"
+                            />
+                          </div>
+
+                          <div>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.unitCost ?? 0}
+                              onChange={(e) =>
+                                updateItemField(catIdx, itemIdx, "unitCost", Number(e.target.value))
+                              }
+                              className="w-full bg-white text-[#111827] border border-slate-200 rounded-lg px-3 py-2 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 2. Menu Quantities */}
