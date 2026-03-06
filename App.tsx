@@ -148,24 +148,41 @@ const toSafeNumber = (value: any, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const persistMenuPriceHistory = async (categories: MenuCategory[], effectiveDate: string) => {
+const persistMenuPriceHistory = async (
+  categories: MenuCategory[],
+  effectiveDate: string
+) => {
+
   const jobs: Promise<any>[] = [];
 
-  categories.forEach((cat) => {
-    cat.items.forEach((item) => {
-      if (!item.id) return;
-      jobs.push(
-        saveMenuPriceHistory(
-          item.id,
-          effectiveDate,
-          Number(item.price),
-          item.unitCost !== undefined && item.unitCost !== null
-            ? Number(item.unitCost)
-            : undefined
-        )
-      );
-    });
-  });
+  for (const cat of categories) {
+    for (const item of cat.items) {
+
+      if (!item.id) continue;
+
+      const history = await getMenuPricesForDate(effectiveDate);
+      const prev = history.get(item.id);
+
+      const priceChanged =
+        prev && Number(prev.price) !== Number(item.price);
+
+      const costChanged =
+        prev && Number(prev.unit_cost) !== Number(item.unitCost);
+
+      if (priceChanged || costChanged) {
+
+        jobs.push(
+          saveMenuPriceHistory(
+            item.id,
+            effectiveDate,
+            Number(item.price),
+            item.unitCost != null ? Number(item.unitCost) : undefined
+          )
+        );
+
+      }
+    }
+  }
 
   await Promise.all(jobs);
 };
