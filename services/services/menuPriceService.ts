@@ -16,7 +16,7 @@ export async function getMenuPricesForDate(date: string) {
 
   if (error) {
     console.error("price history error", error);
-    return new Map();
+    return new Map<string, MenuPriceRow>();
   }
 
   const map = new Map<string, MenuPriceRow>();
@@ -36,12 +36,19 @@ export async function saveMenuPriceHistory(
   price: number,
   unitCost?: number
 ) {
-  const { error } = await supabase.from("menu_price_history").insert({
-    menu_id: menuId,
-    effective_date: effectiveDate,
-    price,
-    unit_cost: unitCost ?? null,
-  });
+  const { error } = await supabase
+    .from("menu_price_history")
+    .upsert(
+      {
+        menu_id: menuId,
+        effective_date: effectiveDate,
+        price,
+        unit_cost: unitCost ?? null,
+      },
+      {
+        onConflict: "menu_id,effective_date",
+      }
+    );
 
   if (error) {
     console.error("save price history error", error);
