@@ -757,43 +757,100 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
   const handleDataChange = (newData: SalesReportData) => {
-    const dateChanged = String(newData.date || "") !== String(data.date || "");
+  const dateChanged = String(newData.date || "") !== String(data.date || "");
 
-    if (dateChanged) {
-      const nextDate = String(newData.date || "");
-      setSelectedDate(nextDate);
-      setData((prev) => ({
-        ...prev,
-        date: nextDate,
-      }));
-      return;
-    }
+  if (dateChanged) {
+    const nextDate = String(newData.date || "");
 
-    const categoriesChanged = JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
+    const runDateChange = async () => {
+      try {
+        const currentData = data;
 
-    const baseFieldsChanged =
-      Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
-      Number(newData.orders || 0) !== Number(data.orders || 0) ||
-      Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
-      String(newData.note || "") !== String(data.note || "");
+        const categoriesChanged =
+          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-    const monthlyTargetChanged =
-      Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
+        const baseFieldsChanged =
+          Number(newData.posSales || 0) !== Number(currentData.posSales || 0) ||
+          Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
+          Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
+          String(newData.note || "") !== String(currentData.note || "") ||
+          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-    setData(newData);
+        const hasUnsavedCurrent =
+          ocrApplied ||
+          !dataSaved ||
+          categoriesChanged ||
+          baseFieldsChanged;
 
-    if (monthlyTargetChanged) {
-      const ym = getMonthKey(newData.date);
-      saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
-    }
+        if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
+          let calcSales = 0;
+          currentData.categories.forEach((cat) => {
+            cat.items.forEach((item) => {
+              calcSales += Number(item.price || 0) * Number(item.qty || 0);
+            });
+          });
 
-    if (categoriesChanged || baseFieldsChanged) {
-      setOcrApplied(true);
-      setDataSaved(false);
-      setReportGenerated(false);
-      setSaveStatus("");
-    }
-  };
+          const savePayload: any = {
+            ...currentData,
+            totalSales: Math.round(calcSales * 100) / 100,
+          };
+
+          const res = await saveDailyData({
+            date: currentData.date,
+            ...savePayload,
+          });
+
+          if ((res as any)?.ok === false) {
+            throw new Error((res as any)?.error || "AUTO_SAVE_FAILED");
+          }
+
+          setLastSavedAt(new Date().toLocaleString());
+          setSaveStatus("자동 저장 완료");
+          setDataSaved(true);
+        }
+
+        setSelectedDate(nextDate);
+        setData((prev) => ({
+          ...prev,
+          date: nextDate,
+        }));
+      } catch (error: any) {
+        console.error("Auto save before date change failed:", error);
+        setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
+        showToast("날짜 변경 전 자동 저장에 실패했습니다.");
+      }
+    };
+
+    void runDateChange();
+    return;
+  }
+
+  const categoriesChanged =
+    JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
+
+  const baseFieldsChanged =
+    Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
+    Number(newData.orders || 0) !== Number(data.orders || 0) ||
+    Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
+    String(newData.note || "") !== String(data.note || "");
+
+  const monthlyTargetChanged =
+    Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
+
+  setData(newData);
+
+  if (monthlyTargetChanged) {
+    const ym = getMonthKey(newData.date);
+    saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
+  }
+
+  if (categoriesChanged || baseFieldsChanged) {
+    setOcrApplied(true);
+    setDataSaved(false);
+    setReportGenerated(false);
+    setSaveStatus("");
+  }
+};
 
   const handleSave = async (silent = false) => {
     try {
