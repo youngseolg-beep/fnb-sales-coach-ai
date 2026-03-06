@@ -1,10 +1,9 @@
-// src/components/DataInput.tsx
+// /src/components/DataInput.tsx
 import React from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { format, parseISO } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/services/ocrService";
-import { saveDailyData } from "../services/salesStorage";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -69,7 +68,7 @@ async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<F
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
-/** OCR rawText에서 메뉴 라인 파싱 (홍콩반점 영수증 패턴 대응) */
+/** OCR rawText에서 메뉴 라인 파싱 */
 function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
   const lines = rawText
     .split("\n")
@@ -78,11 +77,8 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
 
   const items: { name: string; price: number; qty: number }[] = [];
 
-  // 패턴1: "메뉴 ($7) .... x2 = $14"
   const r1 = /^(.+?)\s*\(\s*\$?\s*([0-9]+(?:\.[0-9]+)?)\s*\)\s*.*?\bx\s*([0-9]+)\b/i;
-  // 패턴2: "메뉴 .... x2"
   const r2 = /^(.+?)\s+.*?\bx\s*([0-9]+)\b/i;
-  // 패턴3: "메뉴 2 $7"
   const r3 = /^(.+?)\s+([0-9]+)\s+\$?\s*([0-9]+(?:\.[0-9]+)?)$/i;
 
   const skipKeywords = [
@@ -133,7 +129,6 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
     }
   }
 
-  // 중복 합치기 (name+price 기준)
   const merged: Record<string, { name: string; price: number; qty: number }> = {};
   for (const it of items) {
     const key = `${it.name}||${it.price}`;
@@ -143,6 +138,12 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
 
   return Object.values(merged);
 }
+
+type FileStatus = {
+  status: "pending" | "processing" | "success" | "failed" | "retrying";
+  error?: string;
+  retryCount?: number;
+};
 
 const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWithData, onMonthChange }) => {
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
@@ -161,13 +162,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
   // OCR state
   const [ocrFiles, setOcrFiles] = React.useState<File[]>([]);
-  const [ocrFileStatuses, setOcrFileStatuses] = React.useState<
-    Record<
-      string,
-      { status: "pending" | "processing" | "success" | "failed" | "retrying"; error?: string; retryCount?: number }
-    >
-  >({});
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [ocrFileStatuses, setOcrFileStatuses] = React.useState<Record<string, FileStatus>>({});
+  const [thumbUrls, setThumbUrls] = React.useState<Record<string, string>>({});
 
   const [ocrRawText, setOcrRawText] = React.useState<string>("");
   const [ocrItemsAccumulated, setOcrItemsAccumulated] = React.useState<CorrectedItem[]>([]);
@@ -179,77 +175,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
 
-  // ✅ 촬영 / 갤러리 input 분리 (iOS에서 capture 있으면 갤러리 막히는 문제 해결)
-  const ocrCameraInputRef = React.useRef<HTMLInputElement | null>(null);
-  const ocrGalleryInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  const resetOcr = () => {
-    setOcrFiles([]);
-    setOcrFileStatuses({});
-    setOcrRawText("");
-    setOcrItemsAccumulated([]);
-    setOcrError("");
-    setOcrErrorDetail("");
-    setOcrProgress(null);
-  };
-
-  // ✅ 파일 추가(누적) + 중복파일(이름+사이즈) 제거
-  const addOcrFiles = (newFiles: File[]) => {
-    if (newFiles.length === 0) return;
-
-    setOcrFiles((prev) => {
-      const merged = [...prev, ...newFiles];
-      const uniq: File[] = [];
-      const seen = new Set<string>();
-      for (const f of merged) {
-        const key = `${f.name}_${f.size}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        uniq.push(f);
-      }
-      return uniq;
-    });
-
-    // ✅ 파일이 새로 들어오면 OCR 결과/상태 초기화 (원하는 동작이면 유지)
-    setOcrFileStatuses({});
-    setOcrRawText("");
-    setOcrItemsAccumulated([]);
-    setOcrError("");
-    setOcrErrorDetail("");
-    setOcrProgress(null);
-  };
-
-  // ✅ 썸네일 URL 리스트 (cleanup 포함)
-  const thumbUrls = React.useMemo(() => {
-    return ocrFiles.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
-  }, [ocrFiles]);
-
-  React.useEffect(() => {
-    return () => {
-      thumbUrls.forEach((t) => URL.revokeObjectURL(t.url));
-    };
-  }, [thumbUrls]);
-
-  const removeOcrFileAt = (idx: number) => {
-    setOcrFiles((prev) => prev.filter((_, i) => i !== idx));
-    // 파일 목록이 바뀌면, OCR 결과는 안전하게 초기화(혼선 방지)
-    setOcrFileStatuses({});
-    setOcrRawText("");
-    setOcrItemsAccumulated([]);
-    setOcrError("");
-    setOcrErrorDetail("");
-    setOcrProgress(null);
-  };
-
-  React.useEffect(() => {
-    if (ocrFiles.length > 0) {
-      const url = URL.createObjectURL(ocrFiles[0]);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [ocrFiles]);
+  const addInputRef = React.useRef<HTMLInputElement>(null);
+  const replaceInputRef = React.useRef<HTMLInputElement>(null);
 
   // Calendar state
   const [showCalendar, setShowCalendar] = React.useState(false);
@@ -284,6 +211,33 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       window.removeEventListener("resize", close);
     };
   }, [showCalendar]);
+
+  // 파일 키(중복 방지)
+  const fileKey = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
+
+  // 썸네일 URL 관리
+  React.useEffect(() => {
+    // 새로 생긴 파일만 URL 생성
+    const next: Record<string, string> = { ...thumbUrls };
+    for (const f of ocrFiles) {
+      const k = fileKey(f);
+      if (!next[k]) next[k] = URL.createObjectURL(f);
+    }
+
+    // 제거된 파일 URL revoke
+    for (const k of Object.keys(next)) {
+      const stillExists = ocrFiles.some((f) => fileKey(f) === k);
+      if (!stillExists) {
+        try {
+          URL.revokeObjectURL(next[k]);
+        } catch {}
+        delete next[k];
+      }
+    }
+
+    setThumbUrls(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ocrFiles]);
 
   // 메뉴명 정규화/유사도
   const normalizeName = (name: string): string => {
@@ -334,12 +288,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return flattened;
   }, [data.categories]);
 
-  /** OCR 파싱 결과(원문명/qty/price)를 실제 메뉴로 자동 교정 */
+  /** OCR 파싱 결과를 실제 메뉴로 자동 교정 */
   const autoCorrectItem = (ocrItem: { name: string; price: number; qty: number }): CorrectedItem => {
     const originalName = ocrItem.name;
     const normalizedOcrName = normalizeName(originalName);
 
-    // 0) 수동 매핑 우선
     if (manualMappings[originalName]) {
       const matched = allMenus.find((m) => m.id === manualMappings[originalName]);
       if (matched) {
@@ -355,7 +308,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       }
     }
 
-    // 1) 완전 일치
     const exactMatch = allMenus.find((m) => m.normalizedName === normalizedOcrName);
     if (exactMatch) {
       return {
@@ -369,7 +321,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       };
     }
 
-    // 2) 유사도 매칭
     const scores = allMenus
       .map((m) => ({
         ...m,
@@ -388,7 +339,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       if (scoreGap >= 0.08) needsReview = false;
     }
 
-    // 가격 검증(있을 때)
     const usedPrice = ocrItem.price || bestMatch?.price || 0;
     if (!needsReview && usedPrice > 0 && bestMatch?.price) {
       const priceDiff = Math.abs(bestMatch.price - usedPrice);
@@ -410,56 +360,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   };
 
-  /** ✅ 중복 메뉴 제거: 여러 장에서 같은 메뉴가 나오면 "합산"이 아니라 "최댓값"으로 병합 */
-  const mergeOcrItemsDedupMax = (prev: CorrectedItem[], incoming: CorrectedItem[]) => {
-    const map = new Map<string, CorrectedItem>();
-
-    const keyOf = (it: CorrectedItem) => {
-      if (it.matched_id) return `id:${it.matched_id}`;
-      return `nm:${normalizeName(it.item_original || it.item_corrected || "")}`;
-    };
-
-    // prev 먼저 넣기
-    for (const it of prev) {
-      map.set(keyOf(it), { ...it });
-    }
-
-    // incoming 병합: qty는 max, 나머지는 더 "좋은" 정보 우선
-    for (const it of incoming) {
-      const k = keyOf(it);
-      const exist = map.get(k);
-
-      if (!exist) {
-        map.set(k, { ...it });
-        continue;
-      }
-
-      const existQty = Number(exist.qty || 0);
-      const newQty = Number(it.qty || 0);
-
-      // ✅ 핵심: max
-      const mergedQty = Math.max(existQty, newQty);
-
-      // confidence/needs_review는 더 좋은 쪽(확정된 것) 우선
-      const better =
-        exist.needs_review && !it.needs_review
-          ? it
-          : !exist.needs_review && it.needs_review
-          ? exist
-          : (it.confidence || 0) > (exist.confidence || 0)
-          ? it
-          : exist;
-
-      map.set(k, {
-        ...exist,
-        ...better,
-        qty: mergedQty,
-      });
-    }
-
-    return Array.from(map.values());
-  };
-
   /** 서버 OCR 호출 (429 재시도 포함) */
   const callOcrWithRetry = async (imageBase64: string, mimeType: string, fileName: string) => {
     const delays = [2000, 5000, 10000];
@@ -477,7 +377,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
           const delay = delays[attempt] + Math.random() * 800;
           setOcrFileStatuses((prev) => ({
             ...prev,
-            [fileName]: { ...prev[fileName], status: "retrying", retryCount: attempt + 1 },
+            [fileName]: { ...(prev[fileName] || { status: "pending" }), status: "retrying", retryCount: attempt + 1 },
           }));
           await sleep(delay);
           continue;
@@ -488,33 +388,57 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     throw lastErr;
   };
 
-  // (현재 파일에서 쓰이지 않아도 기존 코드 유지)
-  const handleSave = async () => {
-    try {
-      const dateStr = data.date;
-      console.log("[SAVE] dateStr", dateStr);
+  // ✅ OCR 파일 추가(누적) - 기존 결과 유지
+  const appendFiles = (files: File[]) => {
+    if (!files || files.length === 0) return;
 
-      const res = await saveDailyData({
-        date: dateStr,
-        ...data,
-      });
-      alert(JSON.stringify(res));
+    setOcrFiles((prev) => {
+      const prevKeys = new Set(prev.map((f) => fileKey(f)));
+      const next = [...prev];
 
-      await saveDailyData({
-        date: dateStr,
-        ...data,
-      });
+      for (const f of files) {
+        const k = fileKey(f);
+        if (prevKeys.has(k)) continue; // 완전 동일 파일(이름/사이즈/시간) 중복 방지
+        next.push(f);
+        prevKeys.add(k);
+      }
+      return next;
+    });
 
-      alert("매출 데이터 저장이 완료되었습니다.");
-    } catch (e: any) {
-      console.error("[SAVE] exception", e);
-      alert("저장 중 오류: " + (e?.message || String(e)));
-    }
+    // 신규 파일 status만 pending 추가
+    setOcrFileStatuses((prev) => {
+      const next = { ...prev };
+      for (const f of files) {
+        if (!next[f.name]) next[f.name] = { status: "pending" };
+      }
+      return next;
+    });
   };
 
-  /** ✅ OCR 실행 */
+  // ✅ 전체 교체(리셋)
+  const replaceAllFiles = (files: File[]) => {
+    setOcrFiles(files);
+    const nextStatus: Record<string, FileStatus> = {};
+    files.forEach((f) => (nextStatus[f.name] = { status: "pending" }));
+    setOcrFileStatuses(nextStatus);
+
+    // 교체는 “새로 시작”으로 간주 → OCR 결과 초기화
+    setOcrRawText("");
+    setOcrItemsAccumulated([]);
+    setOcrError("");
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
+
+  // ✅ OCR 실행: 기본은 "미분석/실패 파일만"
   const handleOcr = async (filesToProcessOverride?: File[]) => {
-    const filesToProcess = filesToProcessOverride || [...ocrFiles];
+    const statuses = ocrFileStatuses || {};
+    const defaultTargets = ocrFiles.filter((f) => {
+      const s = statuses[f.name]?.status;
+      return s !== "success"; // 성공한 건 재스캔 안 함
+    });
+
+    const filesToProcess = filesToProcessOverride || defaultTargets;
     if (filesToProcess.length === 0) return;
 
     setOcrLoading(true);
@@ -522,9 +446,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrErrorDetail("");
     setOcrProgress({ current: 0, total: filesToProcess.length });
 
-    const initialStatuses = { ...ocrFileStatuses };
-    filesToProcess.forEach((f) => (initialStatuses[f.name] = { status: "pending" }));
-    setOcrFileStatuses(initialStatuses);
+    // 상태 초기화(대상만)
+    setOcrFileStatuses((prev) => {
+      const next = { ...prev };
+      filesToProcess.forEach((f) => (next[f.name] = { status: "pending" }));
+      return next;
+    });
 
     for (let i = 0; i < filesToProcess.length; i++) {
       const currentFile = filesToProcess[i];
@@ -540,15 +467,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       try {
         setOcrOptimizing(true);
 
-        // 1) 이미지 최적화
         const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
-
-        // 2) base64 변환
         const { base64, mimeType } = await fileToBase64(optimizedFile);
 
         setOcrOptimizing(false);
 
-        // 3) 서버 OCR 호출
         const ocrResult = await callOcrWithRetry(base64, mimeType, currentFile.name);
 
         const extractedText = String(ocrResult?.rawText || "").trim();
@@ -557,17 +480,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         // rawText 누적 표시
         setOcrRawText((prev) => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
 
-        // 4) rawText → 메뉴 파싱
+        // 메뉴 파싱
         const parsedItems = extractMenuItemsFromRawText(extractedText);
-        if (parsedItems.length === 0) {
-          console.warn("[OCR] parsedItems=0. rawText exists but menu pattern not matched.");
-        }
 
-        // 5) 메뉴명 자동교정
+        // 메뉴명 자동교정
         const correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
 
-        // ✅ 핵심: 누적 반영(중복 제거/최댓값)
-        setOcrItemsAccumulated((prev) => mergeOcrItemsDedupMax(prev, correctedNewItems));
+        // ✅ 누적 반영(중복 누적은 “apply 단계에서 해결” / 현재 단계는 raw 인식 누적)
+        setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
 
         setOcrFileStatuses((prev) => ({
           ...prev,
@@ -598,28 +518,49 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     if (failedFiles.length > 0) handleOcr(failedFiles);
   };
 
+  const resetOcr = () => {
+    setOcrFiles([]);
+    setOcrFileStatuses({});
+    setOcrRawText("");
+    setOcrItemsAccumulated([]);
+    setOcrError("");
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
+
+  // ✅ apply 시 “중복 메뉴 방지”는 이미 해결한 버전 기준(‘최대값’ 적용 로직)
+  // - 같은 메뉴가 여러 장에서 반복되면 합산이 아니라 "최대값"으로 반영
+  //   (영수증 분할 촬영에서 동일 라인이 겹쳐 찍히는 케이스 대비)
   const applyOcr = () => {
     if (ocrItemsAccumulated.length === 0) return;
 
-    const newCategories = [...data.categories];
-    let matchedCount = 0;
+    const newCategories = data.categories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((it) => ({ ...it })),
+    }));
 
-    ocrItemsAccumulated.forEach((ocrItem) => {
-      if (ocrItem.needs_review || !ocrItem.matched_id) return;
+    // ✅ 메뉴별 qty를 “최대값”으로 결정
+    const qtyMaxById = new Map<string, number>();
 
-      newCategories.forEach((cat) => {
-        cat.items.forEach((menuItem) => {
-          if (menuItem.id === ocrItem.matched_id) {
-            // ✅ 중복 제거는 OCR 누적 단계에서 이미 처리됨 → 여기서는 그대로 반영
-            menuItem.qty = (menuItem.qty || 0) + Number(ocrItem.qty || 0);
-            matchedCount++;
-          }
-        });
+    for (const item of ocrItemsAccumulated) {
+      if (item.needs_review || !item.matched_id) continue;
+      const prev = qtyMaxById.get(item.matched_id) || 0;
+      qtyMaxById.set(item.matched_id, Math.max(prev, Number(item.qty || 0)));
+    }
+
+    let appliedCount = 0;
+    newCategories.forEach((cat) => {
+      cat.items.forEach((menuItem) => {
+        const v = qtyMaxById.get(menuItem.id);
+        if (v !== undefined && v > 0) {
+          menuItem.qty = v; // ✅ 최대값으로 “세팅”
+          appliedCount++;
+        }
       });
     });
 
     onChange({ ...data, categories: newCategories });
-    alert(`${matchedCount}개의 메뉴 수량이 자동 합산되어 입력되었습니다.`);
+    alert(`${appliedCount}개의 메뉴가 중복 제거(최대값 기준)로 적용되었습니다.`);
   };
 
   const handleConfirmCorrection = (idx: number, matchedId: string) => {
@@ -647,12 +588,12 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const needsReviewItems = ocrItemsAccumulated.filter((item) => item.needs_review);
   const confirmedItems = ocrItemsAccumulated.filter((item) => !item.needs_review);
 
-  // 합계 비교 (메뉴 가격은 매칭된 메뉴 가격 우선)
+  // 합계 비교
   const scanTotal = React.useMemo(() => {
     return ocrItemsAccumulated.reduce((sum, item) => {
       const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
       const priceToUse = menuPrice !== null && menuPrice !== undefined ? menuPrice : item.unit_price;
-      return sum + priceToUse * Number(item.qty || 0);
+      return sum + priceToUse * item.qty;
     }, 0);
   }, [ocrItemsAccumulated, allMenus]);
 
@@ -685,6 +626,18 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     const tolerance = Math.max(receiptTotal * 0.01, 1);
     return diff <= tolerance;
   }, [scanTotal, receiptTotal]);
+
+  // ✅ 상태 배지 텍스트
+  const statusBadge = (s?: FileStatus) => {
+    const st = s?.status;
+    if (st === "success") return { text: "성공", cls: "bg-emerald-600" };
+    if (st === "failed") return { text: "실패", cls: "bg-rose-600" };
+    if (st === "processing") return { text: "처리중", cls: "bg-indigo-600" };
+    if (st === "retrying") return { text: `재시도`, cls: "bg-amber-600" };
+    return { text: "대기", cls: "bg-slate-500" };
+  };
+
+  const notSuccessCount = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status !== "success").length;
 
   return (
     <div className="space-y-8">
@@ -720,7 +673,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">🔁</span>
-                  <span>여러 장 처리 시 중복 항목이 있을 수 있어요 → 현재 버전은 “중복 제거(최댓값)”로 처리합니다.</span>
+                  <span>여러 장 처리 시 겹쳐 찍힌 라인이 있을 수 있어요(최종 확인 필수).</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">⚠️</span>
@@ -729,129 +682,123 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </ul>
             </div>
 
-            {/* ✅ 숨김 input: 촬영용 */}
+            {/* Hidden inputs */}
             <input
-              ref={ocrCameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                addOcrFiles(files);
-                e.currentTarget.value = "";
-              }}
-            />
-
-            {/* ✅ 숨김 input: 갤러리/파일 선택용 (capture 없음) */}
-            <input
-              ref={ocrGalleryInputRef}
+              ref={addInputRef}
               type="file"
               accept="image/*"
               multiple
-              className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files || []);
-                addOcrFiles(files);
+                appendFiles(files);
+                // 같은 파일 다시 선택 가능하도록 reset
                 e.currentTarget.value = "";
               }}
+              className="hidden"
+            />
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                replaceAllFiles(files);
+                e.currentTarget.value = "";
+              }}
+              className="hidden"
             />
 
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
               <div className="flex-1 w-full">
                 <div className="flex justify-between items-end mb-1">
                   <label className="block text-xs font-bold text-slate-500">
-                    영수증 사진 추가
+                    영수증 사진 (카메라/갤러리)
                     {ocrFiles.length > 0 && (
                       <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>
                     )}
                   </label>
 
-                  {ocrFiles.length > 0 && (
+                  {(ocrItemsAccumulated.length > 0 || ocrFiles.length > 0) && (
                     <button
                       onClick={resetOcr}
                       className="text-[10px] font-black text-rose-500 hover:text-rose-600 flex items-center gap-1"
                     >
                       <i className="fa-solid fa-trash-can"></i>
-                      🧹 전체 삭제
+                      🧹 전체 초기화
                     </button>
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => ocrCameraInputRef.current?.click()}
-                    className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                    onClick={() => addInputRef.current?.click()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2"
                   >
-                    <i className="fa-solid fa-camera"></i>
-                    촬영해서 추가
+                    <i className="fa-solid fa-plus"></i>
+                    사진 추가
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => ocrGalleryInputRef.current?.click()}
-                    className="flex-1 px-4 py-2.5 bg-white text-indigo-700 border border-indigo-200 rounded-xl text-xs font-black shadow-sm hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                    onClick={() => replaceInputRef.current?.click()}
+                    className="px-4 py-2 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-black hover:bg-slate-50 transition-all flex items-center gap-2"
                   >
-                    <i className="fa-solid fa-image"></i>
-                    갤러리/파일에서 추가
+                    <i className="fa-solid fa-rotate"></i>
+                    전체 교체(리셋)
                   </button>
 
-                  {ocrFiles.length > 0 && (
+                  {ocrFiles.length > 0 && !ocrLoading && (
                     <button
                       type="button"
                       onClick={() => handleOcr()}
-                      disabled={ocrLoading}
-                      className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300"
+                      className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-800 transition-all flex items-center gap-2"
                     >
                       <i className="fa-solid fa-magnifying-glass"></i>
-                      {ocrRawText ? "재분석" : "그대로 분석"}
+                      {notSuccessCount > 0 ? `분석 (미분석 ${notSuccessCount}장)` : "분석 (변경 없음)"}
+                    </button>
+                  )}
+
+                  {Object.values(ocrFileStatuses).some((s) => s.status === "failed") && !ocrLoading && (
+                    <button
+                      type="button"
+                      onClick={handleRetryFailed}
+                      className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-rose-700 transition-all flex items-center gap-2"
+                    >
+                      <i className="fa-solid fa-rotate-right"></i>
+                      실패 파일만 재시도
                     </button>
                   )}
                 </div>
-
-                {/* ✅ 2장 이상이면 썸네일 리스트 표시 */}
-                {ocrFiles.length >= 2 && (
-                  <div className="mt-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                      촬영/선택한 사진 리스트 (삭제 가능)
-                    </p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                      {thumbUrls.map((t, idx) => (
-                        <div key={`${t.file.name}_${idx}`} className="relative group">
-                          <div className="aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-                            <img src={t.url} alt={`receipt-${idx}`} className="w-full h-full object-cover" />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeOcrFileAt(idx)}
-                            className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-rose-600 text-white text-xs font-black shadow-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
-                            title="이 사진 삭제"
-                          >
-                            ✕
-                          </button>
-                          <div className="mt-1 text-[9px] text-slate-400 truncate">{t.file.name}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-[10px] text-slate-500">
-                      * 사진을 삭제하면 OCR 결과 혼선을 막기 위해 스캔 결과가 초기화됩니다.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
-            {previewUrl && !ocrLoading && ocrFiles.length > 0 && (
-              <div className="relative w-full max-h-64 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-contain max-h-64" />
-                <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
-                {ocrFiles.length > 1 && (
-                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg font-bold">
-                    첫 번째 사진 미리보기 (총 {ocrFiles.length}장)
-                  </div>
-                )}
+            {/* Thumbnail list */}
+            {ocrFiles.length > 0 && (
+              <div className="mt-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  촬영/선택한 사진 리스트
+                </p>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {ocrFiles.map((f, idx) => {
+                    const k = fileKey(f);
+                    const s = ocrFileStatuses[f.name];
+                    const badge = statusBadge(s);
+                    return (
+                      <div key={k} className="relative w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                        <img src={thumbUrls[k]} alt={f.name} className="w-full h-full object-cover" />
+                        <div className={`absolute top-2 left-2 text-[9px] px-2 py-1 rounded-lg text-white font-black ${badge.cls}`}>
+                          {badge.text}
+                          {s?.status === "retrying" && s.retryCount ? ` ${s.retryCount}/3` : ""}
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[9px] px-2 py-1 font-bold truncate">
+                          {idx + 1}. {f.name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -865,35 +812,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   <p className="text-sm font-black text-slate-800">
                     {ocrProgress ? `${ocrProgress.current}/${ocrProgress.total} 사진 분석 중...` : "준비 중..."}
                   </p>
-                  <div className="mt-2 space-y-1">
-                    {Object.entries(ocrFileStatuses).map(([name, status]: [string, any]) =>
-                      status.status === "retrying" ? (
-                        <p key={name} className="text-[10px] font-bold text-amber-600 animate-pulse">
-                          {name}: 레이트리밋으로 대기 후 재시도 중... (시도 {status.retryCount}/3)
-                        </p>
-                      ) : null
-                    )}
-                  </div>
-                  <p className="text-xs font-bold text-indigo-600 mt-1">
-                    {ocrOptimizing ? "이미지 최적화 중..." : "서버 OCR 호출 중..."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {Object.values(ocrFileStatuses).some((s: any) => s.status === "failed") && !ocrLoading && (
-              <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black text-rose-600 flex items-center gap-2">
-                    <i className="fa-solid fa-circle-exclamation"></i>
-                    인식 실패한 파일이 있습니다
-                  </h3>
-                  <button
-                    onClick={handleRetryFailed}
-                    className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black shadow-sm hover:bg-rose-700 transition-all"
-                  >
-                    실패한 파일만 다시 시도
-                  </button>
+                  <p className="text-xs font-bold text-indigo-600 mt-1">{ocrOptimizing ? "이미지 최적화 중..." : "서버 OCR 호출 중..."}</p>
                 </div>
               </div>
             )}
@@ -907,9 +826,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 {ocrErrorDetail && (
                   <div className="p-3 bg-rose-900/5 border border-rose-200 rounded-xl">
                     <p className="text-[10px] font-bold text-rose-800 mb-1 uppercase tracking-wider">Error Details:</p>
-                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">
-                      {ocrErrorDetail}
-                    </pre>
+                    <pre className="text-[9px] text-rose-700 font-mono whitespace-pre-wrap break-all leading-relaxed">{ocrErrorDetail}</pre>
                   </div>
                 )}
               </div>
@@ -939,9 +856,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       {receiptTotal !== null ? (
                         <div
                           className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black ${
-                            isTotalMatched
-                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                              : "bg-rose-50 text-rose-600 border border-rose-100"
+                            isTotalMatched ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
                           }`}
                         >
                           <i className={`fa-solid ${isTotalMatched ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
@@ -958,14 +873,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
                   {receiptTotal !== null && !isTotalMatched && (
                     <p className="mt-3 text-[10px] text-rose-500 font-medium italic">
-                      * 차이: {(scanTotal - receiptTotal).toLocaleString()} USD. 메뉴 수량이나 가격을 다시 확인해 주세요.
+                      * 차이: {(scanTotal - receiptTotal).toLocaleString()} USD. 메뉴 수량/가격을 다시 확인해 주세요.
                     </p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-500">이번 사진 추출 텍스트</label>
+                    <label className="block text-xs font-bold text-slate-500">추출 텍스트(누적)</label>
                     <textarea
                       readOnly
                       value={ocrRawText}
