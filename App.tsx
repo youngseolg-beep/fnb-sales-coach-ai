@@ -668,37 +668,48 @@ const App: React.FC = () => {
   };
 
   const handleSave = async (silent = false) => {
-    try {
-      if (!silent) setSaveStatus("데이터 저장 중...");
+  try {
+    if (!silent) setSaveStatus("데이터 저장 중...");
 
-      const payload: any = { ...data, totalSales: results.calcSales };
-      const res = await saveDailyData({ date: data.date, ...payload });
+    let calcSales = 0;
+    data.categories.forEach((cat) => {
+      cat.items.forEach((item) => {
+        calcSales += item.price * (item.qty || 0);
+      });
+    });
 
-      if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
+    const payload: any = {
+      ...data,
+      totalSales: Math.round(calcSales * 100) / 100,
+    };
 
-      setSaveStatus("저장 완료");
-      setLastSavedAt(new Date().toLocaleString());
-      setDataSaved(true);
-      setReportGenerated(false);
+    const res = await saveDailyData({ date: data.date, ...payload });
 
-      if (!silent) {
-        showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
-      }
+    if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
 
-      try {
-        await refreshMonthlyStats(data.date.substring(0, 7));
-      } catch (e) {
-        console.warn("refreshMonthlyStats failed (ignored):", e);
-      }
+    setSaveStatus("저장 완료");
+    setLastSavedAt(new Date().toLocaleString());
+    setDataSaved(true);
+    setReportGenerated(false);
 
-      return true;
-    } catch (error: any) {
-      console.error("Save Error:", error);
-      setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-      if (!silent) showToast("저장 중 오류가 발생했습니다.");
-      return false;
+    if (!silent) {
+      showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
     }
-  };
+
+    try {
+      await refreshMonthlyStats(data.date.substring(0, 7));
+    } catch (e) {
+      console.warn("refreshMonthlyStats failed (ignored):", e);
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error("Save Error:", error);
+    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
+    if (!silent) showToast("저장 중 오류가 발생했습니다.");
+    return false;
+  }
+};
 
   const handleDelete = async () => {
     const targetDate = data.date;
