@@ -164,11 +164,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrFileStatuses, setOcrFileStatuses] = React.useState<
     Record<
       string,
-      {
-        status: "pending" | "processing" | "success" | "failed" | "retrying";
-        error?: string;
-        retryCount?: number;
-      }
+      { status: "pending" | "processing" | "success" | "failed" | "retrying"; error?: string; retryCount?: number }
     >
   >({});
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
@@ -183,13 +179,24 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
 
-  // ✅ OCR input ref (촬영/갤러리 버튼으로 누적 추가)
-  const ocrInputRef = React.useRef<HTMLInputElement | null>(null);
+  // ✅ 촬영 / 갤러리 input 분리 (iOS에서 capture 있으면 갤러리 막히는 문제 해결)
+  const ocrCameraInputRef = React.useRef<HTMLInputElement | null>(null);
+  const ocrGalleryInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const resetOcr = () => {
+    setOcrFiles([]);
+    setOcrFileStatuses({});
+    setOcrRawText("");
+    setOcrItemsAccumulated([]);
+    setOcrError("");
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
+
+  // ✅ 파일 추가(누적) + 중복파일(이름+사이즈) 제거
   const addOcrFiles = (newFiles: File[]) => {
     if (newFiles.length === 0) return;
 
-    // ✅ 기존 덮어쓰기 X → 누적(add)
     setOcrFiles((prev) => {
       const merged = [...prev, ...newFiles];
       const uniq: File[] = [];
@@ -203,7 +210,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       return uniq;
     });
 
-    // ✅ 새 파일 들어오면 OCR 결과/상태 초기화 (기존 행동 유지)
+    // ✅ 파일이 새로 들어오면 OCR 결과/상태 초기화 (원하는 동작이면 유지)
     setOcrFileStatuses({});
     setOcrRawText("");
     setOcrItemsAccumulated([]);
@@ -211,6 +218,38 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrErrorDetail("");
     setOcrProgress(null);
   };
+
+  // ✅ 썸네일 URL 리스트 (cleanup 포함)
+  const thumbUrls = React.useMemo(() => {
+    return ocrFiles.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+  }, [ocrFiles]);
+
+  React.useEffect(() => {
+    return () => {
+      thumbUrls.forEach((t) => URL.revokeObjectURL(t.url));
+    };
+  }, [thumbUrls]);
+
+  const removeOcrFileAt = (idx: number) => {
+    setOcrFiles((prev) => prev.filter((_, i) => i !== idx));
+    // 파일 목록이 바뀌면, OCR 결과는 안전하게 초기화(혼선 방지)
+    setOcrFileStatuses({});
+    setOcrRawText("");
+    setOcrItemsAccumulated([]);
+    setOcrError("");
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
+
+  React.useEffect(() => {
+    if (ocrFiles.length > 0) {
+      const url = URL.createObjectURL(ocrFiles[0]);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [ocrFiles]);
 
   // Calendar state
   const [showCalendar, setShowCalendar] = React.useState(false);
@@ -245,16 +284,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       window.removeEventListener("resize", close);
     };
   }, [showCalendar]);
-
-  React.useEffect(() => {
-    if (ocrFiles.length > 0) {
-      const url = URL.createObjectURL(ocrFiles[0]);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [ocrFiles]);
 
   // 메뉴명 정규화/유사도
   const normalizeName = (name: string): string => {
@@ -381,6 +410,56 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   };
 
+  /** ✅ 중복 메뉴 제거: 여러 장에서 같은 메뉴가 나오면 "합산"이 아니라 "최댓값"으로 병합 */
+  const mergeOcrItemsDedupMax = (prev: CorrectedItem[], incoming: CorrectedItem[]) => {
+    const map = new Map<string, CorrectedItem>();
+
+    const keyOf = (it: CorrectedItem) => {
+      if (it.matched_id) return `id:${it.matched_id}`;
+      return `nm:${normalizeName(it.item_original || it.item_corrected || "")}`;
+    };
+
+    // prev 먼저 넣기
+    for (const it of prev) {
+      map.set(keyOf(it), { ...it });
+    }
+
+    // incoming 병합: qty는 max, 나머지는 더 "좋은" 정보 우선
+    for (const it of incoming) {
+      const k = keyOf(it);
+      const exist = map.get(k);
+
+      if (!exist) {
+        map.set(k, { ...it });
+        continue;
+      }
+
+      const existQty = Number(exist.qty || 0);
+      const newQty = Number(it.qty || 0);
+
+      // ✅ 핵심: max
+      const mergedQty = Math.max(existQty, newQty);
+
+      // confidence/needs_review는 더 좋은 쪽(확정된 것) 우선
+      const better =
+        exist.needs_review && !it.needs_review
+          ? it
+          : !exist.needs_review && it.needs_review
+          ? exist
+          : (it.confidence || 0) > (exist.confidence || 0)
+          ? it
+          : exist;
+
+      map.set(k, {
+        ...exist,
+        ...better,
+        qty: mergedQty,
+      });
+    }
+
+    return Array.from(map.values());
+  };
+
   /** 서버 OCR 호출 (429 재시도 포함) */
   const callOcrWithRetry = async (imageBase64: string, mimeType: string, fileName: string) => {
     const delays = [2000, 5000, 10000];
@@ -409,7 +488,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     throw lastErr;
   };
 
-  // ✅ 매출 데이터 저장 (Supabase upsert) - (현재 파일에서 쓰이지 않아도, 기존 코드 유지)
+  // (현재 파일에서 쓰이지 않아도 기존 코드 유지)
   const handleSave = async () => {
     try {
       const dateStr = data.date;
@@ -433,7 +512,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }
   };
 
-  /** ✅ OCR 실행: /api/ocr만 호출 */
+  /** ✅ OCR 실행 */
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const filesToProcess = filesToProcessOverride || [...ocrFiles];
     if (filesToProcess.length === 0) return;
@@ -443,7 +522,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrErrorDetail("");
     setOcrProgress({ current: 0, total: filesToProcess.length });
 
-    // 상태 초기화
     const initialStatuses = { ...ocrFileStatuses };
     filesToProcess.forEach((f) => (initialStatuses[f.name] = { status: "pending" }));
     setOcrFileStatuses(initialStatuses);
@@ -488,8 +566,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         // 5) 메뉴명 자동교정
         const correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
 
-        // 누적 반영
-        setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
+        // ✅ 핵심: 누적 반영(중복 제거/최댓값)
+        setOcrItemsAccumulated((prev) => mergeOcrItemsDedupMax(prev, correctedNewItems));
 
         setOcrFileStatuses((prev) => ({
           ...prev,
@@ -520,16 +598,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     if (failedFiles.length > 0) handleOcr(failedFiles);
   };
 
-  const resetOcr = () => {
-    setOcrFiles([]);
-    setOcrFileStatuses({});
-    setOcrRawText("");
-    setOcrItemsAccumulated([]);
-    setOcrError("");
-    setOcrErrorDetail("");
-    setOcrProgress(null);
-  };
-
   const applyOcr = () => {
     if (ocrItemsAccumulated.length === 0) return;
 
@@ -542,7 +610,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       newCategories.forEach((cat) => {
         cat.items.forEach((menuItem) => {
           if (menuItem.id === ocrItem.matched_id) {
-            menuItem.qty = (menuItem.qty || 0) + ocrItem.qty;
+            // ✅ 중복 제거는 OCR 누적 단계에서 이미 처리됨 → 여기서는 그대로 반영
+            menuItem.qty = (menuItem.qty || 0) + Number(ocrItem.qty || 0);
             matchedCount++;
           }
         });
@@ -583,7 +652,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return ocrItemsAccumulated.reduce((sum, item) => {
       const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
       const priceToUse = menuPrice !== null && menuPrice !== undefined ? menuPrice : item.unit_price;
-      return sum + priceToUse * item.qty;
+      return sum + priceToUse * Number(item.qty || 0);
     }, 0);
   }, [ocrItemsAccumulated, allMenus]);
 
@@ -651,7 +720,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">🔁</span>
-                  <span>여러 장 처리 시 인식된 중복 항목이 있을 수 있어요(최종 확인 필수).</span>
+                  <span>여러 장 처리 시 중복 항목이 있을 수 있어요 → 현재 버전은 “중복 제거(최댓값)”로 처리합니다.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-shrink-0">⚠️</span>
@@ -660,9 +729,9 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </ul>
             </div>
 
-            {/* ✅ 숨김 input + 누적(add) 방식 */}
+            {/* ✅ 숨김 input: 촬영용 */}
             <input
-              ref={ocrInputRef}
+              ref={ocrCameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
@@ -671,7 +740,20 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               onChange={(e) => {
                 const files = Array.from(e.target.files || []);
                 addOcrFiles(files);
-                // ✅ 같은 파일/촬영 반복해도 change 이벤트 발생하도록 리셋
+                e.currentTarget.value = "";
+              }}
+            />
+
+            {/* ✅ 숨김 input: 갤러리/파일 선택용 (capture 없음) */}
+            <input
+              ref={ocrGalleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                addOcrFiles(files);
                 e.currentTarget.value = "";
               }}
             />
@@ -680,7 +762,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               <div className="flex-1 w-full">
                 <div className="flex justify-between items-end mb-1">
                   <label className="block text-xs font-bold text-slate-500">
-                    영수증 사진 추가 (카메라/갤러리)
+                    영수증 사진 추가
                     {ocrFiles.length > 0 && (
                       <span className="ml-2 text-indigo-600 font-black">선택된 사진: {ocrFiles.length}장</span>
                     )}
@@ -700,11 +782,20 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
-                    onClick={() => ocrInputRef.current?.click()}
+                    onClick={() => ocrCameraInputRef.current?.click()}
                     className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                   >
                     <i className="fa-solid fa-camera"></i>
-                    사진 추가(촬영/갤러리)
+                    촬영해서 추가
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => ocrGalleryInputRef.current?.click()}
+                    className="flex-1 px-4 py-2.5 bg-white text-indigo-700 border border-indigo-200 rounded-xl text-xs font-black shadow-sm hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-image"></i>
+                    갤러리/파일에서 추가
                   </button>
 
                   {ocrFiles.length > 0 && (
@@ -715,10 +806,40 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300"
                     >
                       <i className="fa-solid fa-magnifying-glass"></i>
-                      {ocrRawText ? "추가 사진까지 재분석" : "그대로 분석"}
+                      {ocrRawText ? "재분석" : "그대로 분석"}
                     </button>
                   )}
                 </div>
+
+                {/* ✅ 2장 이상이면 썸네일 리스트 표시 */}
+                {ocrFiles.length >= 2 && (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                      촬영/선택한 사진 리스트 (삭제 가능)
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {thumbUrls.map((t, idx) => (
+                        <div key={`${t.file.name}_${idx}`} className="relative group">
+                          <div className="aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                            <img src={t.url} alt={`receipt-${idx}`} className="w-full h-full object-cover" />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeOcrFileAt(idx)}
+                            className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-rose-600 text-white text-xs font-black shadow-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
+                            title="이 사진 삭제"
+                          >
+                            ✕
+                          </button>
+                          <div className="mt-1 text-[9px] text-slate-400 truncate">{t.file.name}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      * 사진을 삭제하면 OCR 결과 혼선을 막기 위해 스캔 결과가 초기화됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -774,17 +895,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     실패한 파일만 다시 시도
                   </button>
                 </div>
-                <ul className="space-y-1">
-                  {Object.entries(ocrFileStatuses)
-                    .filter(([_, s]: [string, any]) => s.status === "failed")
-                    .map(([name, s]: [string, any]) => (
-                      <li key={name} className="text-[10px] text-rose-500 flex items-center gap-2">
-                        <span className="font-bold truncate max-w-[200px]">{name}</span>
-                        <span className="opacity-50">|</span>
-                        <span>{s.error}</span>
-                      </li>
-                    ))}
-                </ul>
               </div>
             )}
 
@@ -811,17 +921,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          스캔 합계 (메뉴 합계)
-                        </p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">스캔 합계 (메뉴 합계)</p>
                         <p className="text-lg font-black text-indigo-600">
                           {scanTotal.toLocaleString()} <span className="text-xs font-normal text-slate-400">USD</span>
                         </p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          영수증 총액 (Total)
-                        </p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">영수증 총액 (Total)</p>
                         <p className="text-lg font-black text-slate-800">
                           {receiptTotal !== null ? receiptTotal.toLocaleString() : "미검출"}
                           {receiptTotal !== null && <span className="text-xs font-normal text-slate-400 ml-1">USD</span>}
@@ -868,9 +974,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-500">
-                      인식된 메뉴 (누적 {ocrItemsAccumulated.length}개)
-                    </label>
+                    <label className="block text-xs font-bold text-slate-500">인식된 메뉴 (누적 {ocrItemsAccumulated.length}개)</label>
                     <div className="h-48 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-y-auto space-y-4">
                       {needsReviewItems.length > 0 && (
                         <div className="space-y-2">
@@ -887,9 +991,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                     <p className="text-[9px] text-rose-400 font-bold">인식 원문: {item.item_original}</p>
                                     <p className="text-xs font-black text-slate-700">추천: {item.item_corrected}</p>
                                   </div>
-                                  <span className="text-[9px] font-bold text-rose-400">
-                                    {(item.confidence * 100).toFixed(0)}%
-                                  </span>
+                                  <span className="text-[9px] font-bold text-rose-400">{(item.confidence * 100).toFixed(0)}%</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1">
                                   {item.candidates?.map((cand) => (
@@ -1140,10 +1242,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
               {cat.items.map((item, itemIdx) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0"
-                >
+                <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
                   <span className="text-sm font-medium text-slate-700 truncate flex-1">
                     {item.name} <span className="text-[10px] text-slate-400 font-normal">(${item.price})</span>
                   </span>
