@@ -16,6 +16,7 @@ import {
   deleteDaily,
   listDatesInRange,
 } from "./services/salesStorage";
+import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/menuPriceService";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 
@@ -145,6 +146,28 @@ const createEmptyCategories = (): MenuCategory[] =>
 const toSafeNumber = (value: any, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+};
+
+const persistMenuPriceHistory = async (categories: MenuCategory[], effectiveDate: string) => {
+  const jobs: Promise<any>[] = [];
+
+  categories.forEach((cat) => {
+    cat.items.forEach((item) => {
+      if (!item.id) return;
+      jobs.push(
+        saveMenuPriceHistory(
+          item.id,
+          effectiveDate,
+          Number(item.price),
+          item.unitCost !== undefined && item.unitCost !== null
+            ? Number(item.unitCost)
+            : undefined
+        )
+      );
+    });
+  });
+
+  await Promise.all(jobs);
 };
 
 /**
@@ -585,54 +608,65 @@ const App: React.FC = () => {
       const dbData = await loadDaily(dateStr);
       const yearMonth = getMonthKey(dateStr);
 
-      setData((prev) => {
-        const monthTargetFromLocal = loadMonthlyTarget(
-          yearMonth,
-          Number(prev.monthlyTarget) || 15000
-        );
+      let nextCategories: MenuCategory[];
+      let nextPosSales = 0;
+      let nextOrders = 0;
+      let nextVisitCount = 0;
+      let nextNote = "";
 
-        if (!dbData) {
-          return {
-            ...prev,
-            date: dateStr,
-            posSales: 0,
-            orders: 0,
-            visitCount: 0,
-            note: "",
-            monthlyTarget: monthTargetFromLocal,
-            categories: createEmptyCategories(),
-          };
-        }
+      if (dbData) {
+        nextCategories = mergeCategoriesWithInitial(dbData.categories);
+        nextPosSales = toSafeNumber(dbData.posSales, 0);
+        nextOrders = toSafeNumber(dbData.orders, 0);
+        nextVisitCount = toSafeNumber(dbData.visitCount, 0);
+        nextNote = String((dbData as any).note ?? "");
+      } else {
+        const priceMap = await getMenuPricesForDate(dateStr);
+        const cats = createEmptyCategories();
 
-        return {
-          ...prev,
-          date: dateStr,
-          posSales: toSafeNumber(dbData.posSales, 0),
-          orders: toSafeNumber(dbData.orders, 0),
-          visitCount: toSafeNumber(dbData.visitCount, 0),
-          note: String((dbData as any).note ?? ""),
-          monthlyTarget: monthTargetFromLocal,
-          categories: mergeCategoriesWithInitial(dbData.categories),
-        };
-      });
+        cats.forEach((cat) => {
+          cat.items.forEach((item) => {
+            const history = priceMap.get(item.id);
+            if (history) {
+              if (history.price != null) item.price = Number(history.price);
+              if (history.unit_cost != null) item.unitCost = Number(history.unit_cost);
+            }
+          });
+        });
+
+        nextCategories = cats;
+      }
+
+      const monthTargetFromLocal = loadMonthlyTarget(
+        yearMonth,
+        Number(data.monthlyTarget) || 15000
+      );
+
+      setData((prev) => ({
+        ...prev,
+        date: dateStr,
+        posSales: nextPosSales,
+        orders: nextOrders,
+        visitCount: nextVisitCount,
+        note: nextNote,
+        monthlyTarget: monthTargetFromLocal,
+        categories: nextCategories,
+      }));
 
       setOcrApplied(false);
 
-      if (!dbData) {
-        setDataSaved(false);
-      } else {
-        const loadedForCheck: SalesReportData = {
-          date: dbData.date ?? dateStr,
-          posSales: toSafeNumber(dbData.posSales, 0),
-          orders: toSafeNumber(dbData.orders, 0),
-          visitCount: toSafeNumber(dbData.visitCount, 0),
-          note: String((dbData as any).note ?? ""),
-          monthlyTarget: loadMonthlyTarget(yearMonth, 15000),
-          mtdSales: 0,
-          categories: mergeCategoriesWithInitial(dbData.categories),
-        };
-        setDataSaved(hasMeaningfulInput(loadedForCheck));
-      }
+      const loadedForCheck: SalesReportData = {
+        date: dateStr,
+        posSales: nextPosSales,
+        orders: nextOrders,
+        visitCount: nextVisitCount,
+        note: nextNote,
+        monthlyTarget: monthTargetFromLocal,
+        mtdSales: 0,
+        categories: nextCategories,
+      };
+
+      setDataSaved(dbData ? hasMeaningfulInput(loadedForCheck) : false);
 
       setReportGenerated(false);
       setReport("");
@@ -757,100 +791,102 @@ const App: React.FC = () => {
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
   const handleDataChange = (newData: SalesReportData) => {
-  const dateChanged = String(newData.date || "") !== String(data.date || "");
+    const dateChanged = String(newData.date || "") !== String(data.date || "");
 
-  if (dateChanged) {
-    const nextDate = String(newData.date || "");
+    if (dateChanged) {
+      const nextDate = String(newData.date || "");
 
-    const runDateChange = async () => {
-      try {
-        const currentData = data;
+      const runDateChange = async () => {
+        try {
+          const currentData = data;
 
-        const categoriesChanged =
-          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
+          const categoriesChanged =
+            JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-        const baseFieldsChanged =
-          Number(newData.posSales || 0) !== Number(currentData.posSales || 0) ||
-          Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
-          Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
-          String(newData.note || "") !== String(currentData.note || "") ||
-          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
+          const baseFieldsChanged =
+            Number(newData.posSales || 0) !== Number(currentData.posSales || 0) ||
+            Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
+            Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
+            String(newData.note || "") !== String(currentData.note || "") ||
+            JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-        const hasUnsavedCurrent =
-          ocrApplied ||
-          !dataSaved ||
-          categoriesChanged ||
-          baseFieldsChanged;
+          const hasUnsavedCurrent =
+            ocrApplied ||
+            !dataSaved ||
+            categoriesChanged ||
+            baseFieldsChanged;
 
-        if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
-          let calcSales = 0;
-          currentData.categories.forEach((cat) => {
-            cat.items.forEach((item) => {
-              calcSales += Number(item.price || 0) * Number(item.qty || 0);
+          if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
+            let calcSales = 0;
+            currentData.categories.forEach((cat) => {
+              cat.items.forEach((item) => {
+                calcSales += Number(item.price || 0) * Number(item.qty || 0);
+              });
             });
-          });
 
-          const savePayload: any = {
-            ...currentData,
-            totalSales: Math.round(calcSales * 100) / 100,
-          };
+            const savePayload: any = {
+              ...currentData,
+              totalSales: Math.round(calcSales * 100) / 100,
+            };
 
-          const res = await saveDailyData({
-            date: currentData.date,
-            ...savePayload,
-          });
+            const res = await saveDailyData({
+              date: currentData.date,
+              ...savePayload,
+            });
 
-          if ((res as any)?.ok === false) {
-            throw new Error((res as any)?.error || "AUTO_SAVE_FAILED");
+            if ((res as any)?.ok === false) {
+              throw new Error((res as any)?.error || "AUTO_SAVE_FAILED");
+            }
+
+            await persistMenuPriceHistory(currentData.categories, currentData.date);
+
+            setLastSavedAt(new Date().toLocaleString());
+            setSaveStatus("자동 저장 완료");
+            setDataSaved(true);
           }
 
-          setLastSavedAt(new Date().toLocaleString());
-          setSaveStatus("자동 저장 완료");
-          setDataSaved(true);
+          setSelectedDate(nextDate);
+          setData((prev) => ({
+            ...prev,
+            date: nextDate,
+          }));
+        } catch (error: any) {
+          console.error("Auto save before date change failed:", error);
+          setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
+          showToast("날짜 변경 전 자동 저장에 실패했습니다.");
         }
+      };
 
-        setSelectedDate(nextDate);
-        setData((prev) => ({
-          ...prev,
-          date: nextDate,
-        }));
-      } catch (error: any) {
-        console.error("Auto save before date change failed:", error);
-        setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
-        showToast("날짜 변경 전 자동 저장에 실패했습니다.");
-      }
-    };
+      void runDateChange();
+      return;
+    }
 
-    void runDateChange();
-    return;
-  }
+    const categoriesChanged =
+      JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
 
-  const categoriesChanged =
-    JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
+    const baseFieldsChanged =
+      Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
+      Number(newData.orders || 0) !== Number(data.orders || 0) ||
+      Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
+      String(newData.note || "") !== String(data.note || "");
 
-  const baseFieldsChanged =
-    Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
-    Number(newData.orders || 0) !== Number(data.orders || 0) ||
-    Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
-    String(newData.note || "") !== String(data.note || "");
+    const monthlyTargetChanged =
+      Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
 
-  const monthlyTargetChanged =
-    Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
+    setData(newData);
 
-  setData(newData);
+    if (monthlyTargetChanged) {
+      const ym = getMonthKey(newData.date);
+      saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
+    }
 
-  if (monthlyTargetChanged) {
-    const ym = getMonthKey(newData.date);
-    saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
-  }
-
-  if (categoriesChanged || baseFieldsChanged) {
-    setOcrApplied(true);
-    setDataSaved(false);
-    setReportGenerated(false);
-    setSaveStatus("");
-  }
-};
+    if (categoriesChanged || baseFieldsChanged) {
+      setOcrApplied(true);
+      setDataSaved(false);
+      setReportGenerated(false);
+      setSaveStatus("");
+    }
+  };
 
   const handleSave = async (silent = false) => {
     try {
@@ -871,6 +907,8 @@ const App: React.FC = () => {
       const res = await saveDailyData({ date: data.date, ...payload });
 
       if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
+
+      await persistMenuPriceHistory(data.categories, data.date);
 
       setSaveStatus("저장 완료");
       setLastSavedAt(new Date().toLocaleString());
@@ -1180,9 +1218,11 @@ const App: React.FC = () => {
             <div className="mt-4 text-center">
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  saveStatus === "저장 완료"
+                  saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
                     ? "bg-emerald-50 text-emerald-600"
-                    : saveStatus.startsWith("저장 실패") || saveStatus.startsWith("저장 중 오류")
+                    : saveStatus.startsWith("저장 실패") ||
+                      saveStatus.startsWith("저장 중 오류") ||
+                      saveStatus.startsWith("날짜 변경 전 자동 저장 실패")
                     ? "bg-rose-50 text-rose-600"
                     : "bg-slate-100 text-slate-500"
                 }`}
