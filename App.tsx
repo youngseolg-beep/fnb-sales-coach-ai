@@ -167,6 +167,11 @@ const App: React.FC = () => {
     setToastSeq((s) => s + 1);
   };
 
+  // ✅ UX flow state
+  const [ocrApplied, setOcrApplied] = useState(false);
+  const [dataSaved, setDataSaved] = useState(false);
+  const [reportGenerated, setReportGenerated] = useState(false);
+
   const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
 
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
@@ -182,6 +187,17 @@ const App: React.FC = () => {
 
   // ✅ 기간 메뉴 판매량 Top10
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+
+  const hasMeaningfulInput = (v: SalesReportData) => {
+    const hasBase =
+      Number(v.posSales || 0) > 0 ||
+      Number(v.orders || 0) > 0 ||
+      Number(v.visitCount || 0) > 0 ||
+      String(v.note || "").trim().length > 0;
+
+    const hasMenu = v.categories.some((cat) => cat.items.some((item) => Number(item.qty || 0) > 0));
+    return hasBase || hasMenu;
+  };
 
   const sortedMenuEngineering = useMemo(() => {
     if (!menuEngineeringResult) return null;
@@ -475,8 +491,8 @@ const App: React.FC = () => {
           items: cat.items.map((it) => ({ ...it, qty: 0 })),
         }));
 
-        setData((prev) => ({
-          ...prev,
+        const nextData = {
+          ...data,
           date: dateStr,
           posSales: 0,
           orders: 0,
@@ -484,11 +500,16 @@ const App: React.FC = () => {
           note: "",
           monthlyTarget: monthTargetFromLocal,
           categories: resetCats,
-          mtdSales: prev.mtdSales,
-        }));
+          mtdSales: data.mtdSales,
+        };
+
+        setData(nextData);
+        setOcrApplied(false);
+        setDataSaved(false);
+        setReportGenerated(false);
       } else {
-        setData((prev) => ({
-          ...prev,
+        const loadedData = {
+          ...data,
           date: dateStr,
           posSales: dbData.posSales ?? 0,
           orders: dbData.orders ?? 0,
@@ -496,9 +517,17 @@ const App: React.FC = () => {
           monthlyTarget: monthTargetFromLocal,
           note: (dbData as any).note ?? "",
           categories: dbData.categories && dbData.categories.length > 0 ? dbData.categories : INITIAL_CATEGORIES,
-          mtdSales: prev.mtdSales,
-        }));
+          mtdSales: data.mtdSales,
+        };
+
+        setData(loadedData);
+        setOcrApplied(false);
+        setDataSaved(hasMeaningfulInput(loadedData));
+        setReportGenerated(false);
       }
+
+      setReport("");
+      setMenuEngineeringResult(null);
 
       await refreshMonthlyStats(dateStr.substring(0, 7));
     } catch (err) {
@@ -619,6 +648,25 @@ const App: React.FC = () => {
     return (monthlyStats.total / target) * 100;
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
+  // ✅ DataInput 변경 시 UX 상태 정리
+  const handleDataChange = (newData: SalesReportData) => {
+    const categoriesChanged = JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
+    const baseFieldsChanged =
+      Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
+      Number(newData.orders || 0) !== Number(data.orders || 0) ||
+      Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
+      String(newData.note || "") !== String(data.note || "");
+
+    setData(newData);
+
+    if (categoriesChanged || baseFieldsChanged) {
+      setOcrApplied(true);
+      setDataSaved(false);
+      setReportGenerated(false);
+      setSaveStatus("");
+    }
+  };
+
   const handleSave = async (silent = false) => {
     try {
       if (!silent) setSaveStatus("데이터 저장 중...");
@@ -630,7 +678,12 @@ const App: React.FC = () => {
 
       setSaveStatus("저장 완료");
       setLastSavedAt(new Date().toLocaleString());
-      if (!silent) showToast("데이터가 저장되었습니다.");
+      setDataSaved(true);
+      setReportGenerated(false);
+
+      if (!silent) {
+        showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
+      }
 
       try {
         await refreshMonthlyStats(data.date.substring(0, 7));
@@ -659,7 +712,7 @@ const App: React.FC = () => {
       const resetCats = INITIAL_CATEGORIES.map((cat) => ({
         ...cat,
         items: cat.items.map((it) => ({ ...it, qty: 0 })),
-        }));
+      }));
 
       setData((prev) => ({
         ...prev,
@@ -670,6 +723,10 @@ const App: React.FC = () => {
         categories: resetCats,
       }));
       setReport("");
+      setMenuEngineeringResult(null);
+      setOcrApplied(false);
+      setDataSaved(false);
+      setReportGenerated(false);
 
       await refreshMonthlyStats(targetDate.substring(0, 7));
 
@@ -687,7 +744,8 @@ const App: React.FC = () => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      await handleSave(true);
+      const saved = await handleSave(true);
+      if (!saved) return;
 
       const selectedDate = data.date;
       const end = parseISO(selectedDate);
@@ -700,6 +758,8 @@ const App: React.FC = () => {
 
       const result = await generateCoachingReport(data, results, meResult);
       setReport(result);
+      setReportGenerated(true);
+      showToast("AI 코칭 리포트 생성 완료");
     } catch (error: any) {
       console.error("Process Error:", error);
     } finally {
@@ -711,11 +771,12 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     fetchData(data.date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.date, isLoggedIn]);
 
   useEffect(() => {
     if (!toastMsg) return;
-    const timer = window.setTimeout(() => setToastMsg(null), 1200);
+    const timer = window.setTimeout(() => setToastMsg(null), 1800);
     return () => window.clearTimeout(timer);
   }, [toastSeq, toastMsg]);
 
@@ -915,8 +976,28 @@ const App: React.FC = () => {
           </div>
         </header>
 
+        {/* ✅ 단계 안내 배너 */}
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 text-sm font-bold text-indigo-700 flex items-center gap-2 shadow-sm">
+          <i className="fa-solid fa-route text-indigo-500"></i>
+          <span>
+            {reportGenerated
+              ? "✔ 리포트가 생성되었습니다. 아래 결과를 확인하세요."
+              : dataSaved
+              ? "3️⃣ 매출 데이터 저장 완료. AI 코칭 리포트를 생성하세요."
+              : ocrApplied
+              ? "2️⃣ 메뉴 데이터가 반영되었습니다. 매출 데이터를 저장하세요."
+              : "1️⃣ 영수증을 업로드하거나 메뉴 데이터를 입력하세요."}
+          </span>
+        </div>
+
         <div className="relative">
-          <DataInput data={data} onChange={setData} loading={loading} datesWithData={datesWithData} onMonthChange={handleMonthChange} />
+          <DataInput
+            data={data}
+            onChange={handleDataChange}
+            loading={loading}
+            datesWithData={datesWithData}
+            onMonthChange={handleMonthChange}
+          />
 
           {saveStatus && (
             <div className="mt-4 text-center">
@@ -934,7 +1015,9 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {lastSavedAt && <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>}
+          {lastSavedAt && (
+            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>
+          )}
         </div>
 
         <ReportDisplay
@@ -967,7 +1050,11 @@ const App: React.FC = () => {
             <button
               type="button"
               onClick={() => handleSave(false)}
-              className="bg-white text-slate-900 border-2 border-slate-900 px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95"
+              className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
+                ocrApplied && !dataSaved
+                  ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
+                  : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
+              }`}
             >
               <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
               매출 데이터 저장
@@ -977,7 +1064,11 @@ const App: React.FC = () => {
               type="button"
               onClick={() => handleGenerate()}
               disabled={loading}
-              className="col-span-2 md:col-span-1 bg-slate-900 text-white px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 disabled:bg-slate-300"
+              className={`col-span-2 md:col-span-1 px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ${
+                dataSaved && !reportGenerated
+                  ? "bg-emerald-600 text-white ring-2 ring-emerald-300 hover:bg-emerald-700"
+                  : "bg-slate-900 text-white hover:bg-indigo-600 disabled:bg-slate-300"
+              }`}
             >
               {loading ? (
                 <i className="fa-solid fa-spinner fa-spin text-sm md:text-base"></i>
