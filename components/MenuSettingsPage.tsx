@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { format, parseISO, subDays } from "date-fns";
 import type { MenuCategory } from "../types";
 import { getMenuPriceHistory } from "../services/services/menuPriceService";
 
@@ -49,10 +50,39 @@ const compressHistoryRows = (rows: any[]) => {
   return compressed;
 };
 
-const removeBaselineIfNoRealChanges = (rows: any[]) => {
+const buildHistoryRanges = (rows: any[]) => {
   if (!Array.isArray(rows) || rows.length === 0) return [];
-  if (rows.length === 1) return [];
-  return rows;
+
+  const ascRows = [...rows].sort((a, b) =>
+    String(a.effective_date).localeCompare(String(b.effective_date))
+  );
+
+  const compressed = compressHistoryRows(ascRows);
+
+  if (compressed.length <= 1) {
+    return [];
+  }
+
+  const rangedRows = compressed.map((row, idx) => {
+    const nextRow = compressed[idx + 1];
+
+    let appliedRange = `${row.effective_date} 이후`;
+
+    if (nextRow?.effective_date) {
+      const endDate = format(
+        subDays(parseISO(nextRow.effective_date), 1),
+        "yyyy-MM-dd"
+      );
+      appliedRange = `${row.effective_date} ~ ${endDate}`;
+    }
+
+    return {
+      ...row,
+      applied_range: appliedRange,
+    };
+  });
+
+  return rangedRows.reverse();
 };
 
 const slugify = (value: string) => {
@@ -112,7 +142,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       category.items.forEach((item, iIdx) => {
         const originalItem = originalCategories[cIdx]?.items?.[iIdx];
 
-        // 신규 추가 메뉴는 Saved 취급
         if (!originalItem) return;
 
         const oldPrice = normalizeNumber(originalItem.price);
@@ -203,8 +232,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       setShowHistoryModal(true);
 
       const rows = await getMenuPriceHistory(menuId);
-      const compressedRows = compressHistoryRows(rows);
-      const visibleRows = removeBaselineIfNoRealChanges(compressedRows);
+      const visibleRows = buildHistoryRanges(rows);
 
       setHistoryRows(visibleRows);
     } catch (error) {
@@ -306,7 +334,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 Effective Date: {selectedDate}
               </p>
               <p className="mt-1 text-xs font-semibold text-amber-600">
-                이 날짜 이후 가격/원가에 반영됩니다.
+                선택한 날짜부터 이 가격이 적용됩니다.
               </p>
             </div>
 
@@ -357,7 +385,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               {category.items.map((item, itemIndex) => {
                 const originalItem = originalCategories[categoryIndex]?.items?.[itemIndex];
 
-                // 신규 추가 메뉴는 Saved 취급
                 const changed = originalItem
                   ? !isSameValue(item.price, originalItem?.price) ||
                     !isSameValue(item.unitCost, originalItem?.unitCost)
@@ -642,7 +669,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="border-b px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">가격 저장 확인</h3>
               <p className="mt-1 text-sm text-slate-500">
-                선택 날짜 이후 가격/원가에 반영됩니다.
+                선택한 날짜부터 이 가격이 적용됩니다.
               </p>
             </div>
 
@@ -659,7 +686,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 <div className="rounded-xl border bg-amber-50 p-3">
                   <div className="text-xs font-bold text-amber-600">주의</div>
                   <div className="mt-1 text-sm font-bold text-amber-700">
-                    이 날짜 이후 반영
+                    선택 날짜부터 적용
                   </div>
                 </div>
               </div>
@@ -746,7 +773,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="border-b px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
               <p className="mt-1 text-sm text-slate-500">
-                최초 기준값은 숨기고, 실제 변경 이력만 표시합니다.
+                가격이 실제로 적용되는 기간 기준으로 표시합니다.
               </p>
             </div>
 
@@ -758,7 +785,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b">
-                        <th className="px-4 py-3 text-left font-black text-slate-500">Effective Date</th>
+                        <th className="px-4 py-3 text-left font-black text-slate-500">적용 기간</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Price</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Unit Cost</th>
                       </tr>
@@ -767,7 +794,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       {historyRows.length > 0 ? (
                         historyRows.map((row, idx) => (
                           <tr key={`${row.menu_id}-${row.effective_date}-${idx}`} className="border-b border-slate-100">
-                            <td className="px-4 py-3 font-semibold text-slate-800">{row.effective_date}</td>
+                            <td className="px-4 py-3 font-semibold text-slate-800">{row.applied_range}</td>
                             <td className="px-4 py-3 text-right font-semibold text-slate-700">
                               {normalizeNumber(row.price)}
                             </td>
