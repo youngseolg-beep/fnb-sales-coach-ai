@@ -160,26 +160,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     onChange({ ...data, categories: newCategories });
   };
 
-  const updateItemField = (
-    catIdx: number,
-    itemIdx: number,
-    field: "price" | "unitCost",
-    value: number
-  ) => {
-    const safeValue = Number.isFinite(value) ? value : 0;
-
-    const newCategories = data.categories.map((cat, cIdx) => ({
-      ...cat,
-      items: cat.items.map((item, iIdx) =>
-        cIdx === catIdx && iIdx === itemIdx
-          ? { ...item, [field]: safeValue }
-          : { ...item }
-      ),
-    }));
-
-    onChange({ ...data, categories: newCategories });
-  };
-
   const inputClasses =
     "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
   const numericInputClasses = `${inputClasses} text-right pr-12`;
@@ -198,7 +178,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [ocrError, setOcrError] = React.useState<string>("");
   const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
   const [showOcr, setShowOcr] = React.useState<boolean>(false);
-  const [showMenuSettings, setShowMenuSettings] = React.useState<boolean>(false);
 
   const addInputRef = React.useRef<HTMLInputElement>(null);
   const replaceInputRef = React.useRef<HTMLInputElement>(null);
@@ -1153,98 +1132,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </div>
       </div>
 
-      {/* 1.5 Menu Settings */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowMenuSettings((prev) => !prev)}
-          className="w-full bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-2">
-            <i className="fa-solid fa-gear text-indigo-500"></i>
-            <h2 className="text-lg font-bold text-slate-800">메뉴 가격 / 원가 설정</h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {showMenuSettings ? "Close" : "Open"}
-            </span>
-            <i
-              className={`fa-solid fa-chevron-${showMenuSettings ? "up" : "down"} text-slate-400 text-sm`}
-            ></i>
-          </div>
-        </button>
-
-        {showMenuSettings && (
-          <div className="p-6 space-y-6">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-slate-700">
-              <p className="font-bold text-sm mb-1 flex items-center gap-2">
-                <i className="fa-solid fa-circle-info text-amber-500"></i>
-                메뉴 설정 안내
-              </p>
-              <p className="text-xs leading-relaxed">
-                점주가 실제 판매가와 원가를 수정하면, 이후 KPI / 메뉴 엔지니어링 / AI 리포트 계산에 바로 반영됩니다.
-              </p>
-            </div>
-
-            {data.categories.map((cat, catIdx) => (
-              <div key={`settings-${cat.name}`} className="border border-slate-200 rounded-2xl overflow-hidden">
-                <div className="bg-indigo-50/50 border-b border-indigo-100 px-5 py-3">
-                  <h3 className="font-bold text-indigo-900 text-sm">{cat.name}</h3>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <div className="min-w-[640px]">
-                    <div className="grid grid-cols-[2fr_1fr_1fr] bg-slate-50 border-b border-slate-200 px-5 py-3 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                      <div>메뉴명</div>
-                      <div className="text-right">판매가 (USD)</div>
-                      <div className="text-right">원가 (USD)</div>
-                    </div>
-
-                    <div className="divide-y divide-slate-100">
-                      {cat.items.map((item, itemIdx) => (
-                        <div
-                          key={`settings-item-${item.id}`}
-                          className="grid grid-cols-[2fr_1fr_1fr] gap-3 px-5 py-3 items-center"
-                        >
-                          <div className="text-sm font-medium text-slate-700">{item.name}</div>
-
-                          <div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.price ?? ""}
-                              onChange={(e) =>
-                                updateItemField(catIdx, itemIdx, "price", Number(e.target.value))
-                              }
-                              className="w-full bg-white text-[#111827] border border-slate-200 rounded-lg px-3 py-2 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
-                              placeholder="0.00"
-                            />
-                          </div>
-
-                          <div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.unitCost ?? 0}
-                              onChange={(e) =>
-                                updateItemField(catIdx, itemIdx, "unitCost", Number(e.target.value))
-                              }
-                              className="w-full bg-white text-[#111827] border border-slate-200 rounded-lg px-3 py-2 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
-                              placeholder="0.00"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* 2. Menu Quantities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
