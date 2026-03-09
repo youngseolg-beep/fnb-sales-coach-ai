@@ -1,56 +1,82 @@
-import { supabase } from "../salesStorage";
+import { supabase } from "../supabaseClient";
 
-export type MenuPriceRow = {
+export type MenuPriceHistoryRow = {
   menu_id: string;
   effective_date: string;
   price: number | null;
   unit_cost: number | null;
+  created_at?: string;
 };
 
-export async function getMenuPricesForDate(date: string) {
+export const getMenuPricesForDate = async (date: string) => {
   const { data, error } = await supabase
     .from("menu_price_history")
-    .select("menu_id,effective_date,price,unit_cost")
+    .select("menu_id, effective_date, price, unit_cost")
     .lte("effective_date", date)
     .order("effective_date", { ascending: false });
 
   if (error) {
-    console.error("price history error", error);
-    return new Map<string, MenuPriceRow>();
+    throw error;
   }
 
-  const map = new Map<string, MenuPriceRow>();
+  const latestMap = new Map<
+    string,
+    {
+      menu_id: string;
+      effective_date: string;
+      price: number | null;
+      unit_cost: number | null;
+    }
+  >();
 
-  for (const row of data as MenuPriceRow[]) {
-    if (!map.has(row.menu_id)) {
-      map.set(row.menu_id, row);
+  for (const row of data || []) {
+    if (!latestMap.has(row.menu_id)) {
+      latestMap.set(row.menu_id, row);
     }
   }
 
-  return map;
-}
+  return latestMap;
+};
 
-export async function saveMenuPriceHistory(
+export const saveMenuPriceHistory = async (
   menuId: string,
   effectiveDate: string,
   price: number,
   unitCost?: number
-) {
-  const { error } = await supabase
+) => {
+  const payload = {
+    menu_id: menuId,
+    effective_date: effectiveDate,
+    price,
+    unit_cost: unitCost ?? null,
+  };
+
+  const { data, error } = await supabase
     .from("menu_price_history")
-    .upsert(
-      {
-        menu_id: menuId,
-        effective_date: effectiveDate,
-        price,
-        unit_cost: unitCost ?? null,
-      },
-      {
-        onConflict: "menu_id,effective_date",
-      }
-    );
+    .upsert(payload, {
+      onConflict: "menu_id,effective_date",
+    })
+    .select();
 
   if (error) {
-    console.error("save price history error", error);
+    throw error;
   }
-}
+
+  return data;
+};
+
+export const getMenuPriceHistory = async (
+  menuId: string
+): Promise<MenuPriceHistoryRow[]> => {
+  const { data, error } = await supabase
+    .from("menu_price_history")
+    .select("menu_id, effective_date, price, unit_cost, created_at")
+    .eq("menu_id", menuId)
+    .order("effective_date", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as MenuPriceHistoryRow[];
+};
