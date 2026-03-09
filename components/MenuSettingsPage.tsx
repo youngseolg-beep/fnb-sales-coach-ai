@@ -49,6 +49,16 @@ const compressHistoryRows = (rows: any[]) => {
   return compressed;
 };
 
+const removeBaselineIfNoRealChanges = (rows: any[]) => {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+
+  if (rows.length === 1) {
+    return [];
+  }
+
+  return rows;
+};
+
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   selectedDate,
   categories,
@@ -145,7 +155,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       const rows = await getMenuPriceHistory(menuId);
       const compressedRows = compressHistoryRows(rows);
-      setHistoryRows(compressedRows);
+      const visibleRows = removeBaselineIfNoRealChanges(compressedRows);
+
+      setHistoryRows(visibleRows);
     } catch (error) {
       console.error("History Load Error:", error);
       setHistoryRows([]);
@@ -417,7 +429,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="border-b px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
               <p className="mt-1 text-sm text-slate-500">
-                실제 값이 변경된 이력만 표시합니다.
+                최초 기준값은 숨기고, 실제 변경 이력만 표시합니다.
               </p>
             </div>
 
