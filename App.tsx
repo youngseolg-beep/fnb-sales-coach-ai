@@ -16,9 +16,10 @@ import {
   deleteDaily,
   listDatesInRange,
 } from "./services/salesStorage";
-import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
+import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/menuPriceService";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
+import MenuSettingsPage from "./components/MenuSettingsPage";
 
 const AUTH_KEY = "fb_coach_auth";
 
@@ -130,6 +131,12 @@ const INITIAL_CATEGORIES: MenuCategory[] = [
 
 const cloneInitialCategories = (): MenuCategory[] =>
   INITIAL_CATEGORIES.map((category) => ({
+    ...category,
+    items: category.items.map((item) => ({ ...item })),
+  }));
+
+const cloneCategories = (categories: MenuCategory[]): MenuCategory[] =>
+  categories.map((category) => ({
     ...category,
     items: category.items.map((item) => ({ ...item })),
   }));
@@ -290,6 +297,9 @@ const App: React.FC = () => {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
+  const [currentPage, setCurrentPage] = useState<"daily-sales" | "menu-settings">("daily-sales");
+  const [priceSaving, setPriceSaving] = useState(false);
+
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split("T")[0];
   });
@@ -310,6 +320,10 @@ const App: React.FC = () => {
       categories: cloneInitialCategories(),
     };
   });
+
+  const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
+    cloneInitialCategories()
+  );
 
   const [report, setReport] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -630,98 +644,97 @@ const App: React.FC = () => {
   };
 
   const fetchData = async (dateStr: string) => {
-  setDbLoading(true);
-  setSaveStatus("");
+    setDbLoading(true);
+    setSaveStatus("");
 
-  try {
-    const dbData = await loadDaily(dateStr);
-    const yearMonth = getMonthKey(dateStr);
-    const priceMap = await getMenuPricesForDate(dateStr);
+    try {
+      const dbData = await loadDaily(dateStr);
+      const yearMonth = getMonthKey(dateStr);
+      const priceMap = await getMenuPricesForDate(dateStr);
 
-    let nextCategories: MenuCategory[];
-    let nextPosSales = 0;
-    let nextOrders = 0;
-    let nextVisitCount = 0;
-    let nextNote = "";
+      let nextCategories: MenuCategory[];
+      let nextPosSales = 0;
+      let nextOrders = 0;
+      let nextVisitCount = 0;
+      let nextNote = "";
 
-    if (dbData) {
-      // 1) 기존 저장된 snapshot 불러오기
-      nextCategories = mergeCategoriesWithInitial(dbData.categories);
-      nextPosSales = toSafeNumber(dbData.posSales, 0);
-      nextOrders = toSafeNumber(dbData.orders, 0);
-      nextVisitCount = toSafeNumber(dbData.visitCount, 0);
-      nextNote = String((dbData as any).note ?? "");
-    } else {
-      // 2) 저장된 일 데이터가 없으면 빈 qty + 가격이력 기준으로 생성
-      nextCategories = createEmptyCategories();
+      if (dbData) {
+        nextCategories = mergeCategoriesWithInitial(dbData.categories);
+        nextPosSales = toSafeNumber(dbData.posSales, 0);
+        nextOrders = toSafeNumber(dbData.orders, 0);
+        nextVisitCount = toSafeNumber(dbData.visitCount, 0);
+        nextNote = String((dbData as any).note ?? "");
+      } else {
+        nextCategories = createEmptyCategories();
+      }
+
+      nextCategories = nextCategories.map((cat) => ({
+        ...cat,
+        items: cat.items.map((item) => {
+          const history = priceMap.get(item.id);
+
+          if (!history) {
+            return { ...item };
+          }
+
+          return {
+            ...item,
+            price:
+              history.price != null
+                ? Number(history.price)
+                : Number(item.price ?? 0),
+            unitCost:
+              history.unit_cost != null
+                ? Number(history.unit_cost)
+                : item.unitCost,
+          };
+        }),
+      }));
+
+      const monthTargetFromLocal = loadMonthlyTarget(
+        yearMonth,
+        Number(data.monthlyTarget) || 15000
+      );
+
+      setData((prev) => ({
+        ...prev,
+        date: dateStr,
+        posSales: nextPosSales,
+        orders: nextOrders,
+        visitCount: nextVisitCount,
+        note: nextNote,
+        monthlyTarget: monthTargetFromLocal,
+        categories: cloneCategories(nextCategories),
+      }));
+
+      setOriginalCategories(cloneCategories(nextCategories));
+
+      setOcrApplied(false);
+
+      const loadedForCheck: SalesReportData = {
+        date: dateStr,
+        posSales: nextPosSales,
+        orders: nextOrders,
+        visitCount: nextVisitCount,
+        note: nextNote,
+        monthlyTarget: monthTargetFromLocal,
+        mtdSales: 0,
+        categories: nextCategories,
+      };
+
+      setDataSaved(dbData ? hasMeaningfulInput(loadedForCheck) : false);
+
+      setReportGenerated(false);
+      setReport("");
+      setMenuEngineeringResult(null);
+
+      await refreshMonthlyStats(yearMonth);
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setDbLoading(false);
     }
-
-    // 3) 핵심: snapshot이 있든 없든, 가격/원가는 "해당 날짜 기준 history"로 덮어쓰기
-    nextCategories = nextCategories.map((cat) => ({
-      ...cat,
-      items: cat.items.map((item) => {
-        const history = priceMap.get(item.id);
-
-        if (!history) {
-          return { ...item };
-        }
-
-        return {
-          ...item,
-          price:
-            history.price != null
-              ? Number(history.price)
-              : Number(item.price ?? 0),
-          unitCost:
-            history.unit_cost != null
-              ? Number(history.unit_cost)
-              : item.unitCost,
-        };
-      }),
-    }));
-
-    const monthTargetFromLocal = loadMonthlyTarget(
-      yearMonth,
-      Number(data.monthlyTarget) || 15000
-    );
-
-    setData((prev) => ({
-      ...prev,
-      date: dateStr,
-      posSales: nextPosSales,
-      orders: nextOrders,
-      visitCount: nextVisitCount,
-      note: nextNote,
-      monthlyTarget: monthTargetFromLocal,
-      categories: nextCategories,
-    }));
-
-    setOcrApplied(false);
-
-    const loadedForCheck: SalesReportData = {
-      date: dateStr,
-      posSales: nextPosSales,
-      orders: nextOrders,
-      visitCount: nextVisitCount,
-      note: nextNote,
-      monthlyTarget: monthTargetFromLocal,
-      mtdSales: 0,
-      categories: nextCategories,
-    };
-
-    setDataSaved(dbData ? hasMeaningfulInput(loadedForCheck) : false);
-
-    setReportGenerated(false);
-    setReport("");
-    setMenuEngineeringResult(null);
-
-    await refreshMonthlyStats(yearMonth);
-  } catch (err) {
-    console.error("Fetch Error:", err);
-  } finally {
-    setDbLoading(false);
-  }
-};
+  };
 
   const fetchPeriodStats = async () => {
     setPeriodLoading(true);
@@ -928,6 +941,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
+    setData((prev) => ({
+      ...prev,
+      categories: cloneCategories(nextCategories),
+    }));
+    setReportGenerated(false);
+  };
+
   const handleSave = async (silent = false) => {
     try {
       if (!silent) setSaveStatus("데이터 저장 중...");
@@ -950,6 +971,7 @@ const App: React.FC = () => {
 
       await persistMenuPriceHistory(data.categories, data.date);
 
+      setOriginalCategories(cloneCategories(data.categories));
       setSaveStatus("저장 완료");
       setLastSavedAt(new Date().toLocaleString());
       setDataSaved(true);
@@ -974,6 +996,20 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveMenuPrices = async () => {
+    try {
+      setPriceSaving(true);
+      await persistMenuPriceHistory(data.categories, data.date);
+      setOriginalCategories(cloneCategories(data.categories));
+      showToast("메뉴 가격 / 원가가 저장되었습니다.");
+    } catch (error: any) {
+      console.error("Price Save Error:", error);
+      showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
+    } finally {
+      setPriceSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     const targetDate = data.date;
 
@@ -993,6 +1029,7 @@ const App: React.FC = () => {
         note: "",
         categories: resetCats,
       }));
+      setOriginalCategories(cloneCategories(resetCats));
       setReport("");
       setMenuEngineeringResult(null);
       setOcrApplied(false);
@@ -1184,278 +1221,319 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
-              <i className="fa-solid fa-calendar-check text-indigo-500"></i>
-              오늘의 성과 요약 ({data.date})
-            </h3>
-          </div>
-          <div className="p-5 md:p-8 grid grid-cols-2 md:grid-cols-5 gap-5 md:gap-8">
-            <div className="space-y-1">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                오늘 매출
-              </p>
-              <p className="text-xl md:text-2xl font-black text-slate-900">${results.calcSales.toLocaleString()}</p>
-            </div>
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                오늘 주문수
-              </p>
-              <p className="text-xl md:text-2xl font-black text-slate-900">{data.orders.toLocaleString()}건</p>
-            </div>
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                오늘 방문객
-              </p>
-              <p className="text-xl md:text-2xl font-black text-slate-900">{data.visitCount.toLocaleString()}명</p>
-            </div>
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                주문당 매출 (AOV)
-              </p>
-              <p className="text-xl md:text-2xl font-black text-slate-900">${results.aov.toFixed(2)}</p>
-            </div>
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">POS 오차</p>
-              <div className="flex items-center gap-2">
-                <span className="text-xl md:text-2xl font-black text-slate-900">${results.gapUsd}</span>
-                <span
-                  className={`text-xs md:text-sm font-bold ${
-                    results.status === "🔴"
-                      ? "text-rose-500"
-                      : results.status === "🟡"
-                      ? "text-amber-500"
-                      : "text-emerald-500"
-                  }`}
-                >
-                  {results.status}
-                </span>
-              </div>
-            </div>
-          </div>
+        <section className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage("daily-sales")}
+            className={`h-11 rounded-xl px-4 text-sm font-semibold transition-all ${
+              currentPage === "daily-sales"
+                ? "bg-slate-900 text-white"
+                : "bg-white text-slate-700 border border-slate-200"
+            }`}
+          >
+            Daily Sales
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage("menu-settings")}
+            className={`h-11 rounded-xl px-4 text-sm font-semibold transition-all ${
+              currentPage === "menu-settings"
+                ? "bg-slate-900 text-white"
+                : "bg-white text-slate-700 border border-slate-200"
+            }`}
+          >
+            Menu Settings
+          </button>
         </section>
 
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4">
-          <div className="space-y-1 md:space-y-2">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">매출 코치 리포트</h2>
-            <p className="text-slate-500 text-sm md:text-base font-medium">
-              분석을 통해 객단가와 전환율을 높이는 부스트 전략을 제안합니다.
-            </p>
-          </div>
-        </header>
+        {currentPage === "daily-sales" ? (
+          <>
+            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4">
+                <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
+                  <i className="fa-solid fa-calendar-check text-indigo-500"></i>
+                  오늘의 성과 요약 ({data.date})
+                </h3>
+              </div>
+              <div className="p-5 md:p-8 grid grid-cols-2 md:grid-cols-5 gap-5 md:gap-8">
+                <div className="space-y-1">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    오늘 매출
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">${results.calcSales.toLocaleString()}</p>
+                </div>
+                <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    오늘 주문수
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">{data.orders.toLocaleString()}건</p>
+                </div>
+                <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    오늘 방문객
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">{data.visitCount.toLocaleString()}명</p>
+                </div>
+                <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    주문당 매출 (AOV)
+                  </p>
+                  <p className="text-xl md:text-2xl font-black text-slate-900">${results.aov.toFixed(2)}</p>
+                </div>
+                <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
+                  <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">POS 오차</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl md:text-2xl font-black text-slate-900">${results.gapUsd}</span>
+                    <span
+                      className={`text-xs md:text-sm font-bold ${
+                        results.status === "🔴"
+                          ? "text-rose-500"
+                          : results.status === "🟡"
+                          ? "text-amber-500"
+                          : "text-emerald-500"
+                      }`}
+                    >
+                      {results.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-        <div className="relative">
-          <DataInput
-            data={data}
-            onChange={handleDataChange}
-            loading={loading}
-            datesWithData={datesWithData}
-            onMonthChange={handleMonthChange}
-          />
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4">
+              <div className="space-y-1 md:space-y-2">
+                <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">매출 코치 리포트</h2>
+                <p className="text-slate-500 text-sm md:text-base font-medium">
+                  분석을 통해 객단가와 전환율을 높이는 부스트 전략을 제안합니다.
+                </p>
+              </div>
+            </header>
 
-          {saveStatus && (
-            <div className="mt-4 text-center">
-              <span
-                className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
-                    ? "bg-emerald-50 text-emerald-600"
-                    : saveStatus.startsWith("저장 실패") ||
-                      saveStatus.startsWith("저장 중 오류") ||
-                      saveStatus.startsWith("날짜 변경 전 자동 저장 실패")
-                    ? "bg-rose-50 text-rose-600"
-                    : "bg-slate-100 text-slate-500"
-                }`}
-              >
-                {saveStatus}
-              </span>
+            <div className="relative">
+              <DataInput
+                data={data}
+                onChange={handleDataChange}
+                loading={loading}
+                datesWithData={datesWithData}
+                onMonthChange={handleMonthChange}
+              />
+
+              {saveStatus && (
+                <div className="mt-4 text-center">
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : saveStatus.startsWith("저장 실패") ||
+                          saveStatus.startsWith("저장 중 오류") ||
+                          saveStatus.startsWith("날짜 변경 전 자동 저장 실패")
+                        ? "bg-rose-50 text-rose-600"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {saveStatus}
+                  </span>
+                </div>
+              )}
+
+              {lastSavedAt && (
+                <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>
+              )}
             </div>
-          )}
 
-          {lastSavedAt && (
-            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">마지막 저장: {lastSavedAt}</div>
-          )}
-        </div>
+            <ReportDisplay
+              report={report}
+              loading={loading}
+              menuEngineeringResult={menuEngineeringResult}
+              sortedMenuEngineering={sortedMenuEngineering}
+              boostPlans={boostPlans}
+            />
 
-        <ReportDisplay
-          report={report}
-          loading={loading}
-          menuEngineeringResult={menuEngineeringResult}
-          sortedMenuEngineering={sortedMenuEngineering}
-          boostPlans={boostPlans}
-        />
+            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
+                  <i className="fa-solid fa-chart-column text-indigo-500"></i>
+                  기간별 성과 분석
+                </h3>
 
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
-              <i className="fa-solid fa-chart-column text-indigo-500"></i>
-              기간별 성과 분석
-            </h3>
+                <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                  <input
+                    type="date"
+                    value={periodRange.start}
+                    onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                  <span className="text-slate-400 text-center text-sm font-bold">~</span>
+                  <input
+                    type="date"
+                    value={periodRange.end}
+                    onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={fetchPeriodStats}
+                    disabled={periodLoading}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
+                  >
+                    {periodLoading ? "분석 중..." : "기간 분석"}
+                  </button>
+                </div>
+              </div>
 
-            <div className="flex flex-col md:flex-row gap-2 md:items-center">
-              <input
-                type="date"
-                value={periodRange.start}
-                onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
-              />
-              <span className="text-slate-400 text-center text-sm font-bold">~</span>
-              <input
-                type="date"
-                value={periodRange.end}
-                onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
-              />
+              <div className="p-5 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">
+                      ${Number(periodStats?.totalSales || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 주문</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">
+                      {Number(periodStats?.totalOrders || 0).toLocaleString()}건
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 방문객</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">
+                      {Number(periodStats?.totalVisitors || 0).toLocaleString()}명
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                      <h4 className="font-black text-slate-800 text-sm">일별 추이</h4>
+                    </div>
+                    <div className="max-h-80 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-white sticky top-0">
+                          <tr className="border-b border-slate-200">
+                            <th className="text-left px-4 py-3 font-black text-slate-500">날짜</th>
+                            <th className="text-right px-4 py-3 font-black text-slate-500">매출</th>
+                            <th className="text-right px-4 py-3 font-black text-slate-500">주문</th>
+                            <th className="text-right px-4 py-3 font-black text-slate-500">방문객</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(periodStats?.list || []).length > 0 ? (
+                            (periodStats?.list || []).map((row: any) => (
+                              <tr key={row.date} className="border-b border-slate-100">
+                                <td className="px-4 py-3 font-bold text-slate-700">{row.date}</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900">
+                                  ${Number(row.total_sales || 0).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-700">
+                                  {Number(row.orders || 0).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-700">
+                                  {Number(row.guests || 0).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-bold">
+                                기간 분석 데이터를 불러오면 여기에 표시됩니다.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                      <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {periodMenuTop.length > 0 ? (
+                        periodMenuTop.map((item, idx) => (
+                          <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                              <span className="font-bold text-slate-800">{item.name}</span>
+                            </div>
+                            <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center text-slate-400 font-bold">
+                          기간 분석 데이터를 불러오면 Top10이 표시됩니다.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : (
+          <MenuSettingsPage
+            selectedDate={data.date}
+            categories={data.categories}
+            originalCategories={originalCategories}
+            onChangeCategories={handleMenuSettingsCategoriesChange}
+            onSavePrices={handleSaveMenuPrices}
+            saving={priceSaving}
+          />
+        )}
+      </main>
+
+      {currentPage === "daily-sales" && (
+        <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
+          <div className="max-w-6xl mx-auto pointer-events-auto">
+            <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4">
               <button
                 type="button"
-                onClick={fetchPeriodStats}
-                disabled={periodLoading}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
+                onClick={() => setShowResetModal(true)}
+                className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
               >
-                {periodLoading ? "분석 중..." : "기간 분석"}
+                <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
+                일 데이터 리셋
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSave(false)}
+                className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
+                  ocrApplied && !dataSaved
+                    ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
+                    : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
+                매출 데이터 저장
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleGenerate()}
+                disabled={loading}
+                className={`col-span-2 md:col-span-1 px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ${
+                  dataSaved && !reportGenerated
+                    ? "bg-emerald-600 text-white ring-2 ring-emerald-300 hover:bg-emerald-700"
+                    : "bg-slate-900 text-white hover:bg-indigo-600 disabled:bg-slate-300"
+                }`}
+              >
+                {loading ? (
+                  <i className="fa-solid fa-spinner fa-spin text-sm md:text-base"></i>
+                ) : (
+                  <i className="fa-solid fa-wand-magic-sparkles text-sm md:text-base"></i>
+                )}
+                코칭 리포트 생성
               </button>
             </div>
           </div>
-
-          <div className="p-5 md:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  ${Number(periodStats?.totalSales || 0).toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 주문</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {Number(periodStats?.totalOrders || 0).toLocaleString()}건
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 방문객</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {Number(periodStats?.totalVisitors || 0).toLocaleString()}명
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                  <h4 className="font-black text-slate-800 text-sm">일별 추이</h4>
-                </div>
-                <div className="max-h-80 overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-white sticky top-0">
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left px-4 py-3 font-black text-slate-500">날짜</th>
-                        <th className="text-right px-4 py-3 font-black text-slate-500">매출</th>
-                        <th className="text-right px-4 py-3 font-black text-slate-500">주문</th>
-                        <th className="text-right px-4 py-3 font-black text-slate-500">방문객</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(periodStats?.list || []).length > 0 ? (
-                        (periodStats?.list || []).map((row: any) => (
-                          <tr key={row.date} className="border-b border-slate-100">
-                            <td className="px-4 py-3 font-bold text-slate-700">{row.date}</td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-900">
-                              ${Number(row.total_sales || 0).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-right text-slate-700">
-                              {Number(row.orders || 0).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-right text-slate-700">
-                              {Number(row.guests || 0).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-bold">
-                            기간 분석 데이터를 불러오면 여기에 표시됩니다.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                  <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {periodMenuTop.length > 0 ? (
-                    periodMenuTop.map((item, idx) => (
-                      <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
-                            {idx + 1}
-                          </span>
-                          <span className="font-bold text-slate-800">{item.name}</span>
-                        </div>
-                        <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-8 text-center text-slate-400 font-bold">
-                      기간 분석 데이터를 불러오면 Top10이 표시됩니다.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
-        <div className="max-w-6xl mx-auto pointer-events-auto">
-          <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4">
-            <button
-              type="button"
-              onClick={() => setShowResetModal(true)}
-              className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
-            >
-              <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
-              일 데이터 리셋
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSave(false)}
-              className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
-                ocrApplied && !dataSaved
-                  ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
-                  : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
-              매출 데이터 저장
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleGenerate()}
-              disabled={loading}
-              className={`col-span-2 md:col-span-1 px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ${
-                dataSaved && !reportGenerated
-                  ? "bg-emerald-600 text-white ring-2 ring-emerald-300 hover:bg-emerald-700"
-                  : "bg-slate-900 text-white hover:bg-indigo-600 disabled:bg-slate-300"
-              }`}
-            >
-              {loading ? (
-                <i className="fa-solid fa-spinner fa-spin text-sm md:text-base"></i>
-              ) : (
-                <i className="fa-solid fa-wand-magic-sparkles text-sm md:text-base"></i>
-              )}
-              코칭 리포트 생성
-            </button>
-          </div>
         </div>
-      </div>
+      )}
 
       {showResetModal && (
         <div
