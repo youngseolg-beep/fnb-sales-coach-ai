@@ -277,7 +277,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <p className="mt-1 text-sm font-medium text-slate-700">
                 Effective Date: {selectedDate}
               </p>
-              <p className="mt-1 text-xs text-amber-600 font-semibold">
+              <p className="mt-1 text-xs font-semibold text-amber-600">
                 이 날짜 이후 가격/원가에 반영됩니다.
               </p>
             </div>
@@ -286,9 +286,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddMenuModal(true)}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
               >
-                + 메뉴 추가
+                + 새 메뉴 만들기
               </button>
 
               <button
@@ -448,20 +448,26 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b px-6 py-4">
-              <h3 className="text-lg font-black text-slate-900">새 메뉴 추가</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                선택한 카테고리에 새 메뉴를 추가합니다.
+            <div className="border-b px-6 py-4 bg-indigo-50">
+              <h3 className="text-lg font-black text-indigo-900">새 메뉴 추가</h3>
+              <p className="mt-1 text-sm text-indigo-700">
+                새 메뉴를 생성한 뒤 목록에 바로 반영합니다.
               </p>
             </div>
 
             <div className="space-y-4 px-6 py-5">
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3">
+                <p className="text-xs font-bold text-indigo-700">
+                  메뉴 생성 전용 창입니다. 가격 저장과는 별개로 새 메뉴를 먼저 목록에 추가합니다.
+                </p>
+              </div>
+
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-500">카테고리</label>
                 <select
                   value={newMenuCategoryName}
                   onChange={(e) => setNewMenuCategoryName(e.target.value)}
-                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
                 >
                   <option value="">카테고리 선택</option>
                   {categories.map((category) => (
@@ -478,7 +484,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   type="text"
                   value={newMenuName}
                   onChange={(e) => setNewMenuName(e.target.value)}
-                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
                   placeholder="예: 군만두"
                 />
               </div>
@@ -491,7 +497,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     step="0.01"
                     value={newMenuPrice}
                     onChange={(e) => setNewMenuPrice(e.target.value)}
-                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
                     placeholder="0"
                   />
                 </div>
@@ -503,7 +509,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     step="0.01"
                     value={newMenuUnitCost}
                     onChange={(e) => setNewMenuUnitCost(e.target.value)}
-                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
                     placeholder="0"
                   />
                 </div>
@@ -521,9 +527,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={handleAddMenu}
-                className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white"
+                className="rounded-xl bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-700"
               >
-                추가
+                확인
               </button>
             </div>
           </div>
@@ -547,7 +553,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <p className="text-sm text-slate-700">
                 <span className="font-bold">{deleteTarget.itemName}</span> 메뉴를 삭제하시겠습니까?
               </p>
-              <p className="mt-2 text-xs text-rose-500 font-semibold">
+              <p className="mt-2 text-xs font-semibold text-rose-500">
                 삭제 후 저장하면 현재 categories 상태 기준으로 반영됩니다.
               </p>
             </div>
