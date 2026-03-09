@@ -25,6 +25,30 @@ const isSameValue = (a: any, b: any) => {
   return normalizeNumber(a) === normalizeNumber(b);
 };
 
+const compressHistoryRows = (rows: any[]) => {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+
+  const compressed: any[] = [];
+
+  for (const row of rows) {
+    if (compressed.length === 0) {
+      compressed.push(row);
+      continue;
+    }
+
+    const prev = compressed[compressed.length - 1];
+
+    const samePrice = isSameValue(prev?.price, row?.price);
+    const sameUnitCost = isSameValue(prev?.unit_cost, row?.unit_cost);
+
+    if (!samePrice || !sameUnitCost) {
+      compressed.push(row);
+    }
+  }
+
+  return compressed;
+};
+
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   selectedDate,
   categories,
@@ -120,7 +144,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       setShowHistoryModal(true);
 
       const rows = await getMenuPriceHistory(menuId);
-      setHistoryRows(rows);
+      const compressedRows = compressHistoryRows(rows);
+      setHistoryRows(compressedRows);
     } catch (error) {
       console.error("History Load Error:", error);
       setHistoryRows([]);
@@ -392,7 +417,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="border-b px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
               <p className="mt-1 text-sm text-slate-500">
-                최근 effective date 기준 가격 / 원가 이력입니다.
+                실제 값이 변경된 이력만 표시합니다.
               </p>
             </div>
 
@@ -425,7 +450,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       ) : (
                         <tr>
                           <td colSpan={3} className="px-4 py-8 text-center font-bold text-slate-400">
-                            가격 이력이 없습니다.
+                            실제 가격 변경 이력이 없습니다.
                           </td>
                         </tr>
                       )}
