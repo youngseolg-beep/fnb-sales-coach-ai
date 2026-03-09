@@ -9,6 +9,7 @@ interface MenuSettingsPageProps {
   onChangeCategories: (next: MenuCategory[]) => void;
   onSavePrices: () => Promise<void> | void;
   saving: boolean;
+  onShowToast?: (msg: string) => void;
 }
 
 const toNumber = (value: string) => {
@@ -51,12 +52,16 @@ const compressHistoryRows = (rows: any[]) => {
 
 const removeBaselineIfNoRealChanges = (rows: any[]) => {
   if (!Array.isArray(rows) || rows.length === 0) return [];
-
-  if (rows.length === 1) {
-    return [];
-  }
-
+  if (rows.length === 1) return [];
   return rows;
+};
+
+const slugify = (value: string) => {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9가-힣_-]/g, "");
 };
 
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
@@ -66,12 +71,26 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   onChangeCategories,
   onSavePrices,
   saving,
+  onShowToast,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [historyMenuName, setHistoryMenuName] = useState("");
   const [historyRows, setHistoryRows] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const [showAddMenuModal, setShowAddMenuModal] = useState(false);
+  const [newMenuCategoryName, setNewMenuCategoryName] = useState("");
+  const [newMenuName, setNewMenuName] = useState("");
+  const [newMenuPrice, setNewMenuPrice] = useState("");
+  const [newMenuUnitCost, setNewMenuUnitCost] = useState("");
+
+  const [deleteTarget, setDeleteTarget] = useState<{
+    categoryIndex: number;
+    itemIndex: number;
+    itemId: string;
+    itemName: string;
+  } | null>(null);
 
   const changedItems = useMemo(() => {
     const rows: Array<{
@@ -166,6 +185,85 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     }
   };
 
+  const handleAddMenu = () => {
+    const categoryName = String(newMenuCategoryName || "").trim();
+    const menuName = String(newMenuName || "").trim();
+    const price = toNumber(newMenuPrice);
+    const unitCost = toNumber(newMenuUnitCost);
+
+    if (!categoryName) {
+      onShowToast?.("카테고리를 선택하세요.");
+      return;
+    }
+
+    if (!menuName) {
+      onShowToast?.("메뉴명을 입력하세요.");
+      return;
+    }
+
+    const duplicated = categories.some((cat) =>
+      cat.items.some((item) => item.name.trim().toLowerCase() === menuName.toLowerCase())
+    );
+
+    if (duplicated) {
+      onShowToast?.("같은 이름의 메뉴가 이미 있습니다.");
+      return;
+    }
+
+    const categoryIndex = categories.findIndex((cat) => cat.name === categoryName);
+    if (categoryIndex < 0) {
+      onShowToast?.("선택한 카테고리를 찾을 수 없습니다.");
+      return;
+    }
+
+    const newId = `${slugify(categoryName)}-${slugify(menuName)}-${Date.now()}`;
+
+    const next = categories.map((category, idx) => {
+      if (idx !== categoryIndex) return category;
+
+      return {
+        ...category,
+        items: [
+          ...category.items,
+          {
+            id: newId,
+            name: menuName,
+            price,
+            qty: 0,
+            unitCost,
+          },
+        ],
+      };
+    });
+
+    onChangeCategories(next);
+
+    setNewMenuCategoryName("");
+    setNewMenuName("");
+    setNewMenuPrice("");
+    setNewMenuUnitCost("");
+    setShowAddMenuModal(false);
+
+    onShowToast?.("새 메뉴가 추가되었습니다.");
+  };
+
+  const handleDeleteMenu = () => {
+    if (!deleteTarget) return;
+
+    const next = categories.map((category, cIdx) => {
+      if (cIdx !== deleteTarget.categoryIndex) return category;
+
+      return {
+        ...category,
+        items: category.items.filter((_, iIdx) => iIdx !== deleteTarget.itemIndex),
+      };
+    });
+
+    onChangeCategories(next);
+    setDeleteTarget(null);
+    onShowToast?.("메뉴가 삭제되었습니다.");
+  };
+
   return (
     <>
       <section className="space-y-4 pb-28">
@@ -184,14 +282,24 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowConfirmModal(true)}
-              disabled={saving || dirtyCount === 0}
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? "Saving..." : `가격 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddMenuModal(true)}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                + 메뉴 추가
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={saving || dirtyCount === 0}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? "Saving..." : `가격 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -209,10 +317,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
             <div className="hidden grid-cols-12 gap-2 border-b pb-2 text-xs font-bold text-slate-500 md:grid">
               <div className="col-span-3">메뉴명</div>
-              <div className="col-span-3">Price</div>
-              <div className="col-span-3">Unit Cost</div>
+              <div className="col-span-2">Price</div>
+              <div className="col-span-2">Unit Cost</div>
               <div className="col-span-1">상태</div>
               <div className="col-span-2">History</div>
+              <div className="col-span-2">Delete</div>
             </div>
 
             <div className="mt-3 space-y-3">
@@ -232,7 +341,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       <div className="text-sm font-semibold text-slate-900">{item.name}</div>
                     </div>
 
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-2">
                       <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
                         Price
                       </label>
@@ -247,7 +356,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       />
                     </div>
 
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-2">
                       <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
                         Unit Cost
                       </label>
@@ -283,6 +392,23 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                         History 보기
                       </button>
                     </div>
+
+                    <div className="md:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDeleteTarget({
+                            categoryIndex,
+                            itemIndex,
+                            itemId: item.id,
+                            itemName: item.name,
+                          })
+                        }
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                      >
+                        메뉴 삭제
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -312,6 +438,139 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         </div>
       </section>
+
+      {showAddMenuModal && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowAddMenuModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-black text-slate-900">새 메뉴 추가</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                선택한 카테고리에 새 메뉴를 추가합니다.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-500">카테고리</label>
+                <select
+                  value={newMenuCategoryName}
+                  onChange={(e) => setNewMenuCategoryName(e.target.value)}
+                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                >
+                  <option value="">카테고리 선택</option>
+                  {categories.map((category) => (
+                    <option key={category.name} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-500">메뉴명</label>
+                <input
+                  type="text"
+                  value={newMenuName}
+                  onChange={(e) => setNewMenuName(e.target.value)}
+                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                  placeholder="예: 군만두"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-500">Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newMenuPrice}
+                    onChange={(e) => setNewMenuPrice(e.target.value)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-500">Unit Cost</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newMenuUnitCost}
+                    onChange={(e) => setNewMenuUnitCost(e.target.value)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowAddMenuModal(false)}
+                className="rounded-xl px-5 py-2 font-bold text-slate-600 hover:bg-slate-100"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleAddMenu}
+                className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-black text-slate-900">메뉴 삭제</h3>
+            </div>
+
+            <div className="px-6 py-5">
+              <p className="text-sm text-slate-700">
+                <span className="font-bold">{deleteTarget.itemName}</span> 메뉴를 삭제하시겠습니까?
+              </p>
+              <p className="mt-2 text-xs text-rose-500 font-semibold">
+                삭제 후 저장하면 현재 categories 상태 기준으로 반영됩니다.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl px-5 py-2 font-bold text-slate-600 hover:bg-slate-100"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteMenu}
+                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showConfirmModal && (
         <div
