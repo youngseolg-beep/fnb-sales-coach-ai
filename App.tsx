@@ -942,13 +942,12 @@ const App: React.FC = () => {
   };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
-    setData((prev) => ({
-      ...prev,
-      categories: cloneCategories(nextCategories),
-    }));
-    setOriginalCategories(cloneCategories(nextCategories));
-    setReportGenerated(false);
-  };
+  setData((prev) => ({
+    ...prev,
+    categories: cloneCategories(nextCategories),
+  }));
+  setReportGenerated(false);
+};
 
   const handleSave = async (silent = false) => {
     try {
