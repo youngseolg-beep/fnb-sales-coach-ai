@@ -994,18 +994,18 @@ const App: React.FC = () => {
   };
 
   const handleSaveMenuPrices = async () => {
-    try {
-      setPriceSaving(true);
-      await persistMenuPriceHistory(data.categories, data.date);
-      setOriginalCategories(cloneCategories(data.categories));
-      showToast("메뉴 가격 / 원가가 저장되었습니다.");
-    } catch (error: any) {
-      console.error("Price Save Error:", error);
-      showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
-    } finally {
-      setPriceSaving(false);
-    }
-  };
+  try {
+    setPriceSaving(true);
+    await persistMenuPriceHistory(data.categories, data.date);
+    setOriginalCategories(cloneCategories(data.categories));
+    showToast("메뉴 가격 / 원가가 저장되었습니다.");
+  } catch (error: any) {
+    console.error("Price Save Error:", error);
+    showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
+  } finally {
+    setPriceSaving(false);
+  }
+};
 
   const handleDelete = async () => {
     const targetDate = data.date;
