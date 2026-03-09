@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import type { MenuCategory } from "../types";
+import { getMenuPriceHistory } from "../services/services/menuPriceService";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -33,6 +34,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   saving,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [historyMenuName, setHistoryMenuName] = useState("");
+  const [historyRows, setHistoryRows] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const changedItems = useMemo(() => {
     const rows: Array<{
@@ -108,6 +113,22 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setShowConfirmModal(false);
   };
 
+  const handleOpenHistory = async (menuId: string, menuName: string) => {
+    try {
+      setHistoryLoading(true);
+      setHistoryMenuName(menuName);
+      setShowHistoryModal(true);
+
+      const rows = await getMenuPriceHistory(menuId);
+      setHistoryRows(rows);
+    } catch (error) {
+      console.error("History Load Error:", error);
+      setHistoryRows([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   return (
     <>
       <section className="space-y-4 pb-28">
@@ -150,10 +171,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             </div>
 
             <div className="hidden grid-cols-12 gap-2 border-b pb-2 text-xs font-bold text-slate-500 md:grid">
-              <div className="col-span-4">메뉴명</div>
+              <div className="col-span-3">메뉴명</div>
               <div className="col-span-3">Price</div>
               <div className="col-span-3">Unit Cost</div>
-              <div className="col-span-2">상태</div>
+              <div className="col-span-1">상태</div>
+              <div className="col-span-2">History</div>
             </div>
 
             <div className="mt-3 space-y-3">
@@ -169,7 +191,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     key={item.id}
                     className="grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center"
                   >
-                    <div className="md:col-span-4">
+                    <div className="md:col-span-3">
                       <div className="text-sm font-semibold text-slate-900">{item.name}</div>
                     </div>
 
@@ -203,7 +225,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       />
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-1">
                       <span
                         className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
                           changed
@@ -213,6 +235,16 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       >
                         {changed ? "Changed" : "Saved"}
                       </span>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenHistory(item.id, item.name)}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        History 보기
+                      </button>
                     </div>
                   </div>
                 );
@@ -342,6 +374,74 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
               >
                 {saving ? "Saving..." : "저장 확정"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowHistoryModal(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                최근 effective date 기준 가격 / 원가 이력입니다.
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              {historyLoading ? (
+                <div className="py-10 text-center font-bold text-slate-400">불러오는 중...</div>
+              ) : (
+                <div className="max-h-96 overflow-auto rounded-xl border">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="border-b">
+                        <th className="px-4 py-3 text-left font-black text-slate-500">Effective Date</th>
+                        <th className="px-4 py-3 text-right font-black text-slate-500">Price</th>
+                        <th className="px-4 py-3 text-right font-black text-slate-500">Unit Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyRows.length > 0 ? (
+                        historyRows.map((row, idx) => (
+                          <tr key={`${row.menu_id}-${row.effective_date}-${idx}`} className="border-b border-slate-100">
+                            <td className="px-4 py-3 font-semibold text-slate-800">{row.effective_date}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-700">
+                              {normalizeNumber(row.price)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-slate-700">
+                              {normalizeNumber(row.unit_cost)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center font-bold text-slate-400">
+                            가격 이력이 없습니다.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(false)}
+                className="rounded-xl px-5 py-2 font-bold text-slate-600 hover:bg-slate-100"
+              >
+                닫기
               </button>
             </div>
           </div>
