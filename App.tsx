@@ -969,8 +969,6 @@ const App: React.FC = () => {
 
       if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
 
-
-      setOriginalCategories(cloneCategories(data.categories));
       setSaveStatus("저장 완료");
       setLastSavedAt(new Date().toLocaleString());
       setDataSaved(true);
@@ -995,49 +993,19 @@ const App: React.FC = () => {
     }
   };
 
-const handleSave = async (silent = false) => {
-  try {
-    if (!silent) setSaveStatus("데이터 저장 중...");
-
-    let calcSales = 0;
-    data.categories.forEach((cat) => {
-      cat.items.forEach((item) => {
-        calcSales += item.price * (item.qty || 0);
-      });
-    });
-
-    const payload: any = {
-      ...data,
-      totalSales: Math.round(calcSales * 100) / 100,
-    };
-
-    const res = await saveDailyData({ date: data.date, ...payload });
-
-    if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
-
-    setSaveStatus("저장 완료");
-    setLastSavedAt(new Date().toLocaleString());
-    setDataSaved(true);
-    setReportGenerated(false);
-
-    if (!silent) {
-      showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
-    }
-
+  const handleSaveMenuPrices = async () => {
     try {
-      await refreshMonthlyStats(data.date.substring(0, 7));
-    } catch (e) {
-      console.warn("refreshMonthlyStats failed (ignored):", e);
+      setPriceSaving(true);
+      await persistMenuPriceHistory(data.categories, data.date);
+      setOriginalCategories(cloneCategories(data.categories));
+      showToast("메뉴 가격 / 원가가 저장되었습니다.");
+    } catch (error: any) {
+      console.error("Price Save Error:", error);
+      showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
+    } finally {
+      setPriceSaving(false);
     }
-
-    return true;
-  } catch (error: any) {
-    console.error("Save Error:", error);
-    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-    if (!silent) showToast("저장 중 오류가 발생했습니다.");
-    return false;
-  }
-};
+  };
 
   const handleDelete = async () => {
     const targetDate = data.date;
