@@ -159,47 +159,22 @@ const persistMenuPriceHistory = async (
   categories: MenuCategory[],
   effectiveDate: string
 ) => {
-  const historyMap = await getMenuPricesForDate(effectiveDate);
   const jobs: Promise<any>[] = [];
 
   for (const cat of categories) {
     for (const item of cat.items) {
       if (!item.id) continue;
 
-      const prev = historyMap.get(item.id);
-
-      const prevPrice =
-        prev?.price !== null && prev?.price !== undefined
-          ? Number(prev.price)
-          : undefined;
-
-      const prevUnitCost =
-        prev?.unit_cost !== null && prev?.unit_cost !== undefined
-          ? Number(prev.unit_cost)
-          : undefined;
-
-      const nextPrice = Number(item.price ?? 0);
-      const nextUnitCost =
-        item.unitCost !== null && item.unitCost !== undefined
-          ? Number(item.unitCost)
-          : undefined;
-
-      const priceChanged =
-        prevPrice === undefined || prevPrice !== nextPrice;
-
-      const unitCostChanged =
-        prevUnitCost === undefined || prevUnitCost !== nextUnitCost;
-
-      if (priceChanged || unitCostChanged) {
-        jobs.push(
-          saveMenuPriceHistory(
-            item.id,
-            effectiveDate,
-            nextPrice,
-            nextUnitCost
-          )
-        );
-      }
+      jobs.push(
+        saveMenuPriceHistory(
+          item.id,
+          effectiveDate,
+          Number(item.price ?? 0),
+          item.unitCost !== null && item.unitCost !== undefined
+            ? Number(item.unitCost)
+            : undefined
+        )
+      );
     }
   }
 
@@ -942,12 +917,12 @@ const App: React.FC = () => {
   };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
-  setData((prev) => ({
-    ...prev,
-    categories: cloneCategories(nextCategories),
-  }));
-  setReportGenerated(false);
-};
+    setData((prev) => ({
+      ...prev,
+      categories: cloneCategories(nextCategories),
+    }));
+    setReportGenerated(false);
+  };
 
   const handleSave = async (silent = false) => {
     try {
@@ -996,8 +971,38 @@ const App: React.FC = () => {
   const handleSaveMenuPrices = async () => {
     try {
       setPriceSaving(true);
+
       await persistMenuPriceHistory(data.categories, data.date);
-      setOriginalCategories(cloneCategories(data.categories));
+
+      const freshPriceMap = await getMenuPricesForDate(data.date);
+
+      const refreshedCategories = data.categories.map((cat) => ({
+        ...cat,
+        items: cat.items.map((item) => {
+          const latest = freshPriceMap.get(item.id);
+
+          if (!latest) return { ...item };
+
+          return {
+            ...item,
+            price:
+              latest.price !== null && latest.price !== undefined
+                ? Number(latest.price)
+                : Number(item.price ?? 0),
+            unitCost:
+              latest.unit_cost !== null && latest.unit_cost !== undefined
+                ? Number(latest.unit_cost)
+                : item.unitCost,
+          };
+        }),
+      }));
+
+      setData((prev) => ({
+        ...prev,
+        categories: cloneCategories(refreshedCategories),
+      }));
+      setOriginalCategories(cloneCategories(refreshedCategories));
+
       showToast("메뉴 가격 / 원가가 저장되었습니다.");
     } catch (error: any) {
       console.error("Price Save Error:", error);
