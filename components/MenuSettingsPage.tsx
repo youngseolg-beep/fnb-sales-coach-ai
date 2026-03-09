@@ -15,6 +15,15 @@ const toNumber = (value: string) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const normalizeNumber = (value: any) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const isSameValue = (a: any, b: any) => {
+  return normalizeNumber(a) === normalizeNumber(b);
+};
+
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   selectedDate,
   categories,
@@ -31,8 +40,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
         const originalItem = originalCategories[cIdx]?.items?.[iIdx];
         if (!originalItem) return;
 
-        const priceChanged = Number(item.price) !== Number(originalItem.price);
-        const costChanged = Number(item.unitCost) !== Number(originalItem.unitCost);
+        const priceChanged = !isSameValue(item.price, originalItem.price);
+        const costChanged = !isSameValue(item.unitCost, originalItem.unitCost);
 
         if (priceChanged || costChanged) count += 1;
       });
@@ -112,9 +121,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           <div className="mt-3 space-y-3">
             {category.items.map((item, itemIndex) => {
               const originalItem = originalCategories[categoryIndex]?.items?.[itemIndex];
+
               const changed =
-                Number(item.price) !== Number(originalItem?.price ?? item.price) ||
-                Number(item.unitCost) !== Number(originalItem?.unitCost ?? item.unitCost);
+                !isSameValue(item.price, originalItem?.price) ||
+                !isSameValue(item.unitCost, originalItem?.unitCost);
 
               return (
                 <div
@@ -123,7 +133,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 >
                   <div className="md:col-span-4">
                     <div className="text-sm font-semibold text-slate-900">{item.name}</div>
-                    <div className="text-xs text-slate-500">{item.id}</div>
                   </div>
 
                   <div className="md:col-span-3">
@@ -133,7 +142,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     <input
                       type="number"
                       step="0.01"
-                      value={item.price ?? 0}
+                      value={normalizeNumber(item.price)}
                       onChange={(e) =>
                         updateItemField(categoryIndex, itemIndex, "price", e.target.value)
                       }
@@ -148,7 +157,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     <input
                       type="number"
                       step="0.01"
-                      value={item.unitCost ?? 0}
+                      value={normalizeNumber(item.unitCost)}
                       onChange={(e) =>
                         updateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
                       }
