@@ -38,7 +38,6 @@ const compressHistoryRows = (rows: any[]) => {
     }
 
     const prev = compressed[compressed.length - 1];
-
     const samePrice = isSameValue(prev?.price, row?.price);
     const sameUnitCost = isSameValue(prev?.unit_cost, row?.unit_cost);
 
@@ -92,6 +91,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     itemName: string;
   } | null>(null);
 
+  const notify = (msg: string) => {
+    if (onShowToast) onShowToast(msg);
+    else window.alert(msg);
+  };
+
   const changedItems = useMemo(() => {
     const rows: Array<{
       id: string;
@@ -107,6 +111,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     categories.forEach((category, cIdx) => {
       category.items.forEach((item, iIdx) => {
         const originalItem = originalCategories[cIdx]?.items?.[iIdx];
+
+        // 신규 추가 메뉴는 Saved 취급
         if (!originalItem) return;
 
         const oldPrice = normalizeNumber(originalItem.price);
@@ -161,6 +167,30 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     onChangeCategories(next);
   };
 
+  const moveItem = (categoryIndex: number, itemIndex: number, direction: "up" | "down") => {
+    const next = categories.map((category, cIdx) => {
+      if (cIdx !== categoryIndex) return category;
+
+      const items = [...category.items];
+      const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
+
+      if (targetIndex < 0 || targetIndex >= items.length) {
+        return category;
+      }
+
+      const temp = items[itemIndex];
+      items[itemIndex] = items[targetIndex];
+      items[targetIndex] = temp;
+
+      return {
+        ...category,
+        items,
+      };
+    });
+
+    onChangeCategories(next);
+  };
+
   const handleConfirmSave = async () => {
     await onSavePrices();
     setShowConfirmModal(false);
@@ -188,31 +218,29 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const handleAddMenu = () => {
     const categoryName = String(newMenuCategoryName || "").trim();
     const menuName = String(newMenuName || "").trim();
-    const price = toNumber(newMenuPrice);
-    const unitCost = toNumber(newMenuUnitCost);
+    const priceRaw = String(newMenuPrice || "").trim();
+    const unitCostRaw = String(newMenuUnitCost || "").trim();
 
-    if (!categoryName) {
-      onShowToast?.("카테고리를 선택하세요.");
+    if (!categoryName || !menuName || !priceRaw || !unitCostRaw) {
+      notify("모든 항목을 입력해 주세요.");
       return;
     }
 
-    if (!menuName) {
-      onShowToast?.("메뉴명을 입력하세요.");
-      return;
-    }
+    const price = toNumber(priceRaw);
+    const unitCost = toNumber(unitCostRaw);
 
     const duplicated = categories.some((cat) =>
       cat.items.some((item) => item.name.trim().toLowerCase() === menuName.toLowerCase())
     );
 
     if (duplicated) {
-      onShowToast?.("같은 이름의 메뉴가 이미 있습니다.");
+      notify("같은 이름의 메뉴가 이미 있습니다.");
       return;
     }
 
     const categoryIndex = categories.findIndex((cat) => cat.name === categoryName);
     if (categoryIndex < 0) {
-      onShowToast?.("선택한 카테고리를 찾을 수 없습니다.");
+      notify("선택한 카테고리를 찾을 수 없습니다.");
       return;
     }
 
@@ -244,7 +272,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setNewMenuUnitCost("");
     setShowAddMenuModal(false);
 
-    onShowToast?.("새 메뉴가 추가되었습니다.");
+    notify("새 메뉴가 추가되었습니다.");
   };
 
   const handleDeleteMenu = () => {
@@ -261,7 +289,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
     onChangeCategories(next);
     setDeleteTarget(null);
-    onShowToast?.("메뉴가 삭제되었습니다.");
+    notify("메뉴가 삭제되었습니다.");
   };
 
   return (
@@ -316,11 +344,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             </div>
 
             <div className="hidden grid-cols-12 gap-2 border-b pb-2 text-xs font-bold text-slate-500 md:grid">
-              <div className="col-span-3">메뉴명</div>
+              <div className="col-span-2">메뉴명</div>
+              <div className="col-span-2">순서</div>
               <div className="col-span-2">Price</div>
               <div className="col-span-2">Unit Cost</div>
               <div className="col-span-1">상태</div>
-              <div className="col-span-2">History</div>
+              <div className="col-span-1">History</div>
               <div className="col-span-2">Delete</div>
             </div>
 
@@ -328,17 +357,43 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               {category.items.map((item, itemIndex) => {
                 const originalItem = originalCategories[categoryIndex]?.items?.[itemIndex];
 
-                const changed =
-                  !isSameValue(item.price, originalItem?.price) ||
-                  !isSameValue(item.unitCost, originalItem?.unitCost);
+                // 신규 추가 메뉴는 Saved 취급
+                const changed = originalItem
+                  ? !isSameValue(item.price, originalItem?.price) ||
+                    !isSameValue(item.unitCost, originalItem?.unitCost)
+                  : false;
+
+                const isFirst = itemIndex === 0;
+                const isLast = itemIndex === category.items.length - 1;
 
                 return (
                   <div
                     key={item.id}
                     className="grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center"
                   >
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-2">
                       <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => moveItem(categoryIndex, itemIndex, "up")}
+                          disabled={isFirst}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          ↑ 위로
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveItem(categoryIndex, itemIndex, "down")}
+                          disabled={isLast}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          ↓ 아래로
+                        </button>
+                      </div>
                     </div>
 
                     <div className="md:col-span-2">
@@ -383,13 +438,13 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       </span>
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-1">
                       <button
                         type="button"
                         onClick={() => handleOpenHistory(item.id, item.name)}
                         className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       >
-                        History 보기
+                        History
                       </button>
                     </div>
 
@@ -448,7 +503,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b px-6 py-4 bg-indigo-50">
+            <div className="border-b bg-indigo-50 px-6 py-4">
               <h3 className="text-lg font-black text-indigo-900">새 메뉴 추가</h3>
               <p className="mt-1 text-sm text-indigo-700">
                 새 메뉴를 생성한 뒤 목록에 바로 반영합니다.
@@ -552,9 +607,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="px-6 py-5">
               <p className="text-sm text-slate-700">
                 <span className="font-bold">{deleteTarget.itemName}</span> 메뉴를 삭제하시겠습니까?
-              </p>
-              <p className="mt-2 text-xs font-semibold text-rose-500">
-                삭제 후 저장하면 현재 categories 상태 기준으로 반영됩니다.
               </p>
             </div>
 
