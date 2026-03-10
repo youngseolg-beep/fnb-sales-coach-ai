@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../supabaseClient";
 
 export interface MenuMasterRow {
   id: string;
@@ -32,7 +32,6 @@ export async function loadMenuMaster(): Promise<MenuCategory[]> {
     if (!categoryMap[menu.category]) {
       categoryMap[menu.category] = [];
     }
-
     categoryMap[menu.category].push(menu);
   });
 
