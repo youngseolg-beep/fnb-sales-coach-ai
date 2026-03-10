@@ -1310,28 +1310,34 @@ await loadComparisonData();
 return (
   <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
 
-   <div style={{border:"1px solid #ccc", padding:"10px", marginBottom:"20px"}}>
+   <div style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "20px" }}>
+  <h3>Period Analytics Test</h3>
 
-<h3>Period Analytics Test</h3>
+  <div>Current Range: {periodRange.start} ~ {periodRange.end}</div>
+  <div>Comparison Range: {comparisonRange?.start ?? "-"} ~ {comparisonRange?.end ?? "-"}</div>
 
-<div>Current Range: {periodRange.start} ~ {periodRange.end}</div>
-<div>Comparison Range: {comparisonRange?.start ?? "-"} ~ {comparisonRange?.end ?? "-"}</div>
+  <div>Rows: {currentPeriodStats?.rows ?? 0}</div>
+  <div>Sales: {currentPeriodStats?.sales ?? 0}</div>
+  <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
+  <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
+  <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
+  <div>
+    Sales Change: {comparisonStats?.sales
+      ? (((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales * 100).toFixed(1)
+      : "0.0"}%
+  </div>
 
-<div>Rows: {currentPeriodStats?.rows ?? 0}</div>
-<div>Sales: {currentPeriodStats?.sales ?? 0}</div>
-<div>Orders: {currentPeriodStats?.orders ?? 0}</div>
-<div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
-<div>AOV: {currentPeriodStats?.aov ?? 0}</div>
-<div>Sales Change: {comparisonStats?.sales ? (((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales * 100).toFixed(1) : "0.0"}%</div>
-<div style={{ marginTop: "10px" }}>
-  <h3>Comparison Period Test</h3>
+  <div style={{ marginTop: "10px" }}>
+    <h3>Comparison Period Test</h3>
 
-  <div>Rows: {comparisonStats?.rows ?? 0}</div>
-  <div>Sales: {comparisonStats?.sales ?? 0}</div>
-  <div>Orders: {comparisonStats?.orders ?? 0}</div>
-  <div>Visitors: {comparisonStats?.visitors ?? 0}</div>
-  <div>AOV: {comparisonStats?.aov ?? 0}</div>
+    <div>Rows: {comparisonStats?.rows ?? 0}</div>
+    <div>Sales: {comparisonStats?.sales ?? 0}</div>
+    <div>Orders: {comparisonStats?.orders ?? 0}</div>
+    <div>Visitors: {comparisonStats?.visitors ?? 0}</div>
+    <div>AOV: {comparisonStats?.aov ?? 0}</div>
+  </div>
 </div>
+
 <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
   <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Sales</div>
 
@@ -1349,7 +1355,8 @@ return (
       : "0.0%"}
   </div>
 </div>
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+
+<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
   <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Orders</div>
 
   <div className="text-2xl font-black text-slate-900">
@@ -1357,14 +1364,13 @@ return (
   </div>
 
   <div className="text-sm text-slate-500 mt-1">
-  Previous: {comparisonStats?.orders ?? 0}
-</div>
+    Previous: {comparisonStats?.orders ?? 0}
+  </div>
 
-<div className="text-sm font-bold mt-2 text-emerald-600">
-  {comparisonStats?.orders
-    ? `${((((currentPeriodStats?.orders ?? 0) - comparisonStats.orders) / comparisonStats.orders) * 100).toFixed(1)}%`
-    : "0.0%"}
-</div>
+  <div className="text-sm font-bold mt-2 text-emerald-600">
+    {comparisonStats?.orders
+      ? `${((((currentPeriodStats?.orders ?? 0) - comparisonStats.orders) / comparisonStats.orders) * 100).toFixed(1)}%`
+      : "0.0%"}
   </div>
 </div>
 
@@ -1378,11 +1384,12 @@ return (
   <div className="text-sm text-slate-500 mt-1">
     Previous: {comparisonStats?.visitors ?? 0}
   </div>
-    <div className="text-sm font-bold mt-2 text-emerald-600">
-  {comparisonStats?.visitors
-    ? `${((((currentPeriodStats?.visitors ?? 0) - comparisonStats.visitors) / comparisonStats.visitors) * 100).toFixed(1)}%`
-    : "0.0%"}
-</div>
+
+  <div className="text-sm font-bold mt-2 text-emerald-600">
+    {comparisonStats?.visitors
+      ? `${((((currentPeriodStats?.visitors ?? 0) - comparisonStats.visitors) / comparisonStats.visitors) * 100).toFixed(1)}%`
+      : "0.0%"}
+  </div>
 </div>
 
 <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
@@ -1392,15 +1399,14 @@ return (
     {currentPeriodStats?.aov ?? 0}
   </div>
 
- <div className="text-sm text-slate-500 mt-1">
-  Previous: {comparisonStats?.aov ?? 0}
-</div>
+  <div className="text-sm text-slate-500 mt-1">
+    Previous: {comparisonStats?.aov ?? 0}
+  </div>
 
-<div className="text-sm font-bold mt-2 text-emerald-600">
-  {comparisonStats?.aov
-    ? `${((((currentPeriodStats?.aov ?? 0) - comparisonStats.aov) / comparisonStats.aov) * 100).toFixed(1)}%`
-    : "0.0%"}
-</div>
+  <div className="text-sm font-bold mt-2 text-emerald-600">
+    {comparisonStats?.aov
+      ? `${((((currentPeriodStats?.aov ?? 0) - comparisonStats.aov) / comparisonStats.aov) * 100).toFixed(1)}%`
+      : "0.0%"}
   </div>
 </div>
    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
