@@ -17,7 +17,7 @@ import {
   listDatesInRange,
 } from "./services/salesStorage";
 import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
-import { loadMenuMaster } from "./services/menuMasterService";
+import { loadMenuMaster } from "./services/services/menuMasterService";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 import MenuSettingsPage from "./components/MenuSettingsPage";
