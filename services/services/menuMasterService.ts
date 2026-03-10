@@ -18,7 +18,6 @@ export async function loadMenuMaster(): Promise<MenuCategory[]> {
     .from("menu_master")
     .select("*")
     .eq("is_active", true)
-    .order("category", { ascending: true })
     .order("display_order", { ascending: true });
 
   if (error) {
@@ -35,9 +34,29 @@ export async function loadMenuMaster(): Promise<MenuCategory[]> {
     categoryMap[menu.category].push(menu);
   });
 
-  return Object.keys(categoryMap).map((category) => ({
+  const categoryOrder = [
+    "음식 메뉴 (Main Dishes)",
+    "탕수육 (Tangsuyuk)",
+    "토핑 (Add-ons)",
+    "음료 및 주류 (Beverages)",
+    "고량주 (Liquors)",
+  ];
+
+  const sortedCategoryNames = Object.keys(categoryMap).sort((a, b) => {
+    const aIndex = categoryOrder.indexOf(a);
+    const bIndex = categoryOrder.indexOf(b);
+
+    const safeA = aIndex === -1 ? 999 : aIndex;
+    const safeB = bIndex === -1 ? 999 : bIndex;
+
+    return safeA - safeB;
+  });
+
+  return sortedCategoryNames.map((category) => ({
     name: category,
-    items: categoryMap[category],
+    items: categoryMap[category].sort(
+      (a, b) => Number(a.display_order || 0) - Number(b.display_order || 0)
+    ),
   }));
 }
 
