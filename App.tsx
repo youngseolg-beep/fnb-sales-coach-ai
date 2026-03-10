@@ -1086,6 +1086,8 @@ useEffect(() => {
 
       try {
         await refreshMonthlyStats(data.date.substring(0, 7));
+        await loadCurrentPeriodData();
+await loadComparisonData();
       } catch (e) {
         console.warn("refreshMonthlyStats failed (ignored):", e);
       }
