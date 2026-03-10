@@ -17,6 +17,7 @@ import {
   listDatesInRange,
 } from "./services/salesStorage";
 import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
+import { loadMenuMaster } from "./services/menuMasterService";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 import MenuSettingsPage from "./components/MenuSettingsPage";
@@ -54,6 +55,10 @@ const SOFT_DRINKS = [
   "쌕쌕 238ml",
 ];
 
+/**
+ * fallback 용 초기 메뉴
+ * menu_master 가 비어 있거나 로드 실패 시만 사용
+ */
 const INITIAL_CATEGORIES: MenuCategory[] = [
   {
     name: "음식 메뉴 (Main Dishes)",
@@ -129,25 +134,10 @@ const INITIAL_CATEGORIES: MenuCategory[] = [
   },
 ];
 
-const cloneInitialCategories = (): MenuCategory[] =>
-  INITIAL_CATEGORIES.map((category) => ({
-    ...category,
-    items: category.items.map((item) => ({ ...item })),
-  }));
-
 const cloneCategories = (categories: MenuCategory[]): MenuCategory[] =>
   categories.map((category) => ({
     ...category,
     items: category.items.map((item) => ({ ...item })),
-  }));
-
-const createEmptyCategories = (): MenuCategory[] =>
-  INITIAL_CATEGORIES.map((category) => ({
-    ...category,
-    items: category.items.map((item) => ({
-      ...item,
-      qty: 0,
-    })),
   }));
 
 const toSafeNumber = (value: any, fallback = 0) => {
@@ -155,38 +145,49 @@ const toSafeNumber = (value: any, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const persistMenuPriceHistory = async (
-  categories: MenuCategory[],
-  effectiveDate: string
-) => {
-  const jobs: Promise<any>[] = [];
-
-  for (const cat of categories) {
-    for (const item of cat.items) {
-      if (!item.id) continue;
-
-      jobs.push(
-        saveMenuPriceHistory(
-          item.id,
-          effectiveDate,
-          Number(item.price ?? 0),
-          item.unitCost !== null && item.unitCost !== undefined
-            ? Number(item.unitCost)
-            : undefined
-        )
-      );
-    }
+const normalizeMenuMasterCategories = (categories?: MenuCategory[] | null): MenuCategory[] => {
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return cloneCategories(INITIAL_CATEGORIES);
   }
 
-  await Promise.all(jobs);
+  return categories.map((category) => ({
+    name: String(category.name),
+    items: Array.isArray(category.items)
+      ? category.items.map((item: any) => ({
+          id: String(item.id),
+          name: String(item.name),
+          price:
+            item.price === undefined || item.price === null || item.price === ""
+              ? 0
+              : toSafeNumber(item.price, 0),
+          qty: 0,
+          unitCost:
+            item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
+              ? undefined
+              : toSafeNumber(item.unitCost, 0),
+        }))
+      : [],
+  }));
 };
 
+const createEmptyCategoriesFromBase = (baseCategories: MenuCategory[]): MenuCategory[] =>
+  baseCategories.map((category) => ({
+    ...category,
+    items: category.items.map((item) => ({
+      ...item,
+      qty: 0,
+    })),
+  }));
+
 /**
- * 저장된 categories를 우선 사용하되,
- * INITIAL_CATEGORIES의 최신 구조와 merge
+ * 저장된 daily_sales.categories를 우선 사용하되,
+ * 현재 baseCategories(menu_master 기반)의 최신 메뉴 구조와 merge
  */
-const mergeCategoriesWithInitial = (loaded?: MenuCategory[] | null): MenuCategory[] => {
-  const base = cloneInitialCategories();
+const mergeCategoriesWithBase = (
+  baseCategories: MenuCategory[],
+  loaded?: MenuCategory[] | null
+): MenuCategory[] => {
+  const base = cloneCategories(baseCategories);
 
   if (!Array.isArray(loaded) || loaded.length === 0) {
     return base;
@@ -263,6 +264,32 @@ const mergeCategoriesWithInitial = (loaded?: MenuCategory[] | null): MenuCategor
   return [...mergedBase, ...extraCategories];
 };
 
+const persistMenuPriceHistory = async (
+  categories: MenuCategory[],
+  effectiveDate: string
+) => {
+  const jobs: Promise<any>[] = [];
+
+  for (const cat of categories) {
+    for (const item of cat.items) {
+      if (!item.id) continue;
+
+      jobs.push(
+        saveMenuPriceHistory(
+          item.id,
+          effectiveDate,
+          Number(item.price ?? 0),
+          item.unitCost !== null && item.unitCost !== undefined
+            ? Number(item.unitCost)
+            : undefined
+        )
+      );
+    }
+  }
+
+  await Promise.all(jobs);
+};
+
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
@@ -279,6 +306,11 @@ const App: React.FC = () => {
     return new Date().toISOString().split("T")[0];
   });
 
+  const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
+    cloneCategories(INITIAL_CATEGORIES)
+  );
+  const [menuMasterLoading, setMenuMasterLoading] = useState(true);
+
   const [data, setData] = useState<SalesReportData>(() => {
     const today = new Date().toISOString().split("T")[0];
     const ym = getMonthKey(today);
@@ -292,12 +324,12 @@ const App: React.FC = () => {
       note: "",
       monthlyTarget: monthTarget,
       mtdSales: 0,
-      categories: cloneInitialCategories(),
+      categories: cloneCategories(INITIAL_CATEGORIES),
     };
   });
 
   const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
-    cloneInitialCategories()
+    cloneCategories(INITIAL_CATEGORIES)
   );
 
   const [report, setReport] = useState<string>("");
@@ -627,6 +659,8 @@ const App: React.FC = () => {
       const yearMonth = getMonthKey(dateStr);
       const priceMap = await getMenuPricesForDate(dateStr);
 
+      const activeBaseCategories = normalizeMenuMasterCategories(menuMasterCategories);
+
       let nextCategories: MenuCategory[];
       let nextPosSales = 0;
       let nextOrders = 0;
@@ -634,13 +668,13 @@ const App: React.FC = () => {
       let nextNote = "";
 
       if (dbData) {
-        nextCategories = mergeCategoriesWithInitial(dbData.categories);
+        nextCategories = mergeCategoriesWithBase(activeBaseCategories, dbData.categories);
         nextPosSales = toSafeNumber(dbData.posSales, 0);
         nextOrders = toSafeNumber(dbData.orders, 0);
         nextVisitCount = toSafeNumber(dbData.visitCount, 0);
         nextNote = String((dbData as any).note ?? "");
       } else {
-        nextCategories = createEmptyCategories();
+        nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
       }
 
       nextCategories = nextCategories.map((cat) => ({
@@ -1021,7 +1055,7 @@ const App: React.FC = () => {
 
       await deleteDaily(targetDate);
 
-      const resetCats = createEmptyCategories();
+      const resetCats = createEmptyCategoriesFromBase(normalizeMenuMasterCategories(menuMasterCategories));
 
       setData((prev) => ({
         ...prev,
@@ -1080,9 +1114,47 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
+
+    let isMounted = true;
+
+    const initMenuMaster = async () => {
+      try {
+        setMenuMasterLoading(true);
+
+        const loadedMenuCategories = await loadMenuMaster();
+        const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+
+        if (!isMounted) return;
+
+        if (normalized.length > 0) {
+          setMenuMasterCategories(normalized);
+        } else {
+          setMenuMasterCategories(cloneCategories(INITIAL_CATEGORIES));
+        }
+      } catch (error) {
+        console.error("Menu Master Load Error:", error);
+        if (!isMounted) return;
+        setMenuMasterCategories(cloneCategories(INITIAL_CATEGORIES));
+      } finally {
+        if (isMounted) {
+          setMenuMasterLoading(false);
+        }
+      }
+    };
+
+    initMenuMaster();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (menuMasterLoading) return;
     fetchData(selectedDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, isLoggedIn]);
+  }, [selectedDate, isLoggedIn, menuMasterLoading]);
 
   useEffect(() => {
     if (!toastMsg) return;
@@ -1120,6 +1192,17 @@ const App: React.FC = () => {
               로그인
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (menuMasterLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-slate-900 text-xl font-black">Menu Master Loading...</div>
+          <div className="mt-2 text-sm font-semibold text-slate-500">menu_master 데이터를 불러오는 중입니다.</div>
         </div>
       </div>
     );
