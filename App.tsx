@@ -17,6 +17,7 @@ import {
   deleteDaily,
   listDatesInRange,
 } from "./services/salesStorage";
+import { loadDailyRange } from "./services/salesStorage";
 import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
 import { loadMenuMaster } from "./services/services/menuMasterService";
 import DataInput from "./components/DataInput";
@@ -369,6 +370,16 @@ useEffect(() => {
 }, [periodRange, comparisonMode]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
+  const loadComparisonData = async () => {
+  if (!comparisonRange) return;
+
+  const rows = await loadDailyRange(
+    comparisonRange.start,
+    comparisonRange.end
+  );
+
+  console.log("comparison rows", rows);
+};
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
