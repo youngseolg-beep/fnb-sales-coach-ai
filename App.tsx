@@ -1309,13 +1309,25 @@ return (
   <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
 
    <div style={{border:"1px solid #ccc", padding:"10px", marginBottom:"20px"}}>
-  <h3>Period Analytics Test</h3>
 
-  <div>Rows: {currentPeriodStats?.rows ?? 0}</div>
-  <div>Sales: {currentPeriodStats?.sales ?? 0}</div>
-  <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
-  <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
-  <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
+<h3>Period Analytics Test</h3>
+
+<div>Rows: {currentPeriodStats?.rows ?? 0}</div>
+<div>Sales: {currentPeriodStats?.sales ?? 0}</div>
+<div>Orders: {currentPeriodStats?.orders ?? 0}</div>
+<div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
+<div>AOV: {currentPeriodStats?.aov ?? 0}</div>
+
+<div style={{ marginTop:"10px" }}>
+<h3>Comparison Period Test</h3>
+
+<div>Rows: {comparisonStats?.rows ?? 0}</div>
+<div>Sales: {comparisonStats?.sales ?? 0}</div>
+<div>Orders: {comparisonStats?.orders ?? 0}</div>
+<div>Visitors: {comparisonStats?.visitors ?? 0}</div>
+<div>AOV: {comparisonStats?.aov ?? 0}</div>
+</div>
+
 </div>
 
    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
