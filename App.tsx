@@ -1332,9 +1332,59 @@ return (
 <div>Visitors: {comparisonStats?.visitors ?? 0}</div>
 <div>AOV: {comparisonStats?.aov ?? 0}</div>
 </div>
+</div>
+<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Sales</div>
 
+  <div className="text-2xl font-black text-slate-900">
+    ${currentPeriodStats?.sales ?? 0}
+  </div>
+
+  <div className="text-sm text-slate-500 mt-1">
+    Previous: ${comparisonStats?.sales ?? 0}
+  </div>
+
+  <div className="text-sm font-bold mt-2 text-emerald-600">
+    {comparisonStats?.sales
+      ? `${((((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales) * 100).toFixed(1)}%`
+      : "0.0%"}
+  </div>
+</div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Orders</div>
+
+  <div className="text-2xl font-black text-slate-900">
+    {currentPeriodStats?.orders ?? 0}
+  </div>
+
+  <div className="text-sm text-slate-500 mt-1">
+    Previous: {comparisonStats?.orders ?? 0}
+  </div>
 </div>
 
+<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Visitors</div>
+
+  <div className="text-2xl font-black text-slate-900">
+    {currentPeriodStats?.visitors ?? 0}
+  </div>
+
+  <div className="text-sm text-slate-500 mt-1">
+    Previous: {comparisonStats?.visitors ?? 0}
+  </div>
+</div>
+
+<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - AOV</div>
+
+  <div className="text-2xl font-black text-slate-900">
+    {currentPeriodStats?.aov ?? 0}
+  </div>
+
+  <div className="text-sm text-slate-500 mt-1">
+    Previous: {comparisonStats?.aov ?? 0}
+  </div>
+</div>
    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
   <div className="max-w-6xl mx-auto flex items-center justify-between">
     <div className="flex items-center gap-3">
