@@ -1098,8 +1098,8 @@ const App: React.FC = () => {
             <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
               <i className="fa-solid fa-lock text-white text-2xl"></i>
             </div>
-            <h1 className="text-white font-black text-2xl uppercase tracking-tight">Sales Coach AI</h1>
-            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">비밀번호를 입력하세요</p>
+            <h1 className="text-white font-black text-2xl uppercase tracking-tight">Sales Coach AI TEST</h1>
+            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">비밀번호를 입력하세요(0529)</p>
           </div>
           <form onSubmit={handleLogin} className="p-8 space-y-6">
             <div>
