@@ -370,7 +370,29 @@ useEffect(() => {
 }, [periodRange, comparisonMode]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
-  const [comparisonStats, setComparisonStats] = useState<any>(null);
+const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
+const [comparisonStats, setComparisonStats] = useState<any>(null);
+  const calculatePeriodKPI = (rows: any[]) => {
+  if (!rows || rows.length === 0) {
+    return {
+      sales: 0,
+      orders: 0,
+      visitors: 0,
+      aov: 0,
+    };
+  }
+
+  const sales = rows.reduce((sum, row) => sum + Number(row.sales || 0), 0);
+  const orders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
+  const visitors = rows.reduce((sum, row) => sum + Number(row.visitors || 0), 0);
+
+  return {
+    sales,
+    orders,
+    visitors,
+    aov: orders > 0 ? sales / orders : 0,
+  };
+};
  const loadComparisonData = async () => {
   if (!comparisonRange) return;
 
@@ -381,7 +403,12 @@ useEffect(() => {
 
   console.log("comparison rows", rows);
 
-  setComparisonStats(rows);
+  const kpi = calculatePeriodKPI(rows);
+
+  setComparisonStats({
+    ...kpi,
+    rows: rows.length,
+  });
 };
 
 const loadCurrentPeriodData = async () => {
@@ -396,9 +423,9 @@ const loadCurrentPeriodData = async () => {
 
   const kpi = calculatePeriodKPI(rows);
 
-  setPeriodStats({
+  setCurrentPeriodStats({
     ...kpi,
-    rows: rows.length
+    rows: rows.length,
   });
 };
 
@@ -1281,15 +1308,15 @@ useEffect(() => {
 return (
   <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
 
-    <div style={{border:"1px solid #ccc", padding:"10px", marginBottom:"20px"}}>
-      <h3>Period Analytics Test</h3>
+   <div style={{border:"1px solid #ccc", padding:"10px", marginBottom:"20px"}}>
+  <h3>Period Analytics Test</h3>
 
-      <div>Rows: {periodStats?.rows ?? 0}</div>
-      <div>Sales: {periodStats?.sales ?? 0}</div>
-      <div>Orders: {periodStats?.orders ?? 0}</div>
-      <div>Visitors: {periodStats?.visitors ?? 0}</div>
-      <div>AOV: {periodStats?.aov ?? 0}</div>
-    </div>
+  <div>Rows: {currentPeriodStats?.rows ?? 0}</div>
+  <div>Sales: {currentPeriodStats?.sales ?? 0}</div>
+  <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
+  <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
+  <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
+</div>
 
    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
   <div className="max-w-6xl mx-auto flex items-center justify-between">
