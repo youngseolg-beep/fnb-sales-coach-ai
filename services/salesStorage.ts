@@ -273,3 +273,14 @@ export async function getMonthlyTotal(yearMonth: string) {
 
   return sum;
 }
+export async function loadDailyRange(start: string, end: string) {
+  const { data, error } = await supabase
+    .from("daily_sales")
+    .select("*")
+    .gte("date", start)
+    .lte("date", end)
+    .order("date", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
