@@ -1285,32 +1285,40 @@ return (
       <div>AOV: {periodStats?.aov ?? 0}</div>
     </div>
 
-    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
-                홍콩반점 테스트
-              </h1>
-              <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
-                Sales Coach AI (USD)
-              </p>
-            </div>
-          </div>
+   <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
+  <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
+        <i className="fa-solid fa-store font-black"></i>
+      </div>
 
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex flex-col items-end leading-tight">
-              <div className="flex items-center gap-2">
-                {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
-                {data.date}
-              </div>
-              <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
-                POWERED BY <span className="text-white">YOUNGSEOL</span>
-              </div>
-            </div>
+      <div>
+        <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
+          홍콩반점 테스트
+        </h1>
+        <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
+          Sales Coach AI (USD)
+        </p>
+      </div>
+    </div>
 
-            <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
-              <i className="fa-solid fa-right-from-bracket"></i>
-            </button>
-          </div>
+    <div className="flex items-center gap-3 md:gap-4">
+      <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex flex-col items-end leading-tight">
+        <div className="flex items-center gap-2">
+          {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
+          {data.date}
         </div>
-      </nav>
+        <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
+          POWERED BY <span className="text-white">YOUNGSEOL</span>
+        </div>
+      </div>
+
+      <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
+        <i className="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </div>
+</nav>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 mt-6 md:mt-10 space-y-8 md:space-y-12">
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
