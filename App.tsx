@@ -1312,6 +1312,9 @@ return (
 
 <h3>Period Analytics Test</h3>
 
+<div>Current Range: {periodRange.start} ~ {periodRange.end}</div>
+<div>Comparison Range: {comparisonRange?.start ?? "-"} ~ {comparisonRange?.end ?? "-"}</div>
+
 <div>Rows: {currentPeriodStats?.rows ?? 0}</div>
 <div>Sales: {currentPeriodStats?.sales ?? 0}</div>
 <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
