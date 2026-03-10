@@ -1323,15 +1323,14 @@ return (
 <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
 <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
 <div>Sales Change: {comparisonStats?.sales ? (((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales * 100).toFixed(1) : "0.0"}%</div>
-<div style={{ marginTop:"10px" }}>
-<h3>Comparison Period Test</h3>
+<div style={{ marginTop: "10px" }}>
+  <h3>Comparison Period Test</h3>
 
-<div>Rows: {comparisonStats?.rows ?? 0}</div>
-<div>Sales: {comparisonStats?.sales ?? 0}</div>
-<div>Orders: {comparisonStats?.orders ?? 0}</div>
-<div>Visitors: {comparisonStats?.visitors ?? 0}</div>
-<div>AOV: {comparisonStats?.aov ?? 0}</div>
-</div>
+  <div>Rows: {comparisonStats?.rows ?? 0}</div>
+  <div>Sales: {comparisonStats?.sales ?? 0}</div>
+  <div>Orders: {comparisonStats?.orders ?? 0}</div>
+  <div>Visitors: {comparisonStats?.visitors ?? 0}</div>
+  <div>AOV: {comparisonStats?.aov ?? 0}</div>
 </div>
 <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
   <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Sales</div>
