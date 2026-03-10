@@ -1135,7 +1135,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
-                홍콩반점 캄보디아
+                홍콩반점 테스트
               </h1>
               <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
                 Sales Coach AI (USD)
