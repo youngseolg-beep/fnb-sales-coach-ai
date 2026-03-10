@@ -290,9 +290,9 @@ export async function loadDailyRange(start: string, end: string) {
     .map((row) => {
       const p: any = safeParsePayload(row.payload);
 
-     return {
+return {
   date: row.date,
-  sales: toNumber(row.total_sales ?? p?.posSales, 0),
+  sales: toNumber(p?.posSales ?? row.total_sales, 0),
   orders: toNumber(row.orders ?? p?.orders, 0),
   visitors: toNumber(row.visit_count ?? p?.visitCount, 0),
 };
