@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO, subDays } from "date-fns";
 import type { MenuCategory } from "../types";
-import { getMenuPriceHistory, saveMenuPriceHistory } from "../services/services/menuPriceService";
+import { getMenuPriceHistory } from "../services/services/menuPriceService";
 import {
   createMenu,
   deactivateMenu,
   updateMenuOrder,
 } from "../services/services/menuMasterService";
+import { supabase } from "../services/supabaseClient";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -244,9 +245,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     try {
       setActionSaving(true);
 
-      await Promise.all(
-        items.map((item, idx) => updateMenuOrder(item.id, idx))
-      );
+      await Promise.all(items.map((item, idx) => updateMenuOrder(item.id, idx)));
 
       await onReloadMenuMaster();
       notify("메뉴 순서가 저장되었습니다.");
@@ -318,7 +317,28 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       setActionSaving(true);
 
       await createMenu(newId, menuName, categoryName, displayOrder);
-      await saveMenuPriceHistory(newId, selectedDate, price, unitCost);
+
+      const { error: historyError } = await supabase
+        .from("menu_price_history")
+        .upsert(
+          [
+            {
+              menu_id: newId,
+              effective_date: selectedDate,
+              price,
+              unit_cost: unitCost,
+            },
+          ],
+          {
+            onConflict: "menu_id,effective_date",
+          }
+        );
+
+      if (historyError) {
+        console.error("initial price history insert error:", historyError);
+        throw historyError;
+      }
+
       await onReloadMenuMaster();
 
       setNewMenuCategoryName("");
