@@ -1322,7 +1322,7 @@ return (
 <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
 <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
 <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
-
+<div>Sales Change: {comparisonStats?.sales ? (((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales * 100).toFixed(1) : "0.0"}%</div>
 <div style={{ marginTop:"10px" }}>
 <h3>Comparison Period Test</h3>
 
