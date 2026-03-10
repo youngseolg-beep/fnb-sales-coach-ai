@@ -310,9 +310,12 @@ const App: React.FC = () => {
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
   );
-  const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
-  const [data, setData] = useState<SalesReportData>(() => {
+const [menuMasterLoading, setMenuMasterLoading] = useState(true);
+
+const [comparisonMode, setComparisonMode] = useState<"WOW" | "MOM" | "YOY">("WOW");
+const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
+const [data, setData] = useState<SalesReportData>(() => {
     const today = new Date().toISOString().split("T")[0];
     const ym = getMonthKey(today);
     const monthTarget = loadMonthlyTarget(ym, 15000);
@@ -356,10 +359,15 @@ const App: React.FC = () => {
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
-  const [periodRange, setPeriodRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
-    end: new Date().toISOString().split("T")[0],
-  });
+ const [periodRange, setPeriodRange] = useState({
+  start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
+  end: new Date().toISOString().split("T")[0],
+});
+
+useEffect(() => {
+  setComparisonRange(getComparisonRange(periodRange, comparisonMode));
+}, [periodRange, comparisonMode]);
+
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
