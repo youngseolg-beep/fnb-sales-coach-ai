@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { getComparisonRange } from "../utils/periodComparison";
+import { getComparisonRange } from "./utils/periodComparison";
 import {
   SalesReportData,
   CalculationResult,
