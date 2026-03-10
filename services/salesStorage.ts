@@ -276,11 +276,25 @@ export async function getMonthlyTotal(yearMonth: string) {
 export async function loadDailyRange(start: string, end: string) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("*")
+    .select("date,total_sales,orders,visit_count,payload")
     .gte("date", start)
     .lte("date", end)
     .order("date", { ascending: true });
 
   if (error) throw error;
-  return data ?? [];
+
+  const rows = (data ?? []) as any[];
+
+  return rows
+    .filter((r) => !isDeletedPayload(r.payload))
+    .map((row) => {
+      const p: any = safeParsePayload(row.payload);
+
+      return {
+        date: row.date,
+        sales: toNumber(p?.posSales ?? row.total_sales, 0),
+        orders: toNumber(p?.orders ?? row.orders, 0),
+        visitors: toNumber(p?.visitCount ?? row.visit_count, 0),
+      };
+    });
 }
