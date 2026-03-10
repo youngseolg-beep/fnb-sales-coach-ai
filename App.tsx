@@ -393,6 +393,13 @@ const loadCurrentPeriodData = async () => {
   );
 
   console.log("current period rows", rows);
+
+  const kpi = calculatePeriodKPI(rows);
+
+  setPeriodStats({
+    ...kpi,
+    rows: rows.length
+  });
 };
 
 useEffect(() => {
