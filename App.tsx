@@ -1379,6 +1379,11 @@ return (
   <div className="text-sm text-slate-500 mt-1">
     Previous: {comparisonStats?.visitors ?? 0}
   </div>
+    <div className="text-sm font-bold mt-2 text-emerald-600">
+  {comparisonStats?.visitors
+    ? `${((((currentPeriodStats?.visitors ?? 0) - comparisonStats.visitors) / comparisonStats.visitors) * 100).toFixed(1)}%`
+    : "0.0%"}
+</div>
 </div>
 
 <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
@@ -1388,8 +1393,15 @@ return (
     {currentPeriodStats?.aov ?? 0}
   </div>
 
-  <div className="text-sm text-slate-500 mt-1">
-    Previous: {comparisonStats?.aov ?? 0}
+ <div className="text-sm text-slate-500 mt-1">
+  Previous: {comparisonStats?.aov ?? 0}
+</div>
+
+<div className="text-sm font-bold mt-2 text-emerald-600">
+  {comparisonStats?.aov
+    ? `${((((currentPeriodStats?.aov ?? 0) - comparisonStats.aov) / comparisonStats.aov) * 100).toFixed(1)}%`
+    : "0.0%"}
+</div>
   </div>
 </div>
    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
