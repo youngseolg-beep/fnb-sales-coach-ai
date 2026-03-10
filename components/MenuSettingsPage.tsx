@@ -65,8 +65,13 @@ const buildHistoryRanges = (rows: any[]) => {
 
   const compressed = compressHistoryRows(ascRows);
 
-  if (compressed.length <= 1) {
-    return [];
+  if (compressed.length === 1) {
+    return [
+      {
+        ...compressed[0],
+        applied_range: `${compressed[0].effective_date} 이후`,
+      },
+    ];
   }
 
   const rangedRows = compressed.map((row, idx) => {
