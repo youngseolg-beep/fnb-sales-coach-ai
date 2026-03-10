@@ -381,7 +381,6 @@ useEffect(() => {
 
   console.log("comparison rows", rows);
 
-  setPeriodStats({ rows: rows.length });
   setComparisonStats(rows);
 };
 
