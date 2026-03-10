@@ -1,7 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO, subDays } from "date-fns";
 import type { MenuCategory } from "../types";
-import { getMenuPriceHistory } from "../services/services/menuPriceService";
+import { getMenuPriceHistory, saveMenuPriceHistory } from "../services/services/menuPriceService";
+import {
+  createMenu,
+  deactivateMenu,
+  updateMenuOrder,
+} from "../services/services/menuMasterService";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -9,6 +14,7 @@ interface MenuSettingsPageProps {
   originalCategories: MenuCategory[];
   onChangeCategories: (next: MenuCategory[]) => void;
   onSavePrices: () => Promise<void> | void;
+  onReloadMenuMaster: () => Promise<void>;
   saving: boolean;
   onShowToast?: (msg: string) => void;
 }
@@ -99,6 +105,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   originalCategories,
   onChangeCategories,
   onSavePrices,
+  onReloadMenuMaster,
   saving,
   onShowToast,
 }) => {
@@ -120,6 +127,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     itemId: string;
     itemName: string;
   } | null>(null);
+
+  const [actionSaving, setActionSaving] = useState(false);
 
   const notify = (msg: string) => {
     if (onShowToast) onShowToast(msg);
@@ -196,28 +205,53 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     onChangeCategories(next);
   };
 
-  const moveItem = (categoryIndex: number, itemIndex: number, direction: "up" | "down") => {
-    const next = categories.map((category, cIdx) => {
-      if (cIdx !== categoryIndex) return category;
+  const moveItem = async (
+    categoryIndex: number,
+    itemIndex: number,
+    direction: "up" | "down"
+  ) => {
+    if (actionSaving) return;
 
-      const items = [...category.items];
-      const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
+    const category = categories[categoryIndex];
+    if (!category) return;
 
-      if (targetIndex < 0 || targetIndex >= items.length) {
-        return category;
-      }
+    const items = [...category.items];
+    const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
 
-      const temp = items[itemIndex];
-      items[itemIndex] = items[targetIndex];
-      items[targetIndex] = temp;
+    if (targetIndex < 0 || targetIndex >= items.length) {
+      return;
+    }
 
+    const temp = items[itemIndex];
+    items[itemIndex] = items[targetIndex];
+    items[targetIndex] = temp;
+
+    const next = categories.map((cat, idx) => {
+      if (idx !== categoryIndex) return cat;
       return {
-        ...category,
+        ...cat,
         items,
       };
     });
 
     onChangeCategories(next);
+
+    try {
+      setActionSaving(true);
+
+      await Promise.all(
+        items.map((item, idx) => updateMenuOrder(item.id, idx))
+      );
+
+      await onReloadMenuMaster();
+      notify("메뉴 순서가 저장되었습니다.");
+    } catch (error) {
+      console.error("moveItem error:", error);
+      notify("메뉴 순서 저장 중 오류가 발생했습니다.");
+      await onReloadMenuMaster();
+    } finally {
+      setActionSaving(false);
+    }
   };
 
   const handleConfirmSave = async () => {
@@ -243,7 +277,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     }
   };
 
-  const handleAddMenu = () => {
+  const handleAddMenu = async () => {
     const categoryName = String(newMenuCategoryName || "").trim();
     const menuName = String(newMenuName || "").trim();
     const priceRaw = String(newMenuPrice || "").trim();
@@ -266,58 +300,54 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       return;
     }
 
-    const categoryIndex = categories.findIndex((cat) => cat.name === categoryName);
-    if (categoryIndex < 0) {
+    const category = categories.find((cat) => cat.name === categoryName);
+    if (!category) {
       notify("선택한 카테고리를 찾을 수 없습니다.");
       return;
     }
 
     const newId = `${slugify(categoryName)}-${slugify(menuName)}-${Date.now()}`;
+    const displayOrder = category.items.length;
 
-    const next = categories.map((category, idx) => {
-      if (idx !== categoryIndex) return category;
+    try {
+      setActionSaving(true);
 
-      return {
-        ...category,
-        items: [
-          ...category.items,
-          {
-            id: newId,
-            name: menuName,
-            price,
-            qty: 0,
-            unitCost,
-          },
-        ],
-      };
-    });
+      await createMenu(newId, menuName, categoryName, displayOrder);
+      await saveMenuPriceHistory(newId, selectedDate, price, unitCost);
+      await onReloadMenuMaster();
 
-    onChangeCategories(next);
+      setNewMenuCategoryName("");
+      setNewMenuName("");
+      setNewMenuPrice("");
+      setNewMenuUnitCost("");
+      setShowAddMenuModal(false);
 
-    setNewMenuCategoryName("");
-    setNewMenuName("");
-    setNewMenuPrice("");
-    setNewMenuUnitCost("");
-    setShowAddMenuModal(false);
-
-    notify("새 메뉴가 추가되었습니다.");
+      notify("새 메뉴가 추가되었습니다.");
+    } catch (error) {
+      console.error("handleAddMenu error:", error);
+      notify("새 메뉴 추가 중 오류가 발생했습니다.");
+    } finally {
+      setActionSaving(false);
+    }
   };
 
-  const handleDeleteMenu = () => {
+  const handleDeleteMenu = async () => {
     if (!deleteTarget) return;
 
-    const next = categories.map((category, cIdx) => {
-      if (cIdx !== deleteTarget.categoryIndex) return category;
+    try {
+      setActionSaving(true);
 
-      return {
-        ...category,
-        items: category.items.filter((_, iIdx) => iIdx !== deleteTarget.itemIndex),
-      };
-    });
+      await deactivateMenu(deleteTarget.itemId);
+      await onReloadMenuMaster();
 
-    onChangeCategories(next);
-    setDeleteTarget(null);
-    notify("메뉴가 삭제되었습니다.");
+      setDeleteTarget(null);
+      notify("메뉴가 삭제되었습니다.");
+    } catch (error) {
+      console.error("handleDeleteMenu error:", error);
+      notify("메뉴 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setActionSaving(false);
+    }
   };
 
   return (
@@ -342,7 +372,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddMenuModal(true)}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                disabled={actionSaving}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 + 새 메뉴 만들기
               </button>
@@ -350,7 +381,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || dirtyCount === 0}
+                disabled={saving || dirtyCount === 0 || actionSaving}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Saving..." : `가격 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
@@ -407,7 +438,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                         <button
                           type="button"
                           onClick={() => moveItem(categoryIndex, itemIndex, "up")}
-                          disabled={isFirst}
+                          disabled={isFirst || actionSaving}
                           className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           ↑ 위로
@@ -415,7 +446,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                         <button
                           type="button"
                           onClick={() => moveItem(categoryIndex, itemIndex, "down")}
-                          disabled={isLast}
+                          disabled={isLast || actionSaving}
                           className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           ↓ 아래로
@@ -486,7 +517,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                             itemName: item.name,
                           })
                         }
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                        disabled={actionSaving}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         메뉴 삭제
                       </button>
@@ -511,7 +543,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || dirtyCount === 0}
+                disabled={saving || dirtyCount === 0 || actionSaving}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Saving..." : "가격 저장"}
@@ -540,7 +572,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="space-y-4 px-6 py-5">
               <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3">
                 <p className="text-xs font-bold text-indigo-700">
-                  메뉴 생성 전용 창입니다. 가격 저장과는 별개로 새 메뉴를 먼저 목록에 추가합니다.
+                  메뉴 생성 후 초기 가격 / 원가도 함께 저장합니다.
                 </p>
               </div>
 
@@ -609,9 +641,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={handleAddMenu}
-                className="rounded-xl bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-700"
+                disabled={actionSaving}
+                className="rounded-xl bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                확인
+                {actionSaving ? "처리 중..." : "확인"}
               </button>
             </div>
           </div>
@@ -648,9 +681,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={handleDeleteMenu}
-                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white"
+                disabled={actionSaving}
+                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                삭제
+                {actionSaving ? "처리 중..." : "삭제"}
               </button>
             </div>
           </div>
