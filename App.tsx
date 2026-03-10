@@ -650,7 +650,7 @@ const App: React.FC = () => {
     });
   };
 
-  const fetchData = async (dateStr: string) => {
+  const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
     setDbLoading(true);
     setSaveStatus("");
 
@@ -659,7 +659,9 @@ const App: React.FC = () => {
       const yearMonth = getMonthKey(dateStr);
       const priceMap = await getMenuPricesForDate(dateStr);
 
-      const activeBaseCategories = normalizeMenuMasterCategories(menuMasterCategories);
+      const activeBaseCategories = normalizeMenuMasterCategories(
+        nextMenuMasterCategories ?? menuMasterCategories
+      );
 
       let nextCategories: MenuCategory[];
       let nextPosSales = 0;
@@ -742,6 +744,25 @@ const App: React.FC = () => {
       console.error("Fetch Error:", err);
     } finally {
       setDbLoading(false);
+    }
+  };
+
+  const reloadMenuMaster = async () => {
+    try {
+      setMenuMasterLoading(true);
+
+      const loadedMenuCategories = await loadMenuMaster();
+      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+      const nextMenuCategories =
+        normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES);
+
+      setMenuMasterCategories(nextMenuCategories);
+      await fetchData(data.date, nextMenuCategories);
+    } catch (error) {
+      console.error("reloadMenuMaster error:", error);
+      showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
+    } finally {
+      setMenuMasterLoading(false);
     }
   };
 
@@ -1567,6 +1588,7 @@ const App: React.FC = () => {
             originalCategories={originalCategories}
             onChangeCategories={handleMenuSettingsCategoriesChange}
             onSavePrices={handleSaveMenuPrices}
+            onReloadMenuMaster={reloadMenuMaster}
             saving={priceSaving}
             onShowToast={showToast}
           />
