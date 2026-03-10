@@ -370,7 +370,8 @@ useEffect(() => {
 }, [periodRange, comparisonMode]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
-  const loadComparisonData = async () => {
+  const [comparisonStats, setComparisonStats] = useState<any>(null);
+ const loadComparisonData = async () => {
   if (!comparisonRange) return;
 
   const rows = await loadDailyRange(
@@ -379,7 +380,29 @@ useEffect(() => {
   );
 
   console.log("comparison rows", rows);
+
+  setPeriodStats({ rows: rows.length });
+  setComparisonStats(rows);
 };
+
+const loadCurrentPeriodData = async () => {
+  if (!periodRange) return;
+
+  const rows = await loadDailyRange(
+    periodRange.start,
+    periodRange.end
+  );
+
+  console.log("current period rows", rows);
+};
+
+useEffect(() => {
+  loadComparisonData();
+}, [comparisonRange]);
+
+useEffect(() => {
+  loadCurrentPeriodData();
+}, [periodRange]);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
