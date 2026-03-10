@@ -1358,7 +1358,14 @@ return (
   </div>
 
   <div className="text-sm text-slate-500 mt-1">
-    Previous: {comparisonStats?.orders ?? 0}
+  Previous: {comparisonStats?.orders ?? 0}
+</div>
+
+<div className="text-sm font-bold mt-2 text-emerald-600">
+  {comparisonStats?.orders
+    ? `${((((currentPeriodStats?.orders ?? 0) - comparisonStats.orders) / comparisonStats.orders) * 100).toFixed(1)}%`
+    : "0.0%"}
+</div>
   </div>
 </div>
 
