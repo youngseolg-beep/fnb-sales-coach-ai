@@ -1272,16 +1272,20 @@ useEffect(() => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
-      <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
-              <i className="fa-solid fa-store font-black"></i>
-            </div>
-            <div>
-              <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
+return (
+  <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
+
+    <div style={{border:"1px solid #ccc", padding:"10px", marginBottom:"20px"}}>
+      <h3>Period Analytics Test</h3>
+
+      <div>Rows: {periodStats?.rows ?? 0}</div>
+      <div>Sales: {periodStats?.sales ?? 0}</div>
+      <div>Orders: {periodStats?.orders ?? 0}</div>
+      <div>Visitors: {periodStats?.visitors ?? 0}</div>
+      <div>AOV: {periodStats?.aov ?? 0}</div>
+    </div>
+
+    <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
                 홍콩반점 테스트
               </h1>
               <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
