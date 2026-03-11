@@ -26,7 +26,7 @@ import {
 import { generateCoachingReport } from "./services/geminiService";
 import { calculateMenuEngineeringForRange } from "./services/menuEngineeringService";
 
-import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/menuPriceService";
+import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
 import { loadMenuMaster } from "./services/menuMasterService";
 
 import { format, parseISO, subDays } from "date-fns";
