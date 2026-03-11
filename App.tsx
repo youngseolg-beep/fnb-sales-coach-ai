@@ -292,7 +292,7 @@ const persistMenuPriceHistory = async (
   await Promise.all(jobs);
 };
 
-const calcChangeRate = (current: number, 비교군: number) => {
+const calcChangeRate = (current: number, previous: number) => {
   if (!Number.isFinite(previous) || previous === 0) return 0;
   return ((current - previous) / previous) * 100;
 };
