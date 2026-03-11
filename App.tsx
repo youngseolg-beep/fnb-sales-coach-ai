@@ -561,8 +561,12 @@ const calculatePeriodKPI = (rows: any[]) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodRange]);
 
-  const [periodLoading, setPeriodLoading] = useState(false);
-  const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+const [periodLoading, setPeriodLoading] = useState(false);
+const [periodStats, setPeriodStats] = useState<any>(null);
+const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+const [comparisonMenuRows, setComparisonMenuRows] = useState<any[]>([]);
+
+const [topMenuMetric, setTopMenuMetric] = useState<"qty" | "sales">("qty");
 
   const hasMeaningfulInput = (v: SalesReportData) => {
     const hasBase =
