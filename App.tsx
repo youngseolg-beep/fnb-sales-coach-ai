@@ -10,9 +10,8 @@ import {
   loadDailyRange
 } from "./services/salesStorage";
 
-import PeriodTopMenuCompare, {
-  type PeriodMenuRow,
-} from "./components/PeriodTopMenuCompare";
+import PeriodMenuAnalysisSection from "./components/PeriodMenuAnalysisSection";
+import type { PeriodMenuRow } from "./components/PeriodTopMenuCompare";
 
 import { getComparisonRange, type ComparisonMode } from "./utils2/periodComparison";
 
@@ -34,7 +33,6 @@ import { format, parseISO, subDays } from "date-fns";
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 import MenuSettingsPage from "./components/MenuSettingsPage";
-import PeriodComparisonPanel from "./components/PeriodComparisonPanel";
 
 const AUTH_KEY = "fb_coach_auth";
 
@@ -316,6 +314,7 @@ const getInclusiveDayCountFromStrings = (start: string, end: string) => {
   endDate.setHours(0, 0, 0, 0);
   return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 };
+
 const loadMenuRowsForRange = async (start: string, end: string) => {
   const dates = await listDatesInRange(start, end);
   const rows: any[] = [];
@@ -328,6 +327,7 @@ const loadMenuRowsForRange = async (start: string, end: string) => {
 
   return rows;
 };
+
 const aggregateMenusFromRows = (rows: any[]): PeriodMenuRow[] => {
   const map = new Map<string, PeriodMenuRow>();
 
@@ -443,60 +443,60 @@ const App: React.FC = () => {
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
   }, [periodRange, comparisonMode]);
 
-const calculatePeriodKPI = (rows: any[]) => {
-  if (!rows || rows.length === 0) {
+  const calculatePeriodKPI = (rows: any[]) => {
+    if (!rows || rows.length === 0) {
+      return {
+        sales: 0,
+        orders: 0,
+        visitors: 0,
+        aov: 0,
+      };
+    }
+
+    const sales = rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row?.posSales ??
+            row?.sales ??
+            row?.total_sales ??
+            row?.totalSales ??
+            0
+        ),
+      0
+    );
+
+    const orders = rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row?.orders ??
+            row?.orderCount ??
+            0
+        ),
+      0
+    );
+
+    const visitors = rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row?.visitCount ??
+            row?.visitors ??
+            row?.guests ??
+            row?.guestCount ??
+            0
+        ),
+      0
+    );
+
     return {
-      sales: 0,
-      orders: 0,
-      visitors: 0,
-      aov: 0,
+      sales,
+      orders,
+      visitors,
+      aov: orders > 0 ? sales / orders : 0,
     };
-  }
-
-  const sales = rows.reduce(
-    (sum, row) =>
-      sum +
-      Number(
-        row?.posSales ??
-        row?.sales ??
-        row?.total_sales ??
-        row?.totalSales ??
-        0
-      ),
-    0
-  );
-
-  const orders = rows.reduce(
-    (sum, row) =>
-      sum +
-      Number(
-        row?.orders ??
-        row?.orderCount ??
-        0
-      ),
-    0
-  );
-
-  const visitors = rows.reduce(
-    (sum, row) =>
-      sum +
-      Number(
-        row?.visitCount ??
-        row?.visitors ??
-        row?.guests ??
-        row?.guestCount ??
-        0
-      ),
-    0
-  );
-
-  return {
-    sales,
-    orders,
-    visitors,
-    aov: orders > 0 ? sales / orders : 0,
   };
-};
 
   const loadComparisonData = async () => {
     if (!comparisonRange) return;
@@ -557,13 +557,14 @@ const calculatePeriodKPI = (rows: any[]) => {
     loadCurrentPeriodData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodRange]);
-const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
-const [comparisonStats, setComparisonStats] = useState<any>(null);
-const [periodLoading, setPeriodLoading] = useState(false);
-const [periodStats, setPeriodStats] = useState<any>(null);
-const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
-const [comparisonMenuRows, setComparisonMenuRows] = useState<any[]>([]);
-const [topMenuMetric, setTopMenuMetric] = useState<"qty" | "sales">("qty");
+
+  const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
+  const [comparisonStats, setComparisonStats] = useState<any>(null);
+  const [periodLoading, setPeriodLoading] = useState(false);
+  const [periodStats, setPeriodStats] = useState<any>(null);
+  const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
+  const [comparisonMenuRows, setComparisonMenuRows] = useState<any[]>([]);
+  const [topMenuMetric, setTopMenuMetric] = useState<"qty" | "sales">("qty");
 
   const hasMeaningfulInput = (v: SalesReportData) => {
     const hasBase =
@@ -968,84 +969,101 @@ const [topMenuMetric, setTopMenuMetric] = useState<"qty" | "sales">("qty");
     }
   };
 
-const fetchPeriodStats = async () => {
-  setPeriodLoading(true);
-  setPeriodStats(null);
-  setPeriodMenuTop([]);
+  const fetchPeriodStats = async () => {
+    setPeriodLoading(true);
+    setPeriodStats(null);
+    setPeriodMenuTop([]);
 
-  try {
-    const start = periodRange.start;
-    const end = periodRange.end;
+    try {
+      const start = periodRange.start;
+      const end = periodRange.end;
 
-    const currentDates = await listDatesInRange(start, end);
+      const currentDates = await listDatesInRange(start, end);
 
-    const currentList: any[] = [];
-    const menuMap = new Map<string, number>();
+      const currentList: any[] = [];
+      const menuMap = new Map<string, number>();
 
-    for (const d of currentDates) {
-      const item = await loadDaily(d);
-      if (!item) continue;
-
-      currentList.push({
-        date: d,
-        total_sales: Number(item.posSales || 0),
-        orders: Number(item.orders || 0),
-        guests: Number(item.visitCount || 0),
-        categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
-      });
-
-      if (Array.isArray((item as any).categories)) {
-        for (const cat of (item as any).categories) {
-          if (!cat?.items || !Array.isArray(cat.items)) continue;
-
-          for (const it of cat.items) {
-            const qty = Number(it?.qty || 0);
-            if (qty <= 0) continue;
-
-            const name = String(it?.name || "").trim();
-            if (!name) continue;
-
-            menuMap.set(name, (menuMap.get(name) || 0) + qty);
-          }
-        }
-      }
-    }
-
-    let comparisonList: any[] = [];
-
-    if (comparisonRange) {
-      const comparisonDates = await listDatesInRange(
-        comparisonRange.start,
-        comparisonRange.end
-      );
-
-      for (const d of comparisonDates) {
+      for (const d of currentDates) {
         const item = await loadDaily(d);
         if (!item) continue;
 
-        comparisonList.push({
+        currentList.push({
           date: d,
           total_sales: Number(item.posSales || 0),
           orders: Number(item.orders || 0),
           guests: Number(item.visitCount || 0),
           categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
         });
+
+        if (Array.isArray((item as any).categories)) {
+          for (const cat of (item as any).categories) {
+            if (!cat?.items || !Array.isArray(cat.items)) continue;
+
+            for (const it of cat.items) {
+              const qty = Number(it?.qty || 0);
+              if (qty <= 0) continue;
+
+              const name = String(it?.name || "").trim();
+              if (!name) continue;
+
+              menuMap.set(name, (menuMap.get(name) || 0) + qty);
+            }
+          }
+        }
       }
-    }
 
-    if (currentList.length > 0) {
-      const totalSales = currentList.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
-      const totalOrders = currentList.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
-      const totalVisitors = currentList.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+      let comparisonList: any[] = [];
 
-      setPeriodStats({
-        totalSales,
-        totalOrders,
-        totalVisitors,
-        list: currentList.sort((a, b) => a.date.localeCompare(b.date)),
-        comparisonList: comparisonList.sort((a, b) => a.date.localeCompare(b.date)),
-      });
-    } else {
+      if (comparisonRange) {
+        const comparisonDates = await listDatesInRange(
+          comparisonRange.start,
+          comparisonRange.end
+        );
+
+        for (const d of comparisonDates) {
+          const item = await loadDaily(d);
+          if (!item) continue;
+
+          comparisonList.push({
+            date: d,
+            total_sales: Number(item.posSales || 0),
+            orders: Number(item.orders || 0),
+            guests: Number(item.visitCount || 0),
+            categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
+          });
+        }
+      }
+
+      if (currentList.length > 0) {
+        const totalSales = currentList.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
+        const totalOrders = currentList.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
+        const totalVisitors = currentList.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+
+        setPeriodStats({
+          totalSales,
+          totalOrders,
+          totalVisitors,
+          list: currentList.sort((a, b) => a.date.localeCompare(b.date)),
+          comparisonList: comparisonList.sort((a, b) => a.date.localeCompare(b.date)),
+        });
+      } else {
+        setPeriodStats({
+          totalSales: 0,
+          totalOrders: 0,
+          totalVisitors: 0,
+          list: [],
+          comparisonList: [],
+        });
+      }
+
+      const top10 = Array.from(menuMap.entries())
+        .map(([name, qty]) => ({ name, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 10);
+
+      setPeriodMenuTop(top10);
+    } catch (e) {
+      console.error("fetchPeriodStats error:", e);
       setPeriodStats({
         totalSales: 0,
         totalOrders: 0,
@@ -1053,28 +1071,11 @@ const fetchPeriodStats = async () => {
         list: [],
         comparisonList: [],
       });
+      setPeriodMenuTop([]);
+    } finally {
+      setPeriodLoading(false);
     }
-
-    const top10 = Array.from(menuMap.entries())
-      .map(([name, qty]) => ({ name, qty }))
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 10);
-
-    setPeriodMenuTop(top10);
-  } catch (e) {
-    console.error("fetchPeriodStats error:", e);
-    setPeriodStats({
-      totalSales: 0,
-      totalOrders: 0,
-      totalVisitors: 0,
-      list: [],
-      comparisonList: [],
-    });
-    setPeriodMenuTop([]);
-  } finally {
-    setPeriodLoading(false);
-  }
-};
+  };
 
   const handleMonthChange = async (month: Date) => {
     const yearMonth = format(month, "yyyy-MM");
@@ -1146,42 +1147,42 @@ const fetchPeriodStats = async () => {
     [currentPeriodStats?.aov, comparisonStats?.aov]
   );
 
- const currentPeriodMenus = useMemo(() => {
-  const map = new Map<string, PeriodMenuRow>();
+  const currentPeriodMenus = useMemo(() => {
+    const map = new Map<string, PeriodMenuRow>();
 
-  const list = periodStats?.list || [];
+    const list = periodStats?.list || [];
 
-  list.forEach((row: any) => {
-    const cats = Array.isArray(row?.categories) ? row.categories : [];
+    list.forEach((row: any) => {
+      const cats = Array.isArray(row?.categories) ? row.categories : [];
 
-    cats.forEach((cat: any) => {
-      const items = Array.isArray(cat?.items) ? cat.items : [];
+      cats.forEach((cat: any) => {
+        const items = Array.isArray(cat?.items) ? cat.items : [];
 
-      items.forEach((it: any) => {
-        const name = String(it?.name || "").trim();
-        const qty = Number(it?.qty || 0);
-        const price = Number(it?.price || 0);
+        items.forEach((it: any) => {
+          const name = String(it?.name || "").trim();
+          const qty = Number(it?.qty || 0);
+          const price = Number(it?.price || 0);
 
-        if (!name || qty <= 0) return;
+          if (!name || qty <= 0) return;
 
-        if (!map.has(name)) {
-          map.set(name, { name, qty: 0, sales: 0 });
-        }
+          if (!map.has(name)) {
+            map.set(name, { name, qty: 0, sales: 0 });
+          }
 
-        const prev = map.get(name)!;
-        prev.qty += qty;
-        prev.sales += qty * price;
+          const prev = map.get(name)!;
+          prev.qty += qty;
+          prev.sales += qty * price;
+        });
       });
     });
-  });
 
-  return Array.from(map.values());
-}, [periodStats]);
+    return Array.from(map.values());
+  }, [periodStats]);
 
- const comparisonPeriodMenus = useMemo(() => {
-  const list = periodStats?.comparisonList || [];
-  return aggregateMenusFromRows(list);
-}, [periodStats]);
+  const comparisonPeriodMenus = useMemo(() => {
+    const list = periodStats?.comparisonList || [];
+    return aggregateMenusFromRows(list);
+  }, [periodStats]);
 
   const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
   const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
@@ -1761,346 +1762,45 @@ const fetchPeriodStats = async () => {
               )}
             </div>
 
-<ReportDisplay
-  report={report}
-  loading={loading}
-  menuEngineeringResult={null}
-  sortedMenuEngineering={null}
-  boostPlans={[]}
-/>
+            <ReportDisplay
+              report={report}
+              loading={loading}
+              menuEngineeringResult={null}
+              sortedMenuEngineering={null}
+              boostPlans={[]}
+            />
 
-            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
-                  <i className="fa-solid fa-chart-column text-indigo-500"></i>
-                  기간별 성과 분석
-                </h3>
-
-                <div className="flex flex-col md:flex-row gap-2 md:items-center">
-                  <input
-                    type="date"
-                    value={periodRange.start}
-                    onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  <span className="text-slate-400 text-center text-sm font-bold">~</span>
-                  <input
-                    type="date"
-                    value={periodRange.end}
-                    onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                 <button
-  type="button"
-  onClick={async () => {
-
-    if (selectedPeriodDays < 7) {
-      showToast("메뉴 엔지니어링 분석은 최소 7일 이상의 데이터가 필요합니다.");
-      return;
-    }
-
-    await loadCurrentPeriodData();
-    await loadComparisonData();
-    await fetchPeriodStats();
-
-    const meResult = await calculateMenuEngineeringForRange(
-      periodRange.start,
-      periodRange.end,
-      data.categories,
-      { maxDays: 60 }
-    );
-
-    setMenuEngineeringResult(meResult);
-
-  }}
-                    disabled={periodLoading}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
-                  >
-                    {periodLoading ? "분석 중..." : "기간 분석"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-5 md:p-8 space-y-6">
-                <PeriodComparisonPanel
-                  comparisonMode={comparisonMode}
-                  setComparisonMode={setComparisonMode}
-                  periodRange={periodRange}
-                  comparisonRange={comparisonRange}
-                  setComparisonRange={setComparisonRange}
-                  canRunPeriodAnalysis={canRunPeriodAnalysis}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <div className="text-sm font-bold text-slate-500 mb-2">기간 매출 비교</div>
-
-                    <div className="text-2xl font-black text-slate-900">
-                      ${Number(currentPeriodStats?.sales ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className="text-sm text-slate-500 mt-1">
-                      비교군: ${Number(comparisonStats?.sales ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className={`text-sm font-bold mt-2 ${salesChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {salesChangeRate.toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <div className="text-sm font-bold text-slate-500 mb-2">기간 주문수 비교</div>
-
-                    <div className="text-2xl font-black text-slate-900">
-                      {Number(currentPeriodStats?.orders ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className="text-sm text-slate-500 mt-1">
-                      비교군: {Number(comparisonStats?.orders ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className={`text-sm font-bold mt-2 ${ordersChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {ordersChangeRate.toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <div className="text-sm font-bold text-slate-500 mb-2">기간 방문객 비교</div>
-
-                    <div className="text-2xl font-black text-slate-900">
-                      {Number(currentPeriodStats?.visitors ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className="text-sm text-slate-500 mt-1">
-                      비교군: {Number(comparisonStats?.visitors ?? 0).toLocaleString()}
-                    </div>
-
-                    <div className={`text-sm font-bold mt-2 ${visitorsChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {visitorsChangeRate.toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <div className="text-sm font-bold text-slate-500 mb-2">기간 객단가 비교</div>
-
-                    <div className="text-2xl font-black text-slate-900">
-                      ${Number(currentPeriodStats?.aov ?? 0).toFixed(2)}
-                    </div>
-
-                    <div className="text-sm text-slate-500 mt-1">
-                      비교군: ${Number(comparisonStats?.aov ?? 0).toFixed(2)}
-                    </div>
-
-                    <div className={`text-sm font-bold mt-2 ${aovChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {aovChangeRate.toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-
-  <PeriodTopMenuCompare
-  currentMenus={currentPeriodMenus}
-  comparisonMenus={comparisonPeriodMenus}
-  minDays={1}
-  currentDays={currentPeriodDays}
-  comparisonDays={comparisonPeriodDays}
-/>
-{sortedMenuEngineering && (
-  <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
-    <div className="mb-4">
-      <h4 className="text-lg font-black text-slate-900">메뉴 엔지니어링 분석</h4>
-      <p className="text-sm text-slate-500 mt-1">
-        최근 분석 기간 기준으로 Star / Cash Cow / Puzzle / Dog 메뉴를 요약합니다.
-      </p>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <div className="text-sm font-black text-emerald-700 mb-2">⭐ Stars</div>
-        <div className="space-y-2 text-sm text-slate-800">
-          {sortedMenuEngineering.starsTop3.length > 0 ? (
-            sortedMenuEngineering.starsTop3.map((item, idx) => (
-              <div key={`stars-${idx}`} className="font-medium">
-                {item}
-              </div>
-            ))
-          ) : (
-            <div className="text-slate-500">데이터 없음</div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-        <div className="text-sm font-black text-blue-700 mb-2">💰 Cash Cows</div>
-        <div className="space-y-2 text-sm text-slate-800">
-          {sortedMenuEngineering.cashCowsTop3.length > 0 ? (
-            sortedMenuEngineering.cashCowsTop3.map((item, idx) => (
-              <div key={`cash-${idx}`} className="font-medium">
-                {item}
-              </div>
-            ))
-          ) : (
-            <div className="text-slate-500">데이터 없음</div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <div className="text-sm font-black text-amber-700 mb-2">🧩 Puzzles</div>
-        <div className="space-y-2 text-sm text-slate-800">
-          {sortedMenuEngineering.puzzlesTop3.length > 0 ? (
-            sortedMenuEngineering.puzzlesTop3.map((item, idx) => (
-              <div key={`puzzle-${idx}`} className="font-medium">
-                {item}
-              </div>
-            ))
-          ) : (
-            <div className="text-slate-500">데이터 없음</div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-        <div className="text-sm font-black text-rose-700 mb-2">🐶 Dogs</div>
-        <div className="space-y-2 text-sm text-slate-800">
-          {sortedMenuEngineering.dogsTop3.length > 0 ? (
-            sortedMenuEngineering.dogsTop3.map((item, idx) => (
-              <div key={`dog-${idx}`} className="font-medium">
-                {item}
-              </div>
-            ))
-          ) : (
-            <div className="text-slate-500">데이터 없음</div>
-          )}
-        </div>
-      </div>
-    </div>
-{boostPlans.length > 0 && (
-  <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
-    <div className="mb-4">
-      <h4 className="text-lg font-black text-slate-900">Boost Plan</h4>
-      <p className="text-sm text-slate-500 mt-1">
-        분석 결과를 바탕으로 매출 개선 액션을 제안합니다.
-      </p>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {boostPlans.map((plan: any, idx: number) => (
-        <div
-          key={`${plan.type}-${idx}`}
-          className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-black text-indigo-700">
-              {plan.type}
-            </div>
-            <div className="text-xs font-bold text-slate-500">
-              목표 {plan.dailyTargetQty}개/일
-            </div>
-          </div>
-
-          <div className="text-base font-black text-slate-900 mb-2">
-            {plan.setName}
-          </div>
-
-          <div className="text-sm text-slate-700 mb-2">
-            {plan.setComposition}
-          </div>
-
-          <div className="text-sm font-semibold text-slate-800 mb-2">
-            {plan.discount}
-          </div>
-
-          <div className="rounded-xl bg-white/80 p-3 text-sm text-slate-700 mb-2">
-            <div className="font-bold text-slate-900 mb-1">직원 실행 멘트</div>
-            <div>{plan.staffComment}</div>
-          </div>
-
-          <div className="text-xs text-slate-600 leading-relaxed">
-            {plan.reason}
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-)}
-    {sortedMenuEngineering.noCostItemsList && (
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <div className="text-sm font-black text-slate-700 mb-1">원가 미입력 메뉴</div>
-        <div className="text-sm text-slate-600">
-          {sortedMenuEngineering.noCostItemsList}
-        </div>
-      </div>
-    )}
-  </section>
-)}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="rounded-2xl border border-slate-200 p-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      ${Number(periodStats?.totalSales || 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 p-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 주문</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      {Number(periodStats?.totalOrders || 0).toLocaleString()}건
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 p-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 방문객</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      {Number(periodStats?.totalVisitors || 0).toLocaleString()}명
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                      <h4 className="font-black text-slate-800 text-sm">일별 추이</h4>
-                    </div>
-                    <div className="max-h-80 overflow-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-white sticky top-0">
-                          <tr className="border-b border-slate-200">
-                            <th className="text-left px-4 py-3 font-black text-slate-500">날짜</th>
-                            <th className="text-right px-4 py-3 font-black text-slate-500">매출</th>
-                            <th className="text-right px-4 py-3 font-black text-slate-500">주문</th>
-                            <th className="text-right px-4 py-3 font-black text-slate-500">방문객</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(periodStats?.list || []).length > 0 ? (
-                            (periodStats?.list || []).map((row: any) => (
-                              <tr key={row.date} className="border-b border-slate-100">
-                                <td className="px-4 py-3 font-bold text-slate-700">{row.date}</td>
-                                <td className="px-4 py-3 text-right font-bold text-slate-900">
-                                  ${Number(row.total_sales || 0).toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-right text-slate-700">
-                                  {Number(row.orders || 0).toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-right text-slate-700">
-                                  {Number(row.guests || 0).toLocaleString()}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-bold">
-                                기간 분석 데이터를 불러오면 여기에 표시됩니다.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                 
-                </div>
-              </div>
-            </section>
+            <PeriodMenuAnalysisSection
+              periodRange={periodRange}
+              setPeriodRange={setPeriodRange}
+              comparisonMode={comparisonMode}
+              setComparisonMode={setComparisonMode}
+              comparisonRange={comparisonRange}
+              setComparisonRange={setComparisonRange}
+              canRunPeriodAnalysis={canRunPeriodAnalysis}
+              currentPeriodStats={currentPeriodStats}
+              comparisonStats={comparisonStats}
+              salesChangeRate={salesChangeRate}
+              ordersChangeRate={ordersChangeRate}
+              visitorsChangeRate={visitorsChangeRate}
+              aovChangeRate={aovChangeRate}
+              periodLoading={periodLoading}
+              selectedPeriodDays={selectedPeriodDays}
+              loadCurrentPeriodData={loadCurrentPeriodData}
+              loadComparisonData={loadComparisonData}
+              fetchPeriodStats={fetchPeriodStats}
+              calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
+              setMenuEngineeringResult={setMenuEngineeringResult}
+              data={data}
+              currentPeriodMenus={currentPeriodMenus}
+              comparisonPeriodMenus={comparisonPeriodMenus}
+              currentPeriodDays={currentPeriodDays}
+              comparisonPeriodDays={comparisonPeriodDays}
+              sortedMenuEngineering={sortedMenuEngineering}
+              boostPlans={boostPlans}
+              periodStats={periodStats}
+              showToast={showToast}
+            />
           </>
         ) : (
           <MenuSettingsPage
