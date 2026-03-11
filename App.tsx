@@ -480,23 +480,24 @@ const App: React.FC = () => {
     });
   };
 
-  const loadCurrentPeriodData = async () => {
-    if (!periodRange) return;
+ const loadCurrentPeriodData = async () => {
+  if (!periodRange) return;
 
-    const rows = await loadDailyRange(
-      periodRange.start,
-      periodRange.end
-    );
+  const rows = await loadDailyRange(
+    periodRange.start,
+    periodRange.end
+  );
 
-    const kpi = calculatePeriodKPI(rows);
+  console.log("currentPeriod rows =", rows);
 
-    setCurrentPeriodStats({
-      ...kpi,
-      rows: rows.length,
-      rawRows: rows,
-    });
-  };
+  const kpi = calculatePeriodKPI(rows);
 
+  setCurrentPeriodStats({
+    ...kpi,
+    rows: rows.length,
+    rawRows: rows,
+  });
+};
   useEffect(() => {
     loadComparisonData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
