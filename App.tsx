@@ -1032,7 +1032,7 @@ list.push({
   const currentPeriodMenus = useMemo(() => {
   const map = new Map<string, PeriodMenuRow>();
 
-  const list = periodStats?.list || [];
+  const list = currentPeriodStats?.rawRows || [];
 
   list.forEach((row: any) => {
     const cats = row?.categories || [];
@@ -1050,7 +1050,6 @@ list.push({
         }
 
         const prev = map.get(name)!;
-
         prev.qty += qty;
         prev.sales += qty * price;
       });
@@ -1058,8 +1057,7 @@ list.push({
   });
 
   return Array.from(map.values());
-}, [periodStats]);
-
+}, [currentPeriodStats]);
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
 
   const salesChangeRate = useMemo(
