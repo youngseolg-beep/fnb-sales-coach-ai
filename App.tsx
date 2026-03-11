@@ -1951,30 +1951,7 @@ const fetchPeriodStats = async () => {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                      <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {periodMenuTop.length > 0 ? (
-                        periodMenuTop.map((item, idx) => (
-                          <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
-                                {idx + 1}
-                              </span>
-                              <span className="font-bold text-slate-800">{item.name}</span>
-                            </div>
-                            <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-8 text-center text-slate-400 font-bold">
-                          기간 분석 데이터를 불러오면 Top10이 표시됩니다.
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                 
                 </div>
               </div>
             </section>
