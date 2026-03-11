@@ -1,4 +1,4 @@
-export type ComparisonMode = "WOW" | "MOM" | "YOY";
+export type ComparisonMode = "WOW" | "MOM" | "YOY" | "MANUAL";
 
 export interface DateRange {
   start: string;
