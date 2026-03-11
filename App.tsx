@@ -931,12 +931,13 @@ const App: React.FC = () => {
         const item = await loadDaily(d);
         if (!item) continue;
 
-        list.push({
-          date: d,
-          total_sales: Number(item.posSales || 0),
-          orders: Number(item.orders || 0),
-          guests: Number(item.visitCount || 0),
-        });
+       list.push({
+  date: d,
+  total_sales: Number(item.posSales || 0),
+  orders: Number(item.orders || 0),
+  guests: Number(item.visitCount || 0),
+  categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
+});
 
         if (Array.isArray((item as any).categories)) {
           for (const cat of (item as any).categories) {
@@ -1027,6 +1028,37 @@ const App: React.FC = () => {
     if (!periodRange.start || !periodRange.end) return 0;
     return getInclusiveDayCountFromStrings(periodRange.start, periodRange.end);
   }, [periodRange.start, periodRange.end]);
+
+  const currentPeriodMenus = useMemo(() => {
+  const map = new Map<string, PeriodMenuRow>();
+
+  const list = periodStats?.list || [];
+
+  list.forEach((row: any) => {
+    const cats = row?.categories || [];
+
+    cats.forEach((cat: any) => {
+      cat.items?.forEach((it: any) => {
+        const name = String(it?.name || "").trim();
+        const qty = Number(it?.qty || 0);
+        const price = Number(it?.price || 0);
+
+        if (!name || qty <= 0) return;
+
+        if (!map.has(name)) {
+          map.set(name, { name, qty: 0, sales: 0 });
+        }
+
+        const prev = map.get(name)!;
+
+        prev.qty += qty;
+        prev.sales += qty * price;
+      });
+    });
+  });
+
+  return Array.from(map.values());
+}, [periodStats]);
 
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
 
@@ -1821,31 +1853,6 @@ const App: React.FC = () => {
                           )}
                         </tbody>
                       </table>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                      <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {periodMenuTop.length > 0 ? (
-                        periodMenuTop.map((item, idx) => (
-                          <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
-                                {idx + 1}
-                              </span>
-                              <span className="font-bold text-slate-800">{item.name}</span>
-                            </div>
-                            <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-8 text-center text-slate-400 font-bold">
-                          기간 분석 데이터를 불러오면 Top10이 표시됩니다.
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
