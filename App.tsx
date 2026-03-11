@@ -1,3 +1,5 @@
+import React, { useState, useMemo, useEffect } from "react";
+
 import {
   loadDaily,
   saveDailyData,
@@ -5,31 +7,30 @@ import {
   listDatesInMonth,
   deleteDaily,
   listDatesInRange,
+  loadDailyRange
 } from "./services/salesStorage";
+
 import PeriodTopMenuCompare, {
   type PeriodMenuRow,
 } from "./components/PeriodTopMenuCompare";
-import React, { useState, useMemo, useEffect } from "react";
+
 import { getComparisonRange, type ComparisonMode } from "./utils2/periodComparison";
+
 import {
   SalesReportData,
   CalculationResult,
   MenuCategory,
   MenuEngineeringResult,
 } from "./types";
+
 import { generateCoachingReport } from "./services/geminiService";
 import { calculateMenuEngineeringForRange } from "./services/menuEngineeringService";
+
+import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/menuPriceService";
+import { loadMenuMaster } from "./services/menuMasterService";
+
 import { format, parseISO, subDays } from "date-fns";
-import {
-  loadDaily,
-  saveDailyData,
-  getMonthlyTotal,
-  listDatesInMonth,
-  deleteDaily,
-} from "./services/salesStorage";
-import { loadDailyRange } from "./services/salesStorage";
-import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
-import { loadMenuMaster } from "./services/services/menuMasterService";
+
 import DataInput from "./components/DataInput";
 import ReportDisplay from "./components/ReportDisplay";
 import MenuSettingsPage from "./components/MenuSettingsPage";
@@ -556,7 +557,8 @@ const calculatePeriodKPI = (rows: any[]) => {
     loadCurrentPeriodData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodRange]);
-
+const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
+const [comparisonStats, setComparisonStats] = useState<any>(null);
 const [periodLoading, setPeriodLoading] = useState(false);
 const [periodStats, setPeriodStats] = useState<any>(null);
 const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
