@@ -1761,9 +1761,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 </div>
-console.log("currentPeriodMenus =", currentPeriodMenus);
-console.log("comparisonPeriodMenus =", comparisonPeriodMenus);
-                
+
                 <PeriodTopMenuCompare
                   currentMenus={currentPeriodMenus}
                   comparisonMenus={comparisonPeriodMenus}
