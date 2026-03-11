@@ -315,7 +315,18 @@ const getInclusiveDayCountFromStrings = (start: string, end: string) => {
   endDate.setHours(0, 0, 0, 0);
   return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 };
+const loadMenuRowsForRange = async (start: string, end: string) => {
+  const dates = await listDatesInRange(start, end);
+  const rows: any[] = [];
 
+  for (const d of dates) {
+    const item = await loadDaily(d);
+    if (!item) continue;
+    rows.push(item);
+  }
+
+  return rows;
+};
 const aggregateMenusFromRows = (rows: any[]): PeriodMenuRow[] => {
   const map = new Map<string, PeriodMenuRow>();
 
@@ -518,6 +529,7 @@ const App: React.FC = () => {
   }, [periodRange]);
 
   const [periodLoading, setPeriodLoading] = useState(false);
+  const [comparisonMenuRows, setComparisonMenuRows] = useState<any[]>([]);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
   const hasMeaningfulInput = (v: SalesReportData) => {
@@ -1001,6 +1013,15 @@ const App: React.FC = () => {
       list: [],
     });
     setPeriodMenuTop([]);
+    // 비교기간 메뉴 rows 로드
+if (comparisonRange) {
+  const rows = await loadMenuRowsForRange(
+    comparisonRange.start,
+    comparisonRange.end
+  );
+
+  setComparisonMenuRows(rows);
+}
   } finally {
     setPeriodLoading(false);
   }
@@ -1080,8 +1101,8 @@ const App: React.FC = () => {
   }, [currentPeriodStats]);
 
   const comparisonPeriodMenus = useMemo(() => {
-    return aggregateMenusFromRows(comparisonStats?.rawRows || []);
-  }, [comparisonStats]);
+  return aggregateMenusFromRows(comparisonMenuRows || []);
+}, [comparisonMenuRows]);
 
   const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
   const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
