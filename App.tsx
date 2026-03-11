@@ -442,10 +442,6 @@ const App: React.FC = () => {
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
   }, [periodRange, comparisonMode]);
 
-  const [periodStats, setPeriodStats] = useState<any>(null);
-  const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
-  const [comparisonStats, setComparisonStats] = useState<any>(null);
-
 const calculatePeriodKPI = (rows: any[]) => {
   if (!rows || rows.length === 0) {
     return {
