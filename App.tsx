@@ -1124,6 +1124,7 @@ const fetchPeriodStats = async () => {
   }, [periodRange.start, periodRange.end]);
 
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
+  const canRunMenuEngineering = selectedPeriodDays >= 7;
 
   const salesChangeRate = useMemo(
     () => calcChangeRate(Number(currentPeriodStats?.sales || 0), Number(comparisonStats?.sales || 0)),
@@ -1789,13 +1790,29 @@ const fetchPeriodStats = async () => {
                     onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-indigo-400"
                   />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await loadCurrentPeriodData();
-                      await loadComparisonData();
-                      await fetchPeriodStats();
-                    }}
+                 <button
+  type="button"
+  onClick={async () => {
+
+    if (selectedPeriodDays < 7) {
+      showToast("메뉴 엔지니어링 분석은 최소 7일 이상의 데이터가 필요합니다.");
+      return;
+    }
+
+    await loadCurrentPeriodData();
+    await loadComparisonData();
+    await fetchPeriodStats();
+
+    const meResult = await calculateMenuEngineeringForRange(
+      periodRange.start,
+      periodRange.end,
+      data.categories,
+      { maxDays: 60 }
+    );
+
+    setMenuEngineeringResult(meResult);
+
+  }}
                     disabled={periodLoading}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
                   >
