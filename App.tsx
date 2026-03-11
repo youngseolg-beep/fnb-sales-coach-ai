@@ -1096,9 +1096,37 @@ if (comparisonRange) {
     [currentPeriodStats?.aov, comparisonStats?.aov]
   );
 
-  const currentPeriodMenus = useMemo(() => {
-    return aggregateMenusFromRows(currentPeriodStats?.rawRows || []);
-  }, [currentPeriodStats]);
+ const currentPeriodMenus = useMemo(() => {
+  const map = new Map<string, PeriodMenuRow>();
+
+  const list = periodStats?.list || [];
+
+  list.forEach((row: any) => {
+    const cats = Array.isArray(row?.categories) ? row.categories : [];
+
+    cats.forEach((cat: any) => {
+      const items = Array.isArray(cat?.items) ? cat.items : [];
+
+      items.forEach((it: any) => {
+        const name = String(it?.name || "").trim();
+        const qty = Number(it?.qty || 0);
+        const price = Number(it?.price || 0);
+
+        if (!name || qty <= 0) return;
+
+        if (!map.has(name)) {
+          map.set(name, { name, qty: 0, sales: 0 });
+        }
+
+        const prev = map.get(name)!;
+        prev.qty += qty;
+        prev.sales += qty * price;
+      });
+    });
+  });
+
+  return Array.from(map.values());
+}, [periodStats]);
 
   const comparisonPeriodMenus = useMemo(() => {
   return aggregateMenusFromRows(comparisonMenuRows || []);
