@@ -931,7 +931,7 @@ const App: React.FC = () => {
         const item = await loadDaily(d);
         if (!item) continue;
 
-       list.push({
+list.push({
   date: d,
   total_sales: Number(item.posSales || 0),
   orders: Number(item.orders || 0),
