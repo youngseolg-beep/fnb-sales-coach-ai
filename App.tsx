@@ -18,7 +18,6 @@ import {
   getMonthlyTotal,
   listDatesInMonth,
   deleteDaily,
-  listDatesInRange,
 } from "./services/salesStorage";
 import { loadDailyRange } from "./services/salesStorage";
 import { getMenuPricesForDate, saveMenuPriceHistory } from "./services/services/menuPriceService";
@@ -309,42 +308,35 @@ const getInclusiveDayCountFromStrings = (start: string, end: string) => {
   return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 };
 
-function aggregateMenusForPeriod(rows: any[]): PeriodMenuRow[] {
-  const menuMap = new Map<string, PeriodMenuRow>();
+const aggregateMenusFromRows = (rows: any[]): PeriodMenuRow[] => {
+  const map = new Map<string, PeriodMenuRow>();
 
-  for (const row of rows || []) {
+  rows.forEach((row: any) => {
     const categories = Array.isArray(row?.categories) ? row.categories : [];
 
-    for (const cat of categories) {
+    categories.forEach((cat: any) => {
       const items = Array.isArray(cat?.items) ? cat.items : [];
 
-      for (const item of items) {
-        const name = String(item?.name || "").trim();
-        if (!name) continue;
+      items.forEach((it: any) => {
+        const name = String(it?.name || "").trim();
+        const qty = Number(it?.qty || 0);
+        const price = Number(it?.price || 0);
 
-        const qty = Number(item?.qty || 0);
-        if (!Number.isFinite(qty) || qty <= 0) continue;
+        if (!name || qty <= 0) return;
 
-        const price = Number(item?.price || 0);
-        const sales = Number.isFinite(price) ? price * qty : 0;
-
-        if (!menuMap.has(name)) {
-          menuMap.set(name, {
-            name,
-            qty: 0,
-            sales: 0,
-          });
+        if (!map.has(name)) {
+          map.set(name, { name, qty: 0, sales: 0 });
         }
 
-        const prev = menuMap.get(name)!;
+        const prev = map.get(name)!;
         prev.qty += qty;
-        prev.sales += sales;
-      }
-    }
-  }
+        prev.sales += qty * price;
+      });
+    });
+  });
 
-  return Array.from(menuMap.values());
-}
+  return Array.from(map.values());
+};
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -429,7 +421,7 @@ const App: React.FC = () => {
     }
 
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
-  }, [periodRange, comparisonMode, comparisonRange]);
+  }, [periodRange, comparisonMode]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
@@ -445,15 +437,9 @@ const App: React.FC = () => {
       };
     }
 
-    const sales = rows.reduce(
-      (sum, row) => sum + Number(row?.posSales ?? row?.sales ?? row?.total_sales ?? 0),
-      0
-    );
-    const orders = rows.reduce((sum, row) => sum + Number(row?.orders ?? 0), 0);
-    const visitors = rows.reduce(
-      (sum, row) => sum + Number(row?.visitCount ?? row?.visitors ?? row?.guests ?? 0),
-      0
-    );
+    const sales = rows.reduce((sum, row) => sum + Number(row?.posSales || 0), 0);
+    const orders = rows.reduce((sum, row) => sum + Number(row?.orders || 0), 0);
+    const visitors = rows.reduce((sum, row) => sum + Number(row?.visitCount || 0), 0);
 
     return {
       sales,
@@ -466,38 +452,53 @@ const App: React.FC = () => {
   const loadComparisonData = async () => {
     if (!comparisonRange) return;
 
-    const rows = await loadDailyRange(
-      comparisonRange.start,
-      comparisonRange.end
-    );
+    try {
+      const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end);
+      const kpi = calculatePeriodKPI(rows);
 
-    const kpi = calculatePeriodKPI(rows);
-
-    setComparisonStats({
-      ...kpi,
-      rows: rows.length,
-      rawRows: rows,
-    });
+      setComparisonStats({
+        ...kpi,
+        rows: rows.length,
+        rawRows: rows,
+      });
+    } catch (error) {
+      console.error("loadComparisonData error:", error);
+      setComparisonStats({
+        sales: 0,
+        orders: 0,
+        visitors: 0,
+        aov: 0,
+        rows: 0,
+        rawRows: [],
+      });
+    }
   };
 
- const loadCurrentPeriodData = async () => {
-  if (!periodRange) return;
+  const loadCurrentPeriodData = async () => {
+    if (!periodRange) return;
 
-  const rows = await loadDailyRange(
-    periodRange.start,
-    periodRange.end
-  );
+    try {
+      const rows = await loadDailyRange(periodRange.start, periodRange.end);
+      const kpi = calculatePeriodKPI(rows);
 
-  console.log("currentPeriod rows =", rows);
+      setCurrentPeriodStats({
+        ...kpi,
+        rows: rows.length,
+        rawRows: rows,
+      });
+    } catch (error) {
+      console.error("loadCurrentPeriodData error:", error);
+      setCurrentPeriodStats({
+        sales: 0,
+        orders: 0,
+        visitors: 0,
+        aov: 0,
+        rows: 0,
+        rawRows: [],
+      });
+    }
+  };
 
-  const kpi = calculatePeriodKPI(rows);
-
-  setCurrentPeriodStats({
-    ...kpi,
-    rows: rows.length,
-    rawRows: rows,
-  });
-};
   useEffect(() => {
     loadComparisonData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -923,31 +924,33 @@ const App: React.FC = () => {
       const start = periodRange.start;
       const end = periodRange.end;
 
-      const dates = await listDatesInRange(start, end);
+      const rows = await loadDailyRange(start, end);
 
       const list: any[] = [];
       const menuMap = new Map<string, number>();
 
-      for (const d of dates) {
-        const item = await loadDaily(d);
-        if (!item) continue;
+      for (const item of rows) {
+        const d = item.date;
 
-list.push({
-  date: d,
-  total_sales: Number(item.posSales || 0),
-  orders: Number(item.orders || 0),
-  guests: Number(item.visitCount || 0),
-  categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
-});
+        list.push({
+          date: d,
+          total_sales: Number(item.posSales || 0),
+          orders: Number(item.orders || 0),
+          guests: Number(item.visitCount || 0),
+          categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
+        });
 
         if (Array.isArray((item as any).categories)) {
           for (const cat of (item as any).categories) {
             if (!cat?.items || !Array.isArray(cat.items)) continue;
+
             for (const it of cat.items) {
               const qty = Number(it?.qty || 0);
               if (qty <= 0) continue;
+
               const name = String(it?.name || "").trim();
               if (!name) continue;
+
               menuMap.set(name, (menuMap.get(name) || 0) + qty);
             }
           }
@@ -973,6 +976,7 @@ list.push({
         .map(([name, qty]) => ({ name, qty }))
         .sort((a, b) => b.qty - a.qty)
         .slice(0, 10);
+
       setPeriodMenuTop(top10);
     } catch (e) {
       console.error("fetchPeriodStats error:", e);
@@ -1030,35 +1034,6 @@ list.push({
     return getInclusiveDayCountFromStrings(periodRange.start, periodRange.end);
   }, [periodRange.start, periodRange.end]);
 
-  const currentPeriodMenus = useMemo(() => {
-  const map = new Map<string, PeriodMenuRow>();
-
-  const list = currentPeriodStats?.rawRows || [];
-
-  list.forEach((row: any) => {
-    const cats = row?.categories || [];
-
-    cats.forEach((cat: any) => {
-      cat.items?.forEach((it: any) => {
-        const name = String(it?.name || "").trim();
-        const qty = Number(it?.qty || 0);
-        const price = Number(it?.price || 0);
-
-        if (!name || qty <= 0) return;
-
-        if (!map.has(name)) {
-          map.set(name, { name, qty: 0, sales: 0 });
-        }
-
-        const prev = map.get(name)!;
-        prev.qty += qty;
-        prev.sales += qty * price;
-      });
-    });
-  });
-
-  return Array.from(map.values());
-}, [currentPeriodStats]);
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
 
   const salesChangeRate = useMemo(
@@ -1081,13 +1056,13 @@ list.push({
     [currentPeriodStats?.aov, comparisonStats?.aov]
   );
 
-  const currentPeriodMenuRows = useMemo(() => {
-    return aggregateMenusForPeriod(currentPeriodStats?.rawRows || []);
-  }, [currentPeriodStats?.rawRows]);
+  const currentPeriodMenus = useMemo(() => {
+    return aggregateMenusFromRows(currentPeriodStats?.rawRows || []);
+  }, [currentPeriodStats]);
 
-  const comparisonPeriodMenuRows = useMemo(() => {
-    return aggregateMenusForPeriod(comparisonStats?.rawRows || []);
-  }, [comparisonStats?.rawRows]);
+  const comparisonPeriodMenus = useMemo(() => {
+    return aggregateMenusFromRows(comparisonStats?.rawRows || []);
+  }, [comparisonStats]);
 
   const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
   const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
@@ -1698,7 +1673,11 @@ list.push({
                   />
                   <button
                     type="button"
-                    onClick={fetchPeriodStats}
+                    onClick={async () => {
+                      await loadCurrentPeriodData();
+                      await loadComparisonData();
+                      await fetchPeriodStats();
+                    }}
                     disabled={periodLoading}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
                   >
@@ -1783,13 +1762,13 @@ list.push({
                   </div>
                 </div>
 
-<PeriodTopMenuCompare
-  currentMenus={currentPeriodMenus}
-  comparisonMenus={currentPeriodMenus}
-  minDays={1}
-  currentDays={selectedPeriodDays}
-  comparisonDays={selectedPeriodDays}
-/>
+                <PeriodTopMenuCompare
+                  currentMenus={currentPeriodMenus}
+                  comparisonMenus={comparisonPeriodMenus}
+                  minDays={1}
+                  currentDays={currentPeriodDays}
+                  comparisonDays={comparisonPeriodDays}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
@@ -1852,6 +1831,31 @@ list.push({
                           )}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                      <h4 className="font-black text-slate-800 text-sm">메뉴 Top10 (판매량)</h4>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {periodMenuTop.length > 0 ? (
+                        periodMenuTop.map((item, idx) => (
+                          <div key={`${item.name}-${idx}`} className="px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                              <span className="font-bold text-slate-800">{item.name}</span>
+                            </div>
+                            <span className="font-black text-slate-900">{item.qty.toLocaleString()}개</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center text-slate-400 font-bold">
+                          기간 분석 데이터를 불러오면 Top10이 표시됩니다.
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
