@@ -1,3 +1,11 @@
+import {
+  loadDaily,
+  saveDailyData,
+  getMonthlyTotal,
+  listDatesInMonth,
+  deleteDaily,
+  listDatesInRange,
+} from "./services/salesStorage";
 import PeriodTopMenuCompare, {
   type PeriodMenuRow,
 } from "./components/PeriodTopMenuCompare";
@@ -915,77 +923,88 @@ const App: React.FC = () => {
     }
   };
 
-  const fetchPeriodStats = async () => {
-    setPeriodLoading(true);
-    setPeriodStats(null);
-    setPeriodMenuTop([]);
+ const fetchPeriodStats = async () => {
+  setPeriodLoading(true);
+  setPeriodStats(null);
+  setPeriodMenuTop([]);
 
-    try {
-      const start = periodRange.start;
-      const end = periodRange.end;
+  try {
+    const start = periodRange.start;
+    const end = periodRange.end;
 
-      const rows = await loadDailyRange(start, end);
+    const dates = await listDatesInRange(start, end);
 
-      const list: any[] = [];
-      const menuMap = new Map<string, number>();
+    const list: any[] = [];
+    const menuMap = new Map<string, number>();
 
-      for (const item of rows) {
-        const d = item.date;
+    for (const d of dates) {
+      const item = await loadDaily(d);
+      if (!item) continue;
 
-        list.push({
-          date: d,
-          total_sales: Number(item.posSales || 0),
-          orders: Number(item.orders || 0),
-          guests: Number(item.visitCount || 0),
-          categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
-        });
+      list.push({
+        date: d,
+        total_sales: Number(item.posSales || 0),
+        orders: Number(item.orders || 0),
+        guests: Number(item.visitCount || 0),
+        categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
+      });
 
-        if (Array.isArray((item as any).categories)) {
-          for (const cat of (item as any).categories) {
-            if (!cat?.items || !Array.isArray(cat.items)) continue;
+      if (Array.isArray((item as any).categories)) {
+        for (const cat of (item as any).categories) {
+          if (!cat?.items || !Array.isArray(cat.items)) continue;
 
-            for (const it of cat.items) {
-              const qty = Number(it?.qty || 0);
-              if (qty <= 0) continue;
+          for (const it of cat.items) {
+            const qty = Number(it?.qty || 0);
+            if (qty <= 0) continue;
 
-              const name = String(it?.name || "").trim();
-              if (!name) continue;
+            const name = String(it?.name || "").trim();
+            if (!name) continue;
 
-              menuMap.set(name, (menuMap.get(name) || 0) + qty);
-            }
+            menuMap.set(name, (menuMap.get(name) || 0) + qty);
           }
         }
       }
-
-      if (list.length > 0) {
-        const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
-        const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
-        const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
-
-        setPeriodStats({
-          totalSales,
-          totalOrders,
-          totalVisitors,
-          list: list.sort((a, b) => a.date.localeCompare(b.date)),
-        });
-      } else {
-        setPeriodStats({ totalSales: 0, totalOrders: 0, totalVisitors: 0, list: [] });
-      }
-
-      const top10 = Array.from(menuMap.entries())
-        .map(([name, qty]) => ({ name, qty }))
-        .sort((a, b) => b.qty - a.qty)
-        .slice(0, 10);
-
-      setPeriodMenuTop(top10);
-    } catch (e) {
-      console.error("fetchPeriodStats error:", e);
-      setPeriodStats({ totalSales: 0, totalOrders: 0, totalVisitors: 0, list: [] });
-      setPeriodMenuTop([]);
-    } finally {
-      setPeriodLoading(false);
     }
-  };
+
+    if (list.length > 0) {
+      const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
+      const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
+      const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+
+      setPeriodStats({
+        totalSales,
+        totalOrders,
+        totalVisitors,
+        list: list.sort((a, b) => a.date.localeCompare(b.date)),
+      });
+    } else {
+      setPeriodStats({
+        totalSales: 0,
+        totalOrders: 0,
+        totalVisitors: 0,
+        list: [],
+      });
+    }
+
+    const top10 = Array.from(menuMap.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+
+    setPeriodMenuTop(top10);
+  } catch (e) {
+    console.error("fetchPeriodStats error:", e);
+    setPeriodStats({
+      totalSales: 0,
+      totalOrders: 0,
+      totalVisitors: 0,
+      list: [],
+    });
+    setPeriodMenuTop([]);
+  } finally {
+    setPeriodLoading(false);
+  }
+};
 
   const handleMonthChange = async (month: Date) => {
     const yearMonth = format(month, "yyyy-MM");
