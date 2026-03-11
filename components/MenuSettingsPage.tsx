@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { format, parseISO, subDays } from "date-fns";
 import type { MenuCategory } from "../types";
-import { getMenuPriceHistory } from "../services/services/menuPriceService";
+import { ... } from "../services/menuPriceService";
 import {
   createMenu,
   deactivateMenu,
   updateMenuOrder,
-} from "../services/services/menuMasterService";
+} from "../services/menuMasterService";
 import { supabase } from "../services/supabaseClient";
 
 interface MenuSettingsPageProps {
