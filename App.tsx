@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { getComparisonRange } from "./utils2/periodComparison";
+import { getComparisonRange, type ComparisonMode } from "./utils2/periodComparison";
 import {
   SalesReportData,
   CalculationResult,
@@ -292,6 +292,19 @@ const persistMenuPriceHistory = async (
   await Promise.all(jobs);
 };
 
+const calcChangeRate = (current: number, previous: number) => {
+  if (!Number.isFinite(previous) || previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+};
+
+const getInclusiveDayCountFromStrings = (start: string, end: string) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+};
+
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
@@ -312,11 +325,12 @@ const App: React.FC = () => {
     cloneCategories(INITIAL_CATEGORIES)
   );
 
-const [menuMasterLoading, setMenuMasterLoading] = useState(true);
+  const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
-const [comparisonMode, setComparisonMode] = useState<"WOW" | "MOM" | "YOY">("WOW");
-const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
-const [data, setData] = useState<SalesReportData>(() => {
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("WOW");
+  const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
+
+  const [data, setData] = useState<SalesReportData>(() => {
     const today = new Date().toISOString().split("T")[0];
     const ym = getMonthKey(today);
     const monthTarget = loadMonthlyTarget(ym, 15000);
@@ -360,82 +374,83 @@ const [data, setData] = useState<SalesReportData>(() => {
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
- const [periodRange, setPeriodRange] = useState({
-  start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
-  end: new Date().toISOString().split("T")[0],
-});
+  const [periodRange, setPeriodRange] = useState({
+    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
+    end: new Date().toISOString().split("T")[0],
+  });
 
-useEffect(() => {
-  setComparisonRange(getComparisonRange(periodRange, comparisonMode));
-}, [periodRange, comparisonMode]);
+  useEffect(() => {
+    setComparisonRange(getComparisonRange(periodRange, comparisonMode));
+  }, [periodRange, comparisonMode]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
-const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
-const [comparisonStats, setComparisonStats] = useState<any>(null);
+  const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
+  const [comparisonStats, setComparisonStats] = useState<any>(null);
+
   const calculatePeriodKPI = (rows: any[]) => {
-  if (!rows || rows.length === 0) {
+    if (!rows || rows.length === 0) {
+      return {
+        sales: 0,
+        orders: 0,
+        visitors: 0,
+        aov: 0,
+      };
+    }
+
+    const sales = rows.reduce((sum, row) => sum + Number(row.sales || 0), 0);
+    const orders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
+    const visitors = rows.reduce((sum, row) => sum + Number(row.visitors || 0), 0);
+
     return {
-      sales: 0,
-      orders: 0,
-      visitors: 0,
-      aov: 0,
+      sales,
+      orders,
+      visitors,
+      aov: orders > 0 ? sales / orders : 0,
     };
-  }
-
-  const sales = rows.reduce((sum, row) => sum + Number(row.sales || 0), 0);
-  const orders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
-  const visitors = rows.reduce((sum, row) => sum + Number(row.visitors || 0), 0);
-
-  return {
-    sales,
-    orders,
-    visitors,
-    aov: orders > 0 ? sales / orders : 0,
   };
-};
- const loadComparisonData = async () => {
-  if (!comparisonRange) return;
 
-  const rows = await loadDailyRange(
-    comparisonRange.start,
-    comparisonRange.end
-  );
+  const loadComparisonData = async () => {
+    if (!comparisonRange) return;
 
-  console.log("comparison rows", rows);
+    const rows = await loadDailyRange(
+      comparisonRange.start,
+      comparisonRange.end
+    );
 
-  const kpi = calculatePeriodKPI(rows);
+    const kpi = calculatePeriodKPI(rows);
 
-  setComparisonStats({
-    ...kpi,
-    rows: rows.length,
-  });
-};
+    setComparisonStats({
+      ...kpi,
+      rows: rows.length,
+    });
+  };
 
-const loadCurrentPeriodData = async () => {
-  if (!periodRange) return;
+  const loadCurrentPeriodData = async () => {
+    if (!periodRange) return;
 
-  const rows = await loadDailyRange(
-    periodRange.start,
-    periodRange.end
-  );
+    const rows = await loadDailyRange(
+      periodRange.start,
+      periodRange.end
+    );
 
-  console.log("current period rows", rows);
+    const kpi = calculatePeriodKPI(rows);
 
-  const kpi = calculatePeriodKPI(rows);
+    setCurrentPeriodStats({
+      ...kpi,
+      rows: rows.length,
+    });
+  };
 
-  setCurrentPeriodStats({
-    ...kpi,
-    rows: rows.length,
-  });
-};
+  useEffect(() => {
+    loadComparisonData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comparisonRange]);
 
-useEffect(() => {
-  loadComparisonData();
-}, [comparisonRange]);
+  useEffect(() => {
+    loadCurrentPeriodData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodRange]);
 
-useEffect(() => {
-  loadCurrentPeriodData();
-}, [periodRange]);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
@@ -952,6 +967,33 @@ useEffect(() => {
     return (monthlyStats.total / target) * 100;
   }, [monthlyStats.total, data.date, data.monthlyTarget]);
 
+  const selectedPeriodDays = useMemo(() => {
+    if (!periodRange.start || !periodRange.end) return 0;
+    return getInclusiveDayCountFromStrings(periodRange.start, periodRange.end);
+  }, [periodRange.start, periodRange.end]);
+
+  const canRunPeriodAnalysis = selectedPeriodDays >= 7;
+
+  const salesChangeRate = useMemo(
+    () => calcChangeRate(Number(currentPeriodStats?.sales || 0), Number(comparisonStats?.sales || 0)),
+    [currentPeriodStats?.sales, comparisonStats?.sales]
+  );
+
+  const ordersChangeRate = useMemo(
+    () => calcChangeRate(Number(currentPeriodStats?.orders || 0), Number(comparisonStats?.orders || 0)),
+    [currentPeriodStats?.orders, comparisonStats?.orders]
+  );
+
+  const visitorsChangeRate = useMemo(
+    () => calcChangeRate(Number(currentPeriodStats?.visitors || 0), Number(comparisonStats?.visitors || 0)),
+    [currentPeriodStats?.visitors, comparisonStats?.visitors]
+  );
+
+  const aovChangeRate = useMemo(
+    () => calcChangeRate(Number(currentPeriodStats?.aov || 0), Number(comparisonStats?.aov || 0)),
+    [currentPeriodStats?.aov, comparisonStats?.aov]
+  );
+
   const handleDataChange = (newData: SalesReportData) => {
     const dateChanged = String(newData.date || "") !== String(data.date || "");
 
@@ -1087,7 +1129,7 @@ useEffect(() => {
       try {
         await refreshMonthlyStats(data.date.substring(0, 7));
         await loadCurrentPeriodData();
-await loadComparisonData();
+        await loadComparisonData();
       } catch (e) {
         console.warn("refreshMonthlyStats failed (ignored):", e);
       }
@@ -1307,142 +1349,42 @@ await loadComparisonData();
     );
   }
 
-return (
-  <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
+  return (
+    <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
+      <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
+              <i className="fa-solid fa-store font-black"></i>
+            </div>
 
-   <div style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "20px" }}>
-  <h3>Period Analytics Test</h3>
+            <div>
+              <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
+                홍콩반점 테스트
+              </h1>
+              <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
+                Sales Coach AI (USD)
+              </p>
+            </div>
+          </div>
 
-  <div>Current Range: {periodRange.start} ~ {periodRange.end}</div>
-  <div>Comparison Range: {comparisonRange?.start ?? "-"} ~ {comparisonRange?.end ?? "-"}</div>
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex flex-col items-end leading-tight">
+              <div className="flex items-center gap-2">
+                {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
+                {data.date}
+              </div>
+              <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
+                POWERED BY <span className="text-white">YOUNGSEOL</span>
+              </div>
+            </div>
 
-  <div>Rows: {currentPeriodStats?.rows ?? 0}</div>
-  <div>Sales: {currentPeriodStats?.sales ?? 0}</div>
-  <div>Orders: {currentPeriodStats?.orders ?? 0}</div>
-  <div>Visitors: {currentPeriodStats?.visitors ?? 0}</div>
-  <div>AOV: {currentPeriodStats?.aov ?? 0}</div>
-  <div>
-    Sales Change: {comparisonStats?.sales
-      ? (((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales * 100).toFixed(1)
-      : "0.0"}%
-  </div>
-
-  <div style={{ marginTop: "10px" }}>
-    <h3>Comparison Period Test</h3>
-
-    <div>Rows: {comparisonStats?.rows ?? 0}</div>
-    <div>Sales: {comparisonStats?.sales ?? 0}</div>
-    <div>Orders: {comparisonStats?.orders ?? 0}</div>
-    <div>Visitors: {comparisonStats?.visitors ?? 0}</div>
-    <div>AOV: {comparisonStats?.aov ?? 0}</div>
-  </div>
-</div>
-
-<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Sales</div>
-
-  <div className="text-2xl font-black text-slate-900">
-    ${currentPeriodStats?.sales ?? 0}
-  </div>
-
-  <div className="text-sm text-slate-500 mt-1">
-    Previous: ${comparisonStats?.sales ?? 0}
-  </div>
-
-  <div className="text-sm font-bold mt-2 text-emerald-600">
-    {comparisonStats?.sales
-      ? `${((((currentPeriodStats?.sales ?? 0) - comparisonStats.sales) / comparisonStats.sales) * 100).toFixed(1)}%`
-      : "0.0%"}
-  </div>
-</div>
-
-<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Orders</div>
-
-  <div className="text-2xl font-black text-slate-900">
-    {currentPeriodStats?.orders ?? 0}
-  </div>
-
-  <div className="text-sm text-slate-500 mt-1">
-    Previous: {comparisonStats?.orders ?? 0}
-  </div>
-
-  <div className="text-sm font-bold mt-2 text-emerald-600">
-    {comparisonStats?.orders
-      ? `${((((currentPeriodStats?.orders ?? 0) - comparisonStats.orders) / comparisonStats.orders) * 100).toFixed(1)}%`
-      : "0.0%"}
-  </div>
-</div>
-
-<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Visitors</div>
-
-  <div className="text-2xl font-black text-slate-900">
-    {currentPeriodStats?.visitors ?? 0}
-  </div>
-
-  <div className="text-sm text-slate-500 mt-1">
-    Previous: {comparisonStats?.visitors ?? 0}
-  </div>
-
-  <div className="text-sm font-bold mt-2 text-emerald-600">
-    {comparisonStats?.visitors
-      ? `${((((currentPeriodStats?.visitors ?? 0) - comparisonStats.visitors) / comparisonStats.visitors) * 100).toFixed(1)}%`
-      : "0.0%"}
-  </div>
-</div>
-
-<div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-  <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - AOV</div>
-
-  <div className="text-2xl font-black text-slate-900">
-    {currentPeriodStats?.aov ?? 0}
-  </div>
-
-  <div className="text-sm text-slate-500 mt-1">
-    Previous: {comparisonStats?.aov ?? 0}
-  </div>
-
-  <div className="text-sm font-bold mt-2 text-emerald-600">
-    {comparisonStats?.aov
-      ? `${((((currentPeriodStats?.aov ?? 0) - comparisonStats.aov) / comparisonStats.aov) * 100).toFixed(1)}%`
-      : "0.0%"}
-  </div>
-</div>
-   <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
-  <div className="max-w-6xl mx-auto flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
-        <i className="fa-solid fa-store font-black"></i>
-      </div>
-
-      <div>
-        <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
-          홍콩반점 테스트
-        </h1>
-        <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
-          Sales Coach AI (USD)
-        </p>
-      </div>
-    </div>
-
-    <div className="flex items-center gap-3 md:gap-4">
-      <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex flex-col items-end leading-tight">
-        <div className="flex items-center gap-2">
-          {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
-          {data.date}
+            <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
+              <i className="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
         </div>
-        <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
-          POWERED BY <span className="text-white">YOUNGSEOL</span>
-        </div>
-      </div>
-
-      <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
-        <i className="fa-solid fa-right-from-bracket"></i>
-      </button>
-    </div>
-  </div>
-</nav>
+      </nav>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 mt-6 md:mt-10 space-y-8 md:space-y-12">
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1668,6 +1610,153 @@ return (
               </div>
 
               <div className="p-5 md:p-8 space-y-6">
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Comparison Mode
+                    </p>
+                    <p className="text-sm font-bold text-slate-700">{comparisonMode}</p>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setComparisonMode("WOW")}
+                      className={`h-10 rounded-xl text-sm font-bold border transition-all ${
+                        comparisonMode === "WOW"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      WoW
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setComparisonMode("MOM")}
+                      className={`h-10 rounded-xl text-sm font-bold border transition-all ${
+                        comparisonMode === "MOM"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      MoM
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setComparisonMode("YOY")}
+                      className={`h-10 rounded-xl text-sm font-bold border transition-all ${
+                        comparisonMode === "YOY"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      YoY
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setComparisonMode("MANUAL")}
+                      className={`h-10 rounded-xl text-sm font-bold border transition-all ${
+                        comparisonMode === "MANUAL"
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      Manual
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="font-bold text-slate-500 mb-1">Current Range</div>
+                      <div className="text-slate-900 font-semibold">
+                        {periodRange.start} ~ {periodRange.end}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="font-bold text-slate-500 mb-1">Comparison Range</div>
+                      <div className="text-slate-900 font-semibold">
+                        {comparisonRange?.start ?? "-"} ~ {comparisonRange?.end ?? "-"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {!canRunPeriodAnalysis && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                      메뉴 엔지니어링 / Boost Plan 분석은 최소 7일 이상의 기간이 필요합니다.
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Sales</div>
+
+                    <div className="text-2xl font-black text-slate-900">
+                      ${Number(currentPeriodStats?.sales ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className="text-sm text-slate-500 mt-1">
+                      Previous: ${Number(comparisonStats?.sales ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className={`text-sm font-bold mt-2 ${salesChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {salesChangeRate.toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Orders</div>
+
+                    <div className="text-2xl font-black text-slate-900">
+                      {Number(currentPeriodStats?.orders ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className="text-sm text-slate-500 mt-1">
+                      Previous: {Number(comparisonStats?.orders ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className={`text-sm font-bold mt-2 ${ordersChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {ordersChangeRate.toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - Visitors</div>
+
+                    <div className="text-2xl font-black text-slate-900">
+                      {Number(currentPeriodStats?.visitors ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className="text-sm text-slate-500 mt-1">
+                      Previous: {Number(comparisonStats?.visitors ?? 0).toLocaleString()}
+                    </div>
+
+                    <div className={`text-sm font-bold mt-2 ${visitorsChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {visitorsChangeRate.toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="text-sm font-bold text-slate-500 mb-2">Period Performance - AOV</div>
+
+                    <div className="text-2xl font-black text-slate-900">
+                      ${Number(currentPeriodStats?.aov ?? 0).toFixed(2)}
+                    </div>
+
+                    <div className="text-sm text-slate-500 mt-1">
+                      Previous: ${Number(comparisonStats?.aov ?? 0).toFixed(2)}
+                    </div>
+
+                    <div className={`text-sm font-bold mt-2 ${aovChangeRate >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {aovChangeRate.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
