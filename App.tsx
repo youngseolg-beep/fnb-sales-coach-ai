@@ -1760,13 +1760,13 @@ const fetchPeriodStats = async () => {
               )}
             </div>
 
-            <ReportDisplay
-              report={report}
-              loading={loading}
-              menuEngineeringResult={menuEngineeringResult}
-              sortedMenuEngineering={sortedMenuEngineering}
-              boostPlans={boostPlans}
-            />
+<ReportDisplay
+  report={report}
+  loading={loading}
+  menuEngineeringResult={null}
+  sortedMenuEngineering={null}
+  boostPlans={[]}
+/>
 
             <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1887,7 +1887,135 @@ const fetchPeriodStats = async () => {
   currentDays={currentPeriodDays}
   comparisonDays={comparisonPeriodDays}
 />
+{sortedMenuEngineering && (
+  <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
+    <div className="mb-4">
+      <h4 className="text-lg font-black text-slate-900">메뉴 엔지니어링 분석</h4>
+      <p className="text-sm text-slate-500 mt-1">
+        최근 분석 기간 기준으로 Star / Cash Cow / Puzzle / Dog 메뉴를 요약합니다.
+      </p>
+    </div>
 
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="text-sm font-black text-emerald-700 mb-2">⭐ Stars</div>
+        <div className="space-y-2 text-sm text-slate-800">
+          {sortedMenuEngineering.starsTop3.length > 0 ? (
+            sortedMenuEngineering.starsTop3.map((item, idx) => (
+              <div key={`stars-${idx}`} className="font-medium">
+                {item}
+              </div>
+            ))
+          ) : (
+            <div className="text-slate-500">데이터 없음</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+        <div className="text-sm font-black text-blue-700 mb-2">💰 Cash Cows</div>
+        <div className="space-y-2 text-sm text-slate-800">
+          {sortedMenuEngineering.cashCowsTop3.length > 0 ? (
+            sortedMenuEngineering.cashCowsTop3.map((item, idx) => (
+              <div key={`cash-${idx}`} className="font-medium">
+                {item}
+              </div>
+            ))
+          ) : (
+            <div className="text-slate-500">데이터 없음</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="text-sm font-black text-amber-700 mb-2">🧩 Puzzles</div>
+        <div className="space-y-2 text-sm text-slate-800">
+          {sortedMenuEngineering.puzzlesTop3.length > 0 ? (
+            sortedMenuEngineering.puzzlesTop3.map((item, idx) => (
+              <div key={`puzzle-${idx}`} className="font-medium">
+                {item}
+              </div>
+            ))
+          ) : (
+            <div className="text-slate-500">데이터 없음</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+        <div className="text-sm font-black text-rose-700 mb-2">🐶 Dogs</div>
+        <div className="space-y-2 text-sm text-slate-800">
+          {sortedMenuEngineering.dogsTop3.length > 0 ? (
+            sortedMenuEngineering.dogsTop3.map((item, idx) => (
+              <div key={`dog-${idx}`} className="font-medium">
+                {item}
+              </div>
+            ))
+          ) : (
+            <div className="text-slate-500">데이터 없음</div>
+          )}
+        </div>
+      </div>
+    </div>
+{boostPlans.length > 0 && (
+  <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
+    <div className="mb-4">
+      <h4 className="text-lg font-black text-slate-900">Boost Plan</h4>
+      <p className="text-sm text-slate-500 mt-1">
+        분석 결과를 바탕으로 매출 개선 액션을 제안합니다.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {boostPlans.map((plan: any, idx: number) => (
+        <div
+          key={`${plan.type}-${idx}`}
+          className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-black text-indigo-700">
+              {plan.type}
+            </div>
+            <div className="text-xs font-bold text-slate-500">
+              목표 {plan.dailyTargetQty}개/일
+            </div>
+          </div>
+
+          <div className="text-base font-black text-slate-900 mb-2">
+            {plan.setName}
+          </div>
+
+          <div className="text-sm text-slate-700 mb-2">
+            {plan.setComposition}
+          </div>
+
+          <div className="text-sm font-semibold text-slate-800 mb-2">
+            {plan.discount}
+          </div>
+
+          <div className="rounded-xl bg-white/80 p-3 text-sm text-slate-700 mb-2">
+            <div className="font-bold text-slate-900 mb-1">직원 실행 멘트</div>
+            <div>{plan.staffComment}</div>
+          </div>
+
+          <div className="text-xs text-slate-600 leading-relaxed">
+            {plan.reason}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+    {sortedMenuEngineering.noCostItemsList && (
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="text-sm font-black text-slate-700 mb-1">원가 미입력 메뉴</div>
+        <div className="text-sm text-slate-600">
+          {sortedMenuEngineering.noCostItemsList}
+        </div>
+      </div>
+    )}
+  </section>
+)}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">기간 총 매출</p>
