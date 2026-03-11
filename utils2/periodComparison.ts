@@ -36,6 +36,11 @@ const addYears = (date: Date, years: number) => {
   return d;
 };
 
+const getInclusiveDays = (start: Date, end: Date) => {
+  const diff = end.getTime() - start.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+};
+
 export const getComparisonRange = (
   currentRange: DateRange,
   mode: ComparisonMode
@@ -57,8 +62,17 @@ export const getComparisonRange = (
     };
   }
 
+  if (mode === "YOY") {
+    return {
+      start: formatDate(addYears(start, -1)),
+      end: formatDate(addYears(end, -1)),
+    };
+  }
+
+  const days = getInclusiveDays(start, end);
+
   return {
-    start: formatDate(addYears(start, -1)),
-    end: formatDate(addYears(end, -1)),
+    start: formatDate(addDays(start, -days)),
+    end: formatDate(addDays(start, -1)),
   };
 };
