@@ -1784,13 +1784,13 @@ list.push({
                   </div>
                 </div>
 
-                <PeriodTopMenuCompare
-                  currentMenus={currentPeriodMenuRows}
-                  comparisonMenus={comparisonPeriodMenuRows}
-                  minDays={1}
-                  currentDays={currentPeriodDays}
-                  comparisonDays={comparisonPeriodDays}
-                />
+              <PeriodTopMenuCompare
+  currentMenus={currentPeriodMenus}
+  comparisonMenus={[]}
+  minDays={1}
+  currentDays={selectedPeriodDays}
+  comparisonDays={selectedPeriodDays}
+/>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
