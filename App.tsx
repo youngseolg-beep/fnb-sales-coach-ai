@@ -1784,9 +1784,9 @@ list.push({
                   </div>
                 </div>
 
-              <PeriodTopMenuCompare
+<PeriodTopMenuCompare
   currentMenus={currentPeriodMenus}
-  comparisonMenus={[]}
+  comparisonMenus={currentPeriodMenus}
   minDays={1}
   currentDays={selectedPeriodDays}
   comparisonDays={selectedPeriodDays}
