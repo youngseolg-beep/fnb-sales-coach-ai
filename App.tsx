@@ -446,27 +446,60 @@ const App: React.FC = () => {
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
   const [comparisonStats, setComparisonStats] = useState<any>(null);
 
-  const calculatePeriodKPI = (rows: any[]) => {
-    if (!rows || rows.length === 0) {
-      return {
-        sales: 0,
-        orders: 0,
-        visitors: 0,
-        aov: 0,
-      };
-    }
-
-    const sales = rows.reduce((sum, row) => sum + Number(row?.posSales || 0), 0);
-    const orders = rows.reduce((sum, row) => sum + Number(row?.orders || 0), 0);
-    const visitors = rows.reduce((sum, row) => sum + Number(row?.visitCount || 0), 0);
-
+const calculatePeriodKPI = (rows: any[]) => {
+  if (!rows || rows.length === 0) {
     return {
-      sales,
-      orders,
-      visitors,
-      aov: orders > 0 ? sales / orders : 0,
+      sales: 0,
+      orders: 0,
+      visitors: 0,
+      aov: 0,
     };
+  }
+
+  const sales = rows.reduce(
+    (sum, row) =>
+      sum +
+      Number(
+        row?.posSales ??
+        row?.sales ??
+        row?.total_sales ??
+        row?.totalSales ??
+        0
+      ),
+    0
+  );
+
+  const orders = rows.reduce(
+    (sum, row) =>
+      sum +
+      Number(
+        row?.orders ??
+        row?.orderCount ??
+        0
+      ),
+    0
+  );
+
+  const visitors = rows.reduce(
+    (sum, row) =>
+      sum +
+      Number(
+        row?.visitCount ??
+        row?.visitors ??
+        row?.guests ??
+        row?.guestCount ??
+        0
+      ),
+    0
+  );
+
+  return {
+    sales,
+    orders,
+    visitors,
+    aov: orders > 0 ? sales / orders : 0,
   };
+};
 
   const loadComparisonData = async () => {
     if (!comparisonRange) return;
@@ -529,7 +562,6 @@ const App: React.FC = () => {
   }, [periodRange]);
 
   const [periodLoading, setPeriodLoading] = useState(false);
-  const [comparisonMenuRows, setComparisonMenuRows] = useState<any[]>([]);
   const [periodMenuTop, setPeriodMenuTop] = useState<{ name: string; qty: number }[]>([]);
 
   const hasMeaningfulInput = (v: SalesReportData) => {
@@ -935,7 +967,7 @@ const App: React.FC = () => {
     }
   };
 
- const fetchPeriodStats = async () => {
+const fetchPeriodStats = async () => {
   setPeriodLoading(true);
   setPeriodStats(null);
   setPeriodMenuTop([]);
@@ -944,16 +976,16 @@ const App: React.FC = () => {
     const start = periodRange.start;
     const end = periodRange.end;
 
-    const dates = await listDatesInRange(start, end);
+    const currentDates = await listDatesInRange(start, end);
 
-    const list: any[] = [];
+    const currentList: any[] = [];
     const menuMap = new Map<string, number>();
 
-    for (const d of dates) {
+    for (const d of currentDates) {
       const item = await loadDaily(d);
       if (!item) continue;
 
-      list.push({
+      currentList.push({
         date: d,
         total_sales: Number(item.posSales || 0),
         orders: Number(item.orders || 0),
@@ -978,16 +1010,39 @@ const App: React.FC = () => {
       }
     }
 
-    if (list.length > 0) {
-      const totalSales = list.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
-      const totalOrders = list.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
-      const totalVisitors = list.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
+    let comparisonList: any[] = [];
+
+    if (comparisonRange) {
+      const comparisonDates = await listDatesInRange(
+        comparisonRange.start,
+        comparisonRange.end
+      );
+
+      for (const d of comparisonDates) {
+        const item = await loadDaily(d);
+        if (!item) continue;
+
+        comparisonList.push({
+          date: d,
+          total_sales: Number(item.posSales || 0),
+          orders: Number(item.orders || 0),
+          guests: Number(item.visitCount || 0),
+          categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
+        });
+      }
+    }
+
+    if (currentList.length > 0) {
+      const totalSales = currentList.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
+      const totalOrders = currentList.reduce((acc, curr) => acc + Number(curr.orders || 0), 0);
+      const totalVisitors = currentList.reduce((acc, curr) => acc + Number(curr.guests || 0), 0);
 
       setPeriodStats({
         totalSales,
         totalOrders,
         totalVisitors,
-        list: list.sort((a, b) => a.date.localeCompare(b.date)),
+        list: currentList.sort((a, b) => a.date.localeCompare(b.date)),
+        comparisonList: comparisonList.sort((a, b) => a.date.localeCompare(b.date)),
       });
     } else {
       setPeriodStats({
@@ -995,6 +1050,7 @@ const App: React.FC = () => {
         totalOrders: 0,
         totalVisitors: 0,
         list: [],
+        comparisonList: [],
       });
     }
 
@@ -1011,17 +1067,9 @@ const App: React.FC = () => {
       totalOrders: 0,
       totalVisitors: 0,
       list: [],
+      comparisonList: [],
     });
     setPeriodMenuTop([]);
-    // 비교기간 메뉴 rows 로드
-if (comparisonRange) {
-  const rows = await loadMenuRowsForRange(
-    comparisonRange.start,
-    comparisonRange.end
-  );
-
-  setComparisonMenuRows(rows);
-}
   } finally {
     setPeriodLoading(false);
   }
@@ -1128,9 +1176,10 @@ if (comparisonRange) {
   return Array.from(map.values());
 }, [periodStats]);
 
-  const comparisonPeriodMenus = useMemo(() => {
-  return aggregateMenusFromRows(comparisonMenuRows || []);
-}, [comparisonMenuRows]);
+ const comparisonPeriodMenus = useMemo(() => {
+  const list = periodStats?.comparisonList || [];
+  return aggregateMenusFromRows(list);
+}, [periodStats]);
 
   const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
   const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
@@ -1830,13 +1879,13 @@ if (comparisonRange) {
                   </div>
                 </div>
 
-                <PeriodTopMenuCompare
-                  currentMenus={currentPeriodMenus}
-                  comparisonMenus={comparisonPeriodMenus}
-                  minDays={1}
-                  currentDays={currentPeriodDays}
-                  comparisonDays={comparisonPeriodDays}
-                />
+  <PeriodTopMenuCompare
+  currentMenus={currentPeriodMenus}
+  comparisonMenus={comparisonPeriodMenus}
+  minDays={1}
+  currentDays={currentPeriodDays}
+  comparisonDays={comparisonPeriodDays}
+/>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
