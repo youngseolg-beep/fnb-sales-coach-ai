@@ -1,3 +1,6 @@
+import PeriodTopMenuCompare, {
+  type PeriodMenuRow,
+} from "./components/PeriodTopMenuCompare";
 import React, { useState, useMemo, useEffect } from "react";
 import { getComparisonRange, type ComparisonMode } from "./utils2/periodComparison";
 import {
@@ -306,6 +309,43 @@ const getInclusiveDayCountFromStrings = (start: string, end: string) => {
   return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 };
 
+function aggregateMenusForPeriod(rows: any[]): PeriodMenuRow[] {
+  const menuMap = new Map<string, PeriodMenuRow>();
+
+  for (const row of rows || []) {
+    const categories = Array.isArray(row?.categories) ? row.categories : [];
+
+    for (const cat of categories) {
+      const items = Array.isArray(cat?.items) ? cat.items : [];
+
+      for (const item of items) {
+        const name = String(item?.name || "").trim();
+        if (!name) continue;
+
+        const qty = Number(item?.qty || 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
+
+        const price = Number(item?.price || 0);
+        const sales = Number.isFinite(price) ? price * qty : 0;
+
+        if (!menuMap.has(name)) {
+          menuMap.set(name, {
+            name,
+            qty: 0,
+            sales: 0,
+          });
+        }
+
+        const prev = menuMap.get(name)!;
+        prev.qty += qty;
+        prev.sales += sales;
+      }
+    }
+  }
+
+  return Array.from(menuMap.values());
+}
+
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
@@ -380,16 +420,16 @@ const App: React.FC = () => {
     end: new Date().toISOString().split("T")[0],
   });
 
- useEffect(() => {
-  if (comparisonMode === "MANUAL") {
-    if (!comparisonRange) {
-      setComparisonRange(getComparisonRange(periodRange, comparisonMode));
+  useEffect(() => {
+    if (comparisonMode === "MANUAL") {
+      if (!comparisonRange) {
+        setComparisonRange(getComparisonRange(periodRange, comparisonMode));
+      }
+      return;
     }
-    return;
-  }
 
-  setComparisonRange(getComparisonRange(periodRange, comparisonMode));
-}, [periodRange, comparisonMode]);
+    setComparisonRange(getComparisonRange(periodRange, comparisonMode));
+  }, [periodRange, comparisonMode, comparisonRange]);
 
   const [periodStats, setPeriodStats] = useState<any>(null);
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
@@ -405,9 +445,15 @@ const App: React.FC = () => {
       };
     }
 
-    const sales = rows.reduce((sum, row) => sum + Number(row.sales || 0), 0);
-    const orders = rows.reduce((sum, row) => sum + Number(row.orders || 0), 0);
-    const visitors = rows.reduce((sum, row) => sum + Number(row.visitors || 0), 0);
+    const sales = rows.reduce(
+      (sum, row) => sum + Number(row?.posSales ?? row?.sales ?? row?.total_sales ?? 0),
+      0
+    );
+    const orders = rows.reduce((sum, row) => sum + Number(row?.orders ?? 0), 0);
+    const visitors = rows.reduce(
+      (sum, row) => sum + Number(row?.visitCount ?? row?.visitors ?? row?.guests ?? 0),
+      0
+    );
 
     return {
       sales,
@@ -430,6 +476,7 @@ const App: React.FC = () => {
     setComparisonStats({
       ...kpi,
       rows: rows.length,
+      rawRows: rows,
     });
   };
 
@@ -446,6 +493,7 @@ const App: React.FC = () => {
     setCurrentPeriodStats({
       ...kpi,
       rows: rows.length,
+      rawRows: rows,
     });
   };
 
@@ -1001,6 +1049,17 @@ const App: React.FC = () => {
     () => calcChangeRate(Number(currentPeriodStats?.aov || 0), Number(comparisonStats?.aov || 0)),
     [currentPeriodStats?.aov, comparisonStats?.aov]
   );
+
+  const currentPeriodMenuRows = useMemo(() => {
+    return aggregateMenusForPeriod(currentPeriodStats?.rawRows || []);
+  }, [currentPeriodStats?.rawRows]);
+
+  const comparisonPeriodMenuRows = useMemo(() => {
+    return aggregateMenusForPeriod(comparisonStats?.rawRows || []);
+  }, [comparisonStats?.rawRows]);
+
+  const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
+  const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
 
   const handleDataChange = (newData: SalesReportData) => {
     const dateChanged = String(newData.date || "") !== String(data.date || "");
@@ -1618,14 +1677,14 @@ const App: React.FC = () => {
               </div>
 
               <div className="p-5 md:p-8 space-y-6">
-<PeriodComparisonPanel
-  comparisonMode={comparisonMode}
-  setComparisonMode={setComparisonMode}
-  periodRange={periodRange}
-  comparisonRange={comparisonRange}
-  setComparisonRange={setComparisonRange}
-  canRunPeriodAnalysis={canRunPeriodAnalysis}
-/>
+                <PeriodComparisonPanel
+                  comparisonMode={comparisonMode}
+                  setComparisonMode={setComparisonMode}
+                  periodRange={periodRange}
+                  comparisonRange={comparisonRange}
+                  setComparisonRange={setComparisonRange}
+                  canRunPeriodAnalysis={canRunPeriodAnalysis}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -1692,6 +1751,14 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                <PeriodTopMenuCompare
+                  currentMenus={currentPeriodMenuRows}
+                  comparisonMenus={comparisonPeriodMenuRows}
+                  minDays={1}
+                  currentDays={currentPeriodDays}
+                  comparisonDays={comparisonPeriodDays}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-200 p-4">
