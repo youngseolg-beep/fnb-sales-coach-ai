@@ -276,7 +276,7 @@ export async function getMonthlyTotal(yearMonth: string) {
 export async function loadDailyRange(start: string, end: string) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,total_sales,orders,visit_count,payload")
+    .select("date,total_sales,orders,visit_count,sold_items,payload")
     .gte("date", start)
     .lte("date", end)
     .order("date", { ascending: true });
@@ -289,12 +289,15 @@ export async function loadDailyRange(start: string, end: string) {
     .filter((r) => !isDeletedPayload(r.payload))
     .map((row) => {
       const p: any = safeParsePayload(row.payload);
+      const rawCategories = p?.categories ?? row.sold_items ?? null;
+      const safeCategories = normalizeCategories(rawCategories) ?? [];
 
-return {
-  date: row.date,
-  sales: toNumber(p?.posSales ?? row.total_sales, 0),
-  orders: toNumber(row.orders ?? p?.orders, 0),
-  visitors: toNumber(row.visit_count ?? p?.visitCount, 0),
-};
+      return {
+        date: row.date,
+        sales: toNumber(p?.posSales ?? row.total_sales, 0),
+        orders: toNumber(p?.orders ?? row.orders, 0),
+        visitors: toNumber(p?.visitCount ?? row.visit_count, 0),
+        categories: safeCategories,
+      };
     });
 }
