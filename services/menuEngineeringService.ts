@@ -113,6 +113,10 @@ const internalCalculate = async (
   // id별 판매량 누적
   const aggregatedQuantities: Record<string, number> = {};
 
+  // ✅ 기간 내 실제 저장 데이터에서 price / cost 메타도 같이 수집
+  const observedItemsById: Record<string, Partial<MenuItem>> = {};
+  const observedItemsByName: Record<string, Partial<MenuItem>> = {};
+
   for (const date of dates) {
     const dailyData = await loadDaily(date);
     if (!dailyData) continue;
@@ -131,8 +135,47 @@ const internalCalculate = async (
       for (const item of cat.items) {
         if (!item) continue;
 
+        const itemName = String(item.name || "").trim();
+
         // ✅ 제외 메뉴는 집계에서 제외
-        if (excludedMenuNames && excludedMenuNames.has((item.name || "").trim())) continue;
+        if (excludedMenuNames && excludedMenuNames.has(itemName)) continue;
+
+        const normalizedName = normalizeName(itemName);
+
+        // 실제 저장 데이터에서 관측된 메뉴 메타 축적
+        if (item.id) {
+          const prev = observedItemsById[item.id] || {};
+          observedItemsById[item.id] = {
+            ...prev,
+            id: item.id,
+            name: itemName || prev.name,
+            price:
+              item.price !== undefined && item.price !== null && item.price !== ""
+                ? Number(item.price)
+                : prev.price,
+            unitCost:
+              item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== ""
+                ? Number(item.unitCost)
+                : prev.unitCost,
+          };
+        }
+
+        if (normalizedName) {
+          const prevByName = observedItemsByName[normalizedName] || {};
+          observedItemsByName[normalizedName] = {
+            ...prevByName,
+            id: item.id || prevByName.id,
+            name: itemName || prevByName.name,
+            price:
+              item.price !== undefined && item.price !== null && item.price !== ""
+                ? Number(item.price)
+                : prevByName.price,
+            unitCost:
+              item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== ""
+                ? Number(item.unitCost)
+                : prevByName.unitCost,
+          };
+        }
 
         const q = Number(item.qty || 0);
         if (q > 0) {
@@ -145,32 +188,67 @@ const internalCalculate = async (
 
   const aggregatedIdsCount = Object.keys(aggregatedQuantities).length;
 
-  // 메뉴 마스터(초기 카테고리)에서 id→item 매핑
-  const allMenuItems: Record<string, MenuItem> = {};
+  // 메뉴 마스터(초기 카테고리)에서 id→item / name→item 매핑
+  const allMenuItemsById: Record<string, MenuItem> = {};
+  const allMenuItemsByName: Record<string, MenuItem> = {};
+
   for (const cat of initialCategories) {
     for (const item of cat.items) {
-      allMenuItems[item.id] = item;
+      allMenuItemsById[item.id] = item;
+      const normalizedName = normalizeName(item.name);
+      if (normalizedName && !allMenuItemsByName[normalizedName]) {
+        allMenuItemsByName[normalizedName] = item;
+      }
     }
   }
 
   // item별 ME metrics 생성
   const menuEngineeringItems: MenuEngineeringItem[] = [];
+
   for (const itemId of Object.keys(aggregatedQuantities)) {
-    const item = allMenuItems[itemId];
-    if (!item) continue;
+    const masterItem = allMenuItemsById[itemId];
+    const observedItem = observedItemsById[itemId];
+
+    const resolvedName =
+      String(observedItem?.name || masterItem?.name || "").trim();
+
+    const normalizedResolvedName = normalizeName(resolvedName);
+    const fallbackByName =
+      observedItemsByName[normalizedResolvedName] ||
+      allMenuItemsByName[normalizedResolvedName];
+
+    const resolvedPriceRaw =
+      observedItem?.price ??
+      masterItem?.price ??
+      fallbackByName?.price ??
+      0;
+
+    const resolvedUnitCostRaw =
+      observedItem?.unitCost ??
+      masterItem?.unitCost ??
+      fallbackByName?.unitCost;
 
     const qty_month = Number(aggregatedQuantities[itemId] || 0);
-    const revenue_month = Number(item.price || 0) * qty_month;
+    const price = Number(resolvedPriceRaw || 0);
+    const revenue_month = price * qty_month;
 
-    const hasCost = item.unitCost !== undefined && item.unitCost !== null;
-    const unitCost = hasCost ? Number(item.unitCost) : null;
+    const hasCost =
+      resolvedUnitCostRaw !== undefined &&
+      resolvedUnitCostRaw !== null &&
+      resolvedUnitCostRaw !== "";
+
+    const unitCost = hasCost ? Number(resolvedUnitCostRaw) : null;
 
     const cogs_month = hasCost ? unitCost! * qty_month : null;
-    const cm = hasCost ? Number(item.price || 0) - unitCost! : null;
+    const cm = hasCost ? price - unitCost! : null;
     const gp_month = cogs_month !== null ? revenue_month - cogs_month : null;
 
     menuEngineeringItems.push({
-      ...item,
+      id: itemId,
+      name: resolvedName || masterItem?.name || observedItem?.name || itemId,
+      price,
+      qty: 0,
+      unitCost,
       qty_month,
       revenue_month,
       cogs_month,
