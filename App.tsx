@@ -22,6 +22,13 @@ const AUTH_KEY = "fb_coach_auth";
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
+const formatLocalDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const loadMonthlyTarget = (yearMonth: string, fallback = 15000) => {
   if (typeof window === "undefined") return fallback;
   const raw = localStorage.getItem(MONTHLY_TARGET_PREFIX + yearMonth);
@@ -269,7 +276,7 @@ const App: React.FC = () => {
   const [priceSaving, setPriceSaving] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split("T")[0];
+    return formatLocalDate(new Date());
   });
 
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
@@ -278,7 +285,7 @@ const App: React.FC = () => {
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
   const [data, setData] = useState<SalesReportData>(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatLocalDate(new Date());
     const ym = getMonthKey(today);
     const monthTarget = loadMonthlyTarget(ym, 15000);
 
