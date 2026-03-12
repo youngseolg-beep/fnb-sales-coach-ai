@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO, subDays } from "date-fns";
 
 import DataInput from "./DataInput";
@@ -9,7 +9,7 @@ import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 import { getComparisonRange, type ComparisonMode } from "../utils2/periodComparison";
 import { generateCoachingReport } from "../services/geminiService";
 import { calculateMenuEngineeringForRange } from "../services/menuEngineeringService";
-import { loadDaily, listDatesInRange, loadDailyRange, saveDailyData } from "../services/salesStorage";
+import { loadDailyRange, saveDailyData } from "../services/salesStorage";
 
 import type {
   SalesReportData,
@@ -127,6 +127,12 @@ const DailySalesPage: React.FC<Props> = ({
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodStats, setPeriodStats] = useState<any>(null);
 
+    const currentRangeRequestRef = useRef("");
+  const comparisonRangeRequestRef = useRef("");
+  const periodStatsRequestRef = useRef("");
+
+  const makeRangeKey = (start: string, end: string) => `${start}__${end}`;
+  
   const hasMeaningfulInput = (v: SalesReportData) => {
     const hasBase =
       Number(v.posSales || 0) > 0 ||
@@ -138,17 +144,20 @@ const DailySalesPage: React.FC<Props> = ({
     return hasBase || hasMenu;
   };
 
-  useEffect(() => {
+   useEffect(() => {
+    if (!periodRange.start || !periodRange.end) return;
+
     if (comparisonMode === "MANUAL") {
-      if (!comparisonRange) {
-        setComparisonRange(getComparisonRange(periodRange, comparisonMode));
-      }
+      setComparisonRange((prev) => {
+        if (prev?.start && prev?.end) return prev;
+        return getComparisonRange(periodRange, "MANUAL");
+      });
       return;
     }
 
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
-  }, [periodRange, comparisonMode, comparisonRange]);
-
+  }, [periodRange.start, periodRange.end, comparisonMode]);
+  
   useEffect(() => {
     setOcrApplied(false);
     setDataSaved(hasMeaningfulInput(data));
@@ -244,11 +253,22 @@ const DailySalesPage: React.FC<Props> = ({
     };
   };
 
-  const loadComparisonData = async () => {
-    if (!comparisonRange) return;
+   const loadComparisonData = async (force = false) => {
+    if (!comparisonRange?.start || !comparisonRange?.end) return;
+
+    const requestKey = makeRangeKey(comparisonRange.start, comparisonRange.end);
+
+    if (!force && comparisonRangeRequestRef.current === requestKey) {
+      return;
+    }
+
+    comparisonRangeRequestRef.current = requestKey;
 
     try {
       const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end);
+
+      if (comparisonRangeRequestRef.current !== requestKey) return;
+
       const kpi = calculatePeriodKPI(rows);
 
       setComparisonStats({
@@ -257,6 +277,8 @@ const DailySalesPage: React.FC<Props> = ({
         rawRows: rows,
       });
     } catch (error) {
+      if (comparisonRangeRequestRef.current !== requestKey) return;
+
       console.error("loadComparisonData error:", error);
       setComparisonStats({
         sales: 0,
@@ -269,9 +291,22 @@ const DailySalesPage: React.FC<Props> = ({
     }
   };
 
-  const loadCurrentPeriodData = async () => {
+   const loadCurrentPeriodData = async (force = false) => {
+    if (!periodRange.start || !periodRange.end) return;
+
+    const requestKey = makeRangeKey(periodRange.start, periodRange.end);
+
+    if (!force && currentRangeRequestRef.current === requestKey) {
+      return;
+    }
+
+    currentRangeRequestRef.current = requestKey;
+
     try {
       const rows = await loadDailyRange(periodRange.start, periodRange.end);
+
+      if (currentRangeRequestRef.current !== requestKey) return;
+
       const kpi = calculatePeriodKPI(rows);
 
       setCurrentPeriodStats({
@@ -280,6 +315,8 @@ const DailySalesPage: React.FC<Props> = ({
         rawRows: rows,
       });
     } catch (error) {
+      if (currentRangeRequestRef.current !== requestKey) return;
+
       console.error("loadCurrentPeriodData error:", error);
       setCurrentPeriodStats({
         sales: 0,
@@ -292,57 +329,58 @@ const DailySalesPage: React.FC<Props> = ({
     }
   };
 
-  useEffect(() => {
-    loadComparisonData();
-  }, [comparisonRange]);
+   useEffect(() => {
+    void loadComparisonData();
+  }, [comparisonRange?.start, comparisonRange?.end]);
 
   useEffect(() => {
-    loadCurrentPeriodData();
-  }, [periodRange]);
+    void loadCurrentPeriodData();
+  }, [periodRange.start, periodRange.end]);
 
-  const fetchPeriodStats = async () => {
+  const fetchPeriodStats = async (force = false) => {
+    if (!periodRange.start || !periodRange.end) return;
+
+    const comparisonKey =
+      comparisonRange?.start && comparisonRange?.end
+        ? makeRangeKey(comparisonRange.start, comparisonRange.end)
+        : "no_comparison";
+
+    const requestKey = `${makeRangeKey(periodRange.start, periodRange.end)}__${comparisonKey}`;
+
+    if (!force && periodStatsRequestRef.current === requestKey) {
+      return;
+    }
+
+    periodStatsRequestRef.current = requestKey;
+
     setPeriodLoading(true);
     setPeriodStats(null);
 
     try {
-      const start = periodRange.start;
-      const end = periodRange.end;
+      const [currentRows, comparisonRows] = await Promise.all([
+        loadDailyRange(periodRange.start, periodRange.end),
+        comparisonRange?.start && comparisonRange?.end
+          ? loadDailyRange(comparisonRange.start, comparisonRange.end)
+          : Promise.resolve([]),
+      ]);
 
-      const currentDates = await listDatesInRange(start, end);
+      if (periodStatsRequestRef.current !== requestKey) return;
 
-      const currentList: any[] = [];
+      const currentList = currentRows.map((row: any) => ({
+        date: row.date,
+        total_sales: Number(row.sales || 0),
+        orders: Number(row.orders || 0),
+        guests: Number(row.visitors || 0),
+        categories: Array.isArray(row.categories) ? row.categories : [],
+      }));
 
-      for (const d of currentDates) {
-        const item = await loadDaily(d);
-        if (!item) continue;
-
-        currentList.push({
-          date: d,
-          total_sales: Number(item.posSales || 0),
-          orders: Number(item.orders || 0),
-          guests: Number(item.visitCount || 0),
-          categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
-        });
-      }
-
-      let comparisonList: any[] = [];
-
-      if (comparisonRange) {
-        const comparisonDates = await listDatesInRange(comparisonRange.start, comparisonRange.end);
-
-        for (const d of comparisonDates) {
-          const item = await loadDaily(d);
-          if (!item) continue;
-
-          comparisonList.push({
-            date: d,
-            total_sales: Number(item.posSales || 0),
-            orders: Number(item.orders || 0),
-            guests: Number(item.visitCount || 0),
-            categories: Array.isArray((item as any).categories) ? (item as any).categories : [],
-          });
-        }
-      }
+      const comparisonList = comparisonRows.map((row: any) => ({
+        date: row.date,
+        total_sales: Number(row.sales || 0),
+        orders: Number(row.orders || 0),
+        guests: Number(row.visitors || 0),
+        categories: Array.isArray(row.categories) ? row.categories : [],
+      }));
 
       if (currentList.length > 0) {
         const totalSales = currentList.reduce((acc, curr) => acc + Number(curr.total_sales || 0), 0);
@@ -366,6 +404,8 @@ const DailySalesPage: React.FC<Props> = ({
         });
       }
     } catch (e) {
+      if (periodStatsRequestRef.current !== requestKey) return;
+
       console.error("fetchPeriodStats error:", e);
       setPeriodStats({
         totalSales: 0,
@@ -375,7 +415,9 @@ const DailySalesPage: React.FC<Props> = ({
         comparisonList: [],
       });
     } finally {
-      setPeriodLoading(false);
+      if (periodStatsRequestRef.current === requestKey) {
+        setPeriodLoading(false);
+      }
     }
   };
 
@@ -778,8 +820,8 @@ const DailySalesPage: React.FC<Props> = ({
 
       try {
         await refreshMonthlyStats(data.date.substring(0, 7));
-        await loadCurrentPeriodData();
-        await loadComparisonData();
+        await loadCurrentPeriodData(true);
+        await loadComparisonData(true);
       } catch (e) {
         console.warn("refreshMonthlyStats failed (ignored):", e);
       }
