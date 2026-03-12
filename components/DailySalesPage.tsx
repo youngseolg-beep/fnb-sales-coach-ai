@@ -31,6 +31,13 @@ interface Props {
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
+const formatLocalDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const saveMonthlyTarget = (yearMonth: string, value: number) => {
   if (typeof window === "undefined") return;
   const v = Number(value);
@@ -117,9 +124,14 @@ const DailySalesPage: React.FC<Props> = ({
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("WOW");
   const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
 
-  const [periodRange, setPeriodRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split("T")[0],
-    end: new Date().toISOString().split("T")[0],
+  const [periodRange, setPeriodRange] = useState(() => {
+    const today = new Date();
+    const start = subDays(today, 7);
+
+    return {
+      start: formatLocalDate(start),
+      end: formatLocalDate(today),
+    };
   });
 
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
@@ -127,12 +139,12 @@ const DailySalesPage: React.FC<Props> = ({
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodStats, setPeriodStats] = useState<any>(null);
 
-    const currentRangeRequestRef = useRef("");
+  const currentRangeRequestRef = useRef("");
   const comparisonRangeRequestRef = useRef("");
   const periodStatsRequestRef = useRef("");
 
   const makeRangeKey = (start: string, end: string) => `${start}__${end}`;
-  
+
   const hasMeaningfulInput = (v: SalesReportData) => {
     const hasBase =
       Number(v.posSales || 0) > 0 ||
@@ -144,7 +156,7 @@ const DailySalesPage: React.FC<Props> = ({
     return hasBase || hasMenu;
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
 
     if (comparisonMode === "MANUAL") {
@@ -157,7 +169,7 @@ const DailySalesPage: React.FC<Props> = ({
 
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
   }, [periodRange.start, periodRange.end, comparisonMode]);
-  
+
   useEffect(() => {
     setOcrApplied(false);
     setDataSaved(hasMeaningfulInput(data));
@@ -253,7 +265,7 @@ const DailySalesPage: React.FC<Props> = ({
     };
   };
 
-   const loadComparisonData = async (force = false) => {
+  const loadComparisonData = async (force = false) => {
     if (!comparisonRange?.start || !comparisonRange?.end) return;
 
     const requestKey = makeRangeKey(comparisonRange.start, comparisonRange.end);
@@ -291,7 +303,7 @@ const DailySalesPage: React.FC<Props> = ({
     }
   };
 
-   const loadCurrentPeriodData = async (force = false) => {
+  const loadCurrentPeriodData = async (force = false) => {
     if (!periodRange.start || !periodRange.end) return;
 
     const requestKey = makeRangeKey(periodRange.start, periodRange.end);
@@ -329,7 +341,7 @@ const DailySalesPage: React.FC<Props> = ({
     }
   };
 
-   useEffect(() => {
+  useEffect(() => {
     void loadComparisonData();
   }, [comparisonRange?.start, comparisonRange?.end]);
 
