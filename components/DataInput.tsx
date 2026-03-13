@@ -15,6 +15,13 @@ interface DataInputProps {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const formatLocalDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 /** 파일을 base64로 변환 */
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
@@ -216,10 +223,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   }, [showCalendar]);
 
-  // 파일 키(중복 방지)
   const fileKey = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
 
-  // 썸네일 URL 관리
   React.useEffect(() => {
     const next: Record<string, string> = { ...thumbUrls };
     for (const f of ocrFiles) {
@@ -241,7 +246,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ocrFiles]);
 
-  // 메뉴명 정규화/유사도
   const normalizeName = (name: string): string => {
     return name
       .toLowerCase()
@@ -290,7 +294,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return flattened;
   }, [data.categories]);
 
-  /** OCR 파싱 결과를 실제 메뉴로 자동 교정 */
   const autoCorrectItem = (ocrItem: { name: string; price: number; qty: number }): CorrectedItem => {
     const originalName = ocrItem.name;
     const normalizedOcrName = normalizeName(originalName);
@@ -362,7 +365,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   };
 
-  /** 서버 OCR 호출 (429 재시도 포함) */
   const callOcrWithRetry = async (imageBase64: string, mimeType: string, fileName: string) => {
     const delays = [2000, 5000, 10000];
     let lastErr: any;
@@ -390,7 +392,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     throw lastErr;
   };
 
-  // ✅ OCR 파일 추가(누적) - 기존 결과 유지
   const appendFiles = (files: File[]) => {
     if (!files || files.length === 0) return;
 
@@ -416,7 +417,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     });
   };
 
-  // ✅ 전체 교체(리셋)
   const replaceAllFiles = (files: File[]) => {
     setOcrFiles(files);
     const nextStatus: Record<string, FileStatus> = {};
@@ -430,7 +430,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrProgress(null);
   };
 
-  // ✅ OCR 실행: 기본은 "미분석/실패 파일만"
   const handleOcr = async (filesToProcessOverride?: File[]) => {
     const statuses = ocrFileStatuses || {};
     const defaultTargets = ocrFiles.filter((f) => {
@@ -628,7 +627,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
   return (
     <div className="space-y-8">
-      {/* OCR Toggle Button */}
       <div className="flex justify-end">
         <button
           onClick={() => setShowOcr(!showOcr)}
@@ -639,7 +637,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </button>
       </div>
 
-      {/* OCR Receipt Upload Section */}
       {showOcr && (
         <div className="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-visible animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-4 flex items-center justify-between">
@@ -1000,7 +997,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </div>
       )}
 
-      {/* 1. Basic Info & Monthly Target */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-visible">
         <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -1010,7 +1006,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Date Field */}
           <div className="lg:col-span-1 relative">
             <label className="block text-xs font-bold text-slate-500 mb-1">날짜 선택</label>
             <div className="flex gap-2">
@@ -1057,7 +1052,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
               <button
                 onClick={() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = formatLocalDate(new Date());
                   updateBaseField("date", today);
                 }}
                 className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-colors uppercase"
@@ -1067,7 +1062,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             </div>
           </div>
 
-          {/* POS Total Sales */}
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
             <div className="relative">
@@ -1084,7 +1078,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             </div>
           </div>
 
-          {/* Visitor Count */}
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
@@ -1101,7 +1094,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             </div>
           </div>
 
-          {/* Orders */}
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
             <div className="relative">
@@ -1118,7 +1110,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             </div>
           </div>
 
-          {/* Notes */}
           <div className="lg:col-span-3">
             <label className="block text-xs font-bold text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
             <input
@@ -1132,8 +1123,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </div>
       </div>
 
-
-      {/* 2. Menu Quantities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {data.categories.map((cat, catIdx) => (
           <div key={cat.name} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
