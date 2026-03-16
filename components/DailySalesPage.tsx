@@ -938,13 +938,13 @@ const DailySalesPage: React.FC<Props> = ({
       </header>
 
       <div className="relative">
-        <DataInput
-          data={data}
-          onChange={handleDataChange}
-          loading={loading}
-          datesWithData={datesWithData}
-          onMonthChange={onMonthChange}
-        />
+    <DataInput
+  data={data}
+  onChange={handleDataChange}
+  loading={loading}
+  datesWithData={[...datesWithData]}
+  onMonthChange={onMonthChange}
+/>
 
         {saveStatus && (
           <div className="mt-4 text-center">
