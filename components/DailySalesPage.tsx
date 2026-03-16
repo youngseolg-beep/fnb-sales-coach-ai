@@ -195,11 +195,12 @@ const DailySalesPage: React.FC<Props> = ({
     let addonSum = 0;
 
     data.categories.forEach((cat) => {
-      cat.items.forEach((item) => {
-        calcSales += item.price * (item.qty || 0);
-        if (cat.name.includes("토핑")) addonSum += item.qty || 0;
-      });
-    });
+  cat.items.forEach((item) => {
+    calcSales += item.price * (item.qty || 0);
+  });
+});
+
+calcSales += Number((data as any).deliverySales || 0);
 
     const gapUsd = data.posSales - calcSales;
     const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
