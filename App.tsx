@@ -441,10 +441,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleMonthChange = async (month: Date) => {
-    const yearMonth = format(month, "yyyy-MM");
-    await refreshMonthlyStats(yearMonth);
-  };
+ const handleMonthChange = async (month: Date) => {
+  const yearMonth = formatLocalDate(month).substring(0, 7);
+  await refreshMonthlyStats(yearMonth);
+};
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
     setData((prev) => ({
