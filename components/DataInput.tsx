@@ -1023,7 +1023,7 @@ const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesW
                     }}
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
-                 <DayPicker
+                <DayPicker
   mode="single"
   selected={parseLocalDate(data.date)}
   onSelect={(date) => {
@@ -1033,16 +1033,18 @@ const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesW
     }
   }}
   onMonthChange={onMonthChange}
-modifiers={{
-  hasData: (date) => {
-    if (!datesWithData) return false
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, "0")
-    const d = String(date.getDate()).padStart(2, "0")
-    const key = `${y}-${m}-${d}`
-    return datesWithData.includes(key)
-  }
-}}
+  modifiers={{
+    hasData: (date) => {
+      if (!datesWithData) return false;
+
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const key = `${y}-${m}-${d}`;
+
+      return datesWithData.includes(key);
+    },
+  }}
   modifiersClassNames={{
     hasData: "has-data",
   }}
