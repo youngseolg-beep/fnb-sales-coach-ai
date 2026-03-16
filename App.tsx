@@ -12,6 +12,7 @@ import {
   saveMenuPriceHistory,
 } from "./services/menuPriceService";
 import { loadMenuMaster } from "./services/menuMasterService";
+import { formatLocalDate } from "./utils2/date";
 
 import type { SalesReportData, MenuCategory } from "./types";
 
@@ -21,13 +22,6 @@ import DailySalesPage from "./components/DailySalesPage";
 const AUTH_KEY = "fb_coach_auth";
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
-
-const formatLocalDate = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
 
 const loadMonthlyTarget = (yearMonth: string, fallback = 15000) => {
   if (typeof window === "undefined") return fallback;
