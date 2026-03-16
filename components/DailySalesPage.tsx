@@ -180,6 +180,16 @@ const DailySalesPage: React.FC<Props> = ({
     setMenuEngineeringResult(null);
   }, [data.date]);
 
+  useEffect(() => {
+  if (!data.date) return;
+
+  const month = new Date(data.date);
+
+  if (onMonthChange) {
+    onMonthChange(month);
+  }
+}, [data.date]);
+
   const results = useMemo((): CalculationResult => {
     let calcSales = 0;
     let addonSum = 0;
