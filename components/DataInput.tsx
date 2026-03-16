@@ -1033,8 +1033,11 @@ const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesW
     }
   }}
   onMonthChange={onMonthChange}
-  modifiers={{
-  hasData: (date) => hasDataDateSet.has(formatLocalDate(date)),
+modifiers={{
+  hasData: (date) => {
+    const d = formatLocalDate(date)
+    return (datesWithData || []).includes(d)
+  }
 }}
   modifiersClassNames={{
     hasData: "has-data",
