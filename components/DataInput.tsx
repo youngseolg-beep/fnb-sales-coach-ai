@@ -1,9 +1,10 @@
 // /src/components/DataInput.tsx
 import React from "react";
 import { SalesReportData, CorrectedItem } from "../types";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/ocrService";
+import { formatLocalDate, parseLocalDate } from "../utils2/date";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -14,13 +15,6 @@ interface DataInputProps {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const formatLocalDate = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
 
 /** 파일을 base64로 변환 */
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -624,7 +618,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const notSuccessCount = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status !== "success").length;
-
+const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesWithData]);
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
@@ -1029,23 +1023,23 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     }}
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
-                    <DayPicker
-                      mode="single"
-                      selected={parseISO(data.date)}
-                      onSelect={(date) => {
-                        if (date) {
-                          updateBaseField("date", format(date, "yyyy-MM-dd"));
-                          setShowCalendar(false);
-                        }
-                      }}
-                      onMonthChange={onMonthChange}
-                      modifiers={{
-                        hasData: (datesWithData || []).map((d) => parseISO(d)),
-                      }}
-                      modifiersClassNames={{
-                        hasData: "has-data",
-                      }}
-                    />
+                   <DayPicker
+  mode="single"
+  selected={parseLocalDate(data.date)}
+  onSelect={(date) => {
+    if (date) {
+      updateBaseField("date", formatLocalDate(date));
+      setShowCalendar(false);
+    }
+  }}
+  onMonthChange={onMonthChange}
+  modifiers={{
+  hasData: (date) => hasDataDateSet.has(formatLocalDate(date)),
+}}
+  modifiersClassNames={{
+    hasData: "has-data",
+  }}
+/>
                   </div>
                 )}
               </div>
