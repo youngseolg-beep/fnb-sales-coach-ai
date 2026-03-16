@@ -1,4 +1,3 @@
-
 export interface MenuCategory {
   name: string;
   items: MenuItem[];
@@ -9,14 +8,15 @@ export interface MenuItem {
   name: string;
   price: number;
   qty: number;
-  unitCost?: number; // Add unitCost field
+  unitCost?: number;
 }
 
 export interface SalesReportData {
   date: string;
   posSales: number;
   orders: number;
-  visitCount: number; // Added
+  visitCount: number;
+  deliverySales: number;
   note: string;
   monthlyTarget: number;
   mtdSales: number;
@@ -29,7 +29,7 @@ export interface CalculationResult {
   gapRate: number;
   status: '✅' | '🟡' | '🔴';
   aov: number;
-  conversionRate: number; // Added
+  conversionRate: number;
   addonPerOrder: number;
 }
 
@@ -41,15 +41,15 @@ export interface CorrectedItem {
   qty: number;
   confidence: number;
   needs_review: boolean;
-  candidates?: { name: string, id: string, score: number }[];
+  candidates?: { name: string; id: string; score: number }[];
 }
 
 export interface MenuEngineeringItem extends MenuItem {
   qty_month: number;
   revenue_month: number;
   cogs_month: number | null;
-  cm: number | null; // Contribution Margin
-  gp_month: number | null; // Gross Profit
+  cm: number | null;
+  gp_month: number | null;
   popularity: 'High' | 'Low';
   profitability: 'High' | 'Low';
   category: 'Stars' | 'Cash Cows' | 'Puzzles' | 'Dogs';
