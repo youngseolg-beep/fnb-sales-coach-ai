@@ -9,7 +9,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE = "sales_daily";
 
 type DailyRow = {
-  date: string; // yyyy-mm-dd
+  date: string;
   total_sales: number | null;
   orders: number | null;
   visit_count: number | null;
@@ -99,6 +99,18 @@ const calcTotalSalesFromCategories = (categories?: MenuCategory[] | null) => {
 
     return sum + categorySum;
   }, 0);
+};
+
+const getMonthRange = (yearMonth: string) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const start = `${yearMonth}-01`;
+
+  const nextMonthDate = new Date(year, month, 1);
+  const nextYear = nextMonthDate.getFullYear();
+  const nextMonth = String(nextMonthDate.getMonth() + 1).padStart(2, "0");
+  const nextMonthStart = `${nextYear}-${nextMonth}-01`;
+
+  return { start, nextMonthStart };
 };
 
 export async function saveDailyData(input: DailyPayload & { deleted?: boolean }) {
@@ -209,14 +221,13 @@ export async function deleteDaily(dateStr: string) {
 }
 
 export async function listDatesInMonth(yearMonth: string) {
-  const start = `${yearMonth}-01`;
-  const end = `${yearMonth}-31`;
+  const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   const { data, error } = await supabase
     .from(TABLE)
     .select("date,payload")
     .gte("date", start)
-    .lte("date", end)
+    .lt("date", nextMonthStart)
     .order("date", { ascending: true });
 
   if (error) {
@@ -250,14 +261,13 @@ export async function listDatesInRange(startDate: string, endDate: string): Prom
 }
 
 export async function getMonthlyTotal(yearMonth: string) {
-  const start = `${yearMonth}-01`;
-  const end = `${yearMonth}-31`;
+  const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   const { data, error } = await supabase
     .from(TABLE)
     .select("total_sales,payload")
     .gte("date", start)
-    .lte("date", end);
+    .lt("date", nextMonthStart);
 
   if (error) {
     console.error("[getMonthlyTotal] supabase error:", error);
@@ -273,6 +283,7 @@ export async function getMonthlyTotal(yearMonth: string) {
 
   return sum;
 }
+
 export async function loadDailyRange(start: string, end: string) {
   const { data, error } = await supabase
     .from(TABLE)
