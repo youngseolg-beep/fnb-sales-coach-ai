@@ -306,9 +306,11 @@ const App: React.FC = () => {
 const [datesWithData, setDatesWithData] = useState<string[]>([]);
 const [datesWithDataCache, setDatesWithDataCache] = useState<Record<string, string[]>>({});
 const [monthlyTotalCache, setMonthlyTotalCache] = useState<Record<string, number>>({});
-    setToastMsg(msg);
-    setToastSeq((s) => s + 1);
-  };
+
+const showToast = (msg: string) => {
+  setToastMsg(msg);
+  setToastSeq((s) => s + 1);
+};
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
