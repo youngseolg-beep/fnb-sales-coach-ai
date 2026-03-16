@@ -1,7 +1,6 @@
 // /src/components/DataInput.tsx
 import React from "react";
 import { SalesReportData, CorrectedItem } from "../types";
-import { format } from "date-fns";
 import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/ocrService";
 import { formatLocalDate, parseLocalDate } from "../utils2/date";
@@ -187,6 +186,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [showCalendar, setShowCalendar] = React.useState(false);
   const calendarButtonRef = React.useRef<HTMLButtonElement>(null);
   const [calendarPos, setCalendarPos] = React.useState({ top: 0, left: 0 });
+  const [calendarMonth, setCalendarMonth] = React.useState<Date>(() => parseLocalDate(data.date));
 
   const toggleCalendar = () => {
     if (!showCalendar && calendarButtonRef.current) {
@@ -202,6 +202,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         top: rect.bottom + window.scrollY + 8,
         left,
       });
+
+      setCalendarMonth(parseLocalDate(data.date));
     }
     setShowCalendar(!showCalendar);
   };
@@ -216,6 +218,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       window.removeEventListener("resize", close);
     };
   }, [showCalendar]);
+
+  React.useEffect(() => {
+    setCalendarMonth(parseLocalDate(data.date));
+  }, [data.date]);
 
   const fileKey = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
 
@@ -618,7 +624,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const notSuccessCount = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status !== "success").length;
-const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesWithData]);
+  const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesWithData]);
+
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
@@ -1023,33 +1030,30 @@ const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesW
                     }}
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
-                    <div style={{ fontSize: 12, color: "red" }}>{JSON.stringify(datesWithData)}</div>
-                <DayPicker
-  mode="single"
-  selected={parseLocalDate(data.date)}
-  onSelect={(date) => {
-    if (date) {
-      updateBaseField("date", formatLocalDate(date));
-      setShowCalendar(false);
-    }
-  }}
-  onMonthChange={onMonthChange}
-  modifiers={{
-    hasData: (date) => {
-      if (!datesWithData) return false;
-
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      const key = `${y}-${m}-${d}`;
-
-      return datesWithData.includes(key);
-    },
-  }}
-  modifiersClassNames={{
-    hasData: "has-data",
-  }}
-/>
+                    <DayPicker
+                      mode="single"
+                      month={calendarMonth}
+                      selected={parseLocalDate(data.date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          updateBaseField("date", formatLocalDate(date));
+                          setShowCalendar(false);
+                        }
+                      }}
+                      onMonthChange={(month) => {
+                        setCalendarMonth(month);
+                        onMonthChange?.(month);
+                      }}
+                      modifiers={{
+                        hasData: (date) => {
+                          const key = formatLocalDate(date);
+                          return hasDataDateSet.has(key);
+                        },
+                      }}
+                      modifiersClassNames={{
+                        hasData: "has-data",
+                      }}
+                    />
                   </div>
                 )}
               </div>
