@@ -286,6 +286,7 @@ const App: React.FC = () => {
     return {
       date: today,
       posSales: 0,
+      deliverySales: 0,
       orders: 0,
       visitCount: 0,
       note: "",
