@@ -1085,7 +1085,26 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </span>
             </div>
           </div>
+<div>
+  <label className="block text-xs font-bold text-slate-500 mb-1">
+    배달 매출
+  </label>
 
+  <div className="relative">
+    <input
+      type="number"
+      value={(data as any).deliverySales || ""}
+      onChange={(e) =>
+        updateBaseField("deliverySales" as any, Number(e.target.value))
+      }
+      className={numericInputClasses}
+      placeholder="0"
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      USD
+    </span>
+  </div>
+</div>
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
