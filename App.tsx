@@ -304,8 +304,9 @@ const App: React.FC = () => {
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
 const [datesWithData, setDatesWithData] = useState<string[]>([]);
+const [datesWithData, setDatesWithData] = useState<string[]>([]);
 const [datesWithDataCache, setDatesWithDataCache] = useState<Record<string, string[]>>({});
-  const showToast = (msg: string) => {
+const [monthlyTotalCache, setMonthlyTotalCache] = useState<Record<string, number>>({});
     setToastMsg(msg);
     setToastSeq((s) => s + 1);
   };
