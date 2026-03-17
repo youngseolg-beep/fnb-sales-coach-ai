@@ -89,7 +89,7 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
     const all = raw ? JSON.parse(raw) : {};
     all[`${storeId}:${safeDate}`] = row;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    return row;
+    return { success: true, data: row };
   }
 
   const { data, error } = await supabase
@@ -100,14 +100,14 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
 
   if (error) {
     console.error("SUPABASE SAVE ERROR:", error);
-    throw error;
+    return { success: false, error };
   }
 
-  return data;
+  return { success: true, data };
 }
 
 export async function saveDailyData(payload: DailyPayload, storeId: number = 1) {
-  return saveDaily(payload, storeId);
+  return await saveDaily(payload, storeId);
 }
 
 export async function loadDaily(dateStr: string, storeId: number = 1) {
