@@ -308,10 +308,20 @@ async function handleSaveMonthlyTarget(nextValue: number) {
   );
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
-  const [data, setData] = useState<SalesReportData>(() => {
-    const today = formatLocalDate(new Date());
-    const ym = getMonthKey(today);
-    const monthTarget = loadMonthlyTarget(ym, 15000);
+ const [data, setData] = useState<SalesReportData>(() => {
+  const today = formatLocalDate(new Date());
+
+  return {
+    date: today,
+    posSales: 0,
+    deliverySales: 0,
+    orders: 0,
+    visitCount: 0,
+    toppingQty: 0,
+    monthlyTarget: 0,
+    menuSales: {},
+  };
+});
 
     return {
       date: today,
