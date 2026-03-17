@@ -433,10 +433,7 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
       }),
     }));
 
-    const monthTargetFromLocal = loadMonthlyTarget(
-      yearMonth,
-      Number(data.monthlyTarget) || 15000
-    );
+    const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
 
     setData((prev) => ({
       ...prev,
@@ -446,7 +443,7 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
       orders: nextOrders,
       visitCount: nextVisitCount,
       note: nextNote,
-      monthlyTarget: monthTargetFromLocal,
+      monthlyTarget: monthTargetFromDb,
       categories: cloneCategories(nextCategories),
     }));
 
