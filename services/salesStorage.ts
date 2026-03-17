@@ -21,6 +21,7 @@ type DailyRow = {
 export type DailyPayload = {
   date: string;
   posSales: number;
+  deliverySales?: number;
   orders: number;
   visitCount: number;
   note?: string;
@@ -124,6 +125,7 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
   const payload = {
     date: input.date,
     posSales: toNumber(input.posSales, 0),
+    deliverySales: toNumber(input.deliverySales, 0),
     orders: toNumber(input.orders, 0),
     visitCount: toNumber(input.visitCount, 0),
     note: input.note ?? "",
@@ -192,6 +194,7 @@ export async function loadDaily(dateStr: string) {
   return {
     date: row.date,
     posSales: toNumber(p?.posSales ?? row.total_sales ?? 0, 0),
+    deliverySales: toNumber(p?.deliverySales ?? 0, 0),
     orders: toNumber(p?.orders ?? row.orders ?? 0, 0),
     visitCount: toNumber(p?.visitCount ?? row.visit_count ?? 0, 0),
     note: String(p?.note ?? ""),
@@ -306,6 +309,7 @@ export async function loadDailyRange(start: string, end: string) {
       return {
         date: row.date,
         sales: toNumber(p?.posSales ?? row.total_sales, 0),
+        deliverySales: toNumber(p?.deliverySales ?? 0, 0),
         orders: toNumber(p?.orders ?? row.orders, 0),
         visitors: toNumber(p?.visitCount ?? row.visit_count, 0),
         categories: safeCategories,
