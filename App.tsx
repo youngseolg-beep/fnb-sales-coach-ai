@@ -333,46 +333,48 @@ const App: React.FC = () => {
     setToastSeq((s) => s + 1);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!supabase) {
-      setAuthError("Supabase 연결이 설정되지 않았습니다.");
-      return;
+  if (!supabase) {
+    setAuthError("Supabase 연결이 설정되지 않았습니다.");
+    return;
+  }
+
+  setAuthError("");
+
+  const loginEmail = email.includes("@") ? email : `${email}@tbk.com`;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password,
+  });
+
+  if (error) {
+    setAuthError(error.message);
+    return;
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+
+  if (sessionData.session) {
+    setIsLoggedIn(true);
+
+    const userId = sessionData.session.user.id;
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, store_id")
+      .eq("id", userId)
+      .single();
+
+    if (!userError && userData) {
+      setUserRole(userData.role);
+      setStoreId(userData.store_id);
+      console.log("USER INFO:", userData);
     }
-
-    setAuthError("");
-
-   const { error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
-
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    if (sessionData.session) {
-      setIsLoggedIn(true);
-
-      const userId = sessionData.session.user.id;
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("role, store_id")
-        .eq("id", userId)
-        .single();
-
-      if (!userError && userData) {
-        setUserRole(userData.role);
-        setStoreId(userData.store_id);
-        console.log("USER INFO:", userData);
-      }
-    }
-  };
+  }
+};
 
   const handleLogout = async () => {
     if (supabase) {
