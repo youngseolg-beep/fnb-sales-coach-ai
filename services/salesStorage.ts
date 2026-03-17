@@ -158,6 +158,10 @@ export async function saveDaily(payload: any, storeId: number) {
   }
 }
 
+export async function saveDailyData(payload: any, storeId: number) {
+  return saveDaily(payload, storeId);
+}
+
 export async function loadDaily(dateStr: string, storeId: number) {
   const safeDate = String(dateStr).slice(0, 10);
 
