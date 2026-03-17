@@ -343,10 +343,10 @@ const App: React.FC = () => {
 
     setAuthError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+   const { error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
 
     if (error) {
       setAuthError(error.message);
@@ -693,7 +693,7 @@ if (!isLoggedIn) {
           </p>
 
           <div className="mt-3 text-indigo-100 text-s font-semibold opacity-200 space-y-1">
-            <div>ID : test@tbk.com</div>
+            <div>ID : test</div>
             <div>PW : 0000</div>
           </div>
         </div>
