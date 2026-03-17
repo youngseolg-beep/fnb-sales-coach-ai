@@ -698,43 +698,48 @@ if (!isLoggedIn) {
   );
 }
 
-            const { error } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
+            찾아서 삭제할 부분 기준:
+const { error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
 
-            if (error) {
-              alert(error.message);
-              return;
-            }
+if (error) {
+  alert(error.message);
+  return;
+}
 
-            setIsLoggedIn(true);
-          }}
-          className="p-8 space-y-6"
-        >
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-          />
+setIsLoggedIn(true);
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-          />
+위 코드는 로그인 화면 JSX 안에 남아있는 inline 코드라서 전부 삭제.
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700"
-          >
-            로그인
-          </button>
-        </form>
+로그인 화면 쪽 최종 형태는 아래처럼만 남아야 함:
+
+<form onSubmit={handleLogin} className="p-8 space-y-6">
+  <input
+    type="email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    placeholder="Email"
+    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
+    autoFocus
+  />
+
+  <input
+    type="password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    placeholder="Password"
+    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
+  />
+
+  <button
+    type="submit"
+    className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
+  >
+    로그인
+  </button>
+</form>
       </div>
     </div>
   );
