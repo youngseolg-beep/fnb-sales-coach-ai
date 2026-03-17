@@ -583,7 +583,7 @@ if (data.session) {
     setStoreId(userData.store_id);
   }
 }
-
+console.log("USER INFO:", userData);
     setSessionChecked(true);
   };
 
