@@ -23,13 +23,6 @@ import DailySalesPage from "./components/DailySalesPage";
 const AUTH_KEY = "fb_coach_auth";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
-const loadMonthlyTarget = (yearMonth: string, fallback = 15000) => {
-  if (typeof window === "undefined") return fallback;
-  const raw = localStorage.getItem(MONTHLY_TARGET_PREFIX + yearMonth);
-  const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) && n > 0 ? n : fallback;
-};
-
 const INITIAL_CATEGORIES: MenuCategory[] = [
   {
     name: "음식 메뉴 (Main Dishes)",
