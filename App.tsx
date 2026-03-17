@@ -607,12 +607,11 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
     return () => window.clearTimeout(timer);
   }, [toastSeq, toastMsg]);
 
-  const monthlyRate = useMemo(() => {
-    const ym = getMonthKey(data.date);
-    const target = loadMonthlyTarget(ym, Number(data.monthlyTarget) || 15000);
-    if (!target || target <= 0) return 0;
-    return (monthlyStats.total / target) * 100;
-  }, [monthlyStats.total, data.date, data.monthlyTarget]);
+ const monthlyRate = useMemo(() => {
+  const target = monthlyTarget;
+  if (!target || target <= 0) return 0;
+  return (monthlyStats.total / target) * 100;
+}, [monthlyStats.total, monthlyTarget]);
 
   if (!isLoggedIn) {
     return (
