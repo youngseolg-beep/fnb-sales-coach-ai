@@ -646,7 +646,7 @@ if (!sessionChecked) {
   return null;
 }
 
-iif (!isLoggedIn) {
+if (!isLoggedIn) {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
