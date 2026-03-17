@@ -361,26 +361,27 @@ const showToast = (msg: string) => {
     localStorage.removeItem(AUTH_KEY);
   };
 
-  const refreshMonthlyStats = async (yearMonth: string) => {
-    const total = await getMonthlyTotal(yearMonth);
-    const dates = await listDatesInMonth(yearMonth);
-    const target = loadMonthlyTarget(yearMonth, Number(data.monthlyTarget) || 15000);
+ const refreshMonthlyStats = async (yearMonth: string) => {
+  const total = await getMonthlyTotal(yearMonth);
+  const dates = await listDatesInMonth(yearMonth);
+  const target = await loadMonthlyTarget(yearMonth);
 
-    setMonthlyStats({
-      total,
-      avg: dates.length > 0 ? total / dates.length : 0,
-      rate: target > 0 ? (total / target) * 100 : 0,
-    });
+  setMonthlyStats({
+    total,
+    avg: dates.length > 0 ? total / dates.length : 0,
+    rate: target > 0 ? (total / target) * 100 : 0,
+  });
 
-    setDatesWithData(dates);
+  setDatesWithData(dates);
+  setMonthlyTarget(target);
 
-    setData((prev) => {
-      if (getMonthKey(prev.date) === yearMonth) {
-        return { ...prev, mtdSales: total, monthlyTarget: target };
-      }
-      return { ...prev, mtdSales: total };
-    });
-  };
+  setData((prev) => {
+    if (getMonthKey(prev.date) === yearMonth) {
+      return { ...prev, mtdSales: total, monthlyTarget: target };
+    }
+    return { ...prev, mtdSales: total };
+  });
+};
 
 const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
   setDbLoading(true);
