@@ -21,7 +21,6 @@ import MenuSettingsPage from "./components/MenuSettingsPage";
 import DailySalesPage from "./components/DailySalesPage";
 
 const AUTH_KEY = "fb_coach_auth";
-const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
 const loadMonthlyTarget = (yearMonth: string, fallback = 15000) => {
