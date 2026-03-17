@@ -7,16 +7,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const TABLE = "sales_daily";
-
-type DailyRow = {
-  date: string;
-  total_sales: number | null;
-  orders: number | null;
-  visit_count: number | null;
-  sold_items: any | null;
-  sold_items_summary: string | null;
-  payload: any | null;
-};
+const STORAGE_KEY = "sales_daily_local";
 
 export type DailyPayload = {
   date: string;
@@ -24,28 +15,11 @@ export type DailyPayload = {
   deliverySales?: number;
   orders: number;
   visitCount: number;
+  toppingQty?: number;
   note?: string;
   monthlyTarget?: number | string;
   categories?: MenuCategory[];
   totalSales?: number;
-};
-
-const safeParsePayload = (payload: any) => {
-  if (!payload) return {};
-  if (typeof payload === "string") {
-    try {
-      return JSON.parse(payload);
-    } catch {
-      return {};
-    }
-  }
-  if (typeof payload === "object") return payload;
-  return {};
-};
-
-const isDeletedPayload = (payload: any) => {
-  const p = safeParsePayload(payload);
-  return p && typeof p === "object" && p.deleted === true;
 };
 
 const toNumber = (value: any, fallback = 0) => {
@@ -53,10 +27,10 @@ const toNumber = (value: any, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const normalizeCategories = (raw: any): MenuCategory[] | null => {
-  if (!Array.isArray(raw) || raw.length === 0) return null;
+const normalizeCategories = (raw: any): MenuCategory[] => {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
 
-  const normalized: MenuCategory[] = raw
+  return raw
     .filter(
       (category: any) =>
         category &&
@@ -84,22 +58,7 @@ const normalizeCategories = (raw: any): MenuCategory[] | null => {
               ? undefined
               : toNumber(item.unitCost, 0),
         })),
-    }))
-    .filter((category) => Array.isArray(category.items));
-
-  return normalized.length > 0 ? normalized : null;
-};
-
-const calcTotalSalesFromCategories = (categories?: MenuCategory[] | null) => {
-  if (!Array.isArray(categories)) return 0;
-
-  return categories.reduce((sum, category) => {
-    const categorySum = (category.items ?? []).reduce((itemSum, item) => {
-      return itemSum + toNumber(item.price, 0) * toNumber(item.qty, 0);
-    }, 0);
-
-    return sum + categorySum;
-  }, 0);
+    }));
 };
 
 const getMonthRange = (yearMonth: string) => {
@@ -114,88 +73,44 @@ const getMonthRange = (yearMonth: string) => {
   return { start, nextMonthStart };
 };
 
-export async function saveDaily(payload: any, storeId: number) {
+export async function saveDaily(payload: DailyPayload, storeId: number) {
   const safeDate = String(payload.date).slice(0, 10);
 
   const row = {
     date: safeDate,
     store_id: storeId,
-    pos_sales: Number(payload.posSales ?? 0),
-    delivery_sales: Number(payload.deliverySales ?? 0),
-    orders: Number(payload.orders ?? 0),
-    visit_count: Number(payload.visitCount ?? 0),
-    topping_qty: Number(payload.toppingQty ?? 0),
+    pos_sales: toNumber(payload.posSales, 0),
+    delivery_sales: toNumber(payload.deliverySales, 0),
+    orders: toNumber(payload.orders, 0),
+    visit_count: toNumber(payload.visitCount, 0),
+    topping_qty: toNumber((payload as any).toppingQty, 0),
     note: String(payload.note ?? ""),
     categories: Array.isArray(payload.categories) ? payload.categories : [],
     updated_at: new Date().toISOString(),
   };
 
-  if (!supabase) {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
-    all[safeDate] = {
-      date: safeDate,
-      posSales: row.pos_sales,
-      deliverySales: row.delivery_sales,
-      orders: row.orders,
-      visitCount: row.visit_count,
-      toppingQty: row.topping_qty,
-      note: row.note,
-      categories: row.categories,
-      store_id: row.store_id,
-      updated_at: row.updated_at,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    return;
-  }
-
-  const { error } = await supabase
-    .from("sales_daily")
-    .upsert(row, { onConflict: "date,store_id" });
+  const { data, error } = await supabase
+    .from(TABLE)
+    .upsert(row, { onConflict: "date,store_id" })
+    .select();
 
   if (error) {
+    console.error("SUPABASE SAVE ERROR:", error);
     throw error;
   }
+
+  return data;
 }
 
-export async function saveDailyData(payload: any, storeId: number) {
+export async function saveDailyData(payload: DailyPayload, storeId: number) {
   return saveDaily(payload, storeId);
 }
 
 export async function loadDaily(dateStr: string, storeId: number) {
   const safeDate = String(dateStr).slice(0, 10);
 
-  if (!supabase) {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-
-    const all = JSON.parse(raw);
-    const row = all[safeDate];
-    if (!row) return null;
-
-    const safeCategories = Array.isArray(row.categories)
-      ? row.categories.map((cat: any) => ({
-          ...cat,
-          items: Array.isArray(cat.items)
-            ? cat.items.map((item: any) => ({ ...item }))
-            : [],
-        }))
-      : [];
-
-    return {
-      date: safeDate,
-      posSales: Number(row.posSales ?? 0),
-      deliverySales: Number(row.deliverySales ?? 0),
-      orders: Number(row.orders ?? 0),
-      visitCount: Number(row.visitCount ?? 0),
-      toppingQty: Number(row.toppingQty ?? 0),
-      note: String(row.note ?? ""),
-      categories: safeCategories,
-    };
-  }
-
   const { data, error } = await supabase
-    .from("sales_daily")
+    .from(TABLE)
     .select("*")
     .eq("date", safeDate)
     .eq("store_id", storeId)
@@ -209,22 +124,15 @@ export async function loadDaily(dateStr: string, storeId: number) {
     return null;
   }
 
-  const safeCategories = Array.isArray((data as any).categories)
-    ? (data as any).categories.map((cat: any) => ({
-        ...cat,
-        items: Array.isArray(cat.items)
-          ? cat.items.map((item: any) => ({ ...item }))
-          : [],
-      }))
-    : [];
+  const safeCategories = normalizeCategories((data as any).categories);
 
   return {
     date: safeDate,
-    posSales: Number((data as any).pos_sales ?? (data as any).posSales ?? 0),
-    deliverySales: Number((data as any).delivery_sales ?? (data as any).deliverySales ?? 0),
-    orders: Number((data as any).orders ?? 0),
-    visitCount: Number((data as any).visit_count ?? (data as any).visitCount ?? 0),
-    toppingQty: Number((data as any).topping_qty ?? (data as any).toppingQty ?? 0),
+    posSales: toNumber((data as any).pos_sales ?? (data as any).posSales, 0),
+    deliverySales: toNumber((data as any).delivery_sales ?? (data as any).deliverySales, 0),
+    orders: toNumber((data as any).orders, 0),
+    visitCount: toNumber((data as any).visit_count ?? (data as any).visitCount, 0),
+    toppingQty: toNumber((data as any).topping_qty ?? (data as any).toppingQty, 0),
     note: String((data as any).note ?? ""),
     categories: safeCategories,
   };
@@ -233,16 +141,8 @@ export async function loadDaily(dateStr: string, storeId: number) {
 export async function deleteDaily(dateStr: string, storeId: number) {
   const safeDate = String(dateStr).slice(0, 10);
 
-  if (!supabase) {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
-    delete all[safeDate];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    return;
-  }
-
   const { error } = await supabase
-    .from("sales_daily")
+    .from(TABLE)
     .delete()
     .eq("date", safeDate)
     .eq("store_id", storeId);
@@ -252,12 +152,13 @@ export async function deleteDaily(dateStr: string, storeId: number) {
   }
 }
 
-export async function listDatesInMonth(yearMonth: string) {
+export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,payload")
+    .select("date")
+    .eq("store_id", storeId)
     .gte("date", start)
     .lt("date", nextMonthStart)
     .order("date", { ascending: true });
@@ -267,16 +168,18 @@ export async function listDatesInMonth(yearMonth: string) {
     return [];
   }
 
-  const rows = (data ?? []) as any[];
-  const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
-
-  return filtered.map((r) => r.date as string);
+  return ((data ?? []) as any[]).map((r) => String(r.date));
 }
 
-export async function listDatesInRange(startDate: string, endDate: string): Promise<string[]> {
+export async function listDatesInRange(
+  startDate: string,
+  endDate: string,
+  storeId: number = 1
+): Promise<string[]> {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,payload")
+    .select("date")
+    .eq("store_id", storeId)
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true });
@@ -286,18 +189,16 @@ export async function listDatesInRange(startDate: string, endDate: string): Prom
     return [];
   }
 
-  const rows = (data ?? []) as any[];
-  const filtered = rows.filter((r) => !isDeletedPayload(r.payload));
-
-  return filtered.map((r) => r.date as string);
+  return ((data ?? []) as any[]).map((r) => String(r.date));
 }
 
-export async function getMonthlyTotal(yearMonth: string) {
+export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("total_sales,payload")
+    .select("pos_sales,delivery_sales")
+    .eq("store_id", storeId)
     .gte("date", start)
     .lt("date", nextMonthStart);
 
@@ -308,18 +209,22 @@ export async function getMonthlyTotal(yearMonth: string) {
 
   let sum = 0;
 
-  for (const r of (data ?? []) as any[]) {
-    if (isDeletedPayload(r.payload)) continue;
-    sum += toNumber(r.total_sales, 0);
+  for (const row of (data ?? []) as any[]) {
+    sum += toNumber(row.pos_sales, 0) + toNumber(row.delivery_sales, 0);
   }
 
   return sum;
 }
 
-export async function loadDailyRange(start: string, end: string) {
+export async function loadDailyRange(
+  start: string,
+  end: string,
+  storeId: number = 1
+) {
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date,total_sales,orders,visit_count,sold_items,payload")
+    .select("date,pos_sales,delivery_sales,orders,visit_count,categories")
+    .eq("store_id", storeId)
     .gte("date", start)
     .lte("date", end)
     .order("date", { ascending: true });
@@ -328,20 +233,16 @@ export async function loadDailyRange(start: string, end: string) {
 
   const rows = (data ?? []) as any[];
 
-  return rows
-    .filter((r) => !isDeletedPayload(r.payload))
-    .map((row) => {
-      const p: any = safeParsePayload(row.payload);
-      const rawCategories = p?.categories ?? row.sold_items ?? null;
-      const safeCategories = normalizeCategories(rawCategories) ?? [];
+  return rows.map((row) => {
+    const safeCategories = normalizeCategories(row.categories);
 
-      return {
-        date: row.date,
-        sales: toNumber(p?.posSales ?? row.total_sales, 0),
-        deliverySales: toNumber(p?.deliverySales ?? 0, 0),
-        orders: toNumber(p?.orders ?? row.orders, 0),
-        visitors: toNumber(p?.visitCount ?? row.visit_count, 0),
-        categories: safeCategories,
-      };
-    });
+    return {
+      date: String(row.date),
+      sales: toNumber(row.pos_sales, 0),
+      deliverySales: toNumber(row.delivery_sales, 0),
+      orders: toNumber(row.orders, 0),
+      visitors: toNumber(row.visit_count, 0),
+      categories: safeCategories,
+    };
+  });
 }
