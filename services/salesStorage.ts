@@ -236,24 +236,26 @@ export async function loadDaily(dateStr: string, storeId: number) {
   };
 }
 
-export async function deleteDaily(dateStr: string) {
-  const existing = await loadDaily(dateStr);
+export async function deleteDaily(dateStr: string, storeId: number) {
+  const safeDate = String(dateStr).slice(0, 10);
 
-  if (!existing) {
-    return true;
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    delete all[safeDate];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    return;
   }
 
-  const result = await saveDailyData({
-    ...existing,
-    totalSales: calcTotalSalesFromCategories(existing.categories ?? null),
-    deleted: true,
-  });
+  const { error } = await supabase
+    .from("sales_daily")
+    .delete()
+    .eq("date", safeDate)
+    .eq("store_id", storeId);
 
-  if (!result.ok) {
-    throw result.raw ?? new Error(result.error || "Failed to delete daily data");
+  if (error) {
+    throw error;
   }
-
-  return true;
 }
 
 export async function listDatesInMonth(yearMonth: string) {
