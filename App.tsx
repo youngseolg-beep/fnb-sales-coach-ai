@@ -701,13 +701,13 @@ if (!isLoggedIn) {
         <form onSubmit={handleLogin} className="p-8 space-y-6">
           <div>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-              autoFocus
-            />
+  type="text"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  placeholder="ID"
+  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
+  autoFocus
+/>
           </div>
 
           <div>
