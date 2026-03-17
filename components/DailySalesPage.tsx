@@ -757,9 +757,13 @@ const DailySalesPage: React.FC<Props> = ({
               totalSales: Math.round(calcSales * 100) / 100,
             };
 
-await saveDailyData(data, storeId ?? 1);              date: currentData.date,
-              ...savePayload,
-            });
+await saveDailyData(
+  {
+    date: currentData.date,
+    ...savePayload,
+  },
+  storeId ?? 1
+);
 
             if ((res as any)?.ok === false) {
               throw new Error((res as any)?.error || "AUTO_SAVE_FAILED");
