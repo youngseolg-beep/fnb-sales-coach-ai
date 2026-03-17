@@ -1,3 +1,4 @@
+import { loadMonthlyTarget, saveMonthlyTarget } from "./services/monthlyTargetService";
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
@@ -272,7 +273,34 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDate(new Date());
   });
+const targetMonthKey =
+  selectedDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
 
+const [monthlyTarget, setMonthlyTarget] = useState<number>(0);
+const [monthlyTargetLoading, setMonthlyTargetLoading] = useState(false);
+
+async function refreshMonthlyTarget(monthKey: string) {
+  try {
+    setMonthlyTargetLoading(true);
+    const value = await loadMonthlyTarget(monthKey);
+    setMonthlyTarget(value);
+  } catch (error) {
+    console.error("refreshMonthlyTarget error:", error);
+    setMonthlyTarget(0);
+  } finally {
+    setMonthlyTargetLoading(false);
+  }
+}
+
+async function handleSaveMonthlyTarget(nextValue: number) {
+  try {
+    setMonthlyTarget(nextValue);
+    await saveMonthlyTarget(targetMonthKey, nextValue);
+  } catch (error) {
+    console.error("handleSaveMonthlyTarget error:", error);
+    alert("월 목표 저장 중 오류가 발생했습니다.");
+  }
+}
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
   );
