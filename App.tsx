@@ -685,7 +685,10 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-white font-black text-2xl uppercase tracking-tight">SALES COACH AI</h1>
             <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">Supabase Login</p>
-          </div>
+<div className="mt-3 text-indigo-100 text-xs font-semibold opacity-80">
+  <div>ID : test@tbk.com</div>
+  <div>PW : 0000</div>
+</div>            
 
           <form onSubmit={handleLogin} className="p-8 space-y-6">
             <div>
