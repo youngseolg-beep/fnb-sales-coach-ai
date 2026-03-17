@@ -563,8 +563,7 @@ const App: React.FC = () => {
 
     try {
       setDbLoading(true);
-      await deleteDaily(targetDate);
-
+await deleteDaily(targetDate, storeId ?? 1);
       const resetCats = createEmptyCategoriesFromBase(normalizeMenuMasterCategories(menuMasterCategories));
 
       setData((prev) => ({
