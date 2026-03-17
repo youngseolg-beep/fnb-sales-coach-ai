@@ -880,16 +880,17 @@ if (!isLoggedIn) {
         </section>
 
         {currentPage === "daily-sales" ? (
-          <DailySalesPage
-            data={data}
-            setData={setData}
-            setSelectedDate={setSelectedDate}
-            datesWithData={datesWithData}
-            onMonthChange={handleMonthChange}
-            refreshMonthlyStats={refreshMonthlyStats}
-            showToast={showToast}
-            onDelete={handleDelete}
-          />
+         <DailySalesPage
+  data={data}
+  setData={setData}
+  setSelectedDate={setSelectedDate}
+  datesWithData={datesWithData}
+  onMonthChange={handleMonthChange}
+  refreshMonthlyStats={refreshMonthlyStats}
+  showToast={showToast}
+  onDelete={handleDelete}
+  storeId={storeId ?? 1}
+/>
         ) : (
           <MenuSettingsPage
             selectedDate={data.date}
