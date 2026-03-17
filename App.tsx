@@ -369,6 +369,7 @@ const showToast = (msg: string) => {
 
       let nextCategories: MenuCategory[];
       let nextPosSales = 0;
+      let nextDeliverySales = 0;
       let nextOrders = 0;
       let nextVisitCount = 0;
       let nextNote = "";
@@ -376,6 +377,7 @@ const showToast = (msg: string) => {
       if (dbData) {
         nextCategories = mergeCategoriesWithBase(activeBaseCategories, dbData.categories);
         nextPosSales = toSafeNumber(dbData.posSales, 0);
+        nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
         nextOrders = toSafeNumber(dbData.orders, 0);
         nextVisitCount = toSafeNumber(dbData.visitCount, 0);
         nextNote = String((dbData as any).note ?? "");
@@ -407,6 +409,7 @@ const showToast = (msg: string) => {
         ...prev,
         date: dateStr,
         posSales: nextPosSales,
+        deliverySales: nextDeliverySales,
         orders: nextOrders,
         visitCount: nextVisitCount,
         note: nextNote,
@@ -510,6 +513,7 @@ const showToast = (msg: string) => {
       setData((prev) => ({
         ...prev,
         posSales: 0,
+        deliverySales: 0,
         orders: 0,
         visitCount: 0,
         note: "",
