@@ -715,12 +715,15 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
                 <input
                   type="number"
                   value={data.monthlyTarget || ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    const ym = getMonthKey(data.date);
-                    setData((prev) => ({ ...prev, monthlyTarget: v }));
-                    localStorage.setItem(MONTHLY_TARGET_PREFIX + ym, String(v));
-                  }}
+                onChange={(e) => {
+  const v = Number(e.target.value);
+  setData((prev) => ({ ...prev, monthlyTarget: v }));
+  setMonthlyTarget(v);
+}}
+
+onBlur={() => {
+  handleSaveMonthlyTarget(monthlyTarget);
+}}
                   className="w-full bg-white border border-slate-200 rounded-xl pl-2 pr-10 py-1 text-right text-[11px] md:text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none tabular-nums"
                   placeholder="0"
                 />
