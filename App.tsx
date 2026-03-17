@@ -1,5 +1,3 @@
-App.tsx 전체 교체
-
 import { loadMonthlyTarget, saveMonthlyTarget } from "./services/monthlyTargetService";
 import React, { useEffect, useMemo, useState } from "react";
 
