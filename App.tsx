@@ -642,10 +642,6 @@ console.log("USER INFO:", userData);
   return (monthlyStats.total / target) * 100;
 }, [monthlyStats.total, monthlyTarget]);
 
-  if (!sessionChecked) {
-  return null;
-}
-
 if (!sessionChecked) {
   return null;
 }
