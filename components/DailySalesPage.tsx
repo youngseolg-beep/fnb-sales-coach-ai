@@ -731,168 +731,168 @@ const DailySalesPage: React.FC<Props> = ({
     return plans.slice(0, 3);
   }, [menuEngineeringResult, sortedMenuEngineering, data.categories]);
 
- const handleDataChange = (newData: SalesReportData) => {
-  const dateChanged = String(newData.date || "") !== String(data.date || "");
+   const handleDataChange = (newData: SalesReportData) => {
+    const dateChanged = String(newData.date || "") !== String(data.date || "");
 
-  if (dateChanged) {
-    const nextDate = String(newData.date || "");
+    if (dateChanged) {
+      const nextDate = String(newData.date || "");
 
-    const runDateChange = async () => {
-      try {
-        const currentData = data;
+      const runDateChange = async () => {
+        try {
+          const currentData = data;
 
-        const categoriesChanged =
-          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
+          const categoriesChanged =
+            JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-        const baseFieldsChanged =
-          Number(newData.posSales || 0) !== Number(currentData.posSales || 0) ||
-          Number(newData.deliverySales || 0) !== Number(currentData.deliverySales || 0) ||
-          Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
-          Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
-          Number(newData.toppingQty || 0) !== Number(currentData.toppingQty || 0) ||
-          String(newData.note || "") !== String(currentData.note || "") ||
-          JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
+          const baseFieldsChanged =
+            Number(newData.posSales || 0) !== Number(currentData.posSales || 0) ||
+            Number(newData.deliverySales || 0) !== Number(currentData.deliverySales || 0) ||
+            Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
+            Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
+            Number(newData.toppingQty || 0) !== Number(currentData.toppingQty || 0) ||
+            String(newData.note || "") !== String(currentData.note || "") ||
+            JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
-        const hasUnsavedCurrent =
-          ocrApplied ||
-          !dataSaved ||
-          categoriesChanged ||
-          baseFieldsChanged;
+          const hasUnsavedCurrent =
+            ocrApplied ||
+            !dataSaved ||
+            categoriesChanged ||
+            baseFieldsChanged;
 
-        if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
-          let calcSales = 0;
-          currentData.categories.forEach((cat) => {
-            cat.items.forEach((item) => {
-              calcSales += Number(item.price || 0) * Number(item.qty || 0);
+          if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
+            let calcSales = 0;
+            currentData.categories.forEach((cat) => {
+              cat.items.forEach((item) => {
+                calcSales += Number(item.price || 0) * Number(item.qty || 0);
+              });
             });
-          });
 
-          const savePayload: any = {
-            ...currentData,
-            deliverySales: Number(currentData.deliverySales || 0),
-            toppingQty: Number(currentData.toppingQty || 0),
-            totalSales: Math.round(calcSales * 100) / 100,
-          };
+            const savePayload: any = {
+              ...currentData,
+              deliverySales: Number(currentData.deliverySales || 0),
+              toppingQty: Number(currentData.toppingQty || 0),
+              totalSales: Math.round(calcSales * 100) / 100,
+            };
 
-         const res = await saveDailyData(
-  {
-    date: currentData.date,
-    ...savePayload,
-  },
-  storeId
-);
-
-          if ((res as any)?.ok === false || (res as any)?.success === false) {
-            throw new Error(
-              (res as any)?.error?.message ||
-                (res as any)?.error ||
-                "AUTO_SAVE_FAILED"
+            const res = await saveDailyData(
+              {
+                date: currentData.date,
+                ...savePayload,
+              },
+              storeId
             );
+
+            if ((res as any)?.ok === false || (res as any)?.success === false) {
+              throw new Error(
+                (res as any)?.error?.message ||
+                  (res as any)?.error ||
+                  "AUTO_SAVE_FAILED"
+              );
+            }
+
+            setLastSavedAt(new Date().toLocaleString());
+            setSaveStatus("자동 저장 완료");
+            setDataSaved(true);
           }
 
-          setLastSavedAt(new Date().toLocaleString());
-          setSaveStatus("자동 저장 완료");
-          setDataSaved(true);
+          setSelectedDate(nextDate);
+          setData((prev) => ({
+            ...prev,
+            date: nextDate,
+          }));
+        } catch (error: any) {
+          console.error("Auto save before date change failed:", error);
+          setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
+          showToast("날짜 변경 전 자동 저장에 실패했습니다.");
         }
+      };
 
-        setSelectedDate(nextDate);
-        setData((prev) => ({
-          ...prev,
-          date: nextDate,
-        }));
-      } catch (error: any) {
-        console.error("Auto save before date change failed:", error);
-        setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
-        showToast("날짜 변경 전 자동 저장에 실패했습니다.");
-      }
-    };
-
-    void runDateChange();
-    return;
-  }
-
-  const categoriesChanged =
-    JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
-
-  const baseFieldsChanged =
-    Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
-    Number(newData.deliverySales || 0) !== Number(data.deliverySales || 0) ||
-    Number(newData.orders || 0) !== Number(data.orders || 0) ||
-    Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
-    Number(newData.toppingQty || 0) !== Number(data.toppingQty || 0) ||
-    String(newData.note || "") !== String(data.note || "");
-
-  const monthlyTargetChanged =
-    Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
-
-  setData(newData);
-
-  if (monthlyTargetChanged) {
-    const ym = getMonthKey(newData.date);
-    saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
-  }
-
-  if (categoriesChanged || baseFieldsChanged) {
-    setOcrApplied(true);
-    setDataSaved(false);
-    setReportGenerated(false);
-    setSaveStatus("");
-  }
-};
-
-const handleSave = async (silent = false) => {
-  try {
-    if (!silent) setSaveStatus("데이터 저장 중...");
-
-    let calcSales = 0;
-    data.categories.forEach((cat) => {
-      cat.items.forEach((item) => {
-        calcSales += Number(item.price || 0) * Number(item.qty || 0);
-      });
-    });
-
-    const payload: any = {
-      ...data,
-      deliverySales: Number(data.deliverySales || 0),
-      toppingQty: Number(data.toppingQty || 0),
-      totalSales: Math.round(calcSales * 100) / 100,
-    };
-
-const res = await saveDailyData(payload, storeId);
-    
-    if ((res as any)?.ok === false || (res as any)?.success === false) {
-      throw new Error(
-        (res as any)?.error?.message ||
-          (res as any)?.error ||
-          "SAVE_FAILED"
-      );
+      void runDateChange();
+      return;
     }
 
-    setSaveStatus("저장 완료");
-    setLastSavedAt(new Date().toLocaleString());
-    setDataSaved(true);
-    setReportGenerated(false);
+    const categoriesChanged =
+      JSON.stringify(newData.categories) !== JSON.stringify(data.categories);
 
-    if (!silent) {
-      showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
+    const baseFieldsChanged =
+      Number(newData.posSales || 0) !== Number(data.posSales || 0) ||
+      Number(newData.deliverySales || 0) !== Number(data.deliverySales || 0) ||
+      Number(newData.orders || 0) !== Number(data.orders || 0) ||
+      Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
+      Number(newData.toppingQty || 0) !== Number(data.toppingQty || 0) ||
+      String(newData.note || "") !== String(data.note || "");
+
+    const monthlyTargetChanged =
+      Number(newData.monthlyTarget || 0) !== Number(data.monthlyTarget || 0);
+
+    setData(newData);
+
+    if (monthlyTargetChanged) {
+      const ym = getMonthKey(newData.date);
+      saveMonthlyTarget(ym, Number(newData.monthlyTarget || 0));
     }
 
+    if (categoriesChanged || baseFieldsChanged) {
+      setOcrApplied(true);
+      setDataSaved(false);
+      setReportGenerated(false);
+      setSaveStatus("");
+    }
+  };
+
+  const handleSave = async (silent = false) => {
     try {
-      await refreshMonthlyStats(data.date.substring(0, 7));
-      await loadCurrentPeriodData(true);
-      await loadComparisonData(true);
-    } catch (e) {
-      console.warn("refreshMonthlyStats failed (ignored):", e);
-    }
+      if (!silent) setSaveStatus("데이터 저장 중...");
 
-    return true;
-  } catch (error: any) {
-    console.error("Save Error:", error);
-    setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-    if (!silent) showToast("저장 중 오류가 발생했습니다.");
-    return false;
-  }
-};
+      let calcSales = 0;
+      data.categories.forEach((cat) => {
+        cat.items.forEach((item) => {
+          calcSales += Number(item.price || 0) * Number(item.qty || 0);
+        });
+      });
+
+      const payload: any = {
+        ...data,
+        deliverySales: Number(data.deliverySales || 0),
+        toppingQty: Number(data.toppingQty || 0),
+        totalSales: Math.round(calcSales * 100) / 100,
+      };
+
+      const res = await saveDailyData(payload, storeId);
+
+      if ((res as any)?.ok === false || (res as any)?.success === false) {
+        throw new Error(
+          (res as any)?.error?.message ||
+            (res as any)?.error ||
+            "SAVE_FAILED"
+        );
+      }
+
+      setSaveStatus("저장 완료");
+      setLastSavedAt(new Date().toLocaleString());
+      setDataSaved(true);
+      setReportGenerated(false);
+
+      if (!silent) {
+        showToast("매출 데이터가 저장되었습니다. 이제 코칭 리포트를 생성하세요.");
+      }
+
+      try {
+        await refreshMonthlyStats(data.date.substring(0, 7));
+        await loadCurrentPeriodData(true);
+        await loadComparisonData(true);
+      } catch (e) {
+        console.warn("refreshMonthlyStats failed (ignored):", e);
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Save Error:", error);
+      setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
+      if (!silent) showToast("저장 중 오류가 발생했습니다.");
+      return false;
+    }
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -921,7 +921,7 @@ const res = await saveDailyData(payload, storeId);
     }
   };
 
-   return (
+  return (
     <>
       <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4">
@@ -1113,6 +1113,7 @@ const res = await saveDailyData(payload, storeId);
           >
             <h3 className="font-black text-slate-900 text-xl">일 데이터 리셋</h3>
             <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
+
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -1121,6 +1122,7 @@ const res = await saveDailyData(payload, storeId);
               >
                 취소
               </button>
+
               <button
                 type="button"
                 onClick={async () => {
@@ -1144,5 +1146,5 @@ const res = await saveDailyData(payload, storeId);
     </>
   );
 };
-}
+
 export default DailySalesPage;
