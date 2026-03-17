@@ -1102,14 +1102,18 @@ const res = await saveDailyData(payload, storeId);
         </div>
       </div>
 
-      {showResetModal && (
+           {showResetModal && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]"
           onClick={() => setShowResetModal(false)}
         >
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-black text-slate-900 text-xl">일 데이터 리셋</h3>
             <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
+
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -1118,6 +1122,7 @@ const res = await saveDailyData(payload, storeId);
               >
                 취소
               </button>
+
               <button
                 type="button"
                 onClick={async () => {
