@@ -16,7 +16,7 @@ export interface SalesReportData {
   posSales: number;
   orders: number;
   visitCount: number;
-  deliverySales: number;
+  deliverySales?: number;
   note: string;
   monthlyTarget: number;
   mtdSales: number;
@@ -27,7 +27,7 @@ export interface CalculationResult {
   calcSales: number;
   gapUsd: number;
   gapRate: number;
-  status: '✅' | '🟡' | '🔴';
+  status: "✅" | "🟡" | "🔴";
   aov: number;
   conversionRate: number;
   addonPerOrder: number;
@@ -50,9 +50,9 @@ export interface MenuEngineeringItem extends MenuItem {
   cogs_month: number | null;
   cm: number | null;
   gp_month: number | null;
-  popularity: 'High' | 'Low';
-  profitability: 'High' | 'Low';
-  category: 'Stars' | 'Cash Cows' | 'Puzzles' | 'Dogs';
+  popularity: "High" | "Low";
+  profitability: "High" | "Low";
+  category: "Stars" | "Cash Cows" | "Puzzles" | "Dogs";
 }
 
 export interface MenuEngineeringResult {
