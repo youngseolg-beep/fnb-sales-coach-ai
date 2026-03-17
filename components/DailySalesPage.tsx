@@ -757,8 +757,7 @@ const DailySalesPage: React.FC<Props> = ({
               totalSales: Math.round(calcSales * 100) / 100,
             };
 
-            const res = await saveDailyData({
-              date: currentData.date,
+await saveDailyData(data, storeId ?? 1);              date: currentData.date,
               ...savePayload,
             });
 
@@ -831,8 +830,7 @@ const DailySalesPage: React.FC<Props> = ({
   totalSales: Math.round(calcSales * 100) / 100,
 };
 
-      const res = await saveDailyData({ date: data.date, ...payload });
-
+await saveDailyData(data, storeId ?? 1);
       if ((res as any)?.ok === false) throw new Error((res as any)?.error || "SAVE_FAILED");
 
       setSaveStatus("저장 완료");
