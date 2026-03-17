@@ -355,76 +355,81 @@ const showToast = (msg: string) => {
     });
   };
 
-  const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
-    setDbLoading(true);
+const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
+  setDbLoading(true);
 
-    try {
-      const dbData = await loadDaily(dateStr);
-      const yearMonth = getMonthKey(dateStr);
-      const priceMap = await getMenuPricesForDate(dateStr);
+  try {
+    const dbData = await loadDaily(dateStr);
+    const yearMonth = getMonthKey(dateStr);
+    const priceMap = await getMenuPricesForDate(dateStr);
 
-      const activeBaseCategories = normalizeMenuMasterCategories(
-        nextMenuMasterCategories ?? menuMasterCategories
-      );
+    const activeBaseCategories = normalizeMenuMasterCategories(
+      nextMenuMasterCategories ?? menuMasterCategories
+    );
 
-      let nextCategories: MenuCategory[];
-      let nextPosSales = 0;
-      let nextDeliverySales = 0;
-      let nextOrders = 0;
-      let nextVisitCount = 0;
-      let nextNote = "";
+    let nextCategories: MenuCategory[];
+    let nextPosSales = 0;
+    let nextDeliverySales = 0;
+    let nextOrders = 0;
+    let nextVisitCount = 0;
+    let nextNote = "";
 
-      if (dbData) {
-        nextCategories = mergeCategoriesWithBase(activeBaseCategories, dbData.categories);
-        nextPosSales = toSafeNumber(dbData.posSales, 0);
-        nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
-        nextOrders = toSafeNumber(dbData.orders, 0);
-        nextVisitCount = toSafeNumber(dbData.visitCount, 0);
-        nextNote = String((dbData as any).note ?? "");
-      } else {
-        nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
-      }
-
-      nextCategories = nextCategories.map((cat) => ({
-        ...cat,
-        items: cat.items.map((item) => {
-          const history = priceMap.get(item.id);
-
-          if (!history) return { ...item };
-
-          return {
-            ...item,
-            price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
-            unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
-          };
-        }),
-      }));
-
-      const monthTargetFromLocal = loadMonthlyTarget(
-        yearMonth,
-        Number(data.monthlyTarget) || 15000
-      );
-
-      setData((prev) => ({
-        ...prev,
-        date: dateStr,
-        posSales: nextPosSales,
-        deliverySales: nextDeliverySales,
-        orders: nextOrders,
-        visitCount: nextVisitCount,
-        note: nextNote,
-        monthlyTarget: monthTargetFromLocal,
-        categories: cloneCategories(nextCategories),
-      }));
-
-      setOriginalCategories(cloneCategories(nextCategories));
-      await refreshMonthlyStats(yearMonth);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setDbLoading(false);
+    if (dbData) {
+      nextCategories = mergeCategoriesWithBase(activeBaseCategories, dbData.categories);
+      nextPosSales = toSafeNumber((dbData as any).posSales, 0);
+      nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
+      nextOrders = toSafeNumber((dbData as any).orders, 0);
+      nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
+      nextNote = String((dbData as any).note ?? "");
+    } else {
+      nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
+      nextPosSales = 0;
+      nextDeliverySales = 0;
+      nextOrders = 0;
+      nextVisitCount = 0;
+      nextNote = "";
     }
-  };
+
+    nextCategories = nextCategories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((item) => {
+        const history = priceMap.get(item.id);
+
+        if (!history) return { ...item };
+
+        return {
+          ...item,
+          price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
+          unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
+        };
+      }),
+    }));
+
+    const monthTargetFromLocal = loadMonthlyTarget(
+      yearMonth,
+      Number(data.monthlyTarget) || 15000
+    );
+
+    setData((prev) => ({
+      ...prev,
+      date: dateStr,
+      posSales: nextPosSales,
+      deliverySales: nextDeliverySales,
+      orders: nextOrders,
+      visitCount: nextVisitCount,
+      note: nextNote,
+      monthlyTarget: monthTargetFromLocal,
+      categories: cloneCategories(nextCategories),
+    }));
+
+    setOriginalCategories(cloneCategories(nextCategories));
+    await refreshMonthlyStats(yearMonth);
+  } catch (err) {
+    console.error("Fetch Error:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const reloadMenuMaster = async () => {
     try {
