@@ -29,18 +29,6 @@ interface Props {
   storeId: number;
 }
 
-const DailySalesPage: React.FC<Props> = ({
-  data,
-  setData,
-  setSelectedDate,
-  datesWithData,
-  onMonthChange,
-  refreshMonthlyStats,
-  showToast,
-  onDelete,
-  storeId,
-}) => {
-
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
@@ -122,6 +110,7 @@ const DailySalesPage: React.FC<Props> = ({
   refreshMonthlyStats,
   showToast,
   onDelete,
+  storeId,
 }) => {
   const [report, setReport] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -161,8 +150,10 @@ const DailySalesPage: React.FC<Props> = ({
   const hasMeaningfulInput = (v: SalesReportData) => {
     const hasBase =
       Number(v.posSales || 0) > 0 ||
+      Number(v.deliverySales || 0) > 0 ||
       Number(v.orders || 0) > 0 ||
       Number(v.visitCount || 0) > 0 ||
+      Number(v.toppingQty || 0) > 0 ||
       String(v.note || "").trim().length > 0;
 
     const hasMenu = v.categories.some((cat) => cat.items.some((item) => Number(item.qty || 0) > 0));
@@ -194,47 +185,47 @@ const DailySalesPage: React.FC<Props> = ({
   }, [data.date]);
 
   useEffect(() => {
-  if (!data.date) return;
+    if (!data.date) return;
 
-  const month = new Date(data.date);
+    const month = new Date(data.date);
 
-  if (onMonthChange) {
-    onMonthChange(month);
-  }
-}, [data.date]);
+    if (onMonthChange) {
+      onMonthChange(month);
+    }
+  }, [data.date, onMonthChange]);
 
- const results = useMemo((): CalculationResult => {
-  const deliverySales = Number(data.deliverySales || 0);
-  const totalSales = Number(data.posSales || 0) + deliverySales;
+  const results = useMemo((): CalculationResult => {
+    const deliverySales = Number(data.deliverySales || 0);
+    const totalSales = Number(data.posSales || 0) + deliverySales;
 
-  let menuSales = 0;
-  let addonSum = 0;
+    let menuSales = 0;
+    let addonSum = 0;
 
-  data.categories.forEach((cat) => {
-    cat.items.forEach((item) => {
-      menuSales += item.price * (item.qty || 0);
-      if (cat.name.includes("토핑")) addonSum += item.qty || 0;
+    data.categories.forEach((cat) => {
+      cat.items.forEach((item) => {
+        menuSales += item.price * (item.qty || 0);
+        if (cat.name.includes("토핑")) addonSum += item.qty || 0;
+      });
     });
-  });
 
-  const gapUsd = data.posSales - menuSales;
-  const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
-  const absGapRate = Math.abs(gapRate);
+    const gapUsd = data.posSales - menuSales;
+    const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
+    const absGapRate = Math.abs(gapRate);
 
-  let status: "✅" | "🟡" | "🔴" = "✅";
-  if (absGapRate > 3) status = "🔴";
-  else if (absGapRate > 1) status = "🟡";
+    let status: "✅" | "🟡" | "🔴" = "✅";
+    if (absGapRate > 3) status = "🔴";
+    else if (absGapRate > 1) status = "🟡";
 
-  return {
-    calcSales: Math.round(totalSales * 100) / 100,
-    gapUsd: Math.round(gapUsd * 100) / 100,
-    gapRate: Math.round(gapRate * 100) / 100,
-    status,
-    aov: data.orders > 0 ? Math.round((totalSales / data.orders) * 100) / 100 : 0,
-    conversionRate: data.visitCount > 0 ? Math.round((data.orders / data.visitCount) * 1000) / 10 : 0,
-    addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0,
-  };
-}, [data]);
+    return {
+      calcSales: Math.round(totalSales * 100) / 100,
+      gapUsd: Math.round(gapUsd * 100) / 100,
+      gapRate: Math.round(gapRate * 100) / 100,
+      status,
+      aov: data.orders > 0 ? Math.round((totalSales / data.orders) * 100) / 100 : 0,
+      conversionRate: data.visitCount > 0 ? Math.round((data.orders / data.visitCount) * 1000) / 10 : 0,
+      addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0,
+    };
+  }, [data]);
 
   const calculatePeriodKPI = (rows: any[]) => {
     if (!rows || rows.length === 0) {
@@ -303,7 +294,7 @@ const DailySalesPage: React.FC<Props> = ({
     comparisonRangeRequestRef.current = requestKey;
 
     try {
-      const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end);
+      const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end, storeId);
 
       if (comparisonRangeRequestRef.current !== requestKey) return;
 
@@ -341,7 +332,7 @@ const DailySalesPage: React.FC<Props> = ({
     currentRangeRequestRef.current = requestKey;
 
     try {
-      const rows = await loadDailyRange(periodRange.start, periodRange.end);
+      const rows = await loadDailyRange(periodRange.start, periodRange.end, storeId);
 
       if (currentRangeRequestRef.current !== requestKey) return;
 
@@ -369,11 +360,11 @@ const DailySalesPage: React.FC<Props> = ({
 
   useEffect(() => {
     void loadComparisonData();
-  }, [comparisonRange?.start, comparisonRange?.end]);
+  }, [comparisonRange?.start, comparisonRange?.end, storeId]);
 
   useEffect(() => {
     void loadCurrentPeriodData();
-  }, [periodRange.start, periodRange.end]);
+  }, [periodRange.start, periodRange.end, storeId]);
 
   const fetchPeriodStats = async (force = false) => {
     if (!periodRange.start || !periodRange.end) return;
@@ -396,9 +387,9 @@ const DailySalesPage: React.FC<Props> = ({
 
     try {
       const [currentRows, comparisonRows] = await Promise.all([
-        loadDailyRange(periodRange.start, periodRange.end),
+        loadDailyRange(periodRange.start, periodRange.end, storeId),
         comparisonRange?.start && comparisonRange?.end
-          ? loadDailyRange(comparisonRange.start, comparisonRange.end)
+          ? loadDailyRange(comparisonRange.start, comparisonRange.end, storeId)
           : Promise.resolve([]),
       ]);
 
@@ -731,7 +722,7 @@ const DailySalesPage: React.FC<Props> = ({
     return plans.slice(0, 3);
   }, [menuEngineeringResult, sortedMenuEngineering, data.categories]);
 
-   const handleDataChange = (newData: SalesReportData) => {
+  const handleDataChange = (newData: SalesReportData) => {
     const dateChanged = String(newData.date || "") !== String(data.date || "");
 
     if (dateChanged) {
