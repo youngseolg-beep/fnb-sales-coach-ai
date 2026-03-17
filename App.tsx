@@ -335,24 +335,28 @@ const showToast = (msg: string) => {
   setToastSeq((s) => s + 1);
 };
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const correctPassword = (import.meta as any).env?.VITE_APP_PASSWORD;
+  if (!supabase) {
+    setAuthError("Supabase 연결이 설정되지 않았습니다.");
+    return;
+  }
 
-    if (!correctPassword) {
-      setAuthError("환경변수 VITE_APP_PASSWORD가 설정되지 않았습니다. (Vercel Env 확인)");
-      return;
-    }
+  setAuthError("");
 
-    if (password === correctPassword) {
-      setIsLoggedIn(true);
-      localStorage.setItem(AUTH_KEY, "true");
-    } else {
-      setAuthError("비밀번호가 일치하지 않습니다.");
-    }
-  };
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
+  if (error) {
+    setAuthError(error.message);
+    return;
+  }
+
+  setIsLoggedIn(true);
+};
   const handleLogout = () => {
     setIsLoggedIn(false);
     localStorage.removeItem(AUTH_KEY);
