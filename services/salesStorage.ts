@@ -1,10 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import type { MenuCategory } from "../types";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from "./supabaseClient";
 
 const TABLE = "sales_daily";
 const STORAGE_KEY = "sales_daily_local";
@@ -73,7 +68,7 @@ const getMonthRange = (yearMonth: string) => {
   return { start, nextMonthStart };
 };
 
-export async function saveDaily(payload: DailyPayload, storeId: number) {
+export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
   const safeDate = String(payload.date).slice(0, 10);
 
   const row = {
@@ -83,16 +78,25 @@ export async function saveDaily(payload: DailyPayload, storeId: number) {
     delivery_sales: toNumber(payload.deliverySales, 0),
     orders: toNumber(payload.orders, 0),
     visit_count: toNumber(payload.visitCount, 0),
-    topping_qty: toNumber((payload as any).toppingQty, 0),
+    topping_qty: toNumber(payload.toppingQty, 0),
     note: String(payload.note ?? ""),
     categories: Array.isArray(payload.categories) ? payload.categories : [],
     updated_at: new Date().toISOString(),
   };
 
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[`${storeId}:${safeDate}`] = row;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    return row;
+  }
+
   const { data, error } = await supabase
     .from(TABLE)
     .upsert(row, { onConflict: "date,store_id" })
-    .select();
+    .select()
+    .single();
 
   if (error) {
     console.error("SUPABASE SAVE ERROR:", error);
@@ -102,12 +106,32 @@ export async function saveDaily(payload: DailyPayload, storeId: number) {
   return data;
 }
 
-export async function saveDailyData(payload: DailyPayload, storeId: number) {
+export async function saveDailyData(payload: DailyPayload, storeId: number = 1) {
   return saveDaily(payload, storeId);
 }
 
-export async function loadDaily(dateStr: string, storeId: number) {
+export async function loadDaily(dateStr: string, storeId: number = 1) {
   const safeDate = String(dateStr).slice(0, 10);
+
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const all = JSON.parse(raw);
+    const row = all[`${storeId}:${safeDate}`];
+    if (!row) return null;
+
+    return {
+      date: safeDate,
+      posSales: toNumber(row.pos_sales ?? row.posSales, 0),
+      deliverySales: toNumber(row.delivery_sales ?? row.deliverySales, 0),
+      orders: toNumber(row.orders, 0),
+      visitCount: toNumber(row.visit_count ?? row.visitCount, 0),
+      toppingQty: toNumber(row.topping_qty ?? row.toppingQty, 0),
+      note: String(row.note ?? ""),
+      categories: normalizeCategories(row.categories),
+    };
+  }
 
   const { data, error } = await supabase
     .from(TABLE)
@@ -124,8 +148,6 @@ export async function loadDaily(dateStr: string, storeId: number) {
     return null;
   }
 
-  const safeCategories = normalizeCategories((data as any).categories);
-
   return {
     date: safeDate,
     posSales: toNumber((data as any).pos_sales ?? (data as any).posSales, 0),
@@ -134,12 +156,20 @@ export async function loadDaily(dateStr: string, storeId: number) {
     visitCount: toNumber((data as any).visit_count ?? (data as any).visitCount, 0),
     toppingQty: toNumber((data as any).topping_qty ?? (data as any).toppingQty, 0),
     note: String((data as any).note ?? ""),
-    categories: safeCategories,
+    categories: normalizeCategories((data as any).categories),
   };
 }
 
-export async function deleteDaily(dateStr: string, storeId: number) {
+export async function deleteDaily(dateStr: string, storeId: number = 1) {
   const safeDate = String(dateStr).slice(0, 10);
+
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    delete all[`${storeId}:${safeDate}`];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    return;
+  }
 
   const { error } = await supabase
     .from(TABLE)
@@ -154,6 +184,17 @@ export async function deleteDaily(dateStr: string, storeId: number) {
 
 export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
+
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const all = JSON.parse(raw);
+
+    return Object.values(all)
+      .filter((row: any) => row.store_id === storeId && row.date >= start && row.date < nextMonthStart)
+      .map((row: any) => String(row.date))
+      .sort();
+  }
 
   const { data, error } = await supabase
     .from(TABLE)
@@ -176,6 +217,17 @@ export async function listDatesInRange(
   endDate: string,
   storeId: number = 1
 ): Promise<string[]> {
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const all = JSON.parse(raw);
+
+    return Object.values(all)
+      .filter((row: any) => row.store_id === storeId && row.date >= startDate && row.date <= endDate)
+      .map((row: any) => String((row as any).date))
+      .sort();
+  }
+
   const { data, error } = await supabase
     .from(TABLE)
     .select("date")
@@ -195,6 +247,20 @@ export async function listDatesInRange(
 export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return 0;
+    const all = JSON.parse(raw);
+
+    let sum = 0;
+    for (const row of Object.values(all) as any[]) {
+      if (row.store_id !== storeId) continue;
+      if (row.date < start || row.date >= nextMonthStart) continue;
+      sum += toNumber(row.pos_sales ?? row.posSales, 0) + toNumber(row.delivery_sales ?? row.deliverySales, 0);
+    }
+    return sum;
+  }
+
   const { data, error } = await supabase
     .from(TABLE)
     .select("pos_sales,delivery_sales")
@@ -208,7 +274,6 @@ export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
   }
 
   let sum = 0;
-
   for (const row of (data ?? []) as any[]) {
     sum += toNumber(row.pos_sales, 0) + toNumber(row.delivery_sales, 0);
   }
@@ -221,6 +286,24 @@ export async function loadDailyRange(
   end: string,
   storeId: number = 1
 ) {
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const all = JSON.parse(raw);
+
+    return Object.values(all)
+      .filter((row: any) => row.store_id === storeId && row.date >= start && row.date <= end)
+      .sort((a: any, b: any) => String(a.date).localeCompare(String(b.date)))
+      .map((row: any) => ({
+        date: String(row.date),
+        sales: toNumber(row.pos_sales ?? row.posSales, 0),
+        deliverySales: toNumber(row.delivery_sales ?? row.deliverySales, 0),
+        orders: toNumber(row.orders, 0),
+        visitors: toNumber(row.visit_count ?? row.visitCount, 0),
+        categories: normalizeCategories(row.categories),
+      }));
+  }
+
   const { data, error } = await supabase
     .from(TABLE)
     .select("date,pos_sales,delivery_sales,orders,visit_count,categories")
@@ -233,16 +316,12 @@ export async function loadDailyRange(
 
   const rows = (data ?? []) as any[];
 
-  return rows.map((row) => {
-    const safeCategories = normalizeCategories(row.categories);
-
-    return {
-      date: String(row.date),
-      sales: toNumber(row.pos_sales, 0),
-      deliverySales: toNumber(row.delivery_sales, 0),
-      orders: toNumber(row.orders, 0),
-      visitors: toNumber(row.visit_count, 0),
-      categories: safeCategories,
-    };
-  });
+  return rows.map((row) => ({
+    date: String(row.date),
+    sales: toNumber(row.pos_sales, 0),
+    deliverySales: toNumber(row.delivery_sales, 0),
+    orders: toNumber(row.orders, 0),
+    visitors: toNumber(row.visit_count, 0),
+    categories: normalizeCategories(row.categories),
+  }));
 }
