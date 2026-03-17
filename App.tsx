@@ -595,6 +595,10 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
   }, [isLoggedIn]);
 
   useEffect(() => {
+  refreshMonthlyTarget(targetMonthKey);
+}, [targetMonthKey]);
+  
+  useEffect(() => {
     if (!isLoggedIn) return;
     if (menuMasterLoading) return;
     fetchData(selectedDate);
