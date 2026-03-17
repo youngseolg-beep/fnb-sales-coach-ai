@@ -826,9 +826,10 @@ const DailySalesPage: React.FC<Props> = ({
       });
 
       const payload: any = {
-        ...data,
-        totalSales: Math.round(calcSales * 100) / 100,
-      };
+  ...data,
+  deliverySales: Number(data.deliverySales || 0),
+  totalSales: Math.round(calcSales * 100) / 100,
+};
 
       const res = await saveDailyData({ date: data.date, ...payload });
 
