@@ -1,3 +1,5 @@
+App.tsx 전체 교체
+
 import { loadMonthlyTarget, saveMonthlyTarget } from "./services/monthlyTargetService";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -21,7 +23,6 @@ import MenuSettingsPage from "./components/MenuSettingsPage";
 import DailySalesPage from "./components/DailySalesPage";
 import { supabase } from "./services/supabaseClient";
 
-const AUTH_KEY = "fb_coach_auth";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
@@ -253,13 +254,10 @@ const persistMenuPriceHistory = async (
 
 const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
-const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeId, setStoreId] = useState<number | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
-    return false;
-  });
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
@@ -269,56 +267,58 @@ const [storeId, setStoreId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDate(new Date());
   });
-const targetMonthKey =
-  selectedDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
 
-const [monthlyTarget, setMonthlyTarget] = useState<number>(0);
-const [monthlyTargetLoading, setMonthlyTargetLoading] = useState(false);
+  const targetMonthKey =
+    selectedDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
 
-async function refreshMonthlyTarget(monthKey: string) {
-  try {
-    setMonthlyTargetLoading(true);
-    const value = await loadMonthlyTarget(monthKey);
-    setMonthlyTarget(value);
-    setData((prev) => ({ ...prev, monthlyTarget: value }));
-  } catch (error) {
-    console.error("refreshMonthlyTarget error:", error);
-    setMonthlyTarget(0);
-    setData((prev) => ({ ...prev, monthlyTarget: 0 }));
-  } finally {
-    setMonthlyTargetLoading(false);
+  const [monthlyTarget, setMonthlyTarget] = useState<number>(0);
+  const [monthlyTargetLoading, setMonthlyTargetLoading] = useState(false);
+
+  async function refreshMonthlyTarget(monthKey: string) {
+    try {
+      setMonthlyTargetLoading(true);
+      const value = await loadMonthlyTarget(monthKey);
+      setMonthlyTarget(value);
+      setData((prev) => ({ ...prev, monthlyTarget: value }));
+    } catch (error) {
+      console.error("refreshMonthlyTarget error:", error);
+      setMonthlyTarget(0);
+      setData((prev) => ({ ...prev, monthlyTarget: 0 }));
+    } finally {
+      setMonthlyTargetLoading(false);
+    }
   }
-}
 
-async function handleSaveMonthlyTarget(nextValue: number) {
-  try {
-    setMonthlyTarget(nextValue);
-    await saveMonthlyTarget(targetMonthKey, nextValue);
-  } catch (error) {
-    console.error("handleSaveMonthlyTarget error:", error);
-    alert("월 목표 저장 중 오류가 발생했습니다.");
+  async function handleSaveMonthlyTarget(nextValue: number) {
+    try {
+      setMonthlyTarget(nextValue);
+      await saveMonthlyTarget(targetMonthKey, nextValue);
+    } catch (error) {
+      console.error("handleSaveMonthlyTarget error:", error);
+      alert("월 목표 저장 중 오류가 발생했습니다.");
+    }
   }
-}
+
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
   );
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
-const [data, setData] = useState<SalesReportData>(() => {
-  const today = formatLocalDate(new Date());
+  const [data, setData] = useState<SalesReportData>(() => {
+    const today = formatLocalDate(new Date());
 
-  return {
-    date: today,
-    posSales: 0,
-    deliverySales: 0,
-    orders: 0,
-    visitCount: 0,
-    toppingQty: 0,
-    monthlyTarget: 0,
-    menuSales: {},
-    categories: cloneCategories(INITIAL_CATEGORIES),
-  };
-});
+    return {
+      date: today,
+      posSales: 0,
+      deliverySales: 0,
+      orders: 0,
+      visitCount: 0,
+      toppingQty: 0,
+      monthlyTarget: 0,
+      menuSales: {},
+      categories: cloneCategories(INITIAL_CATEGORIES),
+    };
+  });
 
   const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
@@ -328,134 +328,160 @@ const [data, setData] = useState<SalesReportData>(() => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
-const [datesWithData, setDatesWithData] = useState<string[]>([]);
+  const [datesWithData, setDatesWithData] = useState<string[]>([]);
 
-const showToast = (msg: string) => {
-  setToastMsg(msg);
-  setToastSeq((s) => s + 1);
-};
-
- const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!supabase) {
-    setAuthError("Supabase 연결이 설정되지 않았습니다.");
-    return;
-  }
-
-  setAuthError("");
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    setAuthError(error.message);
-    return;
-  }
-
-  setIsLoggedIn(true);
-};
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem(AUTH_KEY);
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setToastSeq((s) => s + 1);
   };
 
-const refreshMonthlyStats = async (yearMonth: string) => {
-  const total = await getMonthlyTotal(yearMonth);
-  const dates = await listDatesInMonth(yearMonth);
-  const target = await loadMonthlyTarget(yearMonth);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  setMonthlyStats({
-    total,
-    avg: dates.length > 0 ? total / dates.length : 0,
-    rate: target > 0 ? (total / target) * 100 : 0,
-  });
-
-  setDatesWithData(dates);
-  setMonthlyTarget(target);
-
-  setData((prev) => {
-    if (getMonthKey(prev.date) === yearMonth) {
-      return { ...prev, mtdSales: total, monthlyTarget: target };
-    }
-    return { ...prev, mtdSales: total };
-  });
-};
-
-const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
-  setDbLoading(true);
-
-  try {
-    const dbData = await loadDaily(dateStr);
-    const yearMonth = getMonthKey(dateStr);
-    const priceMap = await getMenuPricesForDate(dateStr);
-
-    const activeBaseCategories = normalizeMenuMasterCategories(
-      nextMenuMasterCategories ?? menuMasterCategories
-    );
-
-    let nextCategories: MenuCategory[];
-    let nextPosSales = 0;
-    let nextDeliverySales = 0;
-    let nextOrders = 0;
-    let nextVisitCount = 0;
-    let nextNote = "";
-
-    if (dbData) {
-      nextCategories = mergeCategoriesWithBase(activeBaseCategories, dbData.categories);
-      nextPosSales = toSafeNumber((dbData as any).posSales, 0);
-      nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
-      nextOrders = toSafeNumber((dbData as any).orders, 0);
-      nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
-      nextNote = String((dbData as any).note ?? "");
-    } else {
-      nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
-      nextPosSales = 0;
-      nextDeliverySales = 0;
-      nextOrders = 0;
-      nextVisitCount = 0;
-      nextNote = "";
+    if (!supabase) {
+      setAuthError("Supabase 연결이 설정되지 않았습니다.");
+      return;
     }
 
-    nextCategories = nextCategories.map((cat) => ({
-      ...cat,
-      items: cat.items.map((item) => {
-        const history = priceMap.get(item.id);
+    setAuthError("");
 
-        if (!history) return { ...item };
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-        return {
-          ...item,
-          price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
-          unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
-        };
-      }),
-    }));
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
 
-    const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
+    const { data: sessionData } = await supabase.auth.getSession();
 
-    setData((prev) => ({
-      ...prev,
-      date: dateStr,
-      posSales: nextPosSales,
-      deliverySales: nextDeliverySales,
-      orders: nextOrders,
-      visitCount: nextVisitCount,
-      note: nextNote,
-      monthlyTarget: monthTargetFromDb,
-      categories: cloneCategories(nextCategories),
-    }));
+    if (sessionData.session) {
+      setIsLoggedIn(true);
 
-    setOriginalCategories(cloneCategories(nextCategories));
-    await refreshMonthlyStats(yearMonth);
-  } catch (err) {
-    console.error("Fetch Error:", err);
-  } finally {
-    setDbLoading(false);
-  }
-};
+      const userId = sessionData.session.user.id;
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("role, store_id")
+        .eq("id", userId)
+        .single();
+
+      if (!userError && userData) {
+        setUserRole(userData.role);
+        setStoreId(userData.store_id);
+        console.log("USER INFO:", userData);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setIsLoggedIn(false);
+    setUserRole(null);
+    setStoreId(null);
+    setEmail("");
+    setPassword("");
+    setAuthError("");
+  };
+
+  const refreshMonthlyStats = async (yearMonth: string) => {
+    const total = await getMonthlyTotal(yearMonth);
+    const dates = await listDatesInMonth(yearMonth);
+    const target = await loadMonthlyTarget(yearMonth);
+
+    setMonthlyStats({
+      total,
+      avg: dates.length > 0 ? total / dates.length : 0,
+      rate: target > 0 ? (total / target) * 100 : 0,
+    });
+
+    setDatesWithData(dates);
+    setMonthlyTarget(target);
+
+    setData((prev: any) => {
+      if (getMonthKey(prev.date) === yearMonth) {
+        return { ...prev, mtdSales: total, monthlyTarget: target };
+      }
+      return { ...prev, mtdSales: total };
+    });
+  };
+
+  const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
+    setDbLoading(true);
+
+    try {
+      const dbData = await loadDaily(dateStr);
+      const yearMonth = getMonthKey(dateStr);
+      const priceMap = await getMenuPricesForDate(dateStr);
+
+      const activeBaseCategories = normalizeMenuMasterCategories(
+        nextMenuMasterCategories ?? menuMasterCategories
+      );
+
+      let nextCategories: MenuCategory[];
+      let nextPosSales = 0;
+      let nextDeliverySales = 0;
+      let nextOrders = 0;
+      let nextVisitCount = 0;
+      let nextNote = "";
+
+      if (dbData) {
+        nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
+        nextPosSales = toSafeNumber((dbData as any).posSales, 0);
+        nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
+        nextOrders = toSafeNumber((dbData as any).orders, 0);
+        nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
+        nextNote = String((dbData as any).note ?? "");
+      } else {
+        nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
+        nextPosSales = 0;
+        nextDeliverySales = 0;
+        nextOrders = 0;
+        nextVisitCount = 0;
+        nextNote = "";
+      }
+
+      nextCategories = nextCategories.map((cat) => ({
+        ...cat,
+        items: cat.items.map((item) => {
+          const history = priceMap.get(item.id);
+
+          if (!history) return { ...item };
+
+          return {
+            ...item,
+            price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
+            unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
+          };
+        }),
+      }));
+
+      const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
+
+      setData((prev: any) => ({
+        ...prev,
+        date: dateStr,
+        posSales: nextPosSales,
+        deliverySales: nextDeliverySales,
+        orders: nextOrders,
+        visitCount: nextVisitCount,
+        note: nextNote,
+        monthlyTarget: monthTargetFromDb,
+        categories: cloneCategories(nextCategories),
+      }));
+
+      setOriginalCategories(cloneCategories(nextCategories));
+      await refreshMonthlyStats(yearMonth);
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setDbLoading(false);
+    }
+  };
 
   const reloadMenuMaster = async () => {
     try {
@@ -476,10 +502,10 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
     }
   };
 
- const handleMonthChange = async (month: Date) => {
-  const yearMonth = formatLocalDate(month).substring(0, 7);
-  await refreshMonthlyStats(yearMonth);
-};
+  const handleMonthChange = async (month: Date) => {
+    const yearMonth = formatLocalDate(month).substring(0, 7);
+    await refreshMonthlyStats(yearMonth);
+  };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
     setData((prev) => ({
@@ -561,39 +587,40 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
       setDbLoading(false);
     }
   };
-  
-useEffect(() => {
-  const checkSession = async () => {
-    if (!supabase) {
+
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!supabase) {
+        setSessionChecked(true);
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData.session) {
+        setIsLoggedIn(true);
+
+        const userId = sessionData.session.user.id;
+
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("role, store_id")
+          .eq("id", userId)
+          .single();
+
+        if (!error && userData) {
+          setUserRole(userData.role);
+          setStoreId(userData.store_id);
+          console.log("USER INFO:", userData);
+        }
+      }
+
       setSessionChecked(true);
-      return;
-    }
+    };
 
-   const { data } = await supabase.auth.getSession();
+    checkSession();
+  }, []);
 
-if (data.session) {
-  setIsLoggedIn(true);
-
-  const userId = data.session.user.id;
-
-  const { data: userData, error } = await supabase
-    .from("users")
-    .select("role, store_id")
-    .eq("id", userId)
-    .single();
-
-  if (!error && userData) {
-    setUserRole(userData.role);
-    setStoreId(userData.store_id);
-  }
-}
-console.log("USER INFO:", userData);
-    setSessionChecked(true);
-  };
-
-  checkSession();
-}, []);
-  
   useEffect(() => {
     if (!isLoggedIn) return;
 
@@ -625,9 +652,9 @@ console.log("USER INFO:", userData);
   }, [isLoggedIn]);
 
   useEffect(() => {
-  refreshMonthlyTarget(targetMonthKey);
-}, [targetMonthKey]);
-  
+    refreshMonthlyTarget(targetMonthKey);
+  }, [targetMonthKey]);
+
   useEffect(() => {
     if (!isLoggedIn) return;
     if (menuMasterLoading) return;
@@ -640,110 +667,40 @@ console.log("USER INFO:", userData);
     return () => window.clearTimeout(timer);
   }, [toastSeq, toastMsg]);
 
- const monthlyRate = useMemo(() => {
-  const target = monthlyTarget;
-  if (!target || target <= 0) return 0;
-  return (monthlyStats.total / target) * 100;
-}, [monthlyStats.total, monthlyTarget]);
+  const monthlyRate = useMemo(() => {
+    const target = monthlyTarget;
+    if (!target || target <= 0) return 0;
+    return (monthlyStats.total / target) * 100;
+  }, [monthlyStats.total, monthlyTarget]);
 
-if (!sessionChecked) {
-  return null;
-}
+  if (!sessionChecked) {
+    return null;
+  }
 
-if (!isLoggedIn) {
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-        <div className="bg-indigo-600 p-8 text-center">
-          <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-            <i className="fa-solid fa-user text-white text-2xl"></i>
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+          <div className="bg-indigo-600 p-8 text-center">
+            <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+              <i className="fa-solid fa-user text-white text-2xl"></i>
+            </div>
+            <h1 className="text-white font-black text-2xl uppercase tracking-tight">SALES COACH AI</h1>
+            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">Supabase Login</p>
           </div>
 
-          <h1 className="text-white font-black text-2xl uppercase tracking-tight">
-            SALES COACH AI
-          </h1>
+          <form onSubmit={handleLogin} className="p-8 space-y-6">
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
+                autoFocus
+              />
+            </div>
 
-          <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">
-            Supabase Login
-          </p>
-        </div>
-
-        <form onSubmit={handleLogin} className="p-8 space-y-6">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-            autoFocus
-          />
-
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-          />
-
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-          >
-            로그인
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-            찾아서 삭제할 부분 기준:
-const { error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
-
-if (error) {
-  alert(error.message);
-  return;
-}
-
-setIsLoggedIn(true);
-
-위 코드는 로그인 화면 JSX 안에 남아있는 inline 코드라서 전부 삭제.
-
-로그인 화면 쪽 최종 형태는 아래처럼만 남아야 함:
-
-<form onSubmit={handleLogin} className="p-8 space-y-6">
-  <input
-    type="email"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    placeholder="Email"
-    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-    autoFocus
-  />
-
-  <input
-    type="password"
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    placeholder="Password"
-    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
-  />
-
-  <button
-    type="submit"
-    className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-  >
-    로그인
-  </button>
-</form>
-      </div>
-    </div>
-  );
-}
             <div>
               <input
                 type="password"
@@ -751,10 +708,10 @@ setIsLoggedIn(true);
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-                autoFocus
               />
               {authError && <p className="text-rose-500 text-xs font-bold mt-3 text-center">{authError}</p>}
             </div>
+
             <button
               type="submit"
               className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
@@ -830,15 +787,14 @@ setIsLoggedIn(true);
                 <input
                   type="number"
                   value={data.monthlyTarget || ""}
-                onChange={(e) => {
-  const v = Number(e.target.value);
-  setData((prev) => ({ ...prev, monthlyTarget: v }));
-  setMonthlyTarget(v);
-}}
-
-onBlur={() => {
-  handleSaveMonthlyTarget(monthlyTarget);
-}}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setData((prev) => ({ ...prev, monthlyTarget: v }));
+                    setMonthlyTarget(v);
+                  }}
+                  onBlur={() => {
+                    handleSaveMonthlyTarget(monthlyTarget);
+                  }}
                   className="w-full bg-white border border-slate-200 rounded-xl pl-2 pr-10 py-1 text-right text-[11px] md:text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none tabular-nums"
                   placeholder="0"
                 />
