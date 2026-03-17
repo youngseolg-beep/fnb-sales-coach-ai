@@ -190,36 +190,38 @@ const DailySalesPage: React.FC<Props> = ({
   }
 }, [data.date]);
 
-  const results = useMemo((): CalculationResult => {
-    let calcSales = 0;
-    let addonSum = 0;
+ const results = useMemo((): CalculationResult => {
+  const deliverySales = Number(data.deliverySales || 0);
+  const totalSales = Number(data.posSales || 0) + deliverySales;
 
-    data.categories.forEach((cat) => {
-  cat.items.forEach((item) => {
-    calcSales += item.price * (item.qty || 0);
+  let menuSales = 0;
+  let addonSum = 0;
+
+  data.categories.forEach((cat) => {
+    cat.items.forEach((item) => {
+      menuSales += item.price * (item.qty || 0);
+      if (cat.name.includes("토핑")) addonSum += item.qty || 0;
+    });
   });
-});
 
-calcSales += Number((data as any).deliverySales || 0);
+  const gapUsd = data.posSales - menuSales;
+  const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
+  const absGapRate = Math.abs(gapRate);
 
-    const gapUsd = data.posSales - calcSales;
-    const gapRate = data.posSales > 0 ? (gapUsd / data.posSales) * 100 : 0;
-    const absGapRate = Math.abs(gapRate);
+  let status: "✅" | "🟡" | "🔴" = "✅";
+  if (absGapRate > 3) status = "🔴";
+  else if (absGapRate > 1) status = "🟡";
 
-    let status: "✅" | "🟡" | "🔴" = "✅";
-    if (absGapRate > 3) status = "🔴";
-    else if (absGapRate > 1) status = "🟡";
-
-    return {
-      calcSales: Math.round(calcSales * 100) / 100,
-      gapUsd: Math.round(gapUsd * 100) / 100,
-      gapRate: Math.round(gapRate * 100) / 100,
-      status,
-      aov: data.orders > 0 ? Math.round((calcSales / data.orders) * 100) / 100 : 0,
-      conversionRate: data.visitCount > 0 ? Math.round((data.orders / data.visitCount) * 1000) / 10 : 0,
-      addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0,
-    };
-  }, [data]);
+  return {
+    calcSales: Math.round(totalSales * 100) / 100,
+    gapUsd: Math.round(gapUsd * 100) / 100,
+    gapRate: Math.round(gapRate * 100) / 100,
+    status,
+    aov: data.orders > 0 ? Math.round((totalSales / data.orders) * 100) / 100 : 0,
+    conversionRate: data.visitCount > 0 ? Math.round((data.orders / data.visitCount) * 1000) / 10 : 0,
+    addonPerOrder: data.orders > 0 ? Math.round((addonSum / data.orders) * 10) / 10 : 0,
+  };
+}, [data]);
 
   const calculatePeriodKPI = (rows: any[]) => {
     if (!rows || rows.length === 0) {
