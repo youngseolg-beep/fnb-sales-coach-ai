@@ -646,11 +646,10 @@ if (!sessionChecked) {
   return null;
 }
 
-if (!isLoggedIn) {
+iif (!isLoggedIn) {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-
         <div className="bg-indigo-600 p-8 text-center">
           <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
             <i className="fa-solid fa-user text-white text-2xl"></i>
@@ -665,14 +664,35 @@ if (!isLoggedIn) {
           </p>
         </div>
 
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
+        <form onSubmit={handleLogin} className="p-8 space-y-6">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
+            autoFocus
+          />
 
-            if (!supabase) {
-              alert("Supabase 연결 안됨");
-              return;
-            }
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none text-sm font-bold"
+          />
+
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
+          >
+            로그인
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
             const { error } = await supabase.auth.signInWithPassword({
               email,
