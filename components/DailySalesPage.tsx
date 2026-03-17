@@ -1144,5 +1144,5 @@ const res = await saveDailyData(payload, storeId);
     </>
   );
 };
-
+}
 export default DailySalesPage;
