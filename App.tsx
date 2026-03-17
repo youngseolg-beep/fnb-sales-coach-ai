@@ -320,6 +320,7 @@ async function handleSaveMonthlyTarget(nextValue: number) {
     toppingQty: 0,
     monthlyTarget: 0,
     menuSales: {},
+    categories: cloneCategories(INITIAL_CATEGORIES),
   };
 });
 
