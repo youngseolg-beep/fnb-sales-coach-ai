@@ -361,7 +361,7 @@ const showToast = (msg: string) => {
     localStorage.removeItem(AUTH_KEY);
   };
 
- const refreshMonthlyStats = async (yearMonth: string) => {
+const refreshMonthlyStats = async (yearMonth: string) => {
   const total = await getMonthlyTotal(yearMonth);
   const dates = await listDatesInMonth(yearMonth);
   const target = await loadMonthlyTarget(yearMonth);
