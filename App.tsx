@@ -414,7 +414,7 @@ const App: React.FC = () => {
     setDbLoading(true);
 
     try {
-      const dbData = await loadDaily(dateStr);
+      const dbData = await loadDaily(dateStr, storeId ?? 1);
       const yearMonth = getMonthKey(dateStr);
       const priceMap = await getMenuPricesForDate(dateStr);
 
