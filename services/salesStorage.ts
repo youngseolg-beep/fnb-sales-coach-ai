@@ -114,58 +114,48 @@ const getMonthRange = (yearMonth: string) => {
   return { start, nextMonthStart };
 };
 
-export async function saveDailyData(input: DailyPayload & { deleted?: boolean }) {
-  const normalizedCategories = normalizeCategories(input.categories ?? null);
+export async function saveDaily(payload: any, storeId: number) {
+  const safeDate = String(payload.date).slice(0, 10);
 
-  const computedTotalSales =
-    input.totalSales !== undefined && input.totalSales !== null
-      ? toNumber(input.totalSales, 0)
-      : calcTotalSalesFromCategories(normalizedCategories);
-
-  const payload = {
-    date: input.date,
-    posSales: toNumber(input.posSales, 0),
-    deliverySales: toNumber(input.deliverySales, 0),
-    orders: toNumber(input.orders, 0),
-    visitCount: toNumber(input.visitCount, 0),
-    note: input.note ?? "",
-    monthlyTarget: input.monthlyTarget ?? "",
-    categories: normalizedCategories,
-    totalSales: computedTotalSales,
-    deleted: input.deleted === true,
+  const row = {
+    date: safeDate,
+    store_id: storeId,
+    pos_sales: Number(payload.posSales ?? 0),
+    delivery_sales: Number(payload.deliverySales ?? 0),
+    orders: Number(payload.orders ?? 0),
+    visit_count: Number(payload.visitCount ?? 0),
+    topping_qty: Number(payload.toppingQty ?? 0),
+    note: String(payload.note ?? ""),
+    categories: Array.isArray(payload.categories) ? payload.categories : [],
+    updated_at: new Date().toISOString(),
   };
 
-  const row: DailyRow = {
-    date: input.date,
-    total_sales: computedTotalSales,
-    orders: toNumber(input.orders, 0),
-    visit_count: toNumber(input.visitCount, 0),
-    sold_items: normalizedCategories,
-    sold_items_summary: "",
-    payload,
-  };
-
-  const { data: updated, error: updateErr } = await supabase
-    .from(TABLE)
-    .update(row)
-    .eq("date", input.date)
-    .select("date");
-
-  if (updateErr) {
-    return { ok: false, error: updateErr.message, raw: updateErr };
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[safeDate] = {
+      date: safeDate,
+      posSales: row.pos_sales,
+      deliverySales: row.delivery_sales,
+      orders: row.orders,
+      visitCount: row.visit_count,
+      toppingQty: row.topping_qty,
+      note: row.note,
+      categories: row.categories,
+      store_id: row.store_id,
+      updated_at: row.updated_at,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    return;
   }
 
-  if (updated && updated.length > 0) {
-    return { ok: true };
+  const { error } = await supabase
+    .from("sales_daily")
+    .upsert(row, { onConflict: "date,store_id" });
+
+  if (error) {
+    throw error;
   }
-
-  const { error: insertErr } = await supabase.from(TABLE).insert(row);
-
-  if (insertErr) {
-    return { ok: false, error: insertErr.message, raw: insertErr };
-  }
-
-  return { ok: true };
 }
 
 export async function loadDaily(dateStr: string, storeId: number) {
