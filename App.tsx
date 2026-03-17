@@ -675,55 +675,67 @@ const App: React.FC = () => {
     return null;
   }
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-          <div className="bg-indigo-600 p-8 text-center">
-            <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-              <i className="fa-solid fa-user text-white text-2xl"></i>
-            </div>
-            <h1 className="text-white font-black text-2xl uppercase tracking-tight">SALES COACH AI</h1>
-            <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">Supabase Login</p>
-<div className="mt-3 text-indigo-100 text-xs font-semibold opacity-80">
-  <div>ID : test@tbk.com</div>
-  <div>PW : 0000</div>
-</div>            
+if (!isLoggedIn) {
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-indigo-600 p-8 text-center">
+          <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+            <i className="fa-solid fa-user text-white text-2xl"></i>
+          </div>
 
-          <form onSubmit={handleLogin} className="p-8 space-y-6">
-            <div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-                autoFocus
-              />
-            </div>
+          <h1 className="text-white font-black text-2xl uppercase tracking-tight">
+            SALES COACH AI
+          </h1>
 
-            <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-              />
-              {authError && <p className="text-rose-500 text-xs font-bold mt-3 text-center">{authError}</p>}
-            </div>
+          <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">
+            Supabase Login
+          </p>
 
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-            >
-              로그인
-            </button>
-          </form>
+          <div className="mt-3 text-indigo-100 text-xs font-semibold opacity-80 space-y-1">
+            <div>ID : test@tbk.com</div>
+            <div>PW : 0000</div>
+          </div>
         </div>
+
+        <form onSubmit={handleLogin} className="p-8 space-y-6">
+          <div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
+            />
+            {authError && (
+              <p className="text-rose-500 text-xs font-bold mt-3 text-center">
+                {authError}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
+          >
+            로그인
+          </button>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (menuMasterLoading) {
     return (
