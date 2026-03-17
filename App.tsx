@@ -688,7 +688,7 @@ if (!isLoggedIn) {
             SALES COACH AI
           </h1>
 
-          <p className="text-indigo-100 text-sm font-bold opacity-80 mt-1">
+          <p className="text-indigo-100 text-sm font-bold opacity-0 mt-1">
             Supabase Login
           </p>
 
