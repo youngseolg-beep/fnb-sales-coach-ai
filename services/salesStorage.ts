@@ -168,37 +168,70 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
   return { ok: true };
 }
 
-export async function loadDaily(date: string, storeId: number) {
+export async function loadDaily(dateStr: string, storeId: number) {
+  const safeDate = String(dateStr).slice(0, 10);
+
+  if (!supabase) {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const all = JSON.parse(raw);
+    const row = all[safeDate];
+    if (!row) return null;
+
+    const safeCategories = Array.isArray(row.categories)
+      ? row.categories.map((cat: any) => ({
+          ...cat,
+          items: Array.isArray(cat.items)
+            ? cat.items.map((item: any) => ({ ...item }))
+            : [],
+        }))
+      : [];
+
+    return {
+      date: safeDate,
+      posSales: Number(row.posSales ?? 0),
+      deliverySales: Number(row.deliverySales ?? 0),
+      orders: Number(row.orders ?? 0),
+      visitCount: Number(row.visitCount ?? 0),
+      toppingQty: Number(row.toppingQty ?? 0),
+      note: String(row.note ?? ""),
+      categories: safeCategories,
+    };
+  }
+
   const { data, error } = await supabase
     .from("sales_daily")
     .select("*")
-    .eq("date", date)
+    .eq("date", safeDate)
     .eq("store_id", storeId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     throw error;
   }
 
-  return data;
-}
+  if (!data) {
+    return null;
+  }
 
-  const row = data as DailyRow;
-  const p: any = safeParsePayload(row.payload);
-
-  if (p?.deleted === true) return null;
-
-  const rawCategories = p?.categories ?? row.sold_items ?? null;
-  const safeCategories = normalizeCategories(rawCategories);
+  const safeCategories = Array.isArray((data as any).categories)
+    ? (data as any).categories.map((cat: any) => ({
+        ...cat,
+        items: Array.isArray(cat.items)
+          ? cat.items.map((item: any) => ({ ...item }))
+          : [],
+      }))
+    : [];
 
   return {
-    date: row.date,
-    posSales: toNumber(p?.posSales ?? row.total_sales ?? 0, 0),
-    deliverySales: toNumber(p?.deliverySales ?? 0, 0),
-    orders: toNumber(p?.orders ?? row.orders ?? 0, 0),
-    visitCount: toNumber(p?.visitCount ?? row.visit_count ?? 0, 0),
-    note: String(p?.note ?? ""),
-    monthlyTarget: p?.monthlyTarget ?? "",
+    date: safeDate,
+    posSales: Number((data as any).pos_sales ?? (data as any).posSales ?? 0),
+    deliverySales: Number((data as any).delivery_sales ?? (data as any).deliverySales ?? 0),
+    orders: Number((data as any).orders ?? 0),
+    visitCount: Number((data as any).visit_count ?? (data as any).visitCount ?? 0),
+    toppingQty: Number((data as any).topping_qty ?? (data as any).toppingQty ?? 0),
+    note: String((data as any).note ?? ""),
     categories: safeCategories,
   };
 }
