@@ -26,7 +26,20 @@ interface Props {
   refreshMonthlyStats: (yearMonth: string) => Promise<void>;
   showToast: (msg: string) => void;
   onDelete: () => Promise<void>;
+  storeId: number;
 }
+
+const DailySalesPage: React.FC<Props> = ({
+  data,
+  setData,
+  setSelectedDate,
+  datesWithData,
+  onMonthChange,
+  refreshMonthlyStats,
+  showToast,
+  onDelete,
+  storeId,
+}) => {
 
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
@@ -761,13 +774,13 @@ const DailySalesPage: React.FC<Props> = ({
             totalSales: Math.round(calcSales * 100) / 100,
           };
 
-          const res = await saveDailyData(
-            {
-              date: currentData.date,
-              ...savePayload,
-            },
-            1
-          );
+         const res = await saveDailyData(
+  {
+    date: currentData.date,
+    ...savePayload,
+  },
+  storeId
+);
 
           if ((res as any)?.ok === false || (res as any)?.success === false) {
             throw new Error(
@@ -845,8 +858,8 @@ const handleSave = async (silent = false) => {
       totalSales: Math.round(calcSales * 100) / 100,
     };
 
-    const res = await saveDailyData(payload, 1);
-
+const res = await saveDailyData(payload, storeId);
+    
     if ((res as any)?.ok === false || (res as any)?.success === false) {
       throw new Error(
         (res as any)?.error?.message ||
