@@ -324,10 +324,6 @@ const [data, setData] = useState<SalesReportData>(() => {
   };
 });
 
-const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
-  cloneCategories(INITIAL_CATEGORIES)
-);
-
   const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
   );
