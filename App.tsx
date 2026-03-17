@@ -284,9 +284,11 @@ async function refreshMonthlyTarget(monthKey: string) {
     setMonthlyTargetLoading(true);
     const value = await loadMonthlyTarget(monthKey);
     setMonthlyTarget(value);
+    setData((prev) => ({ ...prev, monthlyTarget: value }));
   } catch (error) {
     console.error("refreshMonthlyTarget error:", error);
     setMonthlyTarget(0);
+    setData((prev) => ({ ...prev, monthlyTarget: 0 }));
   } finally {
     setMonthlyTargetLoading(false);
   }
