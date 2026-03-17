@@ -19,6 +19,7 @@ import type { SalesReportData, MenuCategory } from "./types";
 
 import MenuSettingsPage from "./components/MenuSettingsPage";
 import DailySalesPage from "./components/DailySalesPage";
+import { supabase } from "./services/supabaseClient";
 
 const AUTH_KEY = "fb_coach_auth";
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
@@ -251,6 +252,7 @@ const persistMenuPriceHistory = async (
 };
 
 const App: React.FC = () => {
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
     return false;
@@ -553,7 +555,26 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
       setDbLoading(false);
     }
   };
+  
+useEffect(() => {
+  const checkSession = async () => {
+    if (!supabase) {
+      setSessionChecked(true);
+      return;
+    }
 
+    const { data } = await supabase.auth.getSession();
+
+    if (data.session) {
+      setIsLoggedIn(true);
+    }
+
+    setSessionChecked(true);
+  };
+
+  checkSession();
+}, []);
+  
   useEffect(() => {
     if (!isLoggedIn) return;
 
@@ -606,7 +627,11 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
   return (monthlyStats.total / target) * 100;
 }, [monthlyStats.total, monthlyTarget]);
 
-  if (!isLoggedIn) {
+  if (!sessionChecked) {
+  return null;
+}
+
+if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
         <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
