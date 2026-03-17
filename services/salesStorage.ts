@@ -168,20 +168,20 @@ export async function saveDailyData(input: DailyPayload & { deleted?: boolean })
   return { ok: true };
 }
 
-export async function loadDaily(dateStr: string) {
+export async function loadDaily(date: string, storeId: number) {
   const { data, error } = await supabase
-    .from(TABLE)
-    .select("date,total_sales,orders,visit_count,sold_items,sold_items_summary,payload")
-    .eq("date", dateStr)
-    .limit(1)
-    .maybeSingle();
+    .from("sales_daily")
+    .select("*")
+    .eq("date", date)
+    .eq("store_id", storeId)
+    .single();
 
-  if (error) {
-    console.error("[loadDaily] supabase error:", error);
-    return null;
+  if (error && error.code !== "PGRST116") {
+    throw error;
   }
 
-  if (!data) return null;
+  return data;
+}
 
   const row = data as DailyRow;
   const p: any = safeParsePayload(row.payload);
