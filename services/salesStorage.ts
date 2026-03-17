@@ -132,7 +132,11 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
     const all = raw ? JSON.parse(raw) : {};
     all[key] = row;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    return { success: true, data: row };
+    return {
+      ok: true,
+      success: true,
+      data: row,
+    };
   }
 
   const { data, error } = await supabase
@@ -143,10 +147,18 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
 
   if (error) {
     console.error("SUPABASE SAVE ERROR:", error);
-    return { success: false, error };
+    return {
+      ok: false,
+      success: false,
+      error,
+    };
   }
 
-  return { success: true, data };
+  return {
+    ok: true,
+    success: true,
+    data,
+  };
 }
 
 export async function saveDailyData(payload: DailyPayload, storeId: number = 1) {
