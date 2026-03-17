@@ -308,7 +308,7 @@ async function handleSaveMonthlyTarget(nextValue: number) {
   );
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
- const [data, setData] = useState<SalesReportData>(() => {
+const [data, setData] = useState<SalesReportData>(() => {
   const today = formatLocalDate(new Date());
 
   return {
@@ -324,18 +324,9 @@ async function handleSaveMonthlyTarget(nextValue: number) {
   };
 });
 
-    return {
-      date: today,
-      posSales: 0,
-      deliverySales: 0,
-      orders: 0,
-      visitCount: 0,
-      note: "",
-      monthlyTarget: monthTarget,
-      mtdSales: 0,
-      categories: cloneCategories(INITIAL_CATEGORIES),
-    };
-  });
+const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
+  cloneCategories(INITIAL_CATEGORIES)
+);
 
   const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
