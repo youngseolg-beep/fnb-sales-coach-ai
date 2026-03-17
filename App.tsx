@@ -252,6 +252,8 @@ const persistMenuPriceHistory = async (
 };
 
 const App: React.FC = () => {
+  const [userRole, setUserRole] = useState<string | null>(null);
+const [storeId, setStoreId] = useState<number | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window !== "undefined") return localStorage.getItem(AUTH_KEY) === "true";
@@ -563,11 +565,24 @@ useEffect(() => {
       return;
     }
 
-    const { data } = await supabase.auth.getSession();
+   const { data } = await supabase.auth.getSession();
 
-    if (data.session) {
-      setIsLoggedIn(true);
-    }
+if (data.session) {
+  setIsLoggedIn(true);
+
+  const userId = data.session.user.id;
+
+  const { data: userData, error } = await supabase
+    .from("users")
+    .select("role, store_id")
+    .eq("id", userId)
+    .single();
+
+  if (!error && userData) {
+    setUserRole(userData.role);
+    setStoreId(userData.store_id);
+  }
+}
 
     setSessionChecked(true);
   };
