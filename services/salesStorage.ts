@@ -358,15 +358,14 @@ export async function loadDailyRange(
       )
       .sort((a: any, b: any) => String(a.date).localeCompare(String(b.date)))
       .map((row: any) => {
-        const daily = mapRowToDaily(row);
+        const payload = row.payload ?? {};
 
         return {
-          date: daily.date,
-          sales: toNumber(row.total_sales ?? row.payload?.totalSales, 0),
-          deliverySales: daily.deliverySales,
-          orders: daily.orders,
-          visitors: daily.visitCount,
-          categories: daily.categories,
+          date: String(row.date),
+          sales: toNumber(row.total_sales ?? payload.totalSales, 0),
+          orders: toNumber(payload.orders ?? row.orders, 0),
+          visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+          categories: normalizeCategories(payload.categories ?? row.sold_items),
         };
       });
   }
@@ -387,15 +386,14 @@ export async function loadDailyRange(
   const rows = (data ?? []) as any[];
 
   return rows.map((row) => {
-    const daily = mapRowToDaily(row);
+    const payload = row.payload ?? {};
 
     return {
-      date: daily.date,
-      sales: toNumber(row.total_sales, 0),
-      deliverySales: daily.deliverySales,
-      orders: daily.orders,
-      visitors: daily.visitCount,
-      categories: daily.categories,
+      date: String(row.date),
+      sales: toNumber(row.total_sales ?? payload.totalSales, 0),
+      orders: toNumber(payload.orders ?? row.orders, 0),
+      visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+      categories: normalizeCategories(payload.categories ?? row.sold_items),
     };
   });
 }
