@@ -388,37 +388,28 @@ const App: React.FC = () => {
     setAuthError("");
   };
 
- const refreshMonthlyStats = async (yearMonth: string) => {
-  try {
-    const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
-    const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
-    const target = await loadMonthlyTarget(yearMonth);
+const refreshMonthlyStats = async (yearMonth: string) => {
+  const [dates, total, target] = await Promise.all([
+    listDatesInMonth(yearMonth, storeId ?? 1),
+    getMonthlyTotal(yearMonth, storeId ?? 1),
+    loadMonthlyTarget(yearMonth),
+  ]);
 
-    console.error("DEBUG refreshMonthlyStats storeId:", storeId);
-    console.error("DEBUG refreshMonthlyStats yearMonth:", yearMonth);
-    console.error("DEBUG refreshMonthlyStats datesWithData:", dates);
-    console.error("DEBUG refreshMonthlyStats total:", total);
+  setDatesWithData(dates);
+  setMonthlyTarget(target);
 
-    setDatesWithData(dates);
+  setMonthlyStats({
+    total,
+    avg: dates.length > 0 ? total / dates.length : 0,
+    rate: target > 0 ? (total / target) * 100 : 0,
+  });
 
-    setMonthlyStats({
-      total,
-      avg: dates.length > 0 ? total / dates.length : 0,
-      rate: target > 0 ? (total / target) * 100 : 0,
-    });
-
-    setMonthlyTarget(target);
-
-    setData((prev: any) => {
-      if (getMonthKey(prev.date) === yearMonth) {
-        return { ...prev, mtdSales: total, monthlyTarget: target };
-      }
-      return { ...prev, mtdSales: total };
-    });
-  } catch (error) {
-    console.error("DEBUG refreshMonthlyStats ERROR:", error);
-    throw error;
-  }
+  setData((prev: any) => {
+    if (getMonthKey(prev.date) === yearMonth) {
+      return { ...prev, mtdSales: total, monthlyTarget: target };
+    }
+    return { ...prev, mtdSales: total };
+  });
 };
 
 const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
