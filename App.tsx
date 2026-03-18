@@ -390,7 +390,7 @@ const App: React.FC = () => {
 
   const refreshMonthlyStats = async (yearMonth: string) => {
     const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
-    const dates = await listDatesInMonth(yearMonth, storeId);
+    const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
 setDatesWithData(dates);
     const target = await loadMonthlyTarget(yearMonth);
 
@@ -655,11 +655,12 @@ await deleteDaily(targetDate, storeId ?? 1);
     refreshMonthlyTarget(targetMonthKey);
   }, [targetMonthKey]);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    if (menuMasterLoading) return;
-    fetchData(selectedDate);
-  }, [selectedDate, isLoggedIn, menuMasterLoading]);
+ useEffect(() => {
+  if (!isLoggedIn) return;
+  if (menuMasterLoading) return;
+  if (storeId == null) return;
+  fetchData(selectedDate);
+}, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
 
   useEffect(() => {
     if (!toastMsg) return;
