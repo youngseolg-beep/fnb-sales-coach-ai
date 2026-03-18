@@ -434,6 +434,15 @@ setDatesWithData(dates);
         nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
          const legacyMenuSales = (dbData as any).menuSales || {};
 
+const getLegacyQty = (value: any) => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value) || 0;
+  if (value && typeof value === "object") {
+    return Number(value.qty ?? value.count ?? value.value ?? 0) || 0;
+  }
+  return 0;
+};
+
 nextCategories = nextCategories.map((cat) => ({
   ...cat,
   items: cat.items.map((item) => ({
@@ -441,7 +450,7 @@ nextCategories = nextCategories.map((cat) => ({
     qty:
       Number(item.qty || 0) > 0
         ? Number(item.qty || 0)
-        : Number(
+        : getLegacyQty(
             legacyMenuSales[item.id] ??
             legacyMenuSales[item.name] ??
             0
@@ -676,10 +685,12 @@ useEffect(() => {
     refreshMonthlyTarget(targetMonthKey);
   }, [targetMonthKey]);
 
- useEffect(() => {
+useEffect(() => {
   if (!isLoggedIn) return;
   if (menuMasterLoading) return;
   if (storeId == null) return;
+
+  refreshMonthlyStats(selectedDate.substring(0, 7));
   fetchData(selectedDate);
 }, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
 
