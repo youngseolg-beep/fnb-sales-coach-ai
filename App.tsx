@@ -432,6 +432,18 @@ setDatesWithData(dates);
 
       if (dbData) {
         nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
+          const legacyMenuSales = (dbData as any).menuSales || {};
+
+  nextCategories = nextCategories.map((cat) => ({
+    ...cat,
+    items: cat.items.map((item) => ({
+      ...item,
+      qty:
+        Number(item.qty || 0) > 0
+          ? Number(item.qty || 0)
+          : Number(legacyMenuSales[item.id] || 0),
+    })),
+  }));
         nextPosSales = toSafeNumber((dbData as any).posSales, 0);
         nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
         nextOrders = toSafeNumber((dbData as any).orders, 0);
