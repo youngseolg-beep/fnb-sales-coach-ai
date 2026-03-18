@@ -389,20 +389,21 @@ const App: React.FC = () => {
   };
 
 const refreshMonthlyStats = async (yearMonth: string) => {
-  const [dates, total, target] = await Promise.all([
-    listDatesInMonth(yearMonth, storeId ?? 1),
+  const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
+  setDatesWithData(dates);
+
+  const [total, target] = await Promise.all([
     getMonthlyTotal(yearMonth, storeId ?? 1),
     loadMonthlyTarget(yearMonth),
   ]);
-
-  setDatesWithData(dates);
-  setMonthlyTarget(target);
 
   setMonthlyStats({
     total,
     avg: dates.length > 0 ? total / dates.length : 0,
     rate: target > 0 ? (total / target) * 100 : 0,
   });
+
+  setMonthlyTarget(target);
 
   setData((prev: any) => {
     if (getMonthKey(prev.date) === yearMonth) {
