@@ -1007,13 +1007,13 @@ const DailySalesPage: React.FC<Props> = ({
         )}
       </div>
 
-      <ReportDisplay
-        report={report}
-        loading={loading}
-        menuEngineeringResult={null}
-        sortedMenuEngineering={null}
-        boostPlans={[]}
-      />
+    <ReportDisplay
+  report={report}
+  loading={loading}
+  menuEngineeringResult={menuEngineeringResult}
+  sortedMenuEngineering={sortedMenuEngineering}
+  boostPlans={boostPlans}
+/>
 
       <PeriodMenuAnalysisSection
         periodRange={periodRange}
