@@ -130,7 +130,10 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
   if (!supabase) {
     const raw = localStorage.getItem(STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
-    all[key] = row;
+    all[key] = {
+  ...row,
+  store_id: storeId
+};
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     return {
       ok: true,
