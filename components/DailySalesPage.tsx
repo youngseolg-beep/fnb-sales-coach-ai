@@ -776,11 +776,14 @@ const DailySalesPage: React.FC<Props> = ({
             setDataSaved(true);
           }
 
-          setSelectedDate(nextDate);
-          setData((prev) => ({
-            ...prev,
-            date: nextDate,
-          }));
+         console.error("DEBUG date click nextDate:", nextDate);
+console.error("DEBUG before setSelectedDate current data.date:", data.date);
+
+setSelectedDate(nextDate);
+setData((prev) => ({
+  ...prev,
+  date: nextDate,
+}));
         } catch (error: any) {
           console.error("Auto save before date change failed:", error);
           setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
