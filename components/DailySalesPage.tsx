@@ -184,16 +184,6 @@ const DailySalesPage: React.FC<Props> = ({
     setMenuEngineeringResult(null);
   }, [data.date]);
 
-  useEffect(() => {
-    if (!data.date) return;
-
-    const month = new Date(data.date);
-
-    if (onMonthChange) {
-      onMonthChange(month);
-    }
-  }, [data.date, onMonthChange]);
-
   const results = useMemo((): CalculationResult => {
     const deliverySales = Number(data.deliverySales || 0);
     const totalSales = Number(data.posSales || 0) + deliverySales;
