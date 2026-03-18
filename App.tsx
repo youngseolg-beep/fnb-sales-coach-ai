@@ -675,9 +675,8 @@ useEffect(() => {
     refreshMonthlyTarget(targetMonthKey);
   }, [targetMonthKey]);
 
-  useEffect(() => {
+ useEffect(() => {
   if (!isLoggedIn) return;
-  if (storeId == null) return;
 
   const yearMonth = selectedDate.substring(0, 7);
   refreshMonthlyStats(yearMonth);
@@ -686,9 +685,6 @@ useEffect(() => {
 useEffect(() => {
   if (!isLoggedIn) return;
   if (menuMasterLoading) return;
-  if (storeId == null) return;
-
-  refreshMonthlyStats(selectedDate.substring(0, 7));
   fetchData(selectedDate);
 }, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
 
