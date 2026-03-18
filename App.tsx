@@ -389,39 +389,48 @@ const App: React.FC = () => {
   };
 
   const refreshMonthlyStats = async (yearMonth: string) => {
-    const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
-    const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
-setDatesWithData(dates);
-    const target = await loadMonthlyTarget(yearMonth);
+  const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
+  const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
+  console.log("DEBUG refreshMonthlyStats storeId:", storeId);
+  console.log("DEBUG refreshMonthlyStats yearMonth:", yearMonth);
+  console.log("DEBUG refreshMonthlyStats datesWithData:", dates);
+  setDatesWithData(dates);
 
-    setMonthlyStats({
-      total,
-      avg: dates.length > 0 ? total / dates.length : 0,
-      rate: target > 0 ? (total / target) * 100 : 0,
-    });
+  const target = await loadMonthlyTarget(yearMonth);
 
-    setDatesWithData(dates);
-    setMonthlyTarget(target);
+  setMonthlyStats({
+    total,
+    avg: dates.length > 0 ? total / dates.length : 0,
+    rate: target > 0 ? (total / target) * 100 : 0,
+  });
 
-    setData((prev: any) => {
-      if (getMonthKey(prev.date) === yearMonth) {
-        return { ...prev, mtdSales: total, monthlyTarget: target };
-      }
-      return { ...prev, mtdSales: total };
-    });
-  };
+  setDatesWithData(dates);
+  setMonthlyTarget(target);
 
-  const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
-    setDbLoading(true);
+  setData((prev: any) => {
+    if (getMonthKey(prev.date) === yearMonth) {
+      return { ...prev, mtdSales: total, monthlyTarget: target };
+    }
+    return { ...prev, mtdSales: total };
+  });
+};
 
-    try {
-      const dbData = await loadDaily(dateStr, storeId ?? 1);
-      const yearMonth = getMonthKey(dateStr);
-      const priceMap = await getMenuPricesForDate(dateStr);
+const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
+  setDbLoading(true);
 
-      const activeBaseCategories = normalizeMenuMasterCategories(
-        nextMenuMasterCategories ?? menuMasterCategories
-      );
+  try {
+    const dbData = await loadDaily(dateStr, storeId ?? 1);
+    const yearMonth = getMonthKey(dateStr);
+    const priceMap = await getMenuPricesForDate(dateStr);
+
+    console.log("DEBUG fetchData storeId:", storeId);
+    console.log("DEBUG fetchData selectedDate:", selectedDate);
+    console.log("DEBUG fetchData dateStr:", dateStr);
+    console.log("DEBUG fetchData dbData:", dbData);
+
+    const activeBaseCategories = normalizeMenuMasterCategories(
+      nextMenuMasterCategories ?? menuMasterCategories
+    );
 
       let nextCategories: MenuCategory[];
       let nextPosSales = 0;
