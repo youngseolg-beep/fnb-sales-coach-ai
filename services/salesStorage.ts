@@ -230,25 +230,44 @@ export async function deleteDaily(dateStr: string, storeId: number = 1) {
 export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
+  const hasMeaningfulPayload = (payload: any) => {
+    if (!payload) return false;
+
+    const hasBase =
+      toNumber(payload.posSales, 0) > 0 ||
+      toNumber(payload.deliverySales, 0) > 0 ||
+      toNumber(payload.orders, 0) > 0 ||
+      toNumber(payload.visitCount, 0) > 0 ||
+      toNumber(payload.toppingQty, 0) > 0 ||
+      String(payload.note ?? "").trim().length > 0;
+
+    const categories = Array.isArray(payload.categories) ? payload.categories : [];
+    const hasMenu = categories.some((cat: any) =>
+      Array.isArray(cat?.items) && cat.items.some((item: any) => toNumber(item?.qty, 0) > 0)
+    );
+
+    return hasBase || hasMenu;
+  };
+
   if (!supabase) {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const all = JSON.parse(raw);
 
     return Object.values(all)
-      .filter(
-        (row: any) =>
-          Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId &&
-          String(row.date) >= start &&
-          String(row.date) < nextMonthStart
-      )
+      .filter((row: any) => {
+        const sameStore = Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId;
+        const rowDate = String(row.date);
+        const inMonth = rowDate >= start && rowDate < nextMonthStart;
+        return sameStore && inMonth && hasMeaningfulPayload(row.payload);
+      })
       .map((row: any) => String(row.date))
       .sort();
   }
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("date")
+    .select("date,payload")
     .eq("store_id", storeId)
     .gte("date", start)
     .lt("date", nextMonthStart)
@@ -259,7 +278,9 @@ export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
     return [];
   }
 
-  return ((data ?? []) as any[]).map((r) => String(r.date));
+  return ((data ?? []) as any[])
+    .filter((row) => hasMeaningfulPayload(row.payload))
+    .map((row) => String(row.date));
 }
 
 export async function listDatesInRange(
