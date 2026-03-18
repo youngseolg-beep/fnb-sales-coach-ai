@@ -390,7 +390,8 @@ const App: React.FC = () => {
 
   const refreshMonthlyStats = async (yearMonth: string) => {
     const total = await getMonthlyTotal(yearMonth);
-    const dates = await listDatesInMonth(yearMonth);
+    const dates = await listDatesInMonth(yearMonth, storeId);
+setDatesWithData(dates);
     const target = await loadMonthlyTarget(yearMonth);
 
     setMonthlyStats({
