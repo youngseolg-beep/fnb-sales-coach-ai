@@ -869,12 +869,7 @@ const DailySalesPage: React.FC<Props> = ({
       }
 
       try {
-    await refreshMonthlyStats(data.date.substring(0, 7));
-
-if (onMonthChange) {
-  await onMonthChange(new Date(data.date));
-}
-
+   await refreshMonthlyStats(data.date.substring(0, 7));
 await loadCurrentPeriodData(true);
 await loadComparisonData(true);
       } catch (e) {
