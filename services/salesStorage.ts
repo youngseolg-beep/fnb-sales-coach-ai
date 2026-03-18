@@ -112,15 +112,16 @@ const mapRowToDaily = (row: any) => {
   const payload = row?.payload ?? {};
 
   return {
-  date: String(row?.date ?? payload?.date ?? ""),
-  posSales: toNumber(payload?.posSales, 0),
-  deliverySales: toNumber(payload?.deliverySales, 0),
-  orders: toNumber(payload?.orders ?? row?.orders, 0),
-  visitCount: toNumber(payload?.visitCount ?? row?.visit_count, 0),
-  toppingQty: toNumber(payload?.toppingQty, 0),
-  note: String(payload?.note ?? ""),
-  categories: normalizeCategories(payload?.categories ?? row?.sold_items),
-  menuSales: payload?.menuSales ?? {},
+    date: String(row?.date ?? payload?.date ?? ""),
+    posSales: toNumber(payload?.posSales, 0),
+    deliverySales: toNumber(payload?.deliverySales, 0),
+    orders: toNumber(payload?.orders ?? row?.orders, 0),
+    visitCount: toNumber(payload?.visitCount ?? row?.visit_count, 0),
+    toppingQty: toNumber(payload?.toppingQty, 0),
+    note: String(payload?.note ?? ""),
+    categories: normalizeCategories(payload?.categories ?? row?.sold_items),
+    menuSales: payload?.menuSales ?? {},
+  };
 };
 
 export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
