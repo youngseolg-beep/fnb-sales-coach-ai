@@ -388,31 +388,37 @@ const App: React.FC = () => {
     setAuthError("");
   };
 
-  const refreshMonthlyStats = async (yearMonth: string) => {
-  const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
-  const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
-  console.log("DEBUG refreshMonthlyStats storeId:", storeId);
-  console.log("DEBUG refreshMonthlyStats yearMonth:", yearMonth);
-  console.log("DEBUG refreshMonthlyStats datesWithData:", dates);
-  setDatesWithData(dates);
+ const refreshMonthlyStats = async (yearMonth: string) => {
+  try {
+    const total = await getMonthlyTotal(yearMonth, storeId ?? 1);
+    const dates = await listDatesInMonth(yearMonth, storeId ?? 1);
+    const target = await loadMonthlyTarget(yearMonth);
 
-  const target = await loadMonthlyTarget(yearMonth);
+    console.error("DEBUG refreshMonthlyStats storeId:", storeId);
+    console.error("DEBUG refreshMonthlyStats yearMonth:", yearMonth);
+    console.error("DEBUG refreshMonthlyStats datesWithData:", dates);
+    console.error("DEBUG refreshMonthlyStats total:", total);
 
-  setMonthlyStats({
-    total,
-    avg: dates.length > 0 ? total / dates.length : 0,
-    rate: target > 0 ? (total / target) * 100 : 0,
-  });
+    setDatesWithData(dates);
 
-  setDatesWithData(dates);
-  setMonthlyTarget(target);
+    setMonthlyStats({
+      total,
+      avg: dates.length > 0 ? total / dates.length : 0,
+      rate: target > 0 ? (total / target) * 100 : 0,
+    });
 
-  setData((prev: any) => {
-    if (getMonthKey(prev.date) === yearMonth) {
-      return { ...prev, mtdSales: total, monthlyTarget: target };
-    }
-    return { ...prev, mtdSales: total };
-  });
+    setMonthlyTarget(target);
+
+    setData((prev: any) => {
+      if (getMonthKey(prev.date) === yearMonth) {
+        return { ...prev, mtdSales: total, monthlyTarget: target };
+      }
+      return { ...prev, mtdSales: total };
+    });
+  } catch (error) {
+    console.error("DEBUG refreshMonthlyStats ERROR:", error);
+    throw error;
+  }
 };
 
 const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
@@ -423,100 +429,75 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
     const yearMonth = getMonthKey(dateStr);
     const priceMap = await getMenuPricesForDate(dateStr);
 
-    console.log("DEBUG fetchData storeId:", storeId);
-    console.log("DEBUG fetchData selectedDate:", selectedDate);
-    console.log("DEBUG fetchData dateStr:", dateStr);
-    console.log("DEBUG fetchData dbData:", dbData);
+    console.error("DEBUG fetchData storeId:", storeId);
+    console.error("DEBUG fetchData selectedDate:", selectedDate);
+    console.error("DEBUG fetchData dateStr:", dateStr);
+    console.error("DEBUG fetchData dbData:", dbData);
 
     const activeBaseCategories = normalizeMenuMasterCategories(
       nextMenuMasterCategories ?? menuMasterCategories
     );
 
-      let nextCategories: MenuCategory[];
-      let nextPosSales = 0;
-      let nextDeliverySales = 0;
-      let nextOrders = 0;
-      let nextVisitCount = 0;
-      let nextNote = "";
+    let nextCategories: MenuCategory[];
+    let nextPosSales = 0;
+    let nextDeliverySales = 0;
+    let nextOrders = 0;
+    let nextVisitCount = 0;
+    let nextNote = "";
 
-      if (dbData) {
-        nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
-         const legacyMenuSales = (dbData as any).menuSales || {};
-
-const getLegacyQty = (value: any) => {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") return Number(value) || 0;
-  if (value && typeof value === "object") {
-    return Number(value.qty ?? value.count ?? value.value ?? 0) || 0;
-  }
-  return 0;
-};
-
-nextCategories = nextCategories.map((cat) => ({
-  ...cat,
-  items: cat.items.map((item) => ({
-    ...item,
-    qty:
-      Number(item.qty || 0) > 0
-        ? Number(item.qty || 0)
-        : getLegacyQty(
-            legacyMenuSales[item.id] ??
-            legacyMenuSales[item.name] ??
-            0
-          ),
-  })),
-}));
-        nextPosSales = toSafeNumber((dbData as any).posSales, 0);
-        nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
-        nextOrders = toSafeNumber((dbData as any).orders, 0);
-        nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
-        nextNote = String((dbData as any).note ?? "");
-      } else {
-        nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
-        nextPosSales = 0;
-        nextDeliverySales = 0;
-        nextOrders = 0;
-        nextVisitCount = 0;
-        nextNote = "";
-      }
-
-      nextCategories = nextCategories.map((cat) => ({
-        ...cat,
-        items: cat.items.map((item) => {
-          const history = priceMap.get(item.id);
-
-          if (!history) return { ...item };
-
-          return {
-            ...item,
-            price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
-            unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
-          };
-        }),
-      }));
-
-      const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
-
-      setData((prev: any) => ({
-        ...prev,
-        date: dateStr,
-        posSales: nextPosSales,
-        deliverySales: nextDeliverySales,
-        orders: nextOrders,
-        visitCount: nextVisitCount,
-        note: nextNote,
-        monthlyTarget: monthTargetFromDb,
-        categories: cloneCategories(nextCategories),
-      }));
-
-      setOriginalCategories(cloneCategories(nextCategories));
-      await refreshMonthlyStats(yearMonth);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setDbLoading(false);
+    if (dbData) {
+      nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
+      nextPosSales = toSafeNumber((dbData as any).posSales, 0);
+      nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
+      nextOrders = toSafeNumber((dbData as any).orders, 0);
+      nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
+      nextNote = String((dbData as any).note ?? "");
+    } else {
+      nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
+      nextPosSales = 0;
+      nextDeliverySales = 0;
+      nextOrders = 0;
+      nextVisitCount = 0;
+      nextNote = "";
     }
-  };
+
+    nextCategories = nextCategories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((item) => {
+        const history = priceMap.get(item.id);
+
+        if (!history) return { ...item };
+
+        return {
+          ...item,
+          price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
+          unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
+        };
+      }),
+    }));
+
+    const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
+
+    setData((prev: any) => ({
+      ...prev,
+      date: dateStr,
+      posSales: nextPosSales,
+      deliverySales: nextDeliverySales,
+      orders: nextOrders,
+      visitCount: nextVisitCount,
+      note: nextNote,
+      monthlyTarget: monthTargetFromDb,
+      categories: cloneCategories(nextCategories),
+    }));
+
+    setOriginalCategories(cloneCategories(nextCategories));
+    await refreshMonthlyStats(yearMonth);
+  } catch (err) {
+    console.error("DEBUG fetchData ERROR:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const reloadMenuMaster = async () => {
     try {
