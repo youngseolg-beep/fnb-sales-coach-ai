@@ -1,22 +1,15 @@
-@import "react-day-picker/dist/style.css";
-
-/* Calendar dot indicator */
-.rdp-day {
+.has-data {
   position: relative;
 }
 
-.rdp-day::after {
-  content: '';
+.has-data::after {
+  content: "";
   position: absolute;
   bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background-color: transparent;
-}
-
-.rdp-day.has-data::after {
   background-color: #6366f1;
 }
