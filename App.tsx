@@ -455,10 +455,12 @@ const refreshMonthlyStats = useCallback(
 );
 
 const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
+  if (storeId == null) return;
+
   setDbLoading(true);
 
   try {
-    const dbData = await loadDaily(dateStr, storeId ?? 1);
+    const dbData = await loadDaily(dateStr, storeId);
     const yearMonth = getMonthKey(dateStr);
     const priceMap = await getMenuPricesForDate(dateStr);
 
@@ -509,7 +511,7 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
       }),
     }));
 
-    const monthTargetFromDb = await loadMonthlyTarget(yearMonth, storeId ?? 1);
+    const monthTargetFromDb = await loadMonthlyTarget(yearMonth, storeId);
 
     setData((prev: any) => ({
       ...prev,
