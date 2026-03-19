@@ -1,5 +1,4 @@
-// /src/components/DataInput.tsx
-import React from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/ocrService";
@@ -15,7 +14,6 @@ interface DataInputProps {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** 파일을 base64로 변환 */
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -33,7 +31,6 @@ function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }>
   });
 }
 
-/** OCR용 이미지 압축 */
 async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<File> {
   const img = document.createElement("img");
   const url = URL.createObjectURL(file);
@@ -68,7 +65,6 @@ async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<F
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
-/** OCR rawText에서 메뉴 라인 파싱 */
 function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
   const lines = rawText
     .split("\n")
@@ -164,35 +160,35 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
   const numericInputClasses = `${inputClasses} text-right pr-12`;
 
-  // OCR state
-  const [ocrFiles, setOcrFiles] = React.useState<File[]>([]);
-  const [ocrFileStatuses, setOcrFileStatuses] = React.useState<Record<string, FileStatus>>({});
-  const [thumbUrls, setThumbUrls] = React.useState<Record<string, string>>({});
+  const [ocrFiles, setOcrFiles] = useState<File[]>([]);
+  const [ocrFileStatuses, setOcrFileStatuses] = useState<Record<string, FileStatus>>({});
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
 
-  const [ocrRawText, setOcrRawText] = React.useState<string>("");
-  const [ocrItemsAccumulated, setOcrItemsAccumulated] = React.useState<CorrectedItem[]>([]);
-  const [manualMappings, setManualMappings] = React.useState<Record<string, string>>({});
-  const [ocrLoading, setOcrLoading] = React.useState<boolean>(false);
-  const [ocrProgress, setOcrProgress] = React.useState<{ current: number; total: number } | null>(null);
-  const [ocrOptimizing, setOcrOptimizing] = React.useState<boolean>(false);
-  const [ocrError, setOcrError] = React.useState<string>("");
-  const [ocrErrorDetail, setOcrErrorDetail] = React.useState<string>("");
-  const [showOcr, setShowOcr] = React.useState<boolean>(false);
+  const [ocrRawText, setOcrRawText] = useState<string>("");
+  const [ocrItemsAccumulated, setOcrItemsAccumulated] = useState<CorrectedItem[]>([]);
+  const [manualMappings, setManualMappings] = useState<Record<string, string>>({});
+  const [ocrLoading, setOcrLoading] = useState<boolean>(false);
+  const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null);
+  const [ocrOptimizing, setOcrOptimizing] = useState<boolean>(false);
+  const [ocrError, setOcrError] = useState<string>("");
+  const [ocrErrorDetail, setOcrErrorDetail] = useState<string>("");
+  const [showOcr, setShowOcr] = useState<boolean>(false);
 
-  const addInputRef = React.useRef<HTMLInputElement>(null);
-  const replaceInputRef = React.useRef<HTMLInputElement>(null);
+  const addInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
 
-  // Calendar state
-  const [showCalendar, setShowCalendar] = React.useState(false);
-  const calendarButtonRef = React.useRef<HTMLButtonElement>(null);
-  const [calendarPos, setCalendarPos] = React.useState({ top: 0, left: 0 });
-  const [calendarMonth, setCalendarMonth] = React.useState<Date>(() => parseLocalDate(data.date));
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarButtonRef = useRef<HTMLButtonElement>(null);
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(data.date));
+  const [calendarRenderKey, setCalendarRenderKey] = useState(0);
 
   const toggleCalendar = () => {
     if (!showCalendar && calendarButtonRef.current) {
       const rect = calendarButtonRef.current.getBoundingClientRect();
       const windowWidth = window.innerWidth;
       const popupWidth = 320;
+      const currentMonth = parseLocalDate(data.date);
 
       let left = rect.left;
       if (left + popupWidth > windowWidth) left = windowWidth - popupWidth - 20;
@@ -203,12 +199,17 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         left,
       });
 
-      setCalendarMonth(parseLocalDate(data.date));
+      setCalendarMonth(currentMonth);
+      setCalendarRenderKey((prev) => prev + 1);
+      onMonthChange?.(currentMonth);
+      setShowCalendar(true);
+      return;
     }
-    setShowCalendar(!showCalendar);
+
+    setShowCalendar(false);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!showCalendar) return;
     const close = () => setShowCalendar(false);
     window.addEventListener("scroll", close, true);
@@ -219,13 +220,17 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   }, [showCalendar]);
 
-  React.useEffect(() => {
-    setCalendarMonth(parseLocalDate(data.date));
-  }, [data.date]);
+  useEffect(() => {
+    const nextMonth = parseLocalDate(data.date);
+    setCalendarMonth(nextMonth);
+    if (showCalendar) {
+      setCalendarRenderKey((prev) => prev + 1);
+    }
+  }, [data.date, showCalendar]);
 
   const fileKey = (f: File) => `${f.name}__${f.size}__${f.lastModified}`;
 
-  React.useEffect(() => {
+  useEffect(() => {
     const next: Record<string, string> = { ...thumbUrls };
     for (const f of ocrFiles) {
       const k = fileKey(f);
@@ -243,7 +248,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }
 
     setThumbUrls(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ocrFiles]);
 
   const normalizeName = (name: string): string => {
@@ -279,7 +283,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return 1 - distance / maxLength;
   };
 
-  const allMenus = React.useMemo(() => {
+  const allMenus = useMemo(() => {
     const flattened: { id: string; name: string; price: number; normalizedName: string }[] = [];
     data.categories.forEach((cat) => {
       cat.items.forEach((item) => {
@@ -561,9 +565,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         next[idx] = {
           ...item,
           matched_id: matched.id,
+          item_original: item.item_original,
           item_corrected: matched.name,
-          needs_review: false,
+          unit_price: item.unit_price,
+          qty: item.qty,
           confidence: 1.0,
+          needs_review: false,
+          candidates: item.candidates,
         };
         setManualMappings((prevMap) => ({
           ...prevMap,
@@ -577,7 +585,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const needsReviewItems = ocrItemsAccumulated.filter((item) => item.needs_review);
   const confirmedItems = ocrItemsAccumulated.filter((item) => !item.needs_review);
 
-  const scanTotal = React.useMemo(() => {
+  const scanTotal = useMemo(() => {
     return ocrItemsAccumulated.reduce((sum, item) => {
       const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
       const priceToUse = menuPrice !== null && menuPrice !== undefined ? menuPrice : item.unit_price;
@@ -605,9 +613,9 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     return null;
   };
 
-  const receiptTotal = React.useMemo(() => extractReceiptTotal(ocrRawText), [ocrRawText]);
+  const receiptTotal = useMemo(() => extractReceiptTotal(ocrRawText), [ocrRawText]);
 
-  const isTotalMatched = React.useMemo(() => {
+  const isTotalMatched = useMemo(() => {
     if (receiptTotal === null) return null;
     const diff = Math.abs(scanTotal - receiptTotal);
     const tolerance = Math.max(receiptTotal * 0.01, 1);
@@ -624,7 +632,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const notSuccessCount = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status !== "success").length;
-  const hasDataDateSet = React.useMemo(() => new Set(datesWithData || []), [datesWithData]);
+  const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
   return (
     <div className="space-y-8">
@@ -942,7 +950,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                       onClick={() => {
                                         setOcrItemsAccumulated((prev) => {
                                           const next = [...prev];
-                                          next[idx].needs_review = true;
+                                          next[idx] = {
+                                            ...next[idx],
+                                            needs_review: true,
+                                          };
                                           return next;
                                         });
                                       }}
@@ -1031,6 +1042,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
                   >
                     <DayPicker
+                      key={`${calendarRenderKey}_${calendarMonth.getFullYear()}-${calendarMonth.getMonth()}_${(datesWithData || []).join(",")}`}
                       mode="single"
                       month={calendarMonth}
                       selected={parseLocalDate(data.date)}
@@ -1042,6 +1054,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       }}
                       onMonthChange={(month) => {
                         setCalendarMonth(month);
+                        setCalendarRenderKey((prev) => prev + 1);
                         onMonthChange?.(month);
                       }}
                       modifiers={{
@@ -1085,26 +1098,25 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </span>
             </div>
           </div>
-<div>
-  <label className="block text-xs font-bold text-slate-500 mb-1">
-    배달 매출
-  </label>
 
-  <div className="relative">
-    <input
-      type="number"
-      value={(data as any).deliverySales || ""}
-      onChange={(e) =>
-        updateBaseField("deliverySales" as any, Number(e.target.value))
-      }
-      className={numericInputClasses}
-      placeholder="0"
-    />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-      USD
-    </span>
-  </div>
-</div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={(data as any).deliverySales || ""}
+                onChange={(e) =>
+                  updateBaseField("deliverySales" as any, Number(e.target.value))
+                }
+                className={numericInputClasses}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                USD
+              </span>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
