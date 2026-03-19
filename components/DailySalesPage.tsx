@@ -878,32 +878,23 @@ await loadComparisonData(true);
     }
   };
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      const saved = await handleSave(true);
-      if (!saved) return;
+ const handleGenerate = async () => {
+  setLoading(true);
+  try {
+    const saved = await handleSave(true);
+    if (!saved) return;
 
-      const targetDate = data.date;
-      const end = parseISO(targetDate);
-      const start = subDays(end, 6);
-      const startDate = format(start, "yyyy-MM-dd");
-      const endDate = format(end, "yyyy-MM-dd");
-
-      const meResult = await calculateMenuEngineeringForRange(startDate, endDate, data.categories, { maxDays: 7 });
-      setMenuEngineeringResult(meResult);
-
-      const result = await generateCoachingReport(data, results, meResult);
-      setReport(result);
-      setReportGenerated(true);
-      showToast("AI 코칭 리포트 생성 완료");
-    } catch (error: any) {
-      console.error("Process Error:", error);
-    } finally {
-      setLoading(false);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }
-  };
+    const result = await generateCoachingReport(data, results, menuEngineeringResult);
+    setReport(result);
+    setReportGenerated(true);
+    showToast("AI 코칭 리포트 생성 완료");
+  } catch (error: any) {
+    console.error("Process Error:", error);
+  } finally {
+    setLoading(false);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+};
 
   return (
     <>
