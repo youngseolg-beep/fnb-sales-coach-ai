@@ -51,7 +51,7 @@ menuEngineeringSummary = `
   }
 
   // Prompt — shorter + stricter headings
-  const prompt = `
+ const prompt = `
 너는 홍콩반점(캄보디아, USD)의 “매출 코치 AI”다.
 아래 데이터를 바탕으로 점주가 바로 실행할 “짧고 명확한 데일리 코칭 리포트”만 작성하라.
 
@@ -61,8 +61,8 @@ menuEngineeringSummary = `
 - 주문 ${data.orders}건, 방문 ${data.visitCount}명, 객단가 $${results.aov.toFixed(2)}, 전환율 ${results.conversionRate.toFixed(1)}%
 - TOP 메뉴: ${topItemsText}
 - 월 목표 $${Math.round(data.monthlyTarget)} / 누적 $${Math.round(data.mtdSales)} / 잔여 $${Math.round(
-    (data.monthlyTarget || 0) - (data.mtdSales || 0) - results.calcSales
-  )}
+  (data.monthlyTarget || 0) - (data.mtdSales || 0) - results.calcSales
+)}
 - 메모: ${data.note || "없음"}
 
 ${menuEngineeringSummary}
@@ -71,12 +71,17 @@ ${menuEngineeringSummary}
 - 인사말/감탄/설명 금지. “숫자 + 행동”만.
 - 각 섹션 1~2줄 (짧게).
 - 반드시 아래 5개 제목을 그대로 포함해서 출력.
+- 4) 내일 액션 플랜에는 절대 수량 목표를 쓰지 말 것.
+- “+3”, “+5”, “3개”, “5개”, “목표 수량”, “판매 목표” 같은 표현 금지.
+- 내일 액션 플랜은 반드시 행동 중심 문장으로만 작성할 것.
+- 예시: “짜장면 추천 강화”, “짬뽕 판매 집중”, “탕수육 세트 제안 강화”, “볶음밥 보조메뉴 업셀”
+- 데이터가 부족하면 보수적으로 쓰고, 추정 수치나 임의 숫자를 만들지 말 것.
 
 [출력 형식]
 1) 오늘 요약
 2) 핵심 포인트
 3) 월 목표 관점
-4) 내일 액션 플랜 (메뉴 +추가목표 4~6개: 예 “깐풍기 +3”)
+4) 내일 액션 플랜
 5) 실행 체크리스트 (3줄)
 `;
 
