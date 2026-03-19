@@ -1,12 +1,13 @@
 import { supabase } from "./supabaseClient";
 
-const STORE_ID = 1;
-
-export async function loadMonthlyTarget(targetMonth: string): Promise<number> {
+export async function loadMonthlyTarget(
+  targetMonth: string,
+  storeId: number = 1
+): Promise<number> {
   const { data, error } = await supabase
     .from("monthly_targets")
     .select("target_amount")
-    .eq("store_id", STORE_ID)
+    .eq("store_id", storeId)
     .eq("target_month", targetMonth)
     .maybeSingle();
 
@@ -18,12 +19,16 @@ export async function loadMonthlyTarget(targetMonth: string): Promise<number> {
   return Number(data?.target_amount ?? 0);
 }
 
-export async function saveMonthlyTarget(targetMonth: string, targetAmount: number): Promise<void> {
+export async function saveMonthlyTarget(
+  targetMonth: string,
+  targetAmount: number,
+  storeId: number = 1
+): Promise<void> {
   const { error } = await supabase
     .from("monthly_targets")
     .upsert(
       {
-        store_id: STORE_ID,
+        store_id: storeId,
         target_month: targetMonth,
         target_amount: Number(targetAmount || 0),
       },
