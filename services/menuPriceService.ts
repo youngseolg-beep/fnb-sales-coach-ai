@@ -70,7 +70,7 @@ export const getMenuPriceHistory = async (
     .from("menu_price_history")
     .select("menu_id, effective_date, price, unit_cost, created_at")
     .eq("menu_id", menuId)
-    .order("effective_date", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     throw error;
