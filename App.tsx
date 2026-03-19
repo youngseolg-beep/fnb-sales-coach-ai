@@ -624,42 +624,44 @@ const handleMonthChange = async (month: Date) => {
     }
   };
 
-  const handleDelete = async () => {
-    const targetDate = data.date;
+const handleDelete = async () => {
+  if (storeId == null) return;
 
-    try {
-      setDbLoading(true);
-      await deleteDaily(targetDate, storeId ?? 1);
+  const targetDate = data.date;
 
-      const resetCats = createEmptyCategoriesFromBase(normalizeMenuMasterCategories(menuMasterCategories));
+  try {
+    setDbLoading(true);
+    await deleteDaily(targetDate, storeId);
 
-      setData((prev) => ({
-        ...prev,
-        posSales: 0,
-        deliverySales: 0,
-        orders: 0,
-        visitCount: 0,
-        note: "",
-        categories: resetCats,
-      }));
-      setOriginalCategories(cloneCategories(resetCats));
+    const resetCats = createEmptyCategoriesFromBase(normalizeMenuMasterCategories(menuMasterCategories));
 
-      const yearMonth = targetDate.substring(0, 7);
-      const cacheKey = buildMonthCacheKey(yearMonth, storeId ?? 1);
-      const prevDates = datesWithDataCacheRef.current[cacheKey] ?? [];
-      const nextDates = prevDates.filter((date) => date !== targetDate);
-      datesWithDataCacheRef.current[cacheKey] = nextDates;
-      setDatesWithData(nextDates);
+    setData((prev) => ({
+      ...prev,
+      posSales: 0,
+      deliverySales: 0,
+      orders: 0,
+      visitCount: 0,
+      note: "",
+      categories: resetCats,
+    }));
+    setOriginalCategories(cloneCategories(resetCats));
 
-      await refreshMonthlyStats(yearMonth);
-      showToast("데이터가 삭제되었습니다.");
-    } catch (error: any) {
-      console.error("Delete Error:", error);
-      showToast("삭제 중 오류가 발생했습니다.");
-    } finally {
-      setDbLoading(false);
-    }
-  };
+    const yearMonth = targetDate.substring(0, 7);
+    const cacheKey = buildMonthCacheKey(yearMonth, storeId);
+    const prevDates = datesWithDataCacheRef.current[cacheKey] ?? [];
+    const nextDates = prevDates.filter((date) => date !== targetDate);
+    datesWithDataCacheRef.current[cacheKey] = nextDates;
+    setDatesWithData(nextDates);
+
+    await refreshMonthlyStats(yearMonth);
+    showToast("데이터가 삭제되었습니다.");
+  } catch (error: any) {
+    console.error("Delete Error:", error);
+    showToast("삭제 중 오류가 발생했습니다.");
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   useEffect(() => {
     const checkSession = async () => {
