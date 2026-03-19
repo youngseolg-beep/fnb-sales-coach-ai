@@ -404,7 +404,9 @@ const handleLogout = async () => {
 
 const refreshMonthlyStats = useCallback(
   async (yearMonth: string) => {
-    const targetStoreId = storeId ?? 1;
+    if (storeId == null) return;
+
+    const targetStoreId = storeId;
     const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
     const requestKey = `${cacheKey}_${Date.now()}`;
     monthlyStatsRequestRef.current = requestKey;
