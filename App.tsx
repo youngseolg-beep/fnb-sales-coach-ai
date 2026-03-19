@@ -316,221 +316,221 @@ const App: React.FC = () => {
   };
 
   async function refreshMonthlyTarget(monthKey: string) {
-    try {
-      setMonthlyTargetLoading(true);
-      const value = await loadMonthlyTarget(monthKey);
-      setMonthlyTarget(value);
-      setData((prev) => ({ ...prev, monthlyTarget: value }));
-    } catch (error) {
-      console.error("refreshMonthlyTarget error:", error);
-      setMonthlyTarget(0);
-      setData((prev) => ({ ...prev, monthlyTarget: 0 }));
-    } finally {
-      setMonthlyTargetLoading(false);
-    }
+  try {
+    setMonthlyTargetLoading(true);
+    const value = await loadMonthlyTarget(monthKey, storeId ?? 1);
+    setMonthlyTarget(value);
+    setData((prev) => ({ ...prev, monthlyTarget: value }));
+  } catch (error) {
+    console.error("refreshMonthlyTarget error:", error);
+    setMonthlyTarget(0);
+    setData((prev) => ({ ...prev, monthlyTarget: 0 }));
+  } finally {
+    setMonthlyTargetLoading(false);
+  }
+}
+
+async function handleSaveMonthlyTarget(nextValue: number) {
+  try {
+    setMonthlyTarget(nextValue);
+    await saveMonthlyTarget(targetMonthKey, nextValue, storeId ?? 1);
+  } catch (error) {
+    console.error("handleSaveMonthlyTarget error:", error);
+    alert("월 목표 저장 중 오류가 발생했습니다.");
+  }
+}
+
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!supabase) {
+    setAuthError("Supabase 연결이 설정되지 않았습니다.");
+    return;
   }
 
-  async function handleSaveMonthlyTarget(nextValue: number) {
-    try {
-      setMonthlyTarget(nextValue);
-      await saveMonthlyTarget(targetMonthKey, nextValue);
-    } catch (error) {
-      console.error("handleSaveMonthlyTarget error:", error);
-      alert("월 목표 저장 중 오류가 발생했습니다.");
-    }
+  setAuthError("");
+
+  const loginEmail = email.includes("@") ? email : `${email}@tbk.com`;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password,
+  });
+
+  if (error) {
+    setAuthError(error.message);
+    return;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { data: sessionData } = await supabase.auth.getSession();
 
-    if (!supabase) {
-      setAuthError("Supabase 연결이 설정되지 않았습니다.");
-      return;
+  if (sessionData.session) {
+    setIsLoggedIn(true);
+
+    const userId = sessionData.session.user.id;
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, store_id")
+      .eq("id", userId)
+      .single();
+
+    if (!userError && userData) {
+      setUserRole(userData.role);
+      setStoreId(userData.store_id);
+      console.log("USER INFO:", userData);
+    }
+  }
+};
+
+const handleLogout = async () => {
+  if (supabase) {
+    await supabase.auth.signOut();
+  }
+  setIsLoggedIn(false);
+  setUserRole(null);
+  setStoreId(null);
+  setEmail("");
+  setPassword("");
+  setAuthError("");
+  setDatesWithData([]);
+  datesWithDataCacheRef.current = {};
+  monthlyStatsRequestRef.current = "";
+};
+
+const refreshMonthlyStats = useCallback(
+  async (yearMonth: string) => {
+    const targetStoreId = storeId ?? 1;
+    const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
+    const requestKey = `${cacheKey}_${Date.now()}`;
+    monthlyStatsRequestRef.current = requestKey;
+
+    const cachedDates = datesWithDataCacheRef.current[cacheKey];
+    if (cachedDates) {
+      setDatesWithData(cachedDates);
     }
 
-    setAuthError("");
+    try {
+      const [dates, total, target] = await Promise.all([
+        listDatesInMonth(yearMonth, targetStoreId),
+        getMonthlyTotal(yearMonth, targetStoreId),
+        loadMonthlyTarget(yearMonth, targetStoreId),
+      ]);
 
-    const loginEmail = email.includes("@") ? email : `${email}@tbk.com`;
+      if (monthlyStatsRequestRef.current !== requestKey) return;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
+      datesWithDataCacheRef.current[cacheKey] = dates;
+      setDatesWithData(dates);
 
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
+      setMonthlyStats({
+        total,
+        avg: dates.length > 0 ? total / dates.length : 0,
+        rate: target > 0 ? (total / target) * 100 : 0,
+      });
 
-    const { data: sessionData } = await supabase.auth.getSession();
+      setMonthlyTarget(target);
 
-    if (sessionData.session) {
-      setIsLoggedIn(true);
-
-      const userId = sessionData.session.user.id;
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("role, store_id")
-        .eq("id", userId)
-        .single();
-
-      if (!userError && userData) {
-        setUserRole(userData.role);
-        setStoreId(userData.store_id);
-        console.log("USER INFO:", userData);
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    setIsLoggedIn(false);
-    setUserRole(null);
-    setStoreId(null);
-    setEmail("");
-    setPassword("");
-    setAuthError("");
-    setDatesWithData([]);
-    datesWithDataCacheRef.current = {};
-    monthlyStatsRequestRef.current = "";
-  };
-
-  const refreshMonthlyStats = useCallback(
-    async (yearMonth: string) => {
-      const targetStoreId = storeId ?? 1;
-      const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
-      const requestKey = `${cacheKey}_${Date.now()}`;
-      monthlyStatsRequestRef.current = requestKey;
-
-      const cachedDates = datesWithDataCacheRef.current[cacheKey];
-      if (cachedDates) {
-        setDatesWithData(cachedDates);
-      }
-
-      try {
-        const [dates, total, target] = await Promise.all([
-          listDatesInMonth(yearMonth, targetStoreId),
-          getMonthlyTotal(yearMonth, targetStoreId),
-          loadMonthlyTarget(yearMonth),
-        ]);
-
-        if (monthlyStatsRequestRef.current !== requestKey) return;
-
-        datesWithDataCacheRef.current[cacheKey] = dates;
-        setDatesWithData(dates);
-
-        setMonthlyStats({
-          total,
-          avg: dates.length > 0 ? total / dates.length : 0,
-          rate: target > 0 ? (total / target) * 100 : 0,
-        });
-
-        setMonthlyTarget(target);
-
-        setData((prev: any) => {
-          if (getMonthKey(prev.date) === yearMonth) {
-            return { ...prev, mtdSales: total, monthlyTarget: target };
-          }
-          return { ...prev, mtdSales: total };
-        });
-      } catch (error) {
-        if (monthlyStatsRequestRef.current !== requestKey) return;
-        console.error("refreshMonthlyStats error:", error);
-
-        if (!cachedDates) {
-          setDatesWithData([]);
+      setData((prev: any) => {
+        if (getMonthKey(prev.date) === yearMonth) {
+          return { ...prev, mtdSales: total, monthlyTarget: target };
         }
+        return { ...prev, mtdSales: total };
+      });
+    } catch (error) {
+      if (monthlyStatsRequestRef.current !== requestKey) return;
+      console.error("refreshMonthlyStats error:", error);
 
-        setMonthlyStats((prev) => ({
-          ...prev,
-          total: 0,
-          avg: 0,
-        }));
-      }
-    },
-    [buildMonthCacheKey, storeId]
-  );
-
-  const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
-    setDbLoading(true);
-
-    try {
-      const dbData = await loadDaily(dateStr, storeId ?? 1);
-      const yearMonth = getMonthKey(dateStr);
-      const priceMap = await getMenuPricesForDate(dateStr);
-
-      console.error("DEBUG fetchData storeId:", storeId);
-      console.error("DEBUG fetchData selectedDate:", selectedDate);
-      console.error("DEBUG fetchData dateStr:", dateStr);
-      console.error("DEBUG fetchData dbData:", dbData);
-
-      const activeBaseCategories = normalizeMenuMasterCategories(
-        nextMenuMasterCategories ?? menuMasterCategories
-      );
-
-      let nextCategories: MenuCategory[];
-      let nextPosSales = 0;
-      let nextDeliverySales = 0;
-      let nextOrders = 0;
-      let nextVisitCount = 0;
-      let nextNote = "";
-
-      if (dbData) {
-        nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
-        nextPosSales = toSafeNumber((dbData as any).posSales, 0);
-        nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
-        nextOrders = toSafeNumber((dbData as any).orders, 0);
-        nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
-        nextNote = String((dbData as any).note ?? "");
-      } else {
-        nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
-        nextPosSales = 0;
-        nextDeliverySales = 0;
-        nextOrders = 0;
-        nextVisitCount = 0;
-        nextNote = "";
+      if (!cachedDates) {
+        setDatesWithData([]);
       }
 
-      nextCategories = nextCategories.map((cat) => ({
-        ...cat,
-        items: cat.items.map((item) => {
-          const history = priceMap.get(item.id);
-
-          if (!history) return { ...item };
-
-          return {
-            ...item,
-            price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
-            unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
-          };
-        }),
-      }));
-
-      const monthTargetFromDb = await loadMonthlyTarget(yearMonth);
-
-      setData((prev: any) => ({
+      setMonthlyStats((prev) => ({
         ...prev,
-        date: dateStr,
-        posSales: nextPosSales,
-        deliverySales: nextDeliverySales,
-        orders: nextOrders,
-        visitCount: nextVisitCount,
-        note: nextNote,
-        monthlyTarget: monthTargetFromDb,
-        categories: cloneCategories(nextCategories),
+        total: 0,
+        avg: 0,
       }));
-
-      setOriginalCategories(cloneCategories(nextCategories));
-      await refreshMonthlyStats(yearMonth);
-    } catch (err) {
-      console.error("DEBUG fetchData ERROR:", err);
-    } finally {
-      setDbLoading(false);
     }
-  };
+  },
+  [buildMonthCacheKey, storeId]
+);
+
+const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
+  setDbLoading(true);
+
+  try {
+    const dbData = await loadDaily(dateStr, storeId ?? 1);
+    const yearMonth = getMonthKey(dateStr);
+    const priceMap = await getMenuPricesForDate(dateStr);
+
+    console.error("DEBUG fetchData storeId:", storeId);
+    console.error("DEBUG fetchData selectedDate:", selectedDate);
+    console.error("DEBUG fetchData dateStr:", dateStr);
+    console.error("DEBUG fetchData dbData:", dbData);
+
+    const activeBaseCategories = normalizeMenuMasterCategories(
+      nextMenuMasterCategories ?? menuMasterCategories
+    );
+
+    let nextCategories: MenuCategory[];
+    let nextPosSales = 0;
+    let nextDeliverySales = 0;
+    let nextOrders = 0;
+    let nextVisitCount = 0;
+    let nextNote = "";
+
+    if (dbData) {
+      nextCategories = mergeCategoriesWithBase(activeBaseCategories, (dbData as any).categories);
+      nextPosSales = toSafeNumber((dbData as any).posSales, 0);
+      nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
+      nextOrders = toSafeNumber((dbData as any).orders, 0);
+      nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
+      nextNote = String((dbData as any).note ?? "");
+    } else {
+      nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
+      nextPosSales = 0;
+      nextDeliverySales = 0;
+      nextOrders = 0;
+      nextVisitCount = 0;
+      nextNote = "";
+    }
+
+    nextCategories = nextCategories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((item) => {
+        const history = priceMap.get(item.id);
+
+        if (!history) return { ...item };
+
+        return {
+          ...item,
+          price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
+          unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
+        };
+      }),
+    }));
+
+    const monthTargetFromDb = await loadMonthlyTarget(yearMonth, storeId ?? 1);
+
+    setData((prev: any) => ({
+      ...prev,
+      date: dateStr,
+      posSales: nextPosSales,
+      deliverySales: nextDeliverySales,
+      orders: nextOrders,
+      visitCount: nextVisitCount,
+      note: nextNote,
+      monthlyTarget: monthTargetFromDb,
+      categories: cloneCategories(nextCategories),
+    }));
+
+    setOriginalCategories(cloneCategories(nextCategories));
+    await refreshMonthlyStats(yearMonth);
+  } catch (err) {
+    console.error("DEBUG fetchData ERROR:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
 
   const reloadMenuMaster = async () => {
     try {
