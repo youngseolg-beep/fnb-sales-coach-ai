@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import type { MenuCategory } from "../types";
 import {
   createMenu,
@@ -63,41 +63,20 @@ const compressHistoryRows = (rows: any[]) => {
 const buildHistoryRanges = (rows: any[]) => {
   if (!Array.isArray(rows) || rows.length === 0) return [];
 
-  const ascRows = [...rows].sort((a, b) =>
-    String(a.effective_date).localeCompare(String(b.effective_date))
-  );
-
-  const compressed = compressHistoryRows(ascRows);
-
-  if (compressed.length === 1) {
-    return [
-      {
-        ...compressed[0],
-        applied_range: `${compressed[0].effective_date} 이후`,
-      },
-    ];
-  }
-
-  const rangedRows = compressed.map((row, idx) => {
-    const nextRow = compressed[idx + 1];
-
-    let appliedRange = `${row.effective_date} 이후`;
-
-    if (nextRow?.effective_date) {
-      const endDate = format(
-        subDays(parseISO(nextRow.effective_date), 1),
-        "yyyy-MM-dd"
-      );
-      appliedRange = `${row.effective_date} ~ ${endDate}`;
-    }
-
-    return {
-      ...row,
-      applied_range: appliedRange,
-    };
+  const sortedRows = [...rows].sort((a, b) => {
+    const aTime = String(a.created_at ?? "");
+    const bTime = String(b.created_at ?? "");
+    return bTime.localeCompare(aTime);
   });
 
-  return rangedRows.reverse();
+  const visibleRows = compressHistoryRows(sortedRows);
+
+  return visibleRows.map((row) => ({
+    ...row,
+    changed_at: row.created_at
+      ? format(parseISO(row.created_at), "yyyy-MM-dd HH:mm:ss")
+      : row.effective_date,
+  }));
 };
 
 const slugify = (value: string) => {
@@ -828,7 +807,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b">
-                        <th className="px-4 py-3 text-left font-black text-slate-500">적용 기간</th>
+                       <th className="px-4 py-3 text-left font-black text-slate-500">변경 시각</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Price</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Unit Cost</th>
                       </tr>
@@ -837,7 +816,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       {historyRows.length > 0 ? (
                         historyRows.map((row, idx) => (
                           <tr key={`${row.menu_id}-${row.effective_date}-${idx}`} className="border-b border-slate-100">
-                            <td className="px-4 py-3 font-semibold text-slate-800">{row.applied_range}</td>
+                           <td className="px-4 py-3 font-semibold text-slate-800">{row.changed_at}</td>
                             <td className="px-4 py-3 text-right font-semibold text-slate-700">
                               {normalizeNumber(row.price)}
                             </td>
