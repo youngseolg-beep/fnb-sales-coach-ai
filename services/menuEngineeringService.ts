@@ -298,12 +298,6 @@ const internalCalculate = async (
   const profitabilityThreshold =
     cmList.length > 0 ? cmList.reduce((a, b) => a + b, 0) / cmList.length : 0;
 
-  // 총 매출 계산
-const totalRevenue = menuEngineeringItems.reduce(
-  (sum, it) => sum + Number(it.revenue_month || 0),
-  0
-);
-
 // 총 매출 계산
 const totalRevenue = menuEngineeringItems.reduce(
   (sum, it) => sum + Number(it.revenue_month || 0),
