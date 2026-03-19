@@ -7,6 +7,7 @@ import {
   updateMenuOrder,
 } from "../services/menuMasterService";
 import { supabase } from "../services/supabaseClient";
+import { getMenuPriceHistory } from "../services/menuPriceService";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
