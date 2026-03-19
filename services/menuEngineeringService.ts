@@ -298,44 +298,55 @@ const internalCalculate = async (
   const profitabilityThreshold =
     cmList.length > 0 ? cmList.reduce((a, b) => a + b, 0) / cmList.length : 0;
 
-  // 분류
-  const starsRaw: MenuEngineeringItem[] = [];
-  const cashCowsRaw: MenuEngineeringItem[] = [];
-  const puzzlesRaw: MenuEngineeringItem[] = [];
-  const dogsRaw: MenuEngineeringItem[] = [];
-  const noCostItems: MenuEngineeringItem[] = [];
+  // 총 매출 계산
+const totalRevenue = menuEngineeringItems.reduce(
+  (sum, it) => sum + Number(it.revenue_month || 0),
+  0
+);
 
-  for (const item of menuEngineeringItems) {
-    // 원가 없는 메뉴는 별도 분리
-    if (item.unitCost === undefined || item.unitCost === null) {
-      noCostItems.push(item);
-      continue;
-    }
+// 분류
+const starsRaw: MenuEngineeringItem[] = [];
+const cashCowsRaw: MenuEngineeringItem[] = [];
+const puzzlesRaw: MenuEngineeringItem[] = [];
+const dogsRaw: MenuEngineeringItem[] = [];
+const noCostItems: MenuEngineeringItem[] = [];
 
-    const qty = Number(item.qty_month || 0);
-    const cm = Number(item.cm ?? 0);
+for (const item of menuEngineeringItems) {
+  const qty = Number(item.qty_month || 0);
+  const cm = Number(item.cm ?? 0);
 
-    const isPopular = qty >= popularityThreshold;
-    const isProfitable = cm >= profitabilityThreshold;
+  const isPopular = qty >= popularityThreshold;
+  const isProfitable = cm >= profitabilityThreshold;
 
-    item.popularity = isPopular ? "High" : "Low";
-    item.profitability = isProfitable ? "High" : "Low";
+  item.popularity = isPopular ? "High" : "Low";
+  item.profitability = isProfitable ? "High" : "Low";
 
-    if (isPopular && isProfitable) {
-      item.category = "Stars";
-      starsRaw.push(item);
-    } else if (isPopular && !isProfitable) {
-      item.category = "Cash Cows";
-      cashCowsRaw.push(item);
-    } else if (!isPopular && isProfitable) {
-      item.category = "Puzzles";
-      puzzlesRaw.push(item);
-    } else {
-      item.category = "Dogs";
-      dogsRaw.push(item);
-    }
+  // 매출 기여도 계산
+  (item as any).revenueShare =
+    totalRevenue > 0 ? (item.revenue_month / totalRevenue) * 100 : 0;
+
+  // 원가 없는 경우도 Dogs로 포함
+  if (item.unitCost === undefined || item.unitCost === null) {
+    item.category = "Dogs";
+    dogsRaw.push(item);
+    noCostItems.push(item);
+    continue;
   }
 
+  if (isPopular && isProfitable) {
+    item.category = "Stars";
+    starsRaw.push(item);
+  } else if (isPopular && !isProfitable) {
+    item.category = "Cash Cows";
+    cashCowsRaw.push(item);
+  } else if (!isPopular && isProfitable) {
+    item.category = "Puzzles";
+    puzzlesRaw.push(item);
+  } else {
+    item.category = "Dogs";
+    dogsRaw.push(item);
+  }
+}
   // ✅ 표시용: "최대 3개" + "카테고리 간 중복 방지" + "가능하면 3개 채우기"
   const usedNames = new Set<string>();
   const withCostPool = menuEngineeringItems.filter((it) => it.unitCost !== undefined && it.unitCost !== null);
