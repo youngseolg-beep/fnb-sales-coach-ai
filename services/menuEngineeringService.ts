@@ -304,6 +304,12 @@ const totalRevenue = menuEngineeringItems.reduce(
   0
 );
 
+// 총 매출 계산
+const totalRevenue = menuEngineeringItems.reduce(
+  (sum, it) => sum + Number(it.revenue_month || 0),
+  0
+);
+
 // 분류
 const starsRaw: MenuEngineeringItem[] = [];
 const cashCowsRaw: MenuEngineeringItem[] = [];
