@@ -726,9 +726,12 @@ const handleDelete = async () => {
     };
   }, [isLoggedIn]);
 
-  useEffect(() => {
-    refreshMonthlyTarget(targetMonthKey);
-  }, [targetMonthKey]);
+ useEffect(() => {
+  if (!isLoggedIn) return;
+  if (storeId == null) return;
+
+  refreshMonthlyTarget(targetMonthKey);
+}, [isLoggedIn, storeId, targetMonthKey]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
