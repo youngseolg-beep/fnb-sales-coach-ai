@@ -51,12 +51,10 @@ export const saveMenuPriceHistory = async (
     unit_cost: unitCost ?? null,
   };
 
-  const { data, error } = await supabase
-    .from("menu_price_history")
-    .upsert(payload, {
-      onConflict: "menu_id,effective_date",
-    })
-    .select();
+ const { data, error } = await supabase
+  .from("menu_price_history")
+  .insert(payload)
+  .select();
 
   if (error) {
     throw error;
