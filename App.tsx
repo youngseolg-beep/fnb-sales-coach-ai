@@ -267,7 +267,7 @@ const App: React.FC = () => {
   });
 
   const targetMonthKey =
-    selectedDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+  selectedDate?.slice(0, 7) || formatLocalDate(new Date()).slice(0, 7);
 
   const [monthlyTarget, setMonthlyTarget] = useState<number>(0);
   const [monthlyTargetLoading, setMonthlyTargetLoading] = useState(false);
@@ -540,24 +540,26 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
   }
 };
 
-  const reloadMenuMaster = async () => {
-    try {
-      setMenuMasterLoading(true);
+const reloadMenuMaster = async () => {
+  if (storeId == null) return;
 
-      const loadedMenuCategories = await loadMenuMaster();
-      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-      const nextMenuCategories =
-        normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES);
+  try {
+    setMenuMasterLoading(true);
 
-      setMenuMasterCategories(nextMenuCategories);
-      await fetchData(data.date, nextMenuCategories);
-    } catch (error) {
-      console.error("reloadMenuMaster error:", error);
-      showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
-    } finally {
-      setMenuMasterLoading(false);
-    }
-  };
+    const loadedMenuCategories = await loadMenuMaster();
+    const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+    const nextMenuCategories =
+      normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES);
+
+    setMenuMasterCategories(nextMenuCategories);
+    await fetchData(data.date, nextMenuCategories);
+  } catch (error) {
+    console.error("reloadMenuMaster error:", error);
+    showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
+  } finally {
+    setMenuMasterLoading(false);
+  }
+};
 
 const handleMonthChange = async (month: Date) => {
   if (storeId == null) return;
@@ -740,11 +742,13 @@ const handleDelete = async () => {
     void refreshMonthlyStats(selectedDate.substring(0, 7));
   }, [isLoggedIn, storeId, selectedDate, refreshMonthlyStats]);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    if (menuMasterLoading) return;
-    void fetchData(selectedDate);
-  }, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
+ useEffect(() => {
+  if (!isLoggedIn) return;
+  if (storeId == null) return;
+  if (menuMasterLoading) return;
+
+  void fetchData(selectedDate);
+}, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
 
   useEffect(() => {
     if (!toastMsg) return;
