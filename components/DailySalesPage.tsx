@@ -878,13 +878,15 @@ await loadComparisonData(true);
     }
   };
 
- const handleGenerate = async () => {
+const handleGenerate = async () => {
   setLoading(true);
   try {
     const saved = await handleSave(true);
     if (!saved) return;
 
-    const result = await generateCoachingReport(data, results, menuEngineeringResult);
+    const coachOnlyMenuEngineering = null;
+
+    const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
     setReport(result);
     setReportGenerated(true);
     showToast("AI 코칭 리포트 생성 완료");
