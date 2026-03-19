@@ -972,7 +972,7 @@ const handleDelete = async () => {
             refreshMonthlyStats={refreshMonthlyStats}
             showToast={showToast}
             onDelete={handleDelete}
-            storeId={storeId ?? 1}
+            storeId={storeId!}
           />
         ) : (
           <MenuSettingsPage
