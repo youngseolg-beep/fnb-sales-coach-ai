@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { MenuEngineeringResult } from "../types";
 
 interface ReportDisplayProps {
   report: string;
   loading: boolean;
   menuEngineeringResult: MenuEngineeringResult | null;
-  sortedMenuEngineering: any; // 가능하면 나중에 타입 정리
-  boostPlans: any[]; // 가능하면 나중에 타입 정리
+  sortedMenuEngineering: any;
+  boostPlans: any[];
 }
 
 const ReportDisplay: React.FC<ReportDisplayProps> = ({
@@ -16,8 +16,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   sortedMenuEngineering,
   boostPlans,
 }) => {
-  const [isMeSummaryOpen, setIsMeSummaryOpen] = useState(false);
-
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 flex flex-col items-center justify-center space-y-4">
@@ -36,7 +34,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
     );
   }
 
-  // Parse the 5-point structure: 1) 2) 3) 4) 5)
   const sections = report.split(/(?=\d\)\s)/).filter(Boolean);
 
   const iconMap: Record<number, { icon: string; color: string; title: string }> = {
@@ -67,6 +64,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
             color: "text-slate-600 bg-slate-50",
             title: "정보",
           };
+
           const content = sectionContent.replace(/^\d\)\s[^\n]*\n?/, "").trim();
 
           return (
@@ -87,182 +85,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
             </div>
           );
         })}
-
-        {/* ─────────────────────────────────────────────
-            Menu Engineering Section
-           ───────────────────────────────────────────── */}
-        {menuEngineeringResult && menuEngineeringResult.analyzedDatesCount < 7 ? (
-          <div className="bg-slate-50 p-6 rounded-xl text-center text-slate-500 border border-slate-200 mt-6">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2 mb-2">
-              📊 데이터 수집 중
-            </h3>
-            <p className="text-sm font-medium">선택한 날짜 기준 최근 7일 데이터가 필요합니다.</p>
-            <p className="text-xs mt-1">현재 {menuEngineeringResult.analyzedDatesCount}일치 데이터가 있습니다.</p>
-            <p className="text-xs text-slate-400 mt-2">※ 데이터가 많을수록 추천 정확도가 올라갑니다.</p>
-          </div>
-        ) : (
-          menuEngineeringResult && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 mt-6 overflow-hidden">
-              {/* ✅ 토글 버튼(깨지지 않게 구조 고정) */}
-              <button
-                onClick={() => setIsMeSummaryOpen(!isMeSummaryOpen)}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-t-xl border-b border-slate-200"
-                type="button"
-              >
-                <div className="flex flex-col gap-1 text-left">
-                  <span className="flex items-center gap-2">
-                    <i className="fa-solid fa-utensils text-indigo-500"></i>
-                    메뉴 엔지니어링 요약 (최근 7일)
-                  </span>
-
-                  <p style={{ fontSize: "12px", color: "#6b7280" }}>
-                    최근 7일 판매 데이터를 기준으로 분석합니다. 판매된 메뉴 종류가 적을 경우 일부 그룹은 “없음”으로 표시될 수 있습니다.
-                  </p>
-                </div>
-
-                <i
-                  className={`fa-solid ${
-                    isMeSummaryOpen ? "fa-chevron-up" : "fa-chevron-down"
-                  } text-xs text-slate-500`}
-                ></i>
-              </button>
-
-              {/* ✅ 펼쳤을 때 내용 */}
-              {isMeSummaryOpen && (
-                <div className="p-4 space-y-6">
-                  {sortedMenuEngineering && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-100">
-                      <p className="text-xs text-slate-500 p-4 border-b border-slate-100">
-                        ※ 선택한 날짜 기준 최근 7일 / 인기도 기준: 최근 7일 평균 판매수량{" "}
-                        {sortedMenuEngineering.popularityThreshold}개 / 수익성 기준: 평균 1개당
-                        이익(판매가-원가) ${sortedMenuEngineering.profitabilityThreshold}
-                      </p>
-
-                      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Stars */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                          <h4 className="font-black text-slate-900 text-md mb-2">
-                            Stars (고인기, 고수익)
-                          </h4>
-                          <ul className="space-y-1 text-xs text-slate-700">
-                            {sortedMenuEngineering.starsTop3?.length > 0 ? (
-                              sortedMenuEngineering.starsTop3.map((item: any, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))
-                            ) : (
-                              <li>없음</li>
-                            )}
-                          </ul>
-                        </div>
-
-                        {/* Cash Cows */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                          <h4 className="font-black text-slate-900 text-md mb-2">
-                            Cash Cows (고인기, 저수익)
-                          </h4>
-                          <ul className="space-y-1 text-xs text-slate-700">
-                            {sortedMenuEngineering.cashCowsTop3?.length > 0 ? (
-                              sortedMenuEngineering.cashCowsTop3.map((item: any, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))
-                            ) : (
-                              <li>없음</li>
-                            )}
-                          </ul>
-                        </div>
-
-                        {/* Puzzles */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                          <h4 className="font-black text-slate-900 text-md mb-2">
-                            Puzzles (저인기, 고수익)
-                          </h4>
-                          <ul className="space-y-1 text-xs text-slate-700">
-                            {sortedMenuEngineering.puzzlesTop3?.length > 0 ? (
-                              sortedMenuEngineering.puzzlesTop3.map((item: any, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))
-                            ) : (
-                              <li>없음</li>
-                            )}
-                          </ul>
-                        </div>
-
-                        {/* Dogs */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                          <h4 className="font-black text-slate-900 text-md mb-2">
-                            Dogs (저인기, 저수익)
-                          </h4>
-                          <ul className="space-y-1 text-xs text-slate-700">
-                            {sortedMenuEngineering.dogsTop3?.length > 0 ? (
-                              sortedMenuEngineering.dogsTop3.map((item: any, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))
-                            ) : (
-                              <li>없음</li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {sortedMenuEngineering.noCostItemsList && (
-                        <div className="bg-amber-50 border-t border-amber-200 p-4 text-xs text-amber-800 font-medium rounded-b-xl">
-                          <strong>원가 미입력 메뉴:</strong> {sortedMenuEngineering.noCostItemsList}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        )}
-
-        {/* ─────────────────────────────────────────────
-            Boost Plans Section (7일 이상 + 플랜 있을 때)
-           ───────────────────────────────────────────── */}
-        {menuEngineeringResult &&
-          menuEngineeringResult.analyzedDatesCount >= 7 &&
-          boostPlans.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 mt-4">
-              <div className="bg-slate-50 border-b border-slate-100 p-4">
-                <h4 className="font-black text-slate-800 text-sm uppercase tracking-tight flex items-center gap-2">
-                  <i className="fa-solid fa-rocket text-indigo-500"></i>
-                  이번 달 부스트 플랜 (세트/프로모션)
-                </h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  Puzzles (저인기, 고수익) 메뉴를 위한 추천 세트 구성 및 일일 목표입니다.
-                </p>
-              </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {boostPlans.map((plan: any, index: number) => (
-                  <div
-                    key={index}
-                    className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 space-y-2"
-                  >
-                    <p className="text-xs font-black text-indigo-500 uppercase">
-                      프로모션 타입: {plan.type}
-                    </p>
-                    <h5 className="font-black text-indigo-800 text-md">{plan.setName}</h5>
-                    <p className="text-xs text-indigo-700">
-                      <strong>구성:</strong> {plan.setComposition}
-                    </p>
-                    <p className="text-xs text-indigo-700">
-                      <strong>할인:</strong> {plan.discount}
-                    </p>
-                    <p className="text-xs text-indigo-700">
-                      <strong>하루 목표 수량:</strong> {plan.dailyTargetQty}개
-                    </p>
-                    {plan.reason && (
-                      <p className="text-xs text-indigo-700">
-                        <strong>이유:</strong> {plan.reason}
-                      </p>
-                    )}
-                    <p className="text-xs text-indigo-600 font-medium">"{plan.staffComment}"</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
       </div>
 
       <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 text-center">
