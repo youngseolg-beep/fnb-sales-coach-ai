@@ -9,11 +9,12 @@ export type MenuPriceHistoryRow = {
 };
 
 export const getMenuPricesForDate = async (date: string) => {
-  const { data, error } = await supabase
-    .from("menu_price_history")
-    .select("menu_id, effective_date, price, unit_cost")
-    .lte("effective_date", date)
-    .order("effective_date", { ascending: false });
+ const { data, error } = await supabase
+  .from("menu_price_history")
+  .select("menu_id, effective_date, price, unit_cost, created_at")
+  .lte("effective_date", date)
+  .order("effective_date", { ascending: false })
+  .order("created_at", { ascending: false });
 
   if (error) {
     throw error;
