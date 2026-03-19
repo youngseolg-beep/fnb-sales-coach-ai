@@ -315,10 +315,12 @@ const App: React.FC = () => {
     setToastSeq((s) => s + 1);
   };
 
-  async function refreshMonthlyTarget(monthKey: string) {
+ async function refreshMonthlyTarget(monthKey: string) {
+  if (storeId == null) return;
+
   try {
     setMonthlyTargetLoading(true);
-    const value = await loadMonthlyTarget(monthKey, storeId ?? 1);
+    const value = await loadMonthlyTarget(monthKey, storeId);
     setMonthlyTarget(value);
     setData((prev) => ({ ...prev, monthlyTarget: value }));
   } catch (error) {
@@ -331,9 +333,11 @@ const App: React.FC = () => {
 }
 
 async function handleSaveMonthlyTarget(nextValue: number) {
+  if (storeId == null) return;
+
   try {
     setMonthlyTarget(nextValue);
-    await saveMonthlyTarget(targetMonthKey, nextValue, storeId ?? 1);
+    await saveMonthlyTarget(targetMonthKey, nextValue, storeId);
   } catch (error) {
     console.error("handleSaveMonthlyTarget error:", error);
     alert("월 목표 저장 중 오류가 발생했습니다.");
