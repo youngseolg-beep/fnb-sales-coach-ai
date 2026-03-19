@@ -559,17 +559,19 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
     }
   };
 
-  const handleMonthChange = async (month: Date) => {
-    const yearMonth = formatLocalDate(month).substring(0, 7);
-    const cacheKey = buildMonthCacheKey(yearMonth, storeId ?? 1);
-    const cachedDates = datesWithDataCacheRef.current[cacheKey];
+const handleMonthChange = async (month: Date) => {
+  if (storeId == null) return;
 
-    if (cachedDates) {
-      setDatesWithData(cachedDates);
-    }
+  const yearMonth = formatLocalDate(month).substring(0, 7);
+  const cacheKey = buildMonthCacheKey(yearMonth, storeId);
+  const cachedDates = datesWithDataCacheRef.current[cacheKey];
 
-    await refreshMonthlyStats(yearMonth);
-  };
+  if (cachedDates) {
+    setDatesWithData(cachedDates);
+  }
+
+  await refreshMonthlyStats(yearMonth);
+};
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
     setData((prev) => ({
