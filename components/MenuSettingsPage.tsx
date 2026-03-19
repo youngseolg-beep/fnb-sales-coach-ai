@@ -6,8 +6,11 @@ import {
   deactivateMenu,
   updateMenuOrder,
 } from "../services/menuMasterService";
-import { supabase } from "../services/supabaseClient";
-import { getMenuPriceHistory } from "../services/menuPriceService";
+
+import {
+  getMenuPriceHistory,
+  saveMenuPriceHistory,
+} from "../services/menuPriceService";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -318,26 +321,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       await createMenu(newId, menuName, categoryName, displayOrder);
 
-      const { error: historyError } = await supabase
-        .from("menu_price_history")
-        .upsert(
-          [
-            {
-              menu_id: newId,
-              effective_date: selectedDate,
-              price,
-              unit_cost: unitCost,
-            },
-          ],
-          {
-            onConflict: "menu_id,effective_date",
-          }
-        );
-
-      if (historyError) {
-        console.error("initial price history insert error:", historyError);
-        throw historyError;
-      }
+     await saveMenuPriceHistory(newId, selectedDate, price, unitCost);
 
       await onReloadMenuMaster();
 
