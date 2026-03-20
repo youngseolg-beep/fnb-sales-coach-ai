@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import type { MenuCategory } from "../types";
 import {
@@ -87,6 +87,12 @@ const slugify = (value: string) => {
     .replace(/[^a-z0-9가-힣_-]/g, "");
 };
 
+const cloneCategories = (rows: MenuCategory[]) =>
+  rows.map((category) => ({
+    ...category,
+    items: category.items.map((item) => ({ ...item })),
+  }));
+
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
   const next = [...items];
   const [moved] = next.splice(fromIndex, 1);
@@ -105,6 +111,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   storeId,
   onShowToast,
 }) => {
+  const [draftCategories, setDraftCategories] = useState<MenuCategory[]>(() =>
+    cloneCategories(categories)
+  );
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [historyMenuName, setHistoryMenuName] = useState("");
   const [historyRows, setHistoryRows] = useState<any[]>([]);
@@ -134,6 +144,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     categoryIndex: number;
     itemIndex: number;
   } | null>(null);
+
+  useEffect(() => {
+    setDraftCategories(cloneCategories(categories));
+  }, [categories]);
 
   const notify = (msg: string) => {
     if (onShowToast) onShowToast(msg);
@@ -173,7 +187,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       unitCostChanged: boolean;
     }> = [];
 
-    categories.forEach((category) => {
+    draftCategories.forEach((category) => {
       category.items.forEach((item) => {
         const originalItem = originalItemMap.get(item.id);
         if (!originalItem) return;
@@ -202,19 +216,19 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     });
 
     return rows;
-  }, [categories, originalItemMap]);
+  }, [draftCategories, originalItemMap]);
 
   const dirtyCount = changedItems.length;
 
   const orderChanged = useMemo(() => {
-    return categories.some((category, categoryIndex) => {
+    return draftCategories.some((category, categoryIndex) => {
       const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
       const currentIds = category.items.map((item) => item.id);
 
       if (originalIds.length !== currentIds.length) return true;
       return originalIds.some((id, idx) => id !== currentIds[idx]);
     });
-  }, [categories, originalCategories]);
+  }, [draftCategories, originalCategories]);
 
   const updateItemField = (
     categoryIndex: number,
@@ -222,7 +236,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     field: "price" | "unitCost",
     value: string
   ) => {
-    const next = categories.map((category, cIdx) => {
+    const next = draftCategories.map((category, cIdx) => {
       if (cIdx !== categoryIndex) return category;
 
       return {
@@ -237,7 +251,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       };
     });
 
-    onChangeCategories(next);
+    setDraftCategories(next);
   };
 
   const moveItem = (
@@ -247,7 +261,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   ) => {
     if (actionSaving) return;
 
-    const category = categories[categoryIndex];
+    const category = draftCategories[categoryIndex];
     if (!category) return;
 
     const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
@@ -258,7 +272,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
     const items = reorderItems(category.items, itemIndex, targetIndex);
 
-    const next = categories.map((cat, idx) => {
+    const next = draftCategories.map((cat, idx) => {
       if (idx !== categoryIndex) return cat;
       return {
         ...cat,
@@ -266,21 +280,21 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       };
     });
 
-    onChangeCategories(next);
+    setDraftCategories(next);
   };
 
   const moveItemToIndex = (categoryIndex: number, fromIndex: number, toIndex: number) => {
     if (actionSaving) return;
     if (fromIndex === toIndex) return;
 
-    const category = categories[categoryIndex];
+    const category = draftCategories[categoryIndex];
     if (!category) return;
     if (fromIndex < 0 || toIndex < 0) return;
     if (fromIndex >= category.items.length || toIndex >= category.items.length) return;
 
     const items = reorderItems(category.items, fromIndex, toIndex);
 
-    const next = categories.map((cat, idx) => {
+    const next = draftCategories.map((cat, idx) => {
       if (idx !== categoryIndex) return cat;
       return {
         ...cat,
@@ -288,7 +302,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       };
     });
 
-    onChangeCategories(next);
+    setDraftCategories(next);
   };
 
   const handleDragStart = (
@@ -349,10 +363,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       setActionSaving(true);
 
       await Promise.all(
-        categories.flatMap((category) =>
+        draftCategories.flatMap((category) =>
           category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
         )
       );
+
+      onChangeCategories(cloneCategories(draftCategories));
 
       await onSavePrices();
       await onReloadMenuMaster();
@@ -399,7 +415,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     const price = toNumber(priceRaw);
     const unitCost = toNumber(unitCostRaw);
 
-    const duplicated = categories.some((cat) =>
+    const duplicated = draftCategories.some((cat) =>
       cat.items.some((item) => item.name.trim().toLowerCase() === menuName.toLowerCase())
     );
 
@@ -408,7 +424,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       return;
     }
 
-    const category = categories.find((cat) => cat.name === categoryName);
+    const category = draftCategories.find((cat) => cat.name === categoryName);
     if (!category) {
       notify("선택한 카테고리를 찾을 수 없습니다.");
       return;
@@ -503,7 +519,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         </div>
 
-        {categories.map((category, categoryIndex) => (
+        {draftCategories.map((category, categoryIndex) => (
           <div
             key={category.name}
             className="rounded-2xl border bg-white p-4 shadow-sm"
@@ -723,7 +739,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
                 >
                   <option value="">카테고리 선택</option>
-                  {categories.map((category) => (
+                  {draftCategories.map((category) => (
                     <option key={category.name} value={category.name}>
                       {category.name}
                     </option>
