@@ -20,6 +20,7 @@ interface MenuSettingsPageProps {
   onSavePrices: () => Promise<void> | void;
   onReloadMenuMaster: () => Promise<void>;
   saving: boolean;
+  storeId: number;
   onShowToast?: (msg: string) => void;
 }
 
@@ -95,6 +96,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   onSavePrices,
   onReloadMenuMaster,
   saving,
+  storeId,
   onShowToast,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -251,7 +253,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       setHistoryMenuName(menuName);
       setShowHistoryModal(true);
 
-      const rows = await getMenuPriceHistory(menuId);
+      const rows = await getMenuPriceHistory(menuId, storeId);
       const visibleRows = buildHistoryRanges(rows);
 
       setHistoryRows(visibleRows);
@@ -300,8 +302,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       await createMenu(newId, menuName, categoryName, displayOrder);
 
-     await saveMenuPriceHistory(newId, selectedDate, price, unitCost);
-
+    await saveMenuPriceHistory(newId, selectedDate, price, unitCost, storeId);
+      
       await onReloadMenuMaster();
 
       setNewMenuCategoryName("");
