@@ -6,7 +6,6 @@ import {
   deactivateMenu,
   updateMenuOrder,
 } from "../services/menuMasterService";
-
 import {
   getMenuPriceHistory,
   saveMenuPriceHistory,
@@ -88,6 +87,13 @@ const slugify = (value: string) => {
     .replace(/[^a-z0-9가-힣_-]/g, "");
 };
 
+const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+};
+
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   selectedDate,
   categories,
@@ -119,84 +125,96 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   } | null>(null);
 
   const [actionSaving, setActionSaving] = useState(false);
+  const [draggingItem, setDraggingItem] = useState<{
+    categoryIndex: number;
+    itemIndex: number;
+    itemId: string;
+  } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{
+    categoryIndex: number;
+    itemIndex: number;
+  } | null>(null);
 
   const notify = (msg: string) => {
     if (onShowToast) onShowToast(msg);
     else window.alert(msg);
   };
 
-  const changedItems = useMemo(() => {
-  const rows: Array<{
-    id: string;
-    name: string;
-    oldPrice: number;
-    newPrice: number;
-    oldUnitCost: number;
-    newUnitCost: number;
-    priceChanged: boolean;
-    unitCostChanged: boolean;
-  }> = [];
+  const originalItemMap = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        price: number;
+        unitCost: number;
+      }
+    >();
 
-  const originalItemMap = new Map<
-    string,
-    {
-      price: number;
-      unitCost: number;
-    }
-  >();
-
-  originalCategories.forEach((category) => {
-    category.items.forEach((item) => {
-      originalItemMap.set(item.id, {
-        price: normalizeNumber(item.price),
-        unitCost: normalizeNumber(item.unitCost),
+    originalCategories.forEach((category) => {
+      category.items.forEach((item) => {
+        map.set(item.id, {
+          price: normalizeNumber(item.price),
+          unitCost: normalizeNumber(item.unitCost),
+        });
       });
     });
-  });
 
-  categories.forEach((category) => {
-    category.items.forEach((item) => {
-      const originalItem = originalItemMap.get(item.id);
+    return map;
+  }, [originalCategories]);
 
-      if (!originalItem) return;
+  const changedItems = useMemo(() => {
+    const rows: Array<{
+      id: string;
+      name: string;
+      oldPrice: number;
+      newPrice: number;
+      oldUnitCost: number;
+      newUnitCost: number;
+      priceChanged: boolean;
+      unitCostChanged: boolean;
+    }> = [];
 
-      const oldPrice = normalizeNumber(originalItem.price);
-      const newPrice = normalizeNumber(item.price);
-      const oldUnitCost = normalizeNumber(originalItem.unitCost);
-      const newUnitCost = normalizeNumber(item.unitCost);
+    categories.forEach((category) => {
+      category.items.forEach((item) => {
+        const originalItem = originalItemMap.get(item.id);
+        if (!originalItem) return;
 
-      const priceChanged = !isSameValue(newPrice, oldPrice);
-      const unitCostChanged = !isSameValue(newUnitCost, oldUnitCost);
+        const oldPrice = normalizeNumber(originalItem.price);
+        const newPrice = normalizeNumber(item.price);
+        const oldUnitCost = normalizeNumber(originalItem.unitCost);
+        const newUnitCost = normalizeNumber(item.unitCost);
 
-      if (priceChanged || unitCostChanged) {
-        rows.push({
-          id: item.id,
-          name: item.name,
-          oldPrice,
-          newPrice,
-          oldUnitCost,
-          newUnitCost,
-          priceChanged,
-          unitCostChanged,
-        });
-      }
+        const priceChanged = !isSameValue(newPrice, oldPrice);
+        const unitCostChanged = !isSameValue(newUnitCost, oldUnitCost);
+
+        if (priceChanged || unitCostChanged) {
+          rows.push({
+            id: item.id,
+            name: item.name,
+            oldPrice,
+            newPrice,
+            oldUnitCost,
+            newUnitCost,
+            priceChanged,
+            unitCostChanged,
+          });
+        }
+      });
     });
-  });
 
-  return rows;
-}, [categories, originalCategories]);
+    return rows;
+  }, [categories, originalItemMap]);
 
   const dirtyCount = changedItems.length;
 
-const orderChanged = useMemo(() => {
-  return categories.some((category, categoryIndex) => {
-    const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
-    const currentIds = category.items.map((item) => item.id);
+  const orderChanged = useMemo(() => {
+    return categories.some((category, categoryIndex) => {
+      const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
+      const currentIds = category.items.map((item) => item.id);
 
-    if (originalIds.length !== currentIds.length) return true;
-    return originalIds.some((id, idx) => id !== currentIds[idx]);
-  });
-}, [categories, originalCategories]);
+      if (originalIds.length !== currentIds.length) return true;
+      return originalIds.some((id, idx) => id !== currentIds[idx]);
+    });
+  }, [categories, originalCategories]);
 
   const updateItemField = (
     categoryIndex: number,
@@ -223,58 +241,132 @@ const orderChanged = useMemo(() => {
   };
 
   const moveItem = (
-  categoryIndex: number,
-  itemIndex: number,
-  direction: "up" | "down"
-) => {
-  if (actionSaving) return;
+    categoryIndex: number,
+    itemIndex: number,
+    direction: "up" | "down"
+  ) => {
+    if (actionSaving) return;
 
-  const category = categories[categoryIndex];
-  if (!category) return;
+    const category = categories[categoryIndex];
+    if (!category) return;
 
-  const items = [...category.items];
-  const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
+    const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
 
-  if (targetIndex < 0 || targetIndex >= items.length) {
-    return;
-  }
+    if (targetIndex < 0 || targetIndex >= category.items.length) {
+      return;
+    }
 
-  const temp = items[itemIndex];
-  items[itemIndex] = items[targetIndex];
-  items[targetIndex] = temp;
+    const items = reorderItems(category.items, itemIndex, targetIndex);
 
-  const next = categories.map((cat, idx) => {
-    if (idx !== categoryIndex) return cat;
-    return {
-      ...cat,
-      items,
-    };
-  });
+    const next = categories.map((cat, idx) => {
+      if (idx !== categoryIndex) return cat;
+      return {
+        ...cat,
+        items,
+      };
+    });
 
-  onChangeCategories(next);
-};
-const handleConfirmSave = async () => {
-  try {
-    setActionSaving(true);
+    onChangeCategories(next);
+  };
 
-    await Promise.all(
-      categories.flatMap((category) =>
-        category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
-      )
-    );
+  const moveItemToIndex = (categoryIndex: number, fromIndex: number, toIndex: number) => {
+    if (actionSaving) return;
+    if (fromIndex === toIndex) return;
 
-    await onSavePrices();
-    await onReloadMenuMaster();
+    const category = categories[categoryIndex];
+    if (!category) return;
+    if (fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= category.items.length || toIndex >= category.items.length) return;
 
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
-  } finally {
-    setActionSaving(false);
-  }
-};
+    const items = reorderItems(category.items, fromIndex, toIndex);
+
+    const next = categories.map((cat, idx) => {
+      if (idx !== categoryIndex) return cat;
+      return {
+        ...cat,
+        items,
+      };
+    });
+
+    onChangeCategories(next);
+  };
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLButtonElement>,
+    categoryIndex: number,
+    itemIndex: number,
+    itemId: string
+  ) => {
+    if (actionSaving) return;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", itemId);
+    setDraggingItem({ categoryIndex, itemIndex, itemId });
+    setDragOverItem({ categoryIndex, itemIndex });
+  };
+
+  const handleDragOver = (
+    e: React.DragEvent<HTMLDivElement>,
+    categoryIndex: number,
+    itemIndex: number
+  ) => {
+    if (!draggingItem) return;
+    if (draggingItem.categoryIndex !== categoryIndex) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    if (
+      !dragOverItem ||
+      dragOverItem.categoryIndex !== categoryIndex ||
+      dragOverItem.itemIndex !== itemIndex
+    ) {
+      setDragOverItem({ categoryIndex, itemIndex });
+    }
+  };
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    categoryIndex: number,
+    itemIndex: number
+  ) => {
+    e.preventDefault();
+
+    if (!draggingItem) return;
+    if (draggingItem.categoryIndex !== categoryIndex) return;
+
+    moveItemToIndex(categoryIndex, draggingItem.itemIndex, itemIndex);
+    setDraggingItem(null);
+    setDragOverItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingItem(null);
+    setDragOverItem(null);
+  };
+
+  const handleConfirmSave = async () => {
+    try {
+      setActionSaving(true);
+
+      await Promise.all(
+        categories.flatMap((category) =>
+          category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
+        )
+      );
+
+      await onSavePrices();
+      await onReloadMenuMaster();
+
+      setShowConfirmModal(false);
+      notify("메뉴 순서 / 가격이 저장되었습니다.");
+    } catch (error) {
+      console.error("handleConfirmSave error:", error);
+      notify("저장 중 오류가 발생했습니다.");
+    } finally {
+      setActionSaving(false);
+    }
+  };
+
   const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
       setHistoryLoading(true);
@@ -329,9 +421,7 @@ const handleConfirmSave = async () => {
       setActionSaving(true);
 
       await createMenu(newId, menuName, categoryName, displayOrder, storeId);
-
-    await saveMenuPriceHistory(newId, selectedDate, price, unitCost, storeId);
-      
+      await saveMenuPriceHistory(newId, selectedDate, price, unitCost, storeId);
       await onReloadMenuMaster();
 
       setNewMenuCategoryName("");
@@ -384,6 +474,9 @@ const handleConfirmSave = async () => {
               <p className="mt-1 text-xs font-semibold text-amber-600">
                 선택한 날짜부터 이 가격이 적용됩니다.
               </p>
+              <p className="mt-2 text-xs font-semibold text-indigo-600">
+                메뉴명 왼쪽 드래그 버튼으로 순서를 바꾼 뒤 저장하세요.
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -397,15 +490,15 @@ const handleConfirmSave = async () => {
               </button>
 
               <button
-  type="button"
-  onClick={() => setShowConfirmModal(true)}
-  disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
->
-  {saving || actionSaving
-    ? "Saving..."
-    : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
-</button>
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving || actionSaving
+                  ? "Saving..."
+                  : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
+              </button>
             </div>
           </div>
         </div>
@@ -434,23 +527,49 @@ const handleConfirmSave = async () => {
 
             <div className="mt-3 space-y-3">
               {category.items.map((item, itemIndex) => {
-                const originalItem = originalCategories[categoryIndex]?.items?.[itemIndex];
+                const originalItem = originalItemMap.get(item.id);
 
                 const changed = originalItem
-                  ? !isSameValue(item.price, originalItem?.price) ||
-                    !isSameValue(item.unitCost, originalItem?.unitCost)
+                  ? !isSameValue(item.price, originalItem.price) ||
+                    !isSameValue(item.unitCost, originalItem.unitCost)
                   : false;
 
                 const isFirst = itemIndex === 0;
                 const isLast = itemIndex === category.items.length - 1;
+                const isDragging =
+                  draggingItem?.categoryIndex === categoryIndex &&
+                  draggingItem?.itemIndex === itemIndex;
+                const isDragOver =
+                  dragOverItem?.categoryIndex === categoryIndex &&
+                  dragOverItem?.itemIndex === itemIndex &&
+                  draggingItem?.itemIndex !== itemIndex;
 
                 return (
                   <div
                     key={item.id}
-                    className="grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center"
+                    onDragOver={(e) => handleDragOver(e, categoryIndex, itemIndex)}
+                    onDrop={(e) => handleDrop(e, categoryIndex, itemIndex)}
+                    className={`grid grid-cols-1 gap-3 rounded-xl border p-3 transition md:grid-cols-12 md:items-center ${
+                      isDragging ? "opacity-40" : ""
+                    } ${
+                      isDragOver ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200" : ""
+                    }`}
                   >
                     <div className="md:col-span-2">
-                      <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          draggable={!actionSaving}
+                          onDragStart={(e) => handleDragStart(e, categoryIndex, itemIndex, item.id)}
+                          onDragEnd={handleDragEnd}
+                          disabled={actionSaving}
+                          className="inline-flex h-10 w-10 cursor-grab items-center justify-center rounded-xl border bg-slate-50 text-base font-black text-slate-500 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                          title="드래그해서 순서 변경"
+                        >
+                          ⋮⋮
+                        </button>
+                        <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+                      </div>
                     </div>
 
                     <div className="md:col-span-2">
@@ -560,14 +679,14 @@ const handleConfirmSave = async () => {
                 </div>
               </div>
 
-             <button
-  type="button"
-  onClick={() => setShowConfirmModal(true)}
-  disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
->
-  {saving || actionSaving ? "Saving..." : "변경사항 저장"}
-</button>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving || actionSaving ? "Saving..." : "변경사항 저장"}
+              </button>
             </div>
           </div>
         </div>
@@ -721,10 +840,10 @@ const handleConfirmSave = async () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-b px-6 py-4">
-             <h3 className="text-lg font-black text-slate-900">변경사항 저장 확인</h3>
-<p className="mt-1 text-sm text-slate-500">
-  선택한 날짜 기준 가격 변경과 현재 메뉴 순서가 함께 저장됩니다.
-</p>
+              <h3 className="text-lg font-black text-slate-900">변경사항 저장 확인</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                선택한 날짜 기준 가격 변경과 현재 메뉴 순서가 함께 저장됩니다.
+              </p>
             </div>
 
             <div className="space-y-4 px-6 py-5">
@@ -733,12 +852,12 @@ const handleConfirmSave = async () => {
                   <div className="text-xs font-bold text-slate-400">Effective Date</div>
                   <div className="mt-1 text-sm font-bold text-slate-900">{selectedDate}</div>
                 </div>
-               <div className="rounded-xl border bg-slate-50 p-3">
-  <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
-  <div className="mt-1 text-sm font-bold text-slate-900">
-    가격 {dirtyCount}개 / 순서 {orderChanged ? "변경됨" : "변경 없음"}
-  </div>
-</div>
+                <div className="rounded-xl border bg-slate-50 p-3">
+                  <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
+                  <div className="mt-1 text-sm font-bold text-slate-900">
+                    가격 {dirtyCount}개 / 순서 {orderChanged ? "변경됨" : "변경 없음"}
+                  </div>
+                </div>
                 <div className="rounded-xl border bg-amber-50 p-3">
                   <div className="text-xs font-bold text-amber-600">주의</div>
                   <div className="mt-1 text-sm font-bold text-amber-700">
@@ -805,13 +924,13 @@ const handleConfirmSave = async () => {
                 취소
               </button>
               <button
-  type="button"
-  onClick={handleConfirmSave}
-  disabled={saving || actionSaving}
-  className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
->
-  {saving || actionSaving ? "Saving..." : "저장 확정"}
-</button>
+                type="button"
+                onClick={handleConfirmSave}
+                disabled={saving || actionSaving}
+                className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
+              >
+                {saving || actionSaving ? "Saving..." : "저장 확정"}
+              </button>
             </div>
           </div>
         </div>
@@ -841,7 +960,7 @@ const handleConfirmSave = async () => {
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b">
-                       <th className="px-4 py-3 text-left font-black text-slate-500">변경 시각</th>
+                        <th className="px-4 py-3 text-left font-black text-slate-500">변경 시각</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Price</th>
                         <th className="px-4 py-3 text-right font-black text-slate-500">Unit Cost</th>
                       </tr>
@@ -850,7 +969,7 @@ const handleConfirmSave = async () => {
                       {historyRows.length > 0 ? (
                         historyRows.map((row, idx) => (
                           <tr key={`${row.menu_id}-${row.effective_date}-${idx}`} className="border-b border-slate-100">
-                           <td className="px-4 py-3 font-semibold text-slate-800">{row.changed_at}</td>
+                            <td className="px-4 py-3 font-semibold text-slate-800">{row.changed_at}</td>
                             <td className="px-4 py-3 text-right font-semibold text-slate-700">
                               {normalizeNumber(row.price)}
                             </td>
