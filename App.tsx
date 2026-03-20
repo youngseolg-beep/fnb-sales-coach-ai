@@ -226,7 +226,8 @@ const mergeCategoriesWithBase = (
 
 const persistMenuPriceHistory = async (
   categories: MenuCategory[],
-  effectiveDate: string
+  effectiveDate: string,
+  storeId: number
 ) => {
   const jobs: Promise<any>[] = [];
 
@@ -235,14 +236,15 @@ const persistMenuPriceHistory = async (
       if (!item.id) continue;
 
       jobs.push(
-        saveMenuPriceHistory(
-          item.id,
-          effectiveDate,
-          Number(item.price ?? 0),
-          item.unitCost !== null && item.unitCost !== undefined
-            ? Number(item.unitCost)
-            : undefined
-        )
+       saveMenuPriceHistory(
+  item.id,
+  effectiveDate,
+  Number(item.price ?? 0),
+  item.unitCost !== null && item.unitCost !== undefined
+    ? Number(item.unitCost)
+    : undefined,
+  storeId
+)
       );
     }
   }
@@ -468,7 +470,7 @@ const fetchData = async (dateStr: string, nextMenuMasterCategories?: MenuCategor
   try {
     const dbData = await loadDaily(dateStr, storeId);
     const yearMonth = getMonthKey(dateStr);
-    const priceMap = await getMenuPricesForDate(dateStr);
+    const priceMap = await getMenuPricesForDate(dateStr, storeId);
 
     console.error("DEBUG fetchData storeId:", storeId);
     console.error("DEBUG fetchData selectedDate:", selectedDate);
@@ -583,48 +585,50 @@ const handleMonthChange = async (month: Date) => {
   };
 
   const handleSaveMenuPrices = async () => {
-    try {
-      setPriceSaving(true);
+  if (storeId == null) return;
 
-      await persistMenuPriceHistory(data.categories, data.date);
+  try {
+    setPriceSaving(true);
 
-      const freshPriceMap = await getMenuPricesForDate(data.date);
+    await persistMenuPriceHistory(data.categories, data.date, storeId);
 
-      const refreshedCategories = data.categories.map((cat) => ({
-        ...cat,
-        items: cat.items.map((item) => {
-          const latest = freshPriceMap.get(item.id);
+    const freshPriceMap = await getMenuPricesForDate(data.date, storeId);
 
-          if (!latest) return { ...item };
+    const refreshedCategories = data.categories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((item) => {
+        const latest = freshPriceMap.get(item.id);
 
-          return {
-            ...item,
-            price:
-              latest.price !== null && latest.price !== undefined
-                ? Number(latest.price)
-                : Number(item.price ?? 0),
-            unitCost:
-              latest.unit_cost !== null && latest.unit_cost !== undefined
-                ? Number(latest.unit_cost)
-                : item.unitCost,
-          };
-        }),
-      }));
+        if (!latest) return { ...item };
 
-      setData((prev) => ({
-        ...prev,
-        categories: cloneCategories(refreshedCategories),
-      }));
-      setOriginalCategories(cloneCategories(refreshedCategories));
+        return {
+          ...item,
+          price:
+            latest.price !== null && latest.price !== undefined
+              ? Number(latest.price)
+              : Number(item.price ?? 0),
+          unitCost:
+            latest.unit_cost !== null && latest.unit_cost !== undefined
+              ? Number(latest.unit_cost)
+              : item.unitCost,
+        };
+      }),
+    }));
 
-      showToast("메뉴 가격 / 원가가 저장되었습니다.");
-    } catch (error: any) {
-      console.error("Price Save Error:", error);
-      showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
-    } finally {
-      setPriceSaving(false);
-    }
-  };
+    setData((prev) => ({
+      ...prev,
+      categories: cloneCategories(refreshedCategories),
+    }));
+    setOriginalCategories(cloneCategories(refreshedCategories));
+
+    showToast("메뉴 가격 / 원가가 저장되었습니다.");
+  } catch (error: any) {
+    console.error("Price Save Error:", error);
+    showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
+  } finally {
+    setPriceSaving(false);
+  }
+};
 
 const handleDelete = async () => {
   if (storeId == null) return;
@@ -982,16 +986,17 @@ const handleDelete = async () => {
             storeId={storeId!}
           />
         ) : (
-          <MenuSettingsPage
-            selectedDate={data.date}
-            categories={data.categories}
-            originalCategories={originalCategories}
-            onChangeCategories={handleMenuSettingsCategoriesChange}
-            onSavePrices={handleSaveMenuPrices}
-            onReloadMenuMaster={reloadMenuMaster}
-            saving={priceSaving}
-            onShowToast={showToast}
-          />
+         <MenuSettingsPage
+  selectedDate={data.date}
+  categories={data.categories}
+  originalCategories={originalCategories}
+  onChangeCategories={handleMenuSettingsCategoriesChange}
+  onSavePrices={handleSaveMenuPrices}
+  onReloadMenuMaster={reloadMenuMaster}
+  saving={priceSaving}
+  storeId={storeId!}
+  onShowToast={showToast}
+/>
         )}
       </main>
 
