@@ -229,7 +229,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     try {
       setActionSaving(true);
 
-      await Promise.all(items.map((item, idx) => updateMenuOrder(item.id, idx)));
+      await Promise.all(items.map((item, idx) => updateMenuOrder(item.id, idx, storeId)));
 
       await onReloadMenuMaster();
       notify("메뉴 순서가 저장되었습니다.");
@@ -300,7 +300,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     try {
       setActionSaving(true);
 
-      await createMenu(newId, menuName, categoryName, displayOrder);
+      await createMenu(newId, menuName, categoryName, displayOrder, storeId);
 
     await saveMenuPriceHistory(newId, selectedDate, price, unitCost, storeId);
       
@@ -327,7 +327,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     try {
       setActionSaving(true);
 
-      await deactivateMenu(deleteTarget.itemId);
+      await deactivateMenu(deleteTarget.itemId, storeId);
       await onReloadMenuMaster();
 
       setDeleteTarget(null);
