@@ -6,6 +6,7 @@ export interface MenuMasterRow {
   category: string;
   display_order: number;
   is_active: boolean;
+  store_id: number;
 }
 
 export interface MenuCategory {
@@ -13,10 +14,11 @@ export interface MenuCategory {
   items: MenuMasterRow[];
 }
 
-export async function loadMenuMaster(): Promise<MenuCategory[]> {
+export async function loadMenuMaster(storeId: number = 1): Promise<MenuCategory[]> {
   const { data, error } = await supabase
     .from("menu_master")
     .select("*")
+    .eq("store_id", storeId)
     .eq("is_active", true)
     .order("display_order", { ascending: true });
 
@@ -31,7 +33,7 @@ export async function loadMenuMaster(): Promise<MenuCategory[]> {
     if (!categoryMap[menu.category]) {
       categoryMap[menu.category] = [];
     }
-    categoryMap[menu.category].push(menu);
+    categoryMap[menu.category].push(menu as MenuMasterRow);
   });
 
   const categoryOrder = [
@@ -64,7 +66,8 @@ export async function createMenu(
   id: string,
   name: string,
   category: string,
-  displayOrder: number
+  displayOrder: number,
+  storeId: number = 1
 ) {
   const { error } = await supabase.from("menu_master").insert([
     {
@@ -73,6 +76,7 @@ export async function createMenu(
       category,
       display_order: displayOrder,
       is_active: true,
+      store_id: storeId,
     },
   ]);
 
@@ -82,11 +86,16 @@ export async function createMenu(
   }
 }
 
-export async function updateMenuOrder(id: string, displayOrder: number) {
+export async function updateMenuOrder(
+  id: string,
+  displayOrder: number,
+  storeId: number = 1
+) {
   const { error } = await supabase
     .from("menu_master")
     .update({ display_order: displayOrder })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("store_id", storeId);
 
   if (error) {
     console.error("updateMenuOrder error", error);
@@ -94,11 +103,12 @@ export async function updateMenuOrder(id: string, displayOrder: number) {
   }
 }
 
-export async function deactivateMenu(id: string) {
+export async function deactivateMenu(id: string, storeId: number = 1) {
   const { error } = await supabase
     .from("menu_master")
     .update({ is_active: false })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("store_id", storeId);
 
   if (error) {
     console.error("deactivateMenu error", error);
