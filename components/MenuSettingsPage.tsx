@@ -253,7 +253,28 @@ const orderChanged = useMemo(() => {
 
   onChangeCategories(next);
 };
+const handleConfirmSave = async () => {
+  try {
+    setActionSaving(true);
 
+    await Promise.all(
+      categories.flatMap((category) =>
+        category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
+      )
+    );
+
+    await onSavePrices();
+    await onReloadMenuMaster();
+
+    setShowConfirmModal(false);
+    notify("메뉴 순서 / 가격이 저장되었습니다.");
+  } catch (error) {
+    console.error("handleConfirmSave error:", error);
+    notify("저장 중 오류가 발생했습니다.");
+  } finally {
+    setActionSaving(false);
+  }
+};
   const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
       setHistoryLoading(true);
