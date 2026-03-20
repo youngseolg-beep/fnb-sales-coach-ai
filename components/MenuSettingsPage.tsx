@@ -195,57 +195,60 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     onChangeCategories(next);
   };
 
-  const moveItem = async (
-    categoryIndex: number,
-    itemIndex: number,
-    direction: "up" | "down"
-  ) => {
-    if (actionSaving) return;
+  const moveItem = (
+  categoryIndex: number,
+  itemIndex: number,
+  direction: "up" | "down"
+) => {
+  if (actionSaving) return;
 
-    const category = categories[categoryIndex];
-    if (!category) return;
+  const category = categories[categoryIndex];
+  if (!category) return;
 
-    const items = [...category.items];
-    const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
+  const items = [...category.items];
+  const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
 
-    if (targetIndex < 0 || targetIndex >= items.length) {
-      return;
-    }
+  if (targetIndex < 0 || targetIndex >= items.length) {
+    return;
+  }
 
-    const temp = items[itemIndex];
-    items[itemIndex] = items[targetIndex];
-    items[targetIndex] = temp;
+  const temp = items[itemIndex];
+  items[itemIndex] = items[targetIndex];
+  items[targetIndex] = temp;
 
-    const next = categories.map((cat, idx) => {
-      if (idx !== categoryIndex) return cat;
-      return {
-        ...cat,
-        items,
-      };
-    });
+  const next = categories.map((cat, idx) => {
+    if (idx !== categoryIndex) return cat;
+    return {
+      ...cat,
+      items,
+    };
+  });
 
-    onChangeCategories(next);
+  onChangeCategories(next);
+};
 
-    try {
-      setActionSaving(true);
+ const handleConfirmSave = async () => {
+  try {
+    setActionSaving(true);
 
-      await Promise.all(items.map((item, idx) => updateMenuOrder(item.id, idx, storeId)));
+    await Promise.all(
+      categories.flatMap((category) =>
+        category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
+      )
+    );
 
-      await onReloadMenuMaster();
-      notify("메뉴 순서가 저장되었습니다.");
-    } catch (error) {
-      console.error("moveItem error:", error);
-      notify("메뉴 순서 저장 중 오류가 발생했습니다.");
-      await onReloadMenuMaster();
-    } finally {
-      setActionSaving(false);
-    }
-  };
-
-  const handleConfirmSave = async () => {
     await onSavePrices();
+    await onReloadMenuMaster();
+
     setShowConfirmModal(false);
-  };
+    notify("메뉴 순서 / 가격이 저장되었습니다.");
+  } catch (error) {
+    console.error("handleConfirmSave error:", error);
+    notify("저장 중 오류가 발생했습니다.");
+  } finally {
+    setActionSaving(false);
+  }
+};
 
   const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
@@ -369,13 +372,13 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               </button>
 
               <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={saving || dirtyCount === 0 || actionSaving}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? "Saving..." : `가격 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
-              </button>
+  type="button"
+  onClick={() => setShowConfirmModal(true)}
+  disabled={saving || actionSaving}
+  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {saving || actionSaving ? "Saving..." : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
+</button>
             </div>
           </div>
         </div>
@@ -530,14 +533,14 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={saving || dirtyCount === 0 || actionSaving}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "가격 저장"}
-              </button>
+             <button
+  type="button"
+  onClick={() => setShowConfirmModal(true)}
+  disabled={saving || actionSaving}
+  className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {saving || actionSaving ? "Saving..." : "변경사항 저장"}
+</button>
             </div>
           </div>
         </div>
@@ -691,10 +694,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-b px-6 py-4">
-              <h3 className="text-lg font-black text-slate-900">가격 저장 확인</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                선택한 날짜부터 이 가격이 적용됩니다.
-              </p>
+             <h3 className="text-lg font-black text-slate-900">변경사항 저장 확인</h3>
+<p className="mt-1 text-sm text-slate-500">
+  선택한 날짜 기준 가격 변경과 현재 메뉴 순서가 함께 저장됩니다.
+</p>
             </div>
 
             <div className="space-y-4 px-6 py-5">
@@ -773,13 +776,13 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 취소
               </button>
               <button
-                type="button"
-                onClick={handleConfirmSave}
-                disabled={saving || dirtyCount === 0}
-                className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "저장 확정"}
-              </button>
+  type="button"
+  onClick={handleConfirmSave}
+  disabled={saving || actionSaving}
+  className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
+>
+  {saving || actionSaving ? "Saving..." : "저장 확정"}
+</button>
             </div>
           </div>
         </div>
