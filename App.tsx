@@ -548,7 +548,7 @@ const reloadMenuMaster = async () => {
   try {
     setMenuMasterLoading(true);
 
-    const loadedMenuCategories = await loadMenuMaster();
+    const loadedMenuCategories = await loadMenuMaster(storeId);
     const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
     const nextMenuCategories =
       normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES);
@@ -711,7 +711,7 @@ const handleDelete = async () => {
       try {
         setMenuMasterLoading(true);
 
-        const loadedMenuCategories = await loadMenuMaster();
+        const loadedMenuCategories = await loadMenuMaster(storeId);
         const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
 
         if (!isMounted) return;
