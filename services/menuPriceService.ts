@@ -8,7 +8,7 @@ export type MenuPriceHistoryRow = {
   created_at?: string;
 };
 
-export const getMenuPricesForDate = async (date: string) => {
+export const getMenuPricesForDate = async (date: string, storeId: number) => {
  const { data, error } = await supabase
   .from("menu_price_history")
   .select("menu_id, effective_date, price, unit_cost, created_at")
@@ -44,8 +44,10 @@ export const saveMenuPriceHistory = async (
   menuId: string,
   effectiveDate: string,
   price: number,
-  unitCost?: number
+  unitCost: number | undefined,
+  storeId: number
 ) => {
+  
  const payload = {
   menu_id: menuId,
   store_id: 1,
@@ -67,7 +69,8 @@ export const saveMenuPriceHistory = async (
 };
 
 export const getMenuPriceHistory = async (
-  menuId: string
+  menuId: string,
+  storeId: number
 ): Promise<MenuPriceHistoryRow[]> => {
   const { data, error } = await supabase
     .from("menu_price_history")
