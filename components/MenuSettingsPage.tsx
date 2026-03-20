@@ -126,50 +126,77 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   };
 
   const changedItems = useMemo(() => {
-    const rows: Array<{
-      id: string;
-      name: string;
-      oldPrice: number;
-      newPrice: number;
-      oldUnitCost: number;
-      newUnitCost: number;
-      priceChanged: boolean;
-      unitCostChanged: boolean;
-    }> = [];
+  const rows: Array<{
+    id: string;
+    name: string;
+    oldPrice: number;
+    newPrice: number;
+    oldUnitCost: number;
+    newUnitCost: number;
+    priceChanged: boolean;
+    unitCostChanged: boolean;
+  }> = [];
 
-    categories.forEach((category, cIdx) => {
-      category.items.forEach((item, iIdx) => {
-        const originalItem = originalCategories[cIdx]?.items?.[iIdx];
+  const originalItemMap = new Map<
+    string,
+    {
+      price: number;
+      unitCost: number;
+    }
+  >();
 
-        if (!originalItem) return;
-
-        const oldPrice = normalizeNumber(originalItem.price);
-        const newPrice = normalizeNumber(item.price);
-        const oldUnitCost = normalizeNumber(originalItem.unitCost);
-        const newUnitCost = normalizeNumber(item.unitCost);
-
-        const priceChanged = !isSameValue(newPrice, oldPrice);
-        const unitCostChanged = !isSameValue(newUnitCost, oldUnitCost);
-
-        if (priceChanged || unitCostChanged) {
-          rows.push({
-            id: item.id,
-            name: item.name,
-            oldPrice,
-            newPrice,
-            oldUnitCost,
-            newUnitCost,
-            priceChanged,
-            unitCostChanged,
-          });
-        }
+  originalCategories.forEach((category) => {
+    category.items.forEach((item) => {
+      originalItemMap.set(item.id, {
+        price: normalizeNumber(item.price),
+        unitCost: normalizeNumber(item.unitCost),
       });
     });
+  });
 
-    return rows;
-  }, [categories, originalCategories]);
+  categories.forEach((category) => {
+    category.items.forEach((item) => {
+      const originalItem = originalItemMap.get(item.id);
+
+      if (!originalItem) return;
+
+      const oldPrice = normalizeNumber(originalItem.price);
+      const newPrice = normalizeNumber(item.price);
+      const oldUnitCost = normalizeNumber(originalItem.unitCost);
+      const newUnitCost = normalizeNumber(item.unitCost);
+
+      const priceChanged = !isSameValue(newPrice, oldPrice);
+      const unitCostChanged = !isSameValue(newUnitCost, oldUnitCost);
+
+      if (priceChanged || unitCostChanged) {
+        rows.push({
+          id: item.id,
+          name: item.name,
+          oldPrice,
+          newPrice,
+          oldUnitCost,
+          newUnitCost,
+          priceChanged,
+          unitCostChanged,
+        });
+      }
+    });
+  });
+
+  return rows;
+}, [categories, originalCategories]);
 
   const dirtyCount = changedItems.length;
+
+const orderChanged = useMemo(() => {
+  return categories.some((category, categoryIndex) => {
+    const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
+    const currentIds = category.items.map((item) => item.id);
+
+    if (originalIds.length !== currentIds.length) return true;
+    return originalIds.some((id, idx) => id !== currentIds[idx]);
+  });
+}, [categories, originalCategories]);
 
   const updateItemField = (
     categoryIndex: number,
@@ -225,29 +252,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   });
 
   onChangeCategories(next);
-};
-
- const handleConfirmSave = async () => {
-  try {
-    setActionSaving(true);
-
-    await Promise.all(
-      categories.flatMap((category) =>
-        category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
-      )
-    );
-
-    await onSavePrices();
-    await onReloadMenuMaster();
-
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
-  } finally {
-    setActionSaving(false);
-  }
 };
 
   const handleOpenHistory = async (menuId: string, menuName: string) => {
@@ -374,10 +378,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
   type="button"
   onClick={() => setShowConfirmModal(true)}
-  disabled={saving || actionSaving}
+  disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
   className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
 >
-  {saving || actionSaving ? "Saving..." : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : ""}`}
+  {saving || actionSaving
+    ? "Saving..."
+    : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
 </button>
             </div>
           </div>
@@ -536,7 +542,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
              <button
   type="button"
   onClick={() => setShowConfirmModal(true)}
-  disabled={saving || actionSaving}
+  disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
   className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
 >
   {saving || actionSaving ? "Saving..." : "변경사항 저장"}
@@ -706,10 +712,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <div className="text-xs font-bold text-slate-400">Effective Date</div>
                   <div className="mt-1 text-sm font-bold text-slate-900">{selectedDate}</div>
                 </div>
-                <div className="rounded-xl border bg-slate-50 p-3">
-                  <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
-                  <div className="mt-1 text-sm font-bold text-slate-900">{dirtyCount}개</div>
-                </div>
+               <div className="rounded-xl border bg-slate-50 p-3">
+  <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
+  <div className="mt-1 text-sm font-bold text-slate-900">
+    가격 {dirtyCount}개 / 순서 {orderChanged ? "변경됨" : "변경 없음"}
+  </div>
+</div>
                 <div className="rounded-xl border bg-amber-50 p-3">
                   <div className="text-xs font-bold text-amber-600">주의</div>
                   <div className="mt-1 text-sm font-bold text-amber-700">
