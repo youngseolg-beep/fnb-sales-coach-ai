@@ -12,6 +12,7 @@ export const getMenuPricesForDate = async (date: string) => {
  const { data, error } = await supabase
   .from("menu_price_history")
   .select("menu_id, effective_date, price, unit_cost, created_at")
+  .eq("store_id", 1)
   .lte("effective_date", date)
   .order("effective_date", { ascending: false })
   .order("created_at", { ascending: false });
@@ -45,12 +46,13 @@ export const saveMenuPriceHistory = async (
   price: number,
   unitCost?: number
 ) => {
-  const payload = {
-    menu_id: menuId,
-    effective_date: effectiveDate,
-    price,
-    unit_cost: unitCost ?? null,
-  };
+ const payload = {
+  menu_id: menuId,
+  store_id: 1,
+  effective_date: effectiveDate,
+  price,
+  unit_cost: unitCost ?? null,
+};
 
  const { data, error } = await supabase
   .from("menu_price_history")
@@ -71,6 +73,7 @@ export const getMenuPriceHistory = async (
     .from("menu_price_history")
     .select("menu_id, effective_date, price, unit_cost, created_at")
     .eq("menu_id", menuId)
+    .eq("store_id", 1)
     .order("created_at", { ascending: false });
 
   if (error) {
