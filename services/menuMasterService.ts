@@ -91,16 +91,25 @@ export async function updateMenuOrder(
   displayOrder: number,
   storeId: number = 1
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("menu_master")
     .update({ display_order: displayOrder })
     .eq("id", id)
-    .eq("store_id", storeId);
+    .eq("store_id", storeId)
+    .select("id, name, category, display_order, store_id");
 
   if (error) {
     console.error("updateMenuOrder error", error);
     throw error;
   }
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      `updateMenuOrder failed: no rows updated (id=${id}, storeId=${storeId}, displayOrder=${displayOrder})`
+    );
+  }
+
+  console.log("updateMenuOrder success:", data[0]);
 }
 
 export async function deactivateMenu(id: string, storeId: number = 1) {
