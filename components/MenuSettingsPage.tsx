@@ -358,31 +358,39 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setDragOverItem(null);
   };
 
-  const handleConfirmSave = async () => {
-    try {
-      setActionSaving(true);
+ const handleConfirmSave = async () => {
+  try {
+    setActionSaving(true);
 
-      await Promise.all(
-        draftCategories.flatMap((category) =>
-          category.items.map((item, idx) => updateMenuOrder(item.id, idx, storeId))
-        )
-      );
+    let globalOrder = 0;
 
-      onChangeCategories(cloneCategories(draftCategories));
+    const updates = [];
 
-      await onSavePrices();
-      await onReloadMenuMaster();
-
-      setShowConfirmModal(false);
-      notify("메뉴 순서 / 가격이 저장되었습니다.");
-    } catch (error) {
-      console.error("handleConfirmSave error:", error);
-      notify("저장 중 오류가 발생했습니다.");
-    } finally {
-      setActionSaving(false);
+    for (const category of draftCategories) {
+      for (const item of category.items) {
+        updates.push(
+          updateMenuOrder(item.id, globalOrder, storeId)
+        );
+        globalOrder++;
+      }
     }
-  };
 
+    await Promise.all(updates);
+
+    onChangeCategories(cloneCategories(draftCategories));
+
+    await onSavePrices();
+    await onReloadMenuMaster();
+
+    setShowConfirmModal(false);
+    notify("메뉴 순서 / 가격이 저장되었습니다.");
+  } catch (error) {
+    console.error("handleConfirmSave error:", error);
+    notify("저장 중 오류가 발생했습니다.");
+  } finally {
+    setActionSaving(false);
+  }
+};
   const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
       setHistoryLoading(true);
