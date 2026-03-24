@@ -702,49 +702,51 @@ const handleDelete = async () => {
     checkSession();
   }, []);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-
-    let isMounted = true;
-
-    const initMenuMaster = async () => {
-      try {
-        setMenuMasterLoading(true);
-
-        const loadedMenuCategories = await loadMenuMaster(storeId);
-        const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-
-        if (!isMounted) return;
-        setMenuMasterCategories(normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES));
-      } catch (error) {
-        console.error("Menu Master Load Error:", error);
-        if (!isMounted) return;
-        setMenuMasterCategories(cloneCategories(INITIAL_CATEGORIES));
-      } finally {
-        if (isMounted) setMenuMasterLoading(false);
-      }
-    };
-
-    initMenuMaster();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isLoggedIn]);
-
  useEffect(() => {
   if (!isLoggedIn) return;
   if (storeId == null) return;
 
-  refreshMonthlyTarget(targetMonthKey);
-}, [isLoggedIn, storeId, targetMonthKey]);
+  let isMounted = true;
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    if (storeId == null) return;
-    datesWithDataCacheRef.current = {};
-    void refreshMonthlyStats(selectedDate.substring(0, 7));
-  }, [isLoggedIn, storeId, selectedDate, refreshMonthlyStats]);
+  const initMenuMaster = async () => {
+    try {
+      setMenuMasterLoading(true);
+
+      const loadedMenuCategories = await loadMenuMaster(storeId);
+      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+      const nextMenuCategories =
+        normalized.length > 0 ? normalized : cloneCategories(INITIAL_CATEGORIES);
+
+      if (!isMounted) return;
+
+      setMenuMasterCategories(nextMenuCategories);
+      await fetchData(selectedDate, nextMenuCategories);
+    } catch (error) {
+      console.error("Menu Master Load Error:", error);
+      if (!isMounted) return;
+
+      const fallbackCategories = cloneCategories(INITIAL_CATEGORIES);
+      setMenuMasterCategories(fallbackCategories);
+      await fetchData(selectedDate, fallbackCategories);
+    } finally {
+      if (isMounted) setMenuMasterLoading(false);
+    }
+  };
+
+  initMenuMaster();
+
+  return () => {
+    isMounted = false;
+  };
+}, [isLoggedIn, storeId]);
+
+useEffect(() => {
+  if (!isLoggedIn) return;
+  if (storeId == null) return;
+  if (menuMasterLoading) return;
+
+  void fetchData(selectedDate, menuMasterCategories);
+}, [selectedDate, isLoggedIn, menuMasterLoading, storeId, menuMasterCategories]);
 
  useEffect(() => {
   if (!isLoggedIn) return;
