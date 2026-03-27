@@ -353,12 +353,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setDragOverItem(null);
   };
 
-  const handleDragEnd = () => {
-    setDraggingItem(null);
-    setDragOverItem(null);
-  };
+const handleDragEnd = () => {
+  setDraggingItem(null);
+  setDragOverItem(null);
+};
 
- const handleConfirmSave = async () => {
+const handleConfirmSave = async () => {
   try {
     setActionSaving(true);
 
@@ -369,7 +369,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       for (let itemIndex = 0; itemIndex < category.items.length; itemIndex++) {
         const item = category.items[itemIndex];
-
         updates.push(updateMenuOrder(item.id, itemIndex, storeId));
       }
     }
@@ -391,39 +390,23 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   }
 };
 
-    await Promise.all(updates);
+const handleOpenHistory = async (menuId: string, menuName: string) => {
+  try {
+    setHistoryLoading(true);
+    setHistoryMenuName(menuName);
+    setShowHistoryModal(true);
 
-    onChangeCategories(cloneCategories(draftCategories));
+    const rows = await getMenuPriceHistory(menuId, storeId);
+    const visibleRows = buildHistoryRanges(rows);
 
-    await onSavePrices();
-    await onReloadMenuMaster();
-
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
+    setHistoryRows(visibleRows);
   } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
+    console.error("History Load Error:", error);
+    setHistoryRows([]);
   } finally {
-    setActionSaving(false);
+    setHistoryLoading(false);
   }
 };
-  const handleOpenHistory = async (menuId: string, menuName: string) => {
-    try {
-      setHistoryLoading(true);
-      setHistoryMenuName(menuName);
-      setShowHistoryModal(true);
-
-      const rows = await getMenuPriceHistory(menuId, storeId);
-      const visibleRows = buildHistoryRanges(rows);
-
-      setHistoryRows(visibleRows);
-    } catch (error) {
-      console.error("History Load Error:", error);
-      setHistoryRows([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   const handleAddMenu = async () => {
     const categoryName = String(newMenuCategoryName || "").trim();
