@@ -132,9 +132,9 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
     const raw = localStorage.getItem(STORAGE_KEY);
     const all = raw ? JSON.parse(raw) : {};
     all[key] = {
-  ...row,
-  store_id: storeId
-};
+      ...row,
+      store_id: storeId,
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     return {
       ok: true,
@@ -143,14 +143,62 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
     };
   }
 
+  const { data: existingRow, error: existingError } = await supabase
+    .from(TABLE)
+    .select("id,date,store_id")
+    .eq("date", row.date)
+    .eq("store_id", storeId)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("SUPABASE EXISTING CHECK ERROR:", existingError);
+    return {
+      ok: false,
+      success: false,
+      error: existingError,
+    };
+  }
+
+  if (existingRow?.id) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update({
+        total_sales: row.total_sales,
+        orders: row.orders,
+        visit_count: row.visit_count,
+        sold_items: row.sold_items,
+        sold_items_summary: row.sold_items_summary,
+        payload: row.payload,
+      })
+      .eq("id", existingRow.id)
+      .eq("store_id", storeId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("SUPABASE UPDATE ERROR:", error);
+      return {
+        ok: false,
+        success: false,
+        error,
+      };
+    }
+
+    return {
+      ok: true,
+      success: true,
+      data,
+    };
+  }
+
   const { data, error } = await supabase
     .from(TABLE)
-    .upsert(row, { onConflict: "date,store_id" })
+    .insert(row)
     .select()
     .single();
 
   if (error) {
-    console.error("SUPABASE SAVE ERROR:", error);
+    console.error("SUPABASE INSERT ERROR:", error);
     return {
       ok: false,
       success: false,
