@@ -568,13 +568,15 @@ const handleMonthChange = async (month: Date) => {
 
   const yearMonth = formatLocalDate(month).substring(0, 7);
   const cacheKey = buildMonthCacheKey(yearMonth, storeId);
-  const cachedDates = datesWithDataCacheRef.current[cacheKey];
 
+  // 1️⃣ 캐시 먼저 적용
+  const cachedDates = datesWithDataCacheRef.current[cacheKey];
   if (cachedDates) {
     setDatesWithData(cachedDates);
   }
 
-  await refreshMonthlyStats(yearMonth);
+  // 2️⃣ 서버 요청 (기다리지 않음)
+  refreshMonthlyStats(yearMonth);
 };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
