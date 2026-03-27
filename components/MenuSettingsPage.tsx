@@ -362,7 +362,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   try {
     setActionSaving(true);
 
-    const updates = [];
+    const updates: Promise<any>[] = [];
 
     for (let categoryIndex = 0; categoryIndex < draftCategories.length; categoryIndex++) {
       const category = draftCategories[categoryIndex];
@@ -370,9 +370,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       for (let itemIndex = 0; itemIndex < category.items.length; itemIndex++) {
         const item = category.items[itemIndex];
 
-        updates.push(
-          updateMenuOrder(item.id, itemIndex, storeId)
-        );
+        updates.push(updateMenuOrder(item.id, itemIndex, storeId));
       }
     }
 
