@@ -595,24 +595,11 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
                       </div>
                     </div>
 
-                    <div className="md:col-span-2">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => moveItem(categoryIndex, itemIndex, "up")}
-                          disabled={isFirst || actionSaving}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          ↑ 위로
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveItem(categoryIndex, itemIndex, "down")}
-                          disabled={isLast || actionSaving}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          ↓ 아래로
-                        </button>
+                   <div className="md:col-span-2">
+  <div className="text-xs font-semibold text-slate-400">
+    드래그로 순서 변경
+  </div>
+</div>
                       </div>
                     </div>
 
