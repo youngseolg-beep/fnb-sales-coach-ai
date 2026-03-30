@@ -598,8 +598,7 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
                    <div className="md:col-span-2">
   <div className="text-xs font-semibold text-slate-400">
     드래그로 순서 변경
-  </div>
-</div>
+
                       </div>
                     </div>
 
