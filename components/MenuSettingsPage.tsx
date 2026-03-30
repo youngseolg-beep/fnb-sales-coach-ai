@@ -358,7 +358,6 @@ const handleDragEnd = () => {
   setDragOverItem(null);
 };
 
-
 const handleConfirmSave = async () => {
   try {
     setActionSaving(true);
@@ -393,21 +392,6 @@ const handleConfirmSave = async () => {
   }
 };
 
-    onChangeCategories(cloneCategories(draftCategories));
-
-    await onSavePrices();
-    await onReloadMenuMaster();
-
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
-  } finally {
-    setActionSaving(false);
-  }
-};
-
 const handleOpenHistory = async (menuId: string, menuName: string) => {
   try {
     setHistoryLoading(true);
@@ -425,7 +409,6 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
     setHistoryLoading(false);
   }
 };
-
   const handleAddMenu = async () => {
     const categoryName = String(newMenuCategoryName || "").trim();
     const menuName = String(newMenuName || "").trim();
