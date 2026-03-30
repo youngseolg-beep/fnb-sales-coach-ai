@@ -2,12 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import {
   DndContext,
+  DragOverlay,
   MouseSensor,
   TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
+  type DragCancelEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -38,6 +41,25 @@ interface MenuSettingsPageProps {
   storeId: number;
   onShowToast?: (msg: string) => void;
 }
+
+type ChangedItemRow = {
+  id: string;
+  name: string;
+  oldPrice: number;
+  newPrice: number;
+  oldUnitCost: number;
+  newUnitCost: number;
+  priceChanged: boolean;
+  unitCostChanged: boolean;
+};
+
+type DragPreviewItem = {
+  id: string;
+  name: string;
+  price: number;
+  unitCost?: number;
+  changed: boolean;
+};
 
 const toNumber = (value: string) => {
   const n = Number(value);
@@ -109,6 +131,9 @@ const cloneCategories = (rows: MenuCategory[]) =>
     items: category.items.map((item) => ({ ...item })),
   }));
 
+const cardShellClassName =
+  "grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-12 md:items-center md:gap-3 md:p-3";
+
 interface SortableMenuItemProps {
   item: any;
   categoryIndex: number;
@@ -145,18 +170,18 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
     isDragging,
   } = useSortable({ id: item.id });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
+    WebkitUserSelect: "none",
+    userSelect: "none",
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center ${
-        isDragging ? "z-10 scale-[1.01] bg-white shadow-2xl ring-2 ring-indigo-200" : "bg-white"
-      }`}
+      className={`${cardShellClassName} ${isDragging ? "opacity-30" : ""}`}
     >
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
@@ -166,23 +191,33 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
             {...attributes}
             {...listeners}
             disabled={actionSaving}
-            className="inline-flex h-12 w-12 touch-none cursor-grab items-center justify-center rounded-xl border bg-slate-50 text-lg font-black text-slate-500 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-lg font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              WebkitTouchCallout: "none",
+              WebkitUserSelect: "none",
+              userSelect: "none",
+            }}
             title="드래그해서 순서 변경"
           >
             ⋮⋮
           </button>
-          <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
+              {item.name}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold text-slate-400 md:hidden">
+              손잡이를 길게 눌러 이동
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="md:col-span-2">
-        <div className="text-xs font-semibold text-slate-400">
-          드래그로 순서 변경
-        </div>
+      <div className="hidden md:col-span-2 md:block">
+        <div className="text-xs font-semibold text-slate-400">드래그로 순서 변경</div>
       </div>
 
       <div className="md:col-span-2">
-        <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
+        <label className="mb-1 block text-[11px] font-semibold text-slate-500 md:hidden">
           Price
         </label>
         <input
@@ -192,12 +227,12 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
           onChange={(e) =>
             onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
           }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+          className="h-10 w-full rounded-xl border px-3 text-[15px] outline-none focus:border-slate-400 md:h-11 md:text-sm"
         />
       </div>
 
       <div className="md:col-span-2">
-        <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
+        <label className="mb-1 block text-[11px] font-semibold text-slate-500 md:hidden">
           Unit Cost
         </label>
         <input
@@ -207,13 +242,13 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
           onChange={(e) =>
             onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
           }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+          className="h-10 w-full rounded-xl border px-3 text-[15px] outline-none focus:border-slate-400 md:h-11 md:text-sm"
         />
       </div>
 
       <div className="md:col-span-1">
         <span
-          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
+          className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold md:h-9 md:text-xs ${
             changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
           }`}
         >
@@ -225,7 +260,7 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
         <button
           type="button"
           onClick={() => onOpenHistory(item.id, item.name)}
-          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 md:text-xs"
         >
           History
         </button>
@@ -236,10 +271,76 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
           type="button"
           onClick={onDelete}
           disabled={actionSaving}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-[13px] font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 md:text-xs"
         >
           메뉴 삭제
         </button>
+      </div>
+    </div>
+  );
+};
+
+const DragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
+  return (
+    <div
+      className={`${cardShellClassName} scale-[1.01] shadow-2xl ring-2 ring-indigo-200`}
+      style={{
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
+    >
+      <div className="md:col-span-2">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 text-lg font-black text-indigo-500 shadow-sm">
+            ⋮⋮
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
+              {item.name}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold text-indigo-500 md:hidden">
+              이동 중
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden md:col-span-2 md:block">
+        <div className="text-xs font-semibold text-indigo-400">드래그로 순서 변경</div>
+      </div>
+
+      <div className="md:col-span-2">
+        <div className="h-10 rounded-xl border bg-slate-50 px-3 text-[15px] leading-[40px] text-slate-900 md:h-11 md:text-sm md:leading-[44px]">
+          {normalizeNumber(item.price)}
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <div className="h-10 rounded-xl border bg-slate-50 px-3 text-[15px] leading-[40px] text-slate-900 md:h-11 md:text-sm md:leading-[44px]">
+          {normalizeNumber(item.unitCost)}
+        </div>
+      </div>
+
+      <div className="md:col-span-1">
+        <span
+          className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold md:h-9 md:text-xs ${
+            item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {item.changed ? "Changed" : "Saved"}
+        </span>
+      </div>
+
+      <div className="md:col-span-1">
+        <div className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-[13px] font-semibold text-slate-700 md:text-xs">
+          History
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <div className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-[13px] font-semibold text-rose-600 md:text-xs">
+          메뉴 삭제
+        </div>
       </div>
     </div>
   );
@@ -280,17 +381,18 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   } | null>(null);
 
   const [actionSaving, setActionSaving] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState<DragPreviewItem | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 4,
+        distance: 6,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 120,
-        tolerance: 8,
+        delay: 180,
+        tolerance: 10,
       },
     })
   );
@@ -326,16 +428,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   }, [originalCategories]);
 
   const changedItems = useMemo(() => {
-    const rows: Array<{
-      id: string;
-      name: string;
-      oldPrice: number;
-      newPrice: number;
-      oldUnitCost: number;
-      newUnitCost: number;
-      priceChanged: boolean;
-      unitCostChanged: boolean;
-    }> = [];
+    const rows: ChangedItemRow[] = [];
 
     draftCategories.forEach((category) => {
       category.items.forEach((item) => {
@@ -367,6 +460,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
     return rows;
   }, [draftCategories, originalItemMap]);
+
+  const changedItemMap = useMemo(() => {
+    const map = new Map<string, ChangedItemRow>();
+    changedItems.forEach((item) => map.set(item.id, item));
+    return map;
+  }, [changedItems]);
 
   const dirtyCount = changedItems.length;
 
@@ -404,10 +503,29 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setDraftCategories(next);
   };
 
+  const handleCategoryDragStart = (categoryIndex: number, event: DragStartEvent) => {
+    const activeId = String(event.active.id);
+    const category = draftCategories[categoryIndex];
+    const item = category.items.find((menu) => menu.id === activeId);
+
+    if (!item) return;
+
+    setActiveDragItem({
+      id: item.id,
+      name: item.name,
+      price: normalizeNumber(item.price),
+      unitCost: item.unitCost,
+      changed: changedItemMap.has(item.id),
+    });
+  };
+
   const handleCategoryDragEnd = (categoryIndex: number, event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      setActiveDragItem(null);
+      return;
+    }
 
     setDraftCategories((prev) =>
       prev.map((category, idx) => {
@@ -424,6 +542,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
         };
       })
     );
+
+    setActiveDragItem(null);
+  };
+
+  const handleCategoryDragCancel = (_event?: DragCancelEvent) => {
+    setActiveDragItem(null);
   };
 
   const handleConfirmSave = async () => {
@@ -626,7 +750,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={(event) => handleCategoryDragStart(categoryIndex, event)}
               onDragEnd={(event) => handleCategoryDragEnd(categoryIndex, event)}
+              onDragCancel={handleCategoryDragCancel}
             >
               <SortableContext
                 items={category.items.map((item) => item.id)}
@@ -664,6 +790,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   })}
                 </div>
               </SortableContext>
+
+              <DragOverlay dropAnimation={null}>
+                {activeDragItem ? <DragPreviewCard item={activeDragItem} /> : null}
+              </DragOverlay>
             </DndContext>
           </div>
         ))}
