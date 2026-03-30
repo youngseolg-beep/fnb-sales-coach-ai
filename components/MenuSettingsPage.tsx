@@ -1,5 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import {
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { MenuCategory } from "../types";
 import {
   createMenu,
@@ -93,11 +109,138 @@ const cloneCategories = (rows: MenuCategory[]) =>
     items: category.items.map((item) => ({ ...item })),
   }));
 
-const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
-  const next = [...items];
-  const [moved] = next.splice(fromIndex, 1);
-  next.splice(toIndex, 0, moved);
-  return next;
+interface SortableMenuItemProps {
+  item: any;
+  categoryIndex: number;
+  itemIndex: number;
+  changed: boolean;
+  actionSaving: boolean;
+  onUpdateItemField: (
+    categoryIndex: number,
+    itemIndex: number,
+    field: "price" | "unitCost",
+    value: string
+  ) => void;
+  onOpenHistory: (menuId: string, menuName: string) => void;
+  onDelete: () => void;
+}
+
+const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
+  item,
+  categoryIndex,
+  itemIndex,
+  changed,
+  actionSaving,
+  onUpdateItemField,
+  onOpenHistory,
+  onDelete,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center ${
+        isDragging ? "z-10 bg-white shadow-xl opacity-80" : ""
+      }`}
+    >
+      <div className="md:col-span-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            disabled={actionSaving}
+            className="inline-flex h-12 w-12 touch-none cursor-grab items-center justify-center rounded-xl border bg-slate-50 text-lg font-black text-slate-500 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+            title="드래그해서 순서 변경"
+          >
+            ⋮⋮
+          </button>
+          <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <div className="text-xs font-semibold text-slate-400">
+          드래그로 순서 변경
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
+          Price
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.price)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
+          Unit Cost
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.unitCost)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <span
+          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
+            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {changed ? "Changed" : "Saved"}
+        </span>
+      </div>
+
+      <div className="md:col-span-1">
+        <button
+          type="button"
+          onClick={() => onOpenHistory(item.id, item.name)}
+          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          History
+        </button>
+      </div>
+
+      <div className="md:col-span-2">
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={actionSaving}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          메뉴 삭제
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
@@ -135,15 +278,20 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   } | null>(null);
 
   const [actionSaving, setActionSaving] = useState(false);
-  const [draggingItem, setDraggingItem] = useState<{
-    categoryIndex: number;
-    itemIndex: number;
-    itemId: string;
-  } | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<{
-    categoryIndex: number;
-    itemIndex: number;
-  } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 4,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     setDraftCategories(cloneCategories(categories));
@@ -254,172 +402,85 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setDraftCategories(next);
   };
 
-  const moveItem = (
-    categoryIndex: number,
-    itemIndex: number,
-    direction: "up" | "down"
-  ) => {
-    if (actionSaving) return;
+  const handleCategoryDragEnd = (categoryIndex: number, event: DragEndEvent) => {
+    const { active, over } = event;
 
-    const category = draftCategories[categoryIndex];
-    if (!category) return;
+    if (!over || active.id === over.id) return;
 
-    const targetIndex = direction === "up" ? itemIndex - 1 : itemIndex + 1;
+    setDraftCategories((prev) =>
+      prev.map((category, idx) => {
+        if (idx !== categoryIndex) return category;
 
-    if (targetIndex < 0 || targetIndex >= category.items.length) {
-      return;
-    }
+        const oldIndex = category.items.findIndex((item) => item.id === active.id);
+        const newIndex = category.items.findIndex((item) => item.id === over.id);
 
-    const items = reorderItems(category.items, itemIndex, targetIndex);
+        if (oldIndex === -1 || newIndex === -1) return category;
 
-    const next = draftCategories.map((cat, idx) => {
-      if (idx !== categoryIndex) return cat;
-      return {
-        ...cat,
-        items,
-      };
-    });
-
-    setDraftCategories(next);
-  };
-
-  const moveItemToIndex = (categoryIndex: number, fromIndex: number, toIndex: number) => {
-    if (actionSaving) return;
-    if (fromIndex === toIndex) return;
-
-    const category = draftCategories[categoryIndex];
-    if (!category) return;
-    if (fromIndex < 0 || toIndex < 0) return;
-    if (fromIndex >= category.items.length || toIndex >= category.items.length) return;
-
-    const items = reorderItems(category.items, fromIndex, toIndex);
-
-    const next = draftCategories.map((cat, idx) => {
-      if (idx !== categoryIndex) return cat;
-      return {
-        ...cat,
-        items,
-      };
-    });
-
-    setDraftCategories(next);
-  };
-
-  const handleDragStart = (
-    e: React.DragEvent<HTMLButtonElement>,
-    categoryIndex: number,
-    itemIndex: number,
-    itemId: string
-  ) => {
-    if (actionSaving) return;
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", itemId);
-    setDraggingItem({ categoryIndex, itemIndex, itemId });
-    setDragOverItem({ categoryIndex, itemIndex });
-  };
-
-  const handleDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    categoryIndex: number,
-    itemIndex: number
-  ) => {
-    if (!draggingItem) return;
-    if (draggingItem.categoryIndex !== categoryIndex) return;
-
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-
-    if (
-      !dragOverItem ||
-      dragOverItem.categoryIndex !== categoryIndex ||
-      dragOverItem.itemIndex !== itemIndex
-    ) {
-      setDragOverItem({ categoryIndex, itemIndex });
-    }
-  };
-
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    categoryIndex: number,
-    itemIndex: number
-  ) => {
-    e.preventDefault();
-
-    if (!draggingItem) return;
-    if (draggingItem.categoryIndex !== categoryIndex) return;
-
-    moveItemToIndex(categoryIndex, draggingItem.itemIndex, itemIndex);
-    setDraggingItem(null);
-    setDragOverItem(null);
-  };
-
-const handleDragEnd = () => {
-  setDraggingItem(null);
-  setDragOverItem(null);
-};
-
-const handleConfirmSave = async () => {
-  try {
-    setActionSaving(true);
-
-    const flatItems = draftCategories.flatMap((category) => category.items);
-
-    await Promise.all(
-      flatItems.map((item, index) => updateMenuOrder(item.id, index, storeId))
+        return {
+          ...category,
+          items: arrayMove(category.items, oldIndex, newIndex),
+        };
+      })
     );
+  };
 
-    if (dirtyCount > 0) {
-      const priceJobs: Promise<any>[] = [];
+  const handleConfirmSave = async () => {
+    try {
+      setActionSaving(true);
 
-      for (const category of draftCategories) {
-        for (const item of category.items) {
-          priceJobs.push(
+      const flatItems = draftCategories.flatMap((category) => category.items);
+
+      await Promise.all(
+        flatItems.map((item, index) => updateMenuOrder(item.id, index, storeId))
+      );
+
+      if (changedItems.length > 0) {
+        await Promise.all(
+          changedItems.map((item) =>
             saveMenuPriceHistory(
               item.id,
               selectedDate,
-              Number(item.price ?? 0),
-              item.unitCost !== null && item.unitCost !== undefined
-                ? Number(item.unitCost)
+              Number(item.newPrice ?? 0),
+              item.newUnitCost !== null && item.newUnitCost !== undefined
+                ? Number(item.newUnitCost)
                 : undefined,
               storeId
             )
-          );
-        }
+          )
+        );
       }
 
-      await Promise.all(priceJobs);
+      onChangeCategories(cloneCategories(draftCategories));
+      await onReloadMenuMaster();
+
+      setShowConfirmModal(false);
+      notify("메뉴 순서 / 가격이 저장되었습니다.");
+    } catch (error) {
+      console.error("handleConfirmSave error:", error);
+      notify("저장 중 오류가 발생했습니다.");
+    } finally {
+      setActionSaving(false);
     }
+  };
 
-    onChangeCategories(cloneCategories(draftCategories));
-    await onReloadMenuMaster();
+  const handleOpenHistory = async (menuId: string, menuName: string) => {
+    try {
+      setHistoryLoading(true);
+      setHistoryMenuName(menuName);
+      setShowHistoryModal(true);
 
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
-  } finally {
-    setActionSaving(false);
-  }
-};
+      const rows = await getMenuPriceHistory(menuId, storeId);
+      const visibleRows = buildHistoryRanges(rows);
 
-const handleOpenHistory = async (menuId: string, menuName: string) => {
-  try {
-    setHistoryLoading(true);
-    setHistoryMenuName(menuName);
-    setShowHistoryModal(true);
+      setHistoryRows(visibleRows);
+    } catch (error) {
+      console.error("History Load Error:", error);
+      setHistoryRows([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
-    const rows = await getMenuPriceHistory(menuId, storeId);
-    const visibleRows = buildHistoryRanges(rows);
-
-    setHistoryRows(visibleRows);
-  } catch (error) {
-    console.error("History Load Error:", error);
-    setHistoryRows([]);
-  } finally {
-    setHistoryLoading(false);
-  }
-};
   const handleAddMenu = async () => {
     const categoryName = String(newMenuCategoryName || "").trim();
     const menuName = String(newMenuName || "").trim();
@@ -510,7 +571,7 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
                 선택한 날짜부터 이 가격이 적용됩니다.
               </p>
               <p className="mt-2 text-xs font-semibold text-indigo-600">
-                메뉴명 왼쪽 드래그 버튼으로 순서를 바꾼 뒤 저장하세요.
+                모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
               </p>
             </div>
 
@@ -560,116 +621,35 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
               <div className="col-span-2">Delete</div>
             </div>
 
-            <div className="mt-3 space-y-3">
-              {category.items.map((item, itemIndex) => {
-                const originalItem = originalItemMap.get(item.id);
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => handleCategoryDragEnd(categoryIndex, event)}
+            >
+              <SortableContext
+                items={category.items.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="mt-3 space-y-3">
+                  {category.items.map((item, itemIndex) => {
+                    const originalItem = originalItemMap.get(item.id);
 
-                const changed = originalItem
-                  ? !isSameValue(item.price, originalItem.price) ||
-                    !isSameValue(item.unitCost, originalItem.unitCost)
-                  : false;
+                    const changed = originalItem
+                      ? !isSameValue(item.price, originalItem.price) ||
+                        !isSameValue(item.unitCost, originalItem.unitCost)
+                      : false;
 
-                const isFirst = itemIndex === 0;
-                const isLast = itemIndex === category.items.length - 1;
-                const isDragging =
-                  draggingItem?.categoryIndex === categoryIndex &&
-                  draggingItem?.itemIndex === itemIndex;
-                const isDragOver =
-                  dragOverItem?.categoryIndex === categoryIndex &&
-                  dragOverItem?.itemIndex === itemIndex &&
-                  draggingItem?.itemIndex !== itemIndex;
-
-                return (
-                  <div
-                    key={item.id}
-                    onDragOver={(e) => handleDragOver(e, categoryIndex, itemIndex)}
-                    onDrop={(e) => handleDrop(e, categoryIndex, itemIndex)}
-                    className={`grid grid-cols-1 gap-3 rounded-xl border p-3 transition md:grid-cols-12 md:items-center ${
-                      isDragging ? "opacity-40" : ""
-                    } ${
-                      isDragOver ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200" : ""
-                    }`}
-                  >
-                    <div className="md:col-span-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          draggable={!actionSaving}
-                          onDragStart={(e) => handleDragStart(e, categoryIndex, itemIndex, item.id)}
-                          onDragEnd={handleDragEnd}
-                          disabled={actionSaving}
-                          className="inline-flex h-10 w-10 cursor-grab items-center justify-center rounded-xl border bg-slate-50 text-base font-black text-slate-500 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                          title="드래그해서 순서 변경"
-                        >
-                          ⋮⋮
-                        </button>
-                        <div className="text-sm font-semibold text-slate-900">{item.name}</div>
-                      </div>
-                    </div>
-
-                   <div className="md:col-span-2">
-  <div className="text-xs font-semibold text-slate-400">
-    드래그로 순서 변경
-
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
-                        Price
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={normalizeNumber(item.price)}
-                        onChange={(e) =>
-                          updateItemField(categoryIndex, itemIndex, "price", e.target.value)
-                        }
-                        className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-500 md:hidden">
-                        Unit Cost
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={normalizeNumber(item.unitCost)}
-                        onChange={(e) =>
-                          updateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-                        }
-                        className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-                      />
-                    </div>
-
-                    <div className="md:col-span-1">
-                      <span
-                        className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
-                          changed
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {changed ? "Changed" : "Saved"}
-                      </span>
-                    </div>
-
-                    <div className="md:col-span-1">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenHistory(item.id, item.name)}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        History
-                      </button>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <button
-                        type="button"
-                        onClick={() =>
+                    return (
+                      <SortableMenuItem
+                        key={item.id}
+                        item={item}
+                        categoryIndex={categoryIndex}
+                        itemIndex={itemIndex}
+                        changed={changed}
+                        actionSaving={actionSaving}
+                        onUpdateItemField={updateItemField}
+                        onOpenHistory={handleOpenHistory}
+                        onDelete={() =>
                           setDeleteTarget({
                             categoryIndex,
                             itemIndex,
@@ -677,16 +657,12 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
                             itemName: item.name,
                           })
                         }
-                        disabled={actionSaving}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        메뉴 삭제
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
         ))}
 
