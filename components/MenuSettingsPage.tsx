@@ -139,6 +139,7 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -154,12 +155,13 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
       ref={setNodeRef}
       style={style}
       className={`grid grid-cols-1 gap-3 rounded-xl border p-3 md:grid-cols-12 md:items-center ${
-        isDragging ? "z-10 bg-white shadow-xl opacity-80" : ""
+        isDragging ? "z-10 scale-[1.01] bg-white shadow-2xl ring-2 ring-indigo-200" : "bg-white"
       }`}
     >
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
           <button
+            ref={setActivatorNodeRef}
             type="button"
             {...attributes}
             {...listeners}
