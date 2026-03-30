@@ -364,22 +364,33 @@ const handleConfirmSave = async () => {
 
     const flatItems = draftCategories.flatMap((category) => category.items);
 
-    for (let index = 0; index < flatItems.length; index++) {
-      const item = flatItems[index];
-      await updateMenuOrder(item.id, 1000 + index, storeId);
-    }
+    await Promise.all(
+      flatItems.map((item, index) => updateMenuOrder(item.id, index, storeId))
+    );
 
-    for (let index = 0; index < flatItems.length; index++) {
-      const item = flatItems[index];
-      await updateMenuOrder(item.id, index, storeId);
+    if (dirtyCount > 0) {
+      const priceJobs: Promise<any>[] = [];
+
+      for (const category of draftCategories) {
+        for (const item of category.items) {
+          priceJobs.push(
+            saveMenuPriceHistory(
+              item.id,
+              selectedDate,
+              Number(item.price ?? 0),
+              item.unitCost !== null && item.unitCost !== undefined
+                ? Number(item.unitCost)
+                : undefined,
+              storeId
+            )
+          );
+        }
+      }
+
+      await Promise.all(priceJobs);
     }
 
     onChangeCategories(cloneCategories(draftCategories));
-
-    if (dirtyCount > 0) {
-      await onSavePrices();
-    }
-
     await onReloadMenuMaster();
 
     setShowConfirmModal(false);
