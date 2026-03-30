@@ -362,20 +362,19 @@ const handleConfirmSave = async () => {
   try {
     setActionSaving(true);
 
-    const updates: Promise<any>[] = [];
-    let globalOrder = 0;
+    const flatItems = draftCategories.flatMap((category) => category.items);
 
-    for (let categoryIndex = 0; categoryIndex < draftCategories.length; categoryIndex++) {
-      const category = draftCategories[categoryIndex];
-
-      for (let itemIndex = 0; itemIndex < category.items.length; itemIndex++) {
-        const item = category.items[itemIndex];
-        updates.push(updateMenuOrder(item.id, globalOrder, storeId));
-        globalOrder++;
-      }
+    // 1차: 기존 order 충돌 방지용 임시 큰 값으로 먼저 이동
+    for (let index = 0; index < flatItems.length; index++) {
+      const item = flatItems[index];
+      await updateMenuOrder(item.id, 1000 + index, storeId);
     }
 
-    await Promise.all(updates);
+    // 2차: 최종 순서로 다시 저장
+    for (let index = 0; index < flatItems.length; index++) {
+      const item = flatItems[index];
+      await updateMenuOrder(item.id, index, storeId);
+    }
 
     onChangeCategories(cloneCategories(draftCategories));
 
@@ -384,9 +383,9 @@ const handleConfirmSave = async () => {
 
     setShowConfirmModal(false);
     notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
+  } catch (error: any) {
     console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
+    notify(error?.message || "저장 중 오류가 발생했습니다.");
   } finally {
     setActionSaving(false);
   }
