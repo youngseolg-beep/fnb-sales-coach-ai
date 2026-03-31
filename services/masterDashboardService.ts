@@ -8,6 +8,21 @@ export type MasterDateRange = {
   preset: MasterDatePreset;
 };
 
+export type MasterSalesRow = {
+  date: string;
+  store_id: number | null;
+  total_sales: number;
+  orders: number;
+  visit_count: number;
+  payload?: {
+    totalSales?: number | null;
+    posSales?: number | null;
+    deliverySales?: number | null;
+    orders?: number | null;
+    visitCount?: number | null;
+  } | null;
+};
+
 export type StoreKpiRow = {
   storeId: number;
   storeName: string;
@@ -60,6 +75,7 @@ export type MasterDashboardResult = {
 };
 
 type SalesDailyRow = {
+  date?: string | null;
   store_id: number | null;
   total_sales?: number | null;
   orders?: number | null;
@@ -406,7 +422,7 @@ function buildSummary(currentRanking: StoreKpiRow[], previousRanking: StoreKpiRo
 async function fetchSalesRows(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("sales_daily")
-    .select("store_id,total_sales,orders,visit_count,payload,date")
+    .select("date,store_id,total_sales,orders,visit_count,payload")
     .gte("date", startDate)
     .lte("date", endDate);
 
@@ -427,6 +443,19 @@ async function fetchStores() {
   }
 
   return (data || []) as StoreRow[];
+}
+
+export async function loadAllStoresRange(startDate: string, endDate: string): Promise<MasterSalesRow[]> {
+  const rows = await fetchSalesRows(startDate, endDate);
+
+  return rows.map((row) => ({
+    date: row.date || "",
+    store_id: row.store_id,
+    total_sales: safeNumber(row.total_sales),
+    orders: safeNumber(row.orders),
+    visit_count: safeNumber(row.visit_count),
+    payload: row.payload || null,
+  }));
 }
 
 export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {
