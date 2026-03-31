@@ -95,7 +95,7 @@ export default function MasterDashboardPage() {
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
- const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
+ cconst [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
 const [customStartDate, setCustomStartDate] = useState(monthStartStr);
 const [customEndDate, setCustomEndDate] = useState(todayStr);
 const [loading, setLoading] = useState(true);
@@ -151,26 +151,6 @@ useEffect(() => {
     isMounted = false;
   };
 }, [dateRange.start, dateRange.end]);
-
-if (loading) {
-  return (
-    <div className="min-h-screen bg-slate-50 p-5 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white border border-slate-200 rounded-[28px] shadow-sm p-8">
-          <div className="text-[11px] font-black tracking-[0.25em] uppercase text-indigo-500">
-            Master Dashboard
-          </div>
-          <div className="mt-3 text-3xl font-black text-slate-900">전체 매장 통합 현황</div>
-          <div className="mt-2 text-sm font-medium text-slate-500">
-            전체 매장 데이터를 불러오는 중입니다.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-  const storeSummaries = useMemo<StoreSummary[]>(() => {
     const map = new Map<number, StoreSummary>();
 
     for (const row of rows) {
