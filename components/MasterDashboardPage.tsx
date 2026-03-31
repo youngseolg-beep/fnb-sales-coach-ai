@@ -95,12 +95,17 @@ export default function MasterDashboardPage() {
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
-  const [customStartDate, setCustomStartDate] = useState(monthStartStr);
-  const [customEndDate, setCustomEndDate] = useState(todayStr);
-  const [loading, setLoading] = useState(true);
+ const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
+const [customStartDate, setCustomStartDate] = useState(monthStartStr);
+const [customEndDate, setCustomEndDate] = useState(todayStr);
+const [loading, setLoading] = useState(true);
 const [isRefreshing, setIsRefreshing] = useState(false);
 const [errorMsg, setErrorMsg] = useState("");
+
+const dateRange = useMemo(
+  () => getDateRangeByFilter(selectedFilter, customStartDate, customEndDate),
+  [selectedFilter, customStartDate, customEndDate]
+);
 
 useEffect(() => {
   let isMounted = true;
