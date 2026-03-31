@@ -21,6 +21,15 @@ type AlertCard = {
   reason: string;
 };
 
+type FilterKey = "today" | "this_week" | "this_month" | "last_30_days";
+
+const FILTER_OPTIONS: { key: FilterKey; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "this_week", label: "This Week" },
+  { key: "this_month", label: "This Month" },
+  { key: "last_30_days", label: "Last 30 Days" },
+];
+
 const toSafeNumber = (value: any, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -28,17 +37,50 @@ const toSafeNumber = (value: any, fallback = 0) => {
 
 const getToday = () => formatLocalDate(new Date());
 
-const getMonthStart = () => {
+const getDateRangeByFilter = (filter: FilterKey) => {
   const today = new Date();
-  return formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  const end = formatLocalDate(today);
+
+  if (filter === "today") {
+    return { start: end, end };
+  }
+
+  if (filter === "this_week") {
+    const day = today.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - diff);
+    return {
+      start: formatLocalDate(monday),
+      end,
+    };
+  }
+
+  if (filter === "last_30_days") {
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 29);
+    return {
+      start: formatLocalDate(startDate),
+      end,
+    };
+  }
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  return {
+    start: formatLocalDate(monthStart),
+    end,
+  };
 };
 
 export default function MasterDashboardPage() {
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const dateRange = useMemo(() => getDateRangeByFilter(selectedFilter), [selectedFilter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -49,7 +91,7 @@ export default function MasterDashboardPage() {
         setErrorMsg("");
 
         const [salesRes, storeRes] = await Promise.all([
-          loadAllStoresRange(getMonthStart(), getToday()),
+          loadAllStoresRange(dateRange.start, dateRange.end),
           supabase.from("stores").select("*").order("id", { ascending: true }),
         ]);
 
@@ -76,7 +118,7 @@ export default function MasterDashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [dateRange.start, dateRange.end]);
 
   const storeSummaries = useMemo<StoreSummary[]>(() => {
     const map = new Map<number, StoreSummary>();
@@ -245,17 +287,16 @@ export default function MasterDashboardPage() {
     return storeSummaries.find((store) => store.storeId === selectedStoreId) ?? null;
   }, [storeSummaries, selectedStoreId]);
 
-  const selectedStoreAov = selectedStore && selectedStore.orders > 0
-    ? selectedStore.sales / selectedStore.orders
-    : 0;
+  const selectedStoreAov =
+    selectedStore && selectedStore.orders > 0 ? selectedStore.sales / selectedStore.orders : 0;
 
-  const selectedStoreConversion = selectedStore && selectedStore.visits > 0
-    ? (selectedStore.orders / selectedStore.visits) * 100
-    : 0;
+  const selectedStoreConversion =
+    selectedStore && selectedStore.visits > 0
+      ? (selectedStore.orders / selectedStore.visits) * 100
+      : 0;
 
-  const selectedStoreShare = selectedStore && totalSales > 0
-    ? (selectedStore.sales / totalSales) * 100
-    : 0;
+  const selectedStoreShare =
+    selectedStore && totalSales > 0 ? (selectedStore.sales / totalSales) * 100 : 0;
 
   const selectedStoreRank = selectedStore
     ? storeSummaries.findIndex((store) => store.storeId === selectedStore.storeId) + 1
@@ -294,13 +335,19 @@ export default function MasterDashboardPage() {
       });
     }
 
-    if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.75) {
+    if (
+      averageConversionAcrossStores > 0 &&
+      selectedStoreConversion < averageConversionAcrossStores * 0.75
+    ) {
       messages.push({
         label: "전환율 위험",
         value: `평균 전환율 대비 ${((selectedStoreConversion / averageConversionAcrossStores) * 100).toFixed(1)}%`,
         severity: "high",
       });
-    } else if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.9) {
+    } else if (
+      averageConversionAcrossStores > 0 &&
+      selectedStoreConversion < averageConversionAcrossStores * 0.9
+    ) {
       messages.push({
         label: "전환율 주의",
         value: `평균 전환율 대비 ${((selectedStoreConversion / averageConversionAcrossStores) * 100).toFixed(1)}%`,
@@ -329,7 +376,10 @@ export default function MasterDashboardPage() {
     if (averageAovAcrossStores > 0 && selectedStoreAov < averageAovAcrossStores * 0.9) {
       summaryParts.push("객단가 개선 필요");
     }
-    if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.9) {
+    if (
+      averageConversionAcrossStores > 0 &&
+      selectedStoreConversion < averageConversionAcrossStores * 0.9
+    ) {
       summaryParts.push("전환율 개선 필요");
     }
 
@@ -386,37 +436,60 @@ export default function MasterDashboardPage() {
       <div className="max-w-7xl mx-auto px-5 py-6 md:px-8 md:py-8 space-y-6">
         <section className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-600 rounded-[32px] p-7 md:p-9 shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="text-[11px] font-black tracking-[0.28em] uppercase text-indigo-200">
-                Master Dashboard
+          <div className="relative flex flex-col gap-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="text-[11px] font-black tracking-[0.28em] uppercase text-indigo-200">
+                  Master Dashboard
+                </div>
+                <h1 className="mt-3 text-3xl md:text-4xl font-black text-white tracking-tight">
+                  전체 매장 통합 현황
+                </h1>
+                <p className="mt-3 text-sm md:text-base font-medium text-indigo-100">
+                  기준 기간 {dateRange.start} ~ {dateRange.end}
+                </p>
               </div>
-              <h1 className="mt-3 text-3xl md:text-4xl font-black text-white tracking-tight">
-                전체 매장 통합 현황
-              </h1>
-              <p className="mt-3 text-sm md:text-base font-medium text-indigo-100">
-                기준 기간 {getMonthStart()} ~ {getToday()}
-              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-full lg:min-w-[360px] lg:max-w-[420px]">
+                <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-4">
+                  <div className="text-[10px] font-black tracking-[0.2em] uppercase text-indigo-200">
+                    Total Stores
+                  </div>
+                  <div className="mt-2 text-2xl font-black text-white">
+                    {storeCount.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-4">
+                  <div className="text-[10px] font-black tracking-[0.2em] uppercase text-indigo-200">
+                    Top Store
+                  </div>
+                  <div className="mt-2 text-lg font-black text-white truncate">
+                    {topStore ? topStore.storeName : "-"}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-full lg:min-w-[360px] lg:max-w-[420px]">
-              <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-4">
-                <div className="text-[10px] font-black tracking-[0.2em] uppercase text-indigo-200">
-                  Total Stores
-                </div>
-                <div className="mt-2 text-2xl font-black text-white">
-                  {storeCount.toLocaleString()}
-                </div>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              {FILTER_OPTIONS.map((option) => {
+                const active = selectedFilter === option.key;
 
-              <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-4">
-                <div className="text-[10px] font-black tracking-[0.2em] uppercase text-indigo-200">
-                  Top Store
-                </div>
-                <div className="mt-2 text-lg font-black text-white truncate">
-                  {topStore ? topStore.storeName : "-"}
-                </div>
-              </div>
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setSelectedFilter(option.key)}
+                    className={`h-11 rounded-2xl px-4 text-sm font-black transition-all ${
+                      active
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "bg-white/10 text-white border border-white/10 hover:bg-white/20"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -495,17 +568,13 @@ export default function MasterDashboardPage() {
                   <div
                     key={`${alert.type}_${alert.storeName}_${index}`}
                     className={`rounded-[24px] border p-5 shadow-sm ${
-                      isHigh
-                        ? "border-rose-200 bg-rose-50"
-                        : "border-amber-200 bg-amber-50"
+                      isHigh ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div
                         className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black tracking-[0.18em] uppercase ${
-                          isHigh
-                            ? "bg-rose-600 text-white"
-                            : "bg-amber-500 text-white"
+                          isHigh ? "bg-rose-600 text-white" : "bg-amber-500 text-white"
                         }`}
                       >
                         {isHigh ? "High Risk" : "Watch"}
@@ -535,7 +604,9 @@ export default function MasterDashboardPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black text-slate-900">매장별 매출 순위</h2>
-                  <p className="mt-1 text-sm font-medium text-slate-500">이번 달 누적 기준 · 행 클릭 시 상세 보기</p>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    선택 기간 기준 · 행 클릭 시 상세 보기
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">
                   총 {storeCount}개 매장
@@ -569,7 +640,10 @@ export default function MasterDashboardPage() {
                   <tbody>
                     {storeSummaries.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-12 text-center text-sm font-medium text-slate-400">
+                        <td
+                          colSpan={6}
+                          className="px-4 py-12 text-center text-sm font-medium text-slate-400"
+                        >
                           표시할 데이터가 없습니다.
                         </td>
                       </tr>
@@ -767,7 +841,10 @@ export default function MasterDashboardPage() {
                 Top Store Share
               </div>
               <div className="mt-4 text-3xl font-black text-slate-900">
-                {topStore && totalSales > 0 ? ((topStore.sales / totalSales) * 100).toFixed(1) : "0.0"}%
+                {topStore && totalSales > 0
+                  ? ((topStore.sales / totalSales) * 100).toFixed(1)
+                  : "0.0"}
+                %
               </div>
               <div className="mt-2 text-sm text-slate-500 font-medium">
                 {topStore ? `${topStore.storeName} 매출 비중` : "상위 매장 정보 없음"}
@@ -799,4 +876,3 @@ export default function MasterDashboardPage() {
     </div>
   );
 }
-
