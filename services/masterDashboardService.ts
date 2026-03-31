@@ -1,5 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
-
+import { supabase } from "./supabaseClient";
 export type MasterSalesRow = {
   id?: string | number;
   date: string;
