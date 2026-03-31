@@ -21,13 +21,14 @@ type AlertCard = {
   reason: string;
 };
 
-type FilterKey = "today" | "this_week" | "this_month" | "last_30_days";
+type FilterKey = "today" | "this_week" | "this_month" | "last_30_days" | "custom";
 
 const FILTER_OPTIONS: { key: FilterKey; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "this_week", label: "This Week" },
   { key: "this_month", label: "This Month" },
   { key: "last_30_days", label: "Last 30 Days" },
+  { key: "custom", label: "Custom" },
 ];
 
 const toSafeNumber = (value: any, fallback = 0) => {
@@ -37,9 +38,21 @@ const toSafeNumber = (value: any, fallback = 0) => {
 
 const getToday = () => formatLocalDate(new Date());
 
-const getDateRangeByFilter = (filter: FilterKey) => {
+const getDateRangeByFilter = (
+  filter: FilterKey,
+  customStartDate: string,
+  customEndDate: string
+) => {
   const today = new Date();
   const end = formatLocalDate(today);
+
+  if (filter === "custom") {
+    const normalizedStart = customStartDate || end;
+    const normalizedEnd = customEndDate || normalizedStart;
+    return normalizedStart <= normalizedEnd
+      ? { start: normalizedStart, end: normalizedEnd }
+      : { start: normalizedEnd, end: normalizedStart };
+  }
 
   if (filter === "today") {
     return { start: end, end };
@@ -73,14 +86,25 @@ const getDateRangeByFilter = (filter: FilterKey) => {
 };
 
 export default function MasterDashboardPage() {
+  const todayStr = useMemo(() => getToday(), []);
+  const monthStartStr = useMemo(() => {
+    const today = new Date();
+    return formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  }, []);
+
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
+  const [customStartDate, setCustomStartDate] = useState(monthStartStr);
+  const [customEndDate, setCustomEndDate] = useState(todayStr);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const dateRange = useMemo(() => getDateRangeByFilter(selectedFilter), [selectedFilter]);
+  const dateRange = useMemo(
+    () => getDateRangeByFilter(selectedFilter, customStartDate, customEndDate),
+    [selectedFilter, customStartDate, customEndDate]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -491,6 +515,37 @@ export default function MasterDashboardPage() {
                 );
               })}
             </div>
+
+            {selectedFilter === "custom" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-xl">
+                <label className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-3">
+                  <div className="text-[10px] font-black tracking-[0.18em] uppercase text-indigo-200">
+                    Start Date
+                  </div>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    max={customEndDate || todayStr}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="mt-2 w-full bg-transparent text-white font-bold outline-none"
+                  />
+                </label>
+
+                <label className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-3">
+                  <div className="text-[10px] font-black tracking-[0.18em] uppercase text-indigo-200">
+                    End Date
+                  </div>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    min={customStartDate}
+                    max={todayStr}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="mt-2 w-full bg-transparent text-white font-bold outline-none"
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </section>
 
