@@ -849,7 +849,9 @@ useEffect(() => {
     </div>
   );
 }
-
+if (userRole === "master") {
+  return <MasterDashboardPage />;
+}
   return (
     <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
       <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
