@@ -38,6 +38,11 @@ const toSafeNumber = (value: any, fallback = 0) => {
 
 const getToday = () => formatLocalDate(new Date());
 
+const getMonthStart = () => {
+  const today = new Date();
+  return formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1));
+};
+
 const getDateRangeByFilter = (
   filter: FilterKey,
   customStartDate: string,
@@ -95,62 +100,64 @@ export default function MasterDashboardPage() {
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
- cconst [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
-const [customStartDate, setCustomStartDate] = useState(monthStartStr);
-const [customEndDate, setCustomEndDate] = useState(todayStr);
-const [loading, setLoading] = useState(true);
-const [isRefreshing, setIsRefreshing] = useState(false);
-const [errorMsg, setErrorMsg] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("this_month");
+  const [customStartDate, setCustomStartDate] = useState(monthStartStr);
+  const [customEndDate, setCustomEndDate] = useState(todayStr);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-const dateRange = useMemo(
-  () => getDateRangeByFilter(selectedFilter, customStartDate, customEndDate),
-  [selectedFilter, customStartDate, customEndDate]
-);
+  const dateRange = useMemo(
+    () => getDateRangeByFilter(selectedFilter, customStartDate, customEndDate),
+    [selectedFilter, customStartDate, customEndDate]
+  );
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const run = async () => {
-    try {
-      if (loading) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
+    const run = async () => {
+      try {
+        if (loading) {
+          setLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+
+        setErrorMsg("");
+
+        const [salesRes, storeRes] = await Promise.all([
+          loadAllStoresRange(dateRange.start, dateRange.end),
+          supabase.from("stores").select("*").order("id", { ascending: true }),
+        ]);
+
+        if (!isMounted) return;
+
+        const nextStoreMap: Record<number, string> = {};
+        (storeRes.data || []).forEach((store: any) => {
+          nextStoreMap[Number(store.id)] = String(store.store_name ?? `Store ${store.id}`);
+        });
+
+        setStoreMap(nextStoreMap);
+        setRows(salesRes);
+      } catch (error) {
+        console.error("MasterDashboardPage load error:", error);
+        if (!isMounted) return;
+        setErrorMsg("대시보드 데이터를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        if (!isMounted) return;
+        setLoading(false);
+        setIsRefreshing(false);
       }
+    };
 
-      setErrorMsg("");
+    run();
 
-      const [salesRes, storeRes] = await Promise.all([
-        loadAllStoresRange(dateRange.start, dateRange.end),
-        supabase.from("stores").select("*").order("id", { ascending: true }),
-      ]);
+    return () => {
+      isMounted = false;
+    };
+  }, [dateRange.start, dateRange.end]);
 
-      if (!isMounted) return;
-
-      const nextStoreMap: Record<number, string> = {};
-      (storeRes.data || []).forEach((store: any) => {
-        nextStoreMap[Number(store.id)] = String(store.store_name ?? `Store ${store.id}`);
-      });
-
-      setStoreMap(nextStoreMap);
-      setRows(salesRes);
-    } catch (error) {
-      console.error("MasterDashboardPage load error:", error);
-      if (!isMounted) return;
-      setErrorMsg("대시보드 데이터를 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      if (!isMounted) return;
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  run();
-
-  return () => {
-    isMounted = false;
-  };
-}, [dateRange.start, dateRange.end]);
+  const storeSummaries = useMemo<StoreSummary[]>(() => {
     const map = new Map<number, StoreSummary>();
 
     for (const row of rows) {
@@ -427,24 +434,6 @@ useEffect(() => {
     averageConversionAcrossStores,
   ]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-5 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white border border-slate-200 rounded-[28px] shadow-sm p-8">
-            <div className="text-[11px] font-black tracking-[0.25em] uppercase text-indigo-500">
-              Master Dashboard
-            </div>
-            <div className="mt-3 text-3xl font-black text-slate-900">전체 매장 통합 현황</div>
-            <div className="mt-2 text-sm font-medium text-slate-500">
-              전체 매장 데이터를 불러오는 중입니다.
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (errorMsg) {
     return (
       <div className="min-h-screen bg-slate-50 p-5 md:p-8">
@@ -464,6 +453,12 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <div className="max-w-7xl mx-auto px-5 py-6 md:px-8 md:py-8 space-y-6">
+        {(loading || isRefreshing) && (
+          <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-600">
+            데이터 불러오는 중...
+          </div>
+        )}
+
         <section className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-600 rounded-[32px] p-7 md:p-9 shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
           <div className="relative flex flex-col gap-6">
