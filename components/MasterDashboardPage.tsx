@@ -36,6 +36,7 @@ const getMonthStart = () => {
 export default function MasterDashboardPage() {
   const [rows, setRows] = useState<MasterSalesRow[]>([]);
   const [storeMap, setStoreMap] = useState<Record<number, string>>({});
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -104,6 +105,20 @@ export default function MasterDashboardPage() {
     return Array.from(map.values()).sort((a, b) => b.sales - a.sales);
   }, [rows, storeMap]);
 
+  useEffect(() => {
+    if (storeSummaries.length === 0) {
+      setSelectedStoreId(null);
+      return;
+    }
+
+    if (
+      selectedStoreId == null ||
+      !storeSummaries.some((store) => store.storeId === selectedStoreId)
+    ) {
+      setSelectedStoreId(storeSummaries[0].storeId);
+    }
+  }, [storeSummaries, selectedStoreId]);
+
   const totalSales = useMemo(
     () => storeSummaries.reduce((sum, store) => sum + store.sales, 0),
     [storeSummaries]
@@ -125,22 +140,32 @@ export default function MasterDashboardPage() {
   const totalConversionRate = totalVisits > 0 ? (totalOrders / totalVisits) * 100 : 0;
   const topStore = storeSummaries[0] ?? null;
 
+  const averageAovAcrossStores = useMemo(() => {
+    if (storeSummaries.length === 0) return 0;
+    return (
+      storeSummaries.reduce((sum, store) => {
+        const aov = store.orders > 0 ? store.sales / store.orders : 0;
+        return sum + aov;
+      }, 0) / storeSummaries.length
+    );
+  }, [storeSummaries]);
+
+  const averageConversionAcrossStores = useMemo(() => {
+    if (storeSummaries.length === 0) return 0;
+    return (
+      storeSummaries.reduce((sum, store) => {
+        const conversion = store.visits > 0 ? (store.orders / store.visits) * 100 : 0;
+        return sum + conversion;
+      }, 0) / storeSummaries.length
+    );
+  }, [storeSummaries]);
+
   const alertCards = useMemo<AlertCard[]>(() => {
     if (storeSummaries.length === 0) return [];
 
     const avgSales = avgSalesPerStore;
-    const avgAov =
-      storeSummaries.reduce((sum, store) => {
-        const aov = store.orders > 0 ? store.sales / store.orders : 0;
-        return sum + aov;
-      }, 0) / storeSummaries.length;
-
-    const avgConversion =
-      storeSummaries.reduce((sum, store) => {
-        const conversion = store.visits > 0 ? (store.orders / store.visits) * 100 : 0;
-        return sum + conversion;
-      }, 0) / storeSummaries.length;
-
+    const avgAov = averageAovAcrossStores;
+    const avgConversion = averageConversionAcrossStores;
     const cards: AlertCard[] = [];
 
     for (const store of storeSummaries) {
@@ -213,7 +238,114 @@ export default function MasterDashboardPage() {
     return cards
       .sort((a, b) => priority[a.severity] - priority[b.severity])
       .slice(0, 6);
-  }, [storeSummaries, avgSalesPerStore]);
+  }, [storeSummaries, avgSalesPerStore, averageAovAcrossStores, averageConversionAcrossStores]);
+
+  const selectedStore = useMemo(() => {
+    if (selectedStoreId == null) return null;
+    return storeSummaries.find((store) => store.storeId === selectedStoreId) ?? null;
+  }, [storeSummaries, selectedStoreId]);
+
+  const selectedStoreAov = selectedStore && selectedStore.orders > 0
+    ? selectedStore.sales / selectedStore.orders
+    : 0;
+
+  const selectedStoreConversion = selectedStore && selectedStore.visits > 0
+    ? (selectedStore.orders / selectedStore.visits) * 100
+    : 0;
+
+  const selectedStoreShare = selectedStore && totalSales > 0
+    ? (selectedStore.sales / totalSales) * 100
+    : 0;
+
+  const selectedStoreRank = selectedStore
+    ? storeSummaries.findIndex((store) => store.storeId === selectedStore.storeId) + 1
+    : 0;
+
+  const selectedStoreAlerts = useMemo(() => {
+    if (!selectedStore) return [];
+
+    const messages: { label: string; value: string; severity: "high" | "medium" }[] = [];
+
+    if (avgSalesPerStore > 0 && selectedStore.sales < avgSalesPerStore * 0.6) {
+      messages.push({
+        label: "매출 위험",
+        value: `평균 매출 대비 ${((selectedStore.sales / avgSalesPerStore) * 100).toFixed(1)}%`,
+        severity: "high",
+      });
+    } else if (avgSalesPerStore > 0 && selectedStore.sales < avgSalesPerStore * 0.8) {
+      messages.push({
+        label: "매출 주의",
+        value: `평균 매출 대비 ${((selectedStore.sales / avgSalesPerStore) * 100).toFixed(1)}%`,
+        severity: "medium",
+      });
+    }
+
+    if (averageAovAcrossStores > 0 && selectedStoreAov < averageAovAcrossStores * 0.75) {
+      messages.push({
+        label: "객단가 위험",
+        value: `평균 객단가 대비 ${((selectedStoreAov / averageAovAcrossStores) * 100).toFixed(1)}%`,
+        severity: "high",
+      });
+    } else if (averageAovAcrossStores > 0 && selectedStoreAov < averageAovAcrossStores * 0.9) {
+      messages.push({
+        label: "객단가 주의",
+        value: `평균 객단가 대비 ${((selectedStoreAov / averageAovAcrossStores) * 100).toFixed(1)}%`,
+        severity: "medium",
+      });
+    }
+
+    if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.75) {
+      messages.push({
+        label: "전환율 위험",
+        value: `평균 전환율 대비 ${((selectedStoreConversion / averageConversionAcrossStores) * 100).toFixed(1)}%`,
+        severity: "high",
+      });
+    } else if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.9) {
+      messages.push({
+        label: "전환율 주의",
+        value: `평균 전환율 대비 ${((selectedStoreConversion / averageConversionAcrossStores) * 100).toFixed(1)}%`,
+        severity: "medium",
+      });
+    }
+
+    return messages;
+  }, [
+    selectedStore,
+    selectedStoreAov,
+    selectedStoreConversion,
+    avgSalesPerStore,
+    averageAovAcrossStores,
+    averageConversionAcrossStores,
+  ]);
+
+  const selectedStoreSummaryText = useMemo(() => {
+    if (!selectedStore) return "";
+
+    const summaryParts: string[] = [];
+
+    if (avgSalesPerStore > 0 && selectedStore.sales < avgSalesPerStore * 0.8) {
+      summaryParts.push("매출이 평균 대비 낮음");
+    }
+    if (averageAovAcrossStores > 0 && selectedStoreAov < averageAovAcrossStores * 0.9) {
+      summaryParts.push("객단가 개선 필요");
+    }
+    if (averageConversionAcrossStores > 0 && selectedStoreConversion < averageConversionAcrossStores * 0.9) {
+      summaryParts.push("전환율 개선 필요");
+    }
+
+    if (summaryParts.length === 0) {
+      return "현재 기준으로 큰 이상 징후 없이 안정적으로 운영 중입니다.";
+    }
+
+    return `${summaryParts.join(" / ")} 상태입니다.`;
+  }, [
+    selectedStore,
+    selectedStoreAov,
+    selectedStoreConversion,
+    avgSalesPerStore,
+    averageAovAcrossStores,
+    averageConversionAcrossStores,
+  ]);
 
   if (loading) {
     return (
@@ -398,84 +530,219 @@ export default function MasterDashboardPage() {
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4">
-          <div className="bg-white rounded-[28px] shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-black text-slate-900">매장별 매출 순위</h2>
-                <p className="mt-1 text-sm font-medium text-slate-500">이번 달 누적 기준</p>
+          <div className="space-y-4">
+            <div className="bg-white rounded-[28px] shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">매장별 매출 순위</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">이번 달 누적 기준 · 행 클릭 시 상세 보기</p>
+                </div>
+                <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">
+                  총 {storeCount}개 매장
+                </div>
               </div>
-              <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">
-                총 {storeCount}개 매장
-              </div>
-            </div>
 
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[760px]">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="px-4 py-4 text-left text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      Rank
-                    </th>
-                    <th className="px-4 py-4 text-left text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      Store
-                    </th>
-                    <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      Sales
-                    </th>
-                    <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      Orders
-                    </th>
-                    <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      Visits
-                    </th>
-                    <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
-                      AOV
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storeSummaries.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-sm font-medium text-slate-400">
-                        표시할 데이터가 없습니다.
-                      </td>
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full min-w-[760px]">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="px-4 py-4 text-left text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        Rank
+                      </th>
+                      <th className="px-4 py-4 text-left text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        Store
+                      </th>
+                      <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        Sales
+                      </th>
+                      <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        Orders
+                      </th>
+                      <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        Visits
+                      </th>
+                      <th className="px-4 py-4 text-right text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                        AOV
+                      </th>
                     </tr>
-                  ) : (
-                    storeSummaries.map((store, index) => {
-                      const aov = store.orders > 0 ? store.sales / store.orders : 0;
+                  </thead>
+                  <tbody>
+                    {storeSummaries.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-sm font-medium text-slate-400">
+                          표시할 데이터가 없습니다.
+                        </td>
+                      </tr>
+                    ) : (
+                      storeSummaries.map((store, index) => {
+                        const aov = store.orders > 0 ? store.sales / store.orders : 0;
+                        const isSelected = selectedStoreId === store.storeId;
 
-                      return (
-                        <tr key={store.storeId} className="border-b border-slate-100 last:border-b-0">
-                          <td className="px-4 py-4">
-                            <div className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-slate-900 px-3 text-sm font-black text-white">
-                              #{index + 1}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="font-black text-slate-900">{store.storeName}</div>
-                            <div className="mt-1 text-xs font-semibold text-slate-400">
-                              store_id: {store.storeId}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-right text-sm font-black text-slate-900">
-                            ${Math.round(store.sales).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
-                            {Math.round(store.orders).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
-                            {Math.round(store.visits).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
-                            ${aov.toFixed(2)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                        return (
+                          <tr
+                            key={store.storeId}
+                            className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors ${
+                              isSelected ? "bg-indigo-50/70" : "hover:bg-slate-50"
+                            }`}
+                            onClick={() => setSelectedStoreId(store.storeId)}
+                          >
+                            <td className="px-4 py-4">
+                              <div className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-slate-900 px-3 text-sm font-black text-white">
+                                #{index + 1}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="font-black text-slate-900">{store.storeName}</div>
+                              <div className="mt-1 text-xs font-semibold text-slate-400">
+                                store_id: {store.storeId}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-right text-sm font-black text-slate-900">
+                              ${Math.round(store.sales).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
+                              {Math.round(store.orders).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
+                              {Math.round(store.visits).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-4 text-right text-sm font-semibold text-slate-600">
+                              ${aov.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {selectedStore && (
+              <div className="bg-white rounded-[28px] shadow-sm border border-slate-200 p-6">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <div className="text-[11px] font-black tracking-[0.22em] uppercase text-indigo-500">
+                      Selected Store Detail
+                    </div>
+                    <h3 className="mt-2 text-2xl font-black text-slate-900">
+                      {selectedStore.storeName}
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      현재 선택한 매장 상세 현황
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">
+                    매출 순위 #{selectedStoreRank}
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Sales
+                    </div>
+                    <div className="mt-3 text-2xl font-black text-slate-900">
+                      ${Math.round(selectedStore.sales).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Orders
+                    </div>
+                    <div className="mt-3 text-2xl font-black text-slate-900">
+                      {Math.round(selectedStore.orders).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Visits
+                    </div>
+                    <div className="mt-3 text-2xl font-black text-slate-900">
+                      {Math.round(selectedStore.visits).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      AOV
+                    </div>
+                    <div className="mt-3 text-2xl font-black text-slate-900">
+                      ${selectedStoreAov.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Conversion
+                    </div>
+                    <div className="mt-3 text-2xl font-black text-slate-900">
+                      {selectedStoreConversion.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-4">
+                  <div className="rounded-[24px] border border-slate-200 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Store Summary
+                    </div>
+                    <div className="mt-3 text-lg font-black text-slate-900">
+                      전체 매출 비중 {selectedStoreShare.toFixed(1)}%
+                    </div>
+                    <div className="mt-3 text-sm font-medium text-slate-600">
+                      {selectedStoreSummaryText}
+                    </div>
+                    <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-slate-900"
+                        style={{ width: `${Math.min(selectedStoreShare, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 p-5">
+                    <div className="text-[11px] font-black tracking-[0.18em] uppercase text-slate-400">
+                      Risk Check
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {selectedStoreAlerts.length === 0 ? (
+                        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-4">
+                          <div className="text-sm font-black text-emerald-700">정상 운영</div>
+                          <div className="mt-1 text-sm font-medium text-emerald-600">
+                            현재 기준으로 평균 대비 뚜렷한 위험 신호가 없습니다.
+                          </div>
+                        </div>
+                      ) : (
+                        selectedStoreAlerts.map((item, index) => (
+                          <div
+                            key={`${item.label}_${index}`}
+                            className={`rounded-2xl px-4 py-4 border ${
+                              item.severity === "high"
+                                ? "bg-rose-50 border-rose-200"
+                                : "bg-amber-50 border-amber-200"
+                            }`}
+                          >
+                            <div
+                              className={`text-sm font-black ${
+                                item.severity === "high" ? "text-rose-700" : "text-amber-700"
+                              }`}
+                            >
+                              {item.label}
+                            </div>
+                            <div className="mt-1 text-sm font-medium text-slate-600">
+                              {item.value}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -532,3 +799,4 @@ export default function MasterDashboardPage() {
     </div>
   );
 }
+
