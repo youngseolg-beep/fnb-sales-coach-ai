@@ -453,11 +453,7 @@ export default function MasterDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <div className="max-w-7xl mx-auto px-5 py-6 md:px-8 md:py-8 space-y-6">
-        {(loading || isRefreshing) && (
-          <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-600">
-            데이터 불러오는 중...
-          </div>
-        )}
+       
 
         <section className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-600 rounded-[32px] p-7 md:p-9 shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
