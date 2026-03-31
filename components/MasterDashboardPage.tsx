@@ -29,8 +29,7 @@ export default function MasterDashboardPage() {
             formatLocalDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
             formatLocalDate(new Date())
           ),
-          supabase.from("stores").select("id, name"),
-        ]);
+supabase.from("stores").select("*")        ]);
 
         if (!isMounted) return;
 
