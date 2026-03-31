@@ -12,6 +12,15 @@ type StoreSummary = {
   days: number;
 };
 
+type AlertCard = {
+  type: "sales" | "aov" | "conversion";
+  severity: "high" | "medium";
+  title: string;
+  storeName: string;
+  value: string;
+  reason: string;
+};
+
 const toSafeNumber = (value: any, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -115,6 +124,96 @@ export default function MasterDashboardPage() {
   const totalAov = totalOrders > 0 ? totalSales / totalOrders : 0;
   const totalConversionRate = totalVisits > 0 ? (totalOrders / totalVisits) * 100 : 0;
   const topStore = storeSummaries[0] ?? null;
+
+  const alertCards = useMemo<AlertCard[]>(() => {
+    if (storeSummaries.length === 0) return [];
+
+    const avgSales = avgSalesPerStore;
+    const avgAov =
+      storeSummaries.reduce((sum, store) => {
+        const aov = store.orders > 0 ? store.sales / store.orders : 0;
+        return sum + aov;
+      }, 0) / storeSummaries.length;
+
+    const avgConversion =
+      storeSummaries.reduce((sum, store) => {
+        const conversion = store.visits > 0 ? (store.orders / store.visits) * 100 : 0;
+        return sum + conversion;
+      }, 0) / storeSummaries.length;
+
+    const cards: AlertCard[] = [];
+
+    for (const store of storeSummaries) {
+      const aov = store.orders > 0 ? store.sales / store.orders : 0;
+      const conversion = store.visits > 0 ? (store.orders / store.visits) * 100 : 0;
+
+      if (avgSales > 0 && store.sales < avgSales * 0.6) {
+        cards.push({
+          type: "sales",
+          severity: "high",
+          title: "매출 위험 매장",
+          storeName: store.storeName,
+          value: `$${Math.round(store.sales).toLocaleString()}`,
+          reason: `평균 매장 매출 대비 ${((store.sales / avgSales) * 100).toFixed(1)}% 수준`,
+        });
+      } else if (avgSales > 0 && store.sales < avgSales * 0.8) {
+        cards.push({
+          type: "sales",
+          severity: "medium",
+          title: "매출 주의 매장",
+          storeName: store.storeName,
+          value: `$${Math.round(store.sales).toLocaleString()}`,
+          reason: `평균 매장 매출 대비 ${((store.sales / avgSales) * 100).toFixed(1)}% 수준`,
+        });
+      }
+
+      if (avgAov > 0 && aov < avgAov * 0.75) {
+        cards.push({
+          type: "aov",
+          severity: "high",
+          title: "객단가 위험 매장",
+          storeName: store.storeName,
+          value: `$${aov.toFixed(2)}`,
+          reason: `평균 객단가 대비 ${((aov / avgAov) * 100).toFixed(1)}% 수준`,
+        });
+      } else if (avgAov > 0 && aov < avgAov * 0.9) {
+        cards.push({
+          type: "aov",
+          severity: "medium",
+          title: "객단가 주의 매장",
+          storeName: store.storeName,
+          value: `$${aov.toFixed(2)}`,
+          reason: `평균 객단가 대비 ${((aov / avgAov) * 100).toFixed(1)}% 수준`,
+        });
+      }
+
+      if (avgConversion > 0 && conversion < avgConversion * 0.75) {
+        cards.push({
+          type: "conversion",
+          severity: "high",
+          title: "전환율 위험 매장",
+          storeName: store.storeName,
+          value: `${conversion.toFixed(1)}%`,
+          reason: `평균 전환율 대비 ${((conversion / avgConversion) * 100).toFixed(1)}% 수준`,
+        });
+      } else if (avgConversion > 0 && conversion < avgConversion * 0.9) {
+        cards.push({
+          type: "conversion",
+          severity: "medium",
+          title: "전환율 주의 매장",
+          storeName: store.storeName,
+          value: `${conversion.toFixed(1)}%`,
+          reason: `평균 전환율 대비 ${((conversion / avgConversion) * 100).toFixed(1)}% 수준`,
+        });
+      }
+    }
+
+    const priority = { high: 0, medium: 1 };
+
+    return cards
+      .sort((a, b) => priority[a.severity] - priority[b.severity])
+      .slice(0, 6);
+  }, [storeSummaries, avgSalesPerStore]);
 
   if (loading) {
     return (
@@ -229,6 +328,72 @@ export default function MasterDashboardPage() {
               ${totalAov.toFixed(2)}
             </div>
             <div className="mt-2 text-sm text-slate-500 font-medium">전체 평균 객단가</div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-[28px] shadow-sm border border-slate-200 p-6">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-[11px] font-black tracking-[0.22em] uppercase text-rose-500">
+                Alert Center
+              </div>
+              <h2 className="mt-2 text-2xl font-black text-slate-900">문제 매장 자동 탐지</h2>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                평균 대비 낮은 매출 · 객단가 · 전환율을 자동 탐지합니다.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-rose-50 px-4 py-2 text-sm font-bold text-rose-600">
+              총 {alertCards.length}건 탐지
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {alertCards.length === 0 ? (
+              <div className="md:col-span-2 xl:col-span-3 rounded-3xl border border-slate-200 bg-slate-50 px-6 py-10 text-center">
+                <div className="text-lg font-black text-slate-900">이상 징후 없음</div>
+                <div className="mt-2 text-sm font-medium text-slate-500">
+                  현재 기준으로 평균 대비 눈에 띄는 문제 매장이 없습니다.
+                </div>
+              </div>
+            ) : (
+              alertCards.map((alert, index) => {
+                const isHigh = alert.severity === "high";
+
+                return (
+                  <div
+                    key={`${alert.type}_${alert.storeName}_${index}`}
+                    className={`rounded-[24px] border p-5 shadow-sm ${
+                      isHigh
+                        ? "border-rose-200 bg-rose-50"
+                        : "border-amber-200 bg-amber-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black tracking-[0.18em] uppercase ${
+                          isHigh
+                            ? "bg-rose-600 text-white"
+                            : "bg-amber-500 text-white"
+                        }`}
+                      >
+                        {isHigh ? "High Risk" : "Watch"}
+                      </div>
+                      <div
+                        className={`text-sm font-black ${
+                          isHigh ? "text-rose-600" : "text-amber-600"
+                        }`}
+                      >
+                        {alert.value}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 text-lg font-black text-slate-900">{alert.title}</div>
+                    <div className="mt-2 text-base font-bold text-slate-700">{alert.storeName}</div>
+                    <div className="mt-3 text-sm font-medium text-slate-600">{alert.reason}</div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
 
