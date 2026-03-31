@@ -35,7 +35,7 @@ supabase.from("stores").select("*")        ]);
 
         const map: Record<number, string> = {};
         (storeRes.data || []).forEach((s: any) => {
-          map[s.id] = s.name;
+          map[s.id] = s.store_name;
         });
 
         setStoreMap(map);
