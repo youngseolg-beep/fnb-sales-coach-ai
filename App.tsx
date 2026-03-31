@@ -836,16 +836,18 @@ useEffect(() => {
     );
   }
 
-  if (menuMasterLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-slate-900 text-xl font-black">Menu Master Loading...</div>
-          <div className="mt-2 text-sm font-semibold text-slate-500">menu_master 데이터를 불러오는 중입니다.</div>
+ if (userRole !== 'master' && menuMasterLoading) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-slate-900 text-xl font-black">Menu Master Loading...</div>
+        <div className="mt-2 text-sm font-semibold text-slate-500">
+          menu_master 데이터를 불러오는 중입니다.
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
