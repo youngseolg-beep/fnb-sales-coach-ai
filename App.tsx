@@ -19,6 +19,7 @@ import type { SalesReportData, MenuCategory } from "./types";
 
 import MenuSettingsPage from "./components/MenuSettingsPage";
 import DailySalesPage from "./components/DailySalesPage";
+import MasterDashboardPage from "./components/MasterDashboardPage";
 import { supabase } from "./services/supabaseClient";
 
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
