@@ -886,9 +886,12 @@ const menuPage = (
 
 const renderStoreOwnerApp = () => (
   <StoreOwnerShell
-    currentPage={storeOwnerPage}
-    onChangePage={setStoreOwnerPage}
-  >
+  currentPage={storeOwnerPage}
+  onChangePage={setStoreOwnerPage}
+  selectedDate={data.date}
+  monthlyTarget={monthlyTarget}
+  monthlyRate={monthlyRate}
+>
     <StoreOwnerPageRouter
       currentPage={storeOwnerPage}
       summaryPage={summaryPage}
