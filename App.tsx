@@ -841,6 +841,14 @@ const summaryPage = (
     date={data.date}
     monthlyStats={monthlyStats}
     monthlyRate={monthlyRate}
+    monthlyTarget={monthlyTarget}
+    onChangeTarget={(v) => {
+      setMonthlyTarget(v);
+      setData((prev) => ({ ...prev, monthlyTarget: v }));
+    }}
+    onSaveTarget={() =>
+      handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)
+    }
   />
 );
 
