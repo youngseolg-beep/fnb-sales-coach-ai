@@ -18,7 +18,7 @@ import { formatLocalDate } from "./utils2/date";
 import type { SalesReportData, MenuCategory } from "./types";
 
 import MenuSettingsPage from "./components/MenuSettingsPage";
-import DailySalesPage from "./components/DailySalesPage";
+import SalesPage from "./components/SalesPage";
 import MasterDashboardPage from "./components/MasterDashboardPage";
 import SummaryPage from "./components/SummaryPage";
 import DetailPage from "./components/DetailPage";
@@ -869,7 +869,7 @@ const summaryPage = (
 );
 
 const salesPage = (
-  <DailySalesPage
+  <SalesPage
     data={data}
     setData={setData}
     setSelectedDate={setSelectedDate}
