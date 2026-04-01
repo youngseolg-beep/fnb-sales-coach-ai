@@ -899,7 +899,7 @@ const menuPage = (
   />
 );
 
-return (
+const renderStoreOwnerApp = () => (
   <StoreOwnerShell
     currentPage={storeOwnerPage}
     onChangePage={setStoreOwnerPage}
@@ -913,6 +913,8 @@ return (
     />
   </StoreOwnerShell>
 );
+
+return renderStoreOwnerApp();
 };
 
 export default App;
