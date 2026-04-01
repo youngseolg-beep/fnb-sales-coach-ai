@@ -841,7 +841,7 @@ useEffect(() => {
     );
   }
 
- if (userRole !== 'master' && menuMasterLoading) {
+if (userRole !== "master" && menuMasterLoading) {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="text-center">
@@ -853,16 +853,13 @@ useEffect(() => {
     </div>
   );
 }
+
 if (userRole === "master") {
   return <MasterDashboardPage />;
 }
-if (userRole === "master") {
-  return <MasterDashboardPage />;
-}
-  return (
-    const summaryPage = (
+
+const summaryPage = (
   <div className="space-y-4">
-    {/* 월간 KPI 영역 */}
     <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
         <h3 className="font-black text-slate-800 text-sm md:text-base">
@@ -936,5 +933,6 @@ return (
     />
   </StoreOwnerShell>
 );
+};
 
 export default App;
