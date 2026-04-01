@@ -441,11 +441,7 @@ const App: React.FC = () => {
       const yearMonth = getMonthKey(dateStr);
       const priceMap = await getMenuPricesForDate(dateStr, storeId);
 
-      console.error("DEBUG fetchData storeId:", storeId);
-      console.error("DEBUG fetchData selectedDate:", selectedDate);
-      console.error("DEBUG fetchData dateStr:", dateStr);
-      console.error("DEBUG fetchData dbData:", dbData);
-
+     
       const activeBaseCategories = normalizeMenuMasterCategories(
         nextMenuMasterCategories ?? menuMasterCategories
       );
@@ -507,7 +503,7 @@ const App: React.FC = () => {
       await refreshMonthlyStats(yearMonth);
       await refreshMonthlyTarget(yearMonth);
     } catch (err) {
-      console.error("DEBUG fetchData ERROR:", err);
+      console.error("fetchData error:", err);
     } finally {
       setDbLoading(false);
     }
