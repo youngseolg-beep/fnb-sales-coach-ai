@@ -1,3 +1,4 @@
+import { useMonthlyTarget } from "./hooks/useMonthlyTarget";
 import { loadMonthlyTarget, saveMonthlyTarget } from "./services/monthlyTargetService";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -276,9 +277,14 @@ const App: React.FC = () => {
 
   const targetMonthKey =
   selectedDate?.slice(0, 7) || formatLocalDate(new Date()).slice(0, 7);
+  const {
+  monthlyTarget,
+  setMonthlyTarget,
+  monthlyTargetLoading,
+  refreshMonthlyTarget,
+  handleSaveMonthlyTarget,
+} = useMonthlyTarget(storeId);
 
-  const [monthlyTarget, setMonthlyTarget] = useState<number>(0);
-  const [monthlyTargetLoading, setMonthlyTargetLoading] = useState(false);
 
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(INITIAL_CATEGORIES)
@@ -322,35 +328,6 @@ const App: React.FC = () => {
     setToastMsg(msg);
     setToastSeq((s) => s + 1);
   };
-
- async function refreshMonthlyTarget(monthKey: string) {
-  if (storeId == null) return;
-
-  try {
-    setMonthlyTargetLoading(true);
-    const value = await loadMonthlyTarget(monthKey, storeId);
-    setMonthlyTarget(value);
-    setData((prev) => ({ ...prev, monthlyTarget: value }));
-  } catch (error) {
-    console.error("refreshMonthlyTarget error:", error);
-    setMonthlyTarget(0);
-    setData((prev) => ({ ...prev, monthlyTarget: 0 }));
-  } finally {
-    setMonthlyTargetLoading(false);
-  }
-}
-
-async function handleSaveMonthlyTarget(nextValue: number) {
-  if (storeId == null) return;
-
-  try {
-    setMonthlyTarget(nextValue);
-    await saveMonthlyTarget(targetMonthKey, nextValue, storeId);
-  } catch (error) {
-    console.error("handleSaveMonthlyTarget error:", error);
-    alert("월 목표 저장 중 오류가 발생했습니다.");
-  }
-}
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
