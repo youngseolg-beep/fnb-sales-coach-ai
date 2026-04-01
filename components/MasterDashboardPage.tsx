@@ -4,10 +4,36 @@ import {
   loadMasterDashboard,
   type MasterDatePreset,
   type MasterDateRange,
-  type MasterDashboardResult,
   type RiskCard,
   type StoreKpiRow,
 } from "../services/masterDashboardService";
+
+type TopMenuRow = {
+  name: string;
+  qty: number;
+  sales: number;
+};
+
+type MasterDashboardViewData = {
+  summary: {
+    totalSales: number;
+    totalOrders: number;
+    averageSales: number;
+    averageAov: number;
+    overallConversionRate: number;
+    topStoreName: string;
+    topStoreSales: number;
+    totalVisitCount: number;
+    growth: {
+      sales: { current: number; previous: number; rate: number | null };
+      orders: { current: number; previous: number; rate: number | null };
+      aov: { current: number; previous: number; rate: number | null };
+    };
+  };
+  ranking: StoreKpiRow[];
+  risks: RiskCard[];
+  topMenus: TopMenuRow[];
+};
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -82,7 +108,7 @@ function buildDetailRiskText(row: StoreKpiRow) {
 export default function MasterDashboardPage() {
   const [preset, setPreset] = useState<MasterDatePreset>("today");
   const [range, setRange] = useState<MasterDateRange>(getMasterDateRange("today"));
-  const [result, setResult] = useState<MasterDashboardResult | null>(null);
+  const [result, setResult] = useState<MasterDashboardViewData | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -100,7 +126,7 @@ export default function MasterDashboardPage() {
       try {
         setLoading(true);
         setError("");
-        const data = await loadMasterDashboard(range);
+        const data = (await loadMasterDashboard(range)) as MasterDashboardViewData;
 
         if (cancelled) return;
 
@@ -131,6 +157,7 @@ export default function MasterDashboardPage() {
   const summary = result?.summary;
   const ranking = result?.ranking || [];
   const risks = result?.risks || [];
+  const topMenus = result?.topMenus || [];
 
   const selectedStore = useMemo(() => {
     return ranking.find((row) => row.storeId === selectedStoreId) || null;
@@ -249,7 +276,9 @@ export default function MasterDashboardPage() {
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-slate-400">전체 전환율</div>
                 <div className="mt-2 text-3xl font-semibold">{formatPercent(summary.overallConversionRate)}</div>
-                <div className="mt-2 text-sm text-slate-400">방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}</div>
+                <div className="mt-2 text-sm text-slate-400">
+                  방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
+                </div>
               </div>
             </div>
 
@@ -410,6 +439,38 @@ export default function MasterDashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-slate-400">전체 기준 Top 메뉴</div>
+                  <div className="mt-1 text-lg font-semibold">Top 10 Menus</div>
+                </div>
+                <div className="text-sm text-slate-500">{topMenus.length} items</div>
+              </div>
+
+              {topMenus.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  {topMenus.map((menu, index) => (
+                    <div
+                      key={`${menu.name}-${index}`}
+                      className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
+                    >
+                      <div className="text-xs font-medium text-slate-500">#{index + 1}</div>
+                      <div className="mt-2 line-clamp-2 min-h-[40px] text-sm font-semibold text-slate-100">
+                        {menu.name}
+                      </div>
+                      <div className="mt-3 text-lg font-semibold">{formatCurrency(menu.sales)}</div>
+                      <div className="mt-1 text-xs text-slate-400">판매수량 {formatNumber(menu.qty)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
+                  해당 기간 Top 메뉴 데이터가 없습니다.
+                </div>
+              )}
             </div>
           </>
         )}
