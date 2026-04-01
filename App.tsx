@@ -21,6 +21,7 @@ import MenuSettingsPage from "./components/MenuSettingsPage";
 import DailySalesPage from "./components/DailySalesPage";
 import MasterDashboardPage from "./components/MasterDashboardPage";
 import SummaryPage from "./components/SummaryPage";
+import DetailPage from "./components/DetailPage";
 import { supabase } from "./services/supabaseClient";
 
 import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
@@ -882,9 +883,7 @@ const salesPage = (
 );
 
 const detailPage = (
-  <div className="text-center text-slate-400 py-20 font-semibold">
-    Detail 페이지 준비중
-  </div>
+  <DetailPage />
 );
 
 const menuPage = (
