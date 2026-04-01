@@ -458,7 +458,7 @@ export async function loadAllStoresRange(startDate: string, endDate: string): Pr
   }));
 }
 
-export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {
+export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult & { topMenus: { name: string; qty: number; sales: number }[] }> {
   const previousRange = getPreviousRange(range);
 
   const [stores, currentRows, previousRows] = await Promise.all([
@@ -473,9 +473,37 @@ export async function loadMasterDashboard(range: MasterDateRange): Promise<Maste
   const summary = buildSummary(ranking, previousRanking);
   const risks = buildRisks(ranking);
 
+  // 🔥 TOP MENU AGGREGATION
+  const menuMap = new Map<string, { name: string; qty: number; sales: number }>();
+
+  for (const row of currentRows) {
+    const payload = row.payload as any;
+    if (!payload || !payload.categories) continue;
+
+    for (const cat of payload.categories) {
+      for (const item of cat.items || []) {
+        const name = item.name;
+        const qty = Number(item.qty) || 0;
+        const price = Number(item.price) || 0;
+        const sales = qty * price;
+
+        const prev = menuMap.get(name) || { name, qty: 0, sales: 0 };
+        prev.qty += qty;
+        prev.sales += sales;
+
+        menuMap.set(name, prev);
+      }
+    }
+  }
+
+  const topMenus = Array.from(menuMap.values())
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, 10);
+
   return {
     summary,
     ranking,
     risks,
+    topMenus,
   };
 }
