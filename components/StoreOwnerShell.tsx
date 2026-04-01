@@ -48,6 +48,9 @@ export default function StoreOwnerShell({
   children,
   title = "Sales Coach AI",
   subtitle = "Store Owner Workspace",
+  selectedDate,
+  monthlyTarget,
+  monthlyRate,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -62,47 +65,47 @@ export default function StoreOwnerShell({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-  <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
 
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
-      >
-        ☰
-      </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
+            >
+              ☰
+            </button>
 
-      <div>
-        <div className="text-sm font-black text-slate-900">
-          {selectedDate}
+            <div>
+              <div className="text-sm font-black text-slate-900">
+                {selectedDate}
+              </div>
+              <div className="text-[10px] font-black text-slate-400 tracking-widest">
+                POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+
+            <div className="text-right">
+              <div className="text-[10px] text-slate-400">월 목표</div>
+              <div className="text-sm font-black text-slate-900">
+                ${monthlyTarget.toLocaleString()}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-[10px] text-slate-400">달성률</div>
+              <div className="text-sm font-black text-indigo-600">
+                {monthlyRate.toFixed(1)}%
+              </div>
+            </div>
+
+          </div>
         </div>
-        <div className="text-[10px] font-black text-slate-400 tracking-widest">
-          POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
-        </div>
-      </div>
-    </div>
-
-    <div className="flex items-center gap-4">
-
-      <div className="text-right">
-        <div className="text-[10px] text-slate-400">월 목표</div>
-        <div className="text-sm font-black text-slate-900">
-          ${monthlyTarget.toLocaleString()}
-        </div>
-      </div>
-
-      <div className="text-right">
-        <div className="text-[10px] text-slate-400">달성률</div>
-        <div className="text-sm font-black text-indigo-600">
-          {monthlyRate.toFixed(1)}%
-        </div>
-      </div>
-
-    </div>
-  </div>
-</header>
+      </header>
 
       {open && (
         <div className="fixed inset-0 z-50">
@@ -110,7 +113,6 @@ export default function StoreOwnerShell({
             type="button"
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-black/40"
-            aria-label="Close menu overlay"
           />
 
           <aside className="absolute left-0 top-0 h-full w-[84%] max-w-sm border-r border-slate-200 bg-white shadow-2xl">
@@ -123,27 +125,14 @@ export default function StoreOwnerShell({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100"
-                aria-label="Close menu"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+                ✕
               </button>
             </div>
 
             <nav className="px-3 py-3">
-              <div className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <div className="mb-3 px-2 text-xs font-semibold uppercase text-slate-400">
                 Navigation
               </div>
 
@@ -154,22 +143,16 @@ export default function StoreOwnerShell({
                   return (
                     <button
                       key={item.key}
-                      type="button"
                       onClick={() => handleMove(item.key)}
                       className={[
-                        "w-full rounded-2xl border px-4 py-3 text-left transition",
+                        "w-full rounded-2xl border px-4 py-3 text-left",
                         active
-                          ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                          : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+                          ? "bg-slate-900 text-white"
+                          : "bg-white text-slate-900",
                       ].join(" ")}
                     >
                       <div className="text-sm font-semibold">{item.label}</div>
-                      <div
-                        className={[
-                          "mt-1 text-xs",
-                          active ? "text-slate-200" : "text-slate-500",
-                        ].join(" ")}
-                      >
+                      <div className="text-xs text-slate-500 mt-1">
                         {item.description}
                       </div>
                     </button>
@@ -182,18 +165,6 @@ export default function StoreOwnerShell({
       )}
 
       <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-        <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Active Workspace
-          </div>
-          <div className="mt-1 text-lg font-semibold text-slate-900">
-            {activeMenu.label}
-          </div>
-          <div className="mt-1 text-sm text-slate-500">
-            {activeMenu.description}
-          </div>
-        </div>
-
         {children}
       </main>
     </div>
