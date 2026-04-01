@@ -353,7 +353,6 @@ const App: React.FC = () => {
       if (!userError && userData) {
         setUserRole(userData.role);
         setStoreId(userData.store_id);
-        console.log("USER INFO:", userData);
       }
     }
   };
@@ -661,7 +660,6 @@ const App: React.FC = () => {
         if (!error && userData) {
           setUserRole(userData.role);
           setStoreId(userData.store_id);
-          console.log("USER INFO:", userData);
         }
       }
 
