@@ -14,6 +14,12 @@ type TopMenuRow = {
   sales: number;
 };
 
+type GrowthValue = {
+  current: number;
+  previous: number;
+  rate: number | null;
+};
+
 type MasterDashboardViewData = {
   summary: {
     totalSales: number;
@@ -25,14 +31,21 @@ type MasterDashboardViewData = {
     topStoreSales: number;
     totalVisitCount: number;
     growth: {
-      sales: { current: number; previous: number; rate: number | null };
-      orders: { current: number; previous: number; rate: number | null };
-      aov: { current: number; previous: number; rate: number | null };
+      sales: GrowthValue;
+      orders: GrowthValue;
+      aov: GrowthValue;
     };
   };
   ranking: StoreKpiRow[];
   risks: RiskCard[];
   topMenus: TopMenuRow[];
+};
+
+type ActionCard = {
+  title: string;
+  storeName: string;
+  description: string;
+  priority: "high" | "medium";
 };
 
 function formatCurrency(value: number) {
@@ -78,6 +91,13 @@ function riskTone(level: RiskCard["level"]) {
   return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
 }
 
+function actionTone(priority: ActionCard["priority"]) {
+  if (priority === "high") {
+    return "border-rose-500/25 bg-rose-500/10";
+  }
+  return "border-amber-500/25 bg-amber-500/10";
+}
+
 function getPresetLabel(preset: MasterDatePreset) {
   if (preset === "today") return "Today";
   if (preset === "thisWeek") return "This Week";
@@ -103,6 +123,49 @@ function buildDetailRiskText(row: StoreKpiRow) {
   else if (row.conversionRate < 15) items.push("전환율 주의");
 
   return items.length > 0 ? items.join(" / ") : "정상";
+}
+
+function buildActionCards(risks: RiskCard[], topMenus: TopMenuRow[]) {
+  const bestSeller = topMenus[0]?.name || "대표 메뉴";
+  const seen = new Set<string>();
+  const actions: ActionCard[] = [];
+
+  for (const risk of risks) {
+    const key = `${risk.storeId}-${risk.type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    if (risk.type === "sales") {
+      actions.push({
+        title: "매출 회복 액션",
+        storeName: risk.storeName,
+        description: `${bestSeller} 중심 노출을 강화하고, 입구/카운터/배달앱 대표 메뉴 구성을 재정렬하세요.`,
+        priority: risk.level === "danger" ? "high" : "medium",
+      });
+      continue;
+    }
+
+    if (risk.type === "aov") {
+      actions.push({
+        title: "객단가 개선 액션",
+        storeName: risk.storeName,
+        description: `${bestSeller}와 함께 팔기 쉬운 사이드 또는 음료 묶음 제안을 추가해 업셀 비중을 높이세요.`,
+        priority: risk.level === "danger" ? "high" : "medium",
+      });
+      continue;
+    }
+
+    if (risk.type === "conversion") {
+      actions.push({
+        title: "전환율 개선 액션",
+        storeName: risk.storeName,
+        description: `주문 전환이 낮습니다. 베스트 메뉴 1~2개를 전면 배치하고 직원 추천 멘트를 고정해 첫 선택을 빠르게 유도하세요.`,
+        priority: risk.level === "danger" ? "high" : "medium",
+      });
+    }
+  }
+
+  return actions.slice(0, 6);
 }
 
 export default function MasterDashboardPage() {
@@ -158,6 +221,7 @@ export default function MasterDashboardPage() {
   const ranking = result?.ranking || [];
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
+  const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
 
   const selectedStore = useMemo(() => {
     return ranking.find((row) => row.storeId === selectedStoreId) || null;
@@ -316,6 +380,40 @@ export default function MasterDashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-slate-400">문제 매장 액션 제안</div>
+                  <div className="mt-1 text-lg font-semibold">Recommended Actions</div>
+                </div>
+                <div className="text-sm text-slate-500">{actionCards.length} actions</div>
+              </div>
+
+              {actionCards.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  {actionCards.map((card, index) => (
+                    <div
+                      key={`${card.storeName}-${card.title}-${index}`}
+                      className={`rounded-2xl border p-4 ${actionTone(card.priority)}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-slate-100">{card.title}</div>
+                        <div className="rounded-full bg-black/20 px-2 py-1 text-[11px] text-slate-200">
+                          {card.priority === "high" ? "HIGH" : "MEDIUM"}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-slate-300">{card.storeName}</div>
+                      <div className="mt-3 text-sm leading-6 text-slate-200">{card.description}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
+                  현재 추천 액션이 없습니다.
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
