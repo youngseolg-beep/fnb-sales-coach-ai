@@ -776,9 +776,6 @@ const DailySalesPage: React.FC<Props> = ({
             setDataSaved(true);
           }
 
-         console.error("DEBUG date click nextDate:", nextDate);
-console.error("DEBUG before setSelectedDate current data.date:", data.date);
-
 setSelectedDate(nextDate);
 setData((prev) => ({
   ...prev,
