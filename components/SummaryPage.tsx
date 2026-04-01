@@ -7,9 +7,19 @@ type Props = {
     avg: number;
   };
   monthlyRate: number;
+  monthlyTarget: number;
+  onChangeTarget: (value: number) => void;
+  onSaveTarget: () => void;
 };
 
-const SummaryPage: React.FC<Props> = ({ date, monthlyStats, monthlyRate }) => {
+const SummaryPage: React.FC<Props> = ({
+  date,
+  monthlyStats,
+  monthlyRate,
+  monthlyTarget,
+  onChangeTarget,
+  onSaveTarget,
+}) => {
   return (
     <div className="space-y-4">
       <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -17,6 +27,17 @@ const SummaryPage: React.FC<Props> = ({ date, monthlyStats, monthlyRate }) => {
           <h3 className="font-black text-slate-800 text-sm md:text-base">
             {date.substring(0, 7)} 월간 요약
           </h3>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">월 목표</span>
+            <input
+              type="number"
+              value={monthlyTarget || ""}
+              onChange={(e) => onChangeTarget(Number(e.target.value))}
+              onBlur={onSaveTarget}
+              className="w-24 border border-slate-200 rounded px-2 py-1 text-sm text-right"
+            />
+          </div>
         </div>
 
         <div className="p-5 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
