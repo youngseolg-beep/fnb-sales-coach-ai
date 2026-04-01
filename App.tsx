@@ -721,13 +721,6 @@ const App: React.FC = () => {
     void fetchData(selectedDate, menuMasterCategories);
   }, [selectedDate, isLoggedIn, menuMasterLoading, storeId, menuMasterCategories]);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    if (storeId == null) return;
-    if (menuMasterLoading) return;
-
-    void fetchData(selectedDate);
-  }, [selectedDate, isLoggedIn, menuMasterLoading, storeId]);
 
   useEffect(() => {
     if (!toastMsg) return;
