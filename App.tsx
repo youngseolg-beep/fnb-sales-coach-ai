@@ -22,6 +22,9 @@ import DailySalesPage from "./components/DailySalesPage";
 import MasterDashboardPage from "./components/MasterDashboardPage";
 import { supabase } from "./services/supabaseClient";
 
+import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
+import StoreOwnerPageRouter from "./components/StoreOwnerPageRouter";
+
 const getMonthKey = (dateStr: string) => dateStr.substring(0, 7);
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
@@ -263,6 +266,7 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState("");
 
   const [currentPage, setCurrentPage] = useState<"daily-sales" | "menu-settings">("daily-sales");
+  const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
   const [priceSaving, setPriceSaving] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -856,169 +860,81 @@ if (userRole === "master") {
   return <MasterDashboardPage />;
 }
   return (
-    <div className="min-h-screen bg-slate-50 pb-44 md:pb-32">
-      <nav className="bg-indigo-600 px-4 py-3 md:px-6 md:py-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white p-2 rounded-xl text-indigo-600 shadow-sm">
-              <i className="fa-solid fa-store font-black"></i>
-            </div>
+    const summaryPage = (
+  <div className="space-y-4">
+    {/* 월간 KPI 영역 */}
+    <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
+        <h3 className="font-black text-slate-800 text-sm md:text-base">
+          {data.date.substring(0, 7)} 월간 요약
+        </h3>
+      </div>
 
-            <div>
-              <h1 className="text-white font-black text-base md:text-lg leading-none uppercase tracking-tight">
-                홍콩반점 테스트
-              </h1>
-              <p className="text-indigo-200 text-[9px] md:text-[10px] font-bold uppercase mt-1 tracking-widest">
-                Sales Coach AI (USD)
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="text-white font-bold text-xs md:text-sm bg-indigo-500/50 px-2.5 py-1 rounded-full border border-indigo-400 flex flex-col items-end leading-tight">
-              <div className="flex items-center gap-2">
-                {dbLoading && <i className="fa-solid fa-spinner fa-spin text-xs"></i>}
-                {data.date}
-              </div>
-              <div className="text-[7px] font-black tracking-widest text-indigo-200/90 uppercase">
-                POWERED BY <span className="text-white">YOUNGSEOL</span>
-              </div>
-            </div>
-
-            <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors" title="로그아웃">
-              <i className="fa-solid fa-right-from-bracket"></i>
-            </button>
-          </div>
+      <div className="p-5 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
+        <div>
+          <p className="text-xs text-slate-400">누적 매출</p>
+          <p className="text-2xl font-black">${monthlyStats.total.toLocaleString()}</p>
         </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto px-4 md:px-6 mt-6 md:mt-10 space-y-8 md:space-y-12">
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm md:text-base flex items-center gap-2">
-              <i className="fa-solid fa-chart-line text-indigo-500"></i>
-              {data.date.substring(0, 7)} 월간 요약
-            </h3>
-            <div className="flex items-center gap-2 md:gap-3">
-              <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                월 목표
-              </label>
-              <div className="relative w-32 md:w-36">
-                <input
-                  type="number"
-                  value={data.monthlyTarget || ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setData((prev) => ({ ...prev, monthlyTarget: v }));
-                    setMonthlyTarget(v);
-                  }}
-                  onBlur={() => {
-                    handleSaveMonthlyTarget(monthlyTarget);
-                  }}
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-2 pr-10 py-1 text-right text-[11px] md:text-sm font-bold focus:ring-1 focus:ring-indigo-400 outline-none tabular-nums"
-                  placeholder="0"
-                />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 pointer-events-none">
-                  USD
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-5 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
-            <div className="space-y-1">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                이번 달 누적 매출
-              </p>
-              <p className="text-2xl md:text-3xl font-black text-slate-900">${monthlyStats.total.toLocaleString()}</p>
-            </div>
-
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                일평균 매출
-              </p>
-              <p className="text-2xl md:text-3xl font-black text-slate-900">
-                ${Math.round(monthlyStats.avg).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="space-y-1 md:border-l md:border-slate-100 md:pl-8">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                목표 달성률
-              </p>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl md:text-3xl font-black text-indigo-600">{monthlyRate.toFixed(1)}%</p>
-                <div className="flex-1 h-2 bg-slate-100 rounded-full mb-2 overflow-hidden">
-                  <div
-                    className="h-full bg-indigo-500 transition-all duration-1000"
-                    style={{ width: `${Math.min(monthlyRate, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage("daily-sales")}
-            className={`h-11 rounded-xl px-4 text-sm font-semibold transition-all ${
-              currentPage === "daily-sales"
-                ? "bg-slate-900 text-white"
-                : "bg-white text-slate-700 border border-slate-200"
-            }`}
-          >
-            Daily Sales
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentPage("menu-settings")}
-            className={`h-11 rounded-xl px-4 text-sm font-semibold transition-all ${
-              currentPage === "menu-settings"
-                ? "bg-slate-900 text-white"
-                : "bg-white text-slate-700 border border-slate-200"
-            }`}
-          >
-            Menu Settings
-          </button>
-        </section>
-
-        {currentPage === "daily-sales" ? (
-          <DailySalesPage
-            data={data}
-            setData={setData}
-            setSelectedDate={setSelectedDate}
-            datesWithData={datesWithData}
-            onMonthChange={handleMonthChange}
-            refreshMonthlyStats={refreshMonthlyStats}
-            showToast={showToast}
-            onDelete={handleDelete}
-            storeId={storeId!}
-          />
-        ) : (
-         <MenuSettingsPage
-  selectedDate={data.date}
-  categories={data.categories}
-  originalCategories={originalCategories}
-  onChangeCategories={handleMenuSettingsCategoriesChange}
-  onSavePrices={handleSaveMenuPrices}
-  onReloadMenuMaster={reloadMenuMaster}
-  saving={priceSaving}
-  storeId={storeId!}
-  onShowToast={showToast}
-/>
-        )}
-      </main>
-
-      {toastMsg && (
-        <div className="fixed bottom-28 md:bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-[10001] text-sm font-bold pointer-events-none">
-          {toastMsg}
+        <div>
+          <p className="text-xs text-slate-400">일 평균</p>
+          <p className="text-2xl font-black">${Math.round(monthlyStats.avg)}</p>
         </div>
-      )}
-    </div>
-  );
-};
+        <div>
+          <p className="text-xs text-slate-400">달성률</p>
+          <p className="text-2xl font-black text-indigo-600">{monthlyRate.toFixed(1)}%</p>
+        </div>
+      </div>
+    </section>
+  </div>
+);
+
+const salesPage = (
+  <DailySalesPage
+    data={data}
+    setData={setData}
+    setSelectedDate={setSelectedDate}
+    datesWithData={datesWithData}
+    onMonthChange={handleMonthChange}
+    refreshMonthlyStats={refreshMonthlyStats}
+    showToast={showToast}
+    onDelete={handleDelete}
+    storeId={storeId!}
+  />
+);
+
+const detailPage = (
+  <div className="text-center text-slate-400 py-20 font-semibold">
+    Detail 페이지 준비중
+  </div>
+);
+
+const menuPage = (
+  <MenuSettingsPage
+    selectedDate={data.date}
+    categories={data.categories}
+    originalCategories={originalCategories}
+    onChangeCategories={handleMenuSettingsCategoriesChange}
+    onSavePrices={handleSaveMenuPrices}
+    onReloadMenuMaster={reloadMenuMaster}
+    saving={priceSaving}
+    storeId={storeId!}
+    onShowToast={showToast}
+  />
+);
+
+return (
+  <StoreOwnerShell
+    currentPage={storeOwnerPage}
+    onChangePage={setStoreOwnerPage}
+  >
+    <StoreOwnerPageRouter
+      currentPage={storeOwnerPage}
+      summaryPage={summaryPage}
+      salesPage={salesPage}
+      detailPage={detailPage}
+      menuPage={menuPage}
+    />
+  </StoreOwnerShell>
+);
 
 export default App;
