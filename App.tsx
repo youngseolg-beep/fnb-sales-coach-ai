@@ -267,7 +267,6 @@ const App: React.FC = () => {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState<"daily-sales" | "menu-settings">("daily-sales");
   const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
   const [priceSaving, setPriceSaving] = useState(false);
 
