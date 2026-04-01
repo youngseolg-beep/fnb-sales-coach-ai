@@ -693,7 +693,6 @@ const App: React.FC = () => {
         if (!isMounted) return;
 
         setMenuMasterCategories(nextMenuCategories);
-        await fetchData(selectedDate, nextMenuCategories);
       } catch (error) {
         console.error("Menu Master Load Error:", error);
         if (!isMounted) return;
