@@ -14,6 +14,9 @@ type Props = {
   children: ReactNode;
   title?: string;
   subtitle?: string;
+  selectedDate: string;
+  monthlyTarget: number;
+  monthlyRate: number;
 };
 
 const MENU_ITEMS: MenuItem[] = [
@@ -59,45 +62,47 @@ export default function StoreOwnerShell({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100"
-              aria-label="Open menu"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="4" y1="7" x2="20" y2="7" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="17" x2="20" y2="17" />
-              </svg>
-            </button>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+  <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
 
-            <div>
-              <div className="text-base font-semibold leading-tight">{title}</div>
-              <div className="text-xs text-slate-500">{subtitle}</div>
-            </div>
-          </div>
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
+      >
+        ☰
+      </button>
 
-          <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right sm:block">
-            <div className="text-xs text-slate-500">Current Page</div>
-            <div className="text-sm font-semibold text-slate-900">
-              {activeMenu.label}
-            </div>
-          </div>
+      <div>
+        <div className="text-sm font-black text-slate-900">
+          {selectedDate}
         </div>
-      </header>
+        <div className="text-[10px] font-black text-slate-400 tracking-widest">
+          POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+        </div>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-4">
+
+      <div className="text-right">
+        <div className="text-[10px] text-slate-400">월 목표</div>
+        <div className="text-sm font-black text-slate-900">
+          ${monthlyTarget.toLocaleString()}
+        </div>
+      </div>
+
+      <div className="text-right">
+        <div className="text-[10px] text-slate-400">달성률</div>
+        <div className="text-sm font-black text-indigo-600">
+          {monthlyRate.toFixed(1)}%
+        </div>
+      </div>
+
+    </div>
+  </div>
+</header>
 
       {open && (
         <div className="fixed inset-0 z-50">
