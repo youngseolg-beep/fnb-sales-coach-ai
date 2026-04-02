@@ -71,16 +71,10 @@ const App: React.FC = () => {
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
-
-  const {
-    monthlyTarget,
-    setMonthlyTarget,
-    refreshMonthlyTarget,
-    handleSaveMonthlyTarget,
-  } = useMonthlyTarget(storeId);
-
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
+
+  const { monthlyTarget, setMonthlyTarget, handleSaveMonthlyTarget } = useMonthlyTarget(storeId);
 
   const datesWithDataCacheRef = useRef<Record<string, string[]>>({});
   const monthlyStatsRequestRef = useRef("");
@@ -109,8 +103,6 @@ const App: React.FC = () => {
   } = useSalesData({
     storeId,
     menuMasterCategories,
-    setMonthlyTarget,
-    refreshMonthlyTarget,
   });
 
   const targetMonthKey =
@@ -140,21 +132,21 @@ const App: React.FC = () => {
 
     const { data: sessionData } = await supabase.auth.getSession();
 
-    if (sessionData.session) {
-      setIsLoggedIn(true);
+    if (!sessionData.session) return;
 
-      const userId = sessionData.session.user.id;
+    setIsLoggedIn(true);
 
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("role, store_id")
-        .eq("id", userId)
-        .single();
+    const userId = sessionData.session.user.id;
 
-      if (!userError && userData) {
-        setUserRole(userData.role);
-        setStoreId(userData.store_id);
-      }
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, store_id")
+      .eq("id", userId)
+      .single();
+
+    if (!userError && userData) {
+      setUserRole(userData.role);
+      setStoreId(userData.store_id);
     }
   };
 
@@ -162,6 +154,7 @@ const App: React.FC = () => {
     if (supabase) {
       await supabase.auth.signOut();
     }
+
     setIsLoggedIn(false);
     setUserRole(null);
     setStoreId(null);
@@ -169,6 +162,8 @@ const App: React.FC = () => {
     setPassword("");
     setAuthError("");
     setDatesWithData([]);
+    setMenuMasterCategories([]);
+    setMenuMasterLoading(true);
     datesWithDataCacheRef.current = {};
     monthlyStatsRequestRef.current = "";
   };
@@ -196,12 +191,13 @@ const App: React.FC = () => {
 
         if (monthlyStatsRequestRef.current !== requestKey) return;
 
-        datesWithDataCacheRef.current[cacheKey] = dates;
-        setDatesWithData(dates);
+        const safeDates = Array.isArray(dates) ? dates : [];
+        datesWithDataCacheRef.current[cacheKey] = safeDates;
+        setDatesWithData(safeDates);
 
         setMonthlyStats({
           total,
-          avg: dates.length > 0 ? total / dates.length : 0,
+          avg: safeDates.length > 0 ? total / safeDates.length : 0,
           rate: target > 0 ? (total / target) * 100 : 0,
         });
 
@@ -217,14 +213,14 @@ const App: React.FC = () => {
         if (monthlyStatsRequestRef.current !== requestKey) return;
         console.error("refreshMonthlyStats error:", error);
 
-        if (!cachedDates) {
-          setDatesWithData([]);
+        if (cachedDates) {
+          setDatesWithData(cachedDates);
         }
 
         setMonthlyStats((prev) => ({
           ...prev,
-          total: 0,
-          avg: 0,
+          total: prev.total,
+          avg: prev.avg,
         }));
       }
     },
@@ -258,13 +254,13 @@ const App: React.FC = () => {
 
     const yearMonth = formatLocalDate(month).substring(0, 7);
     const cacheKey = buildMonthCacheKey(yearMonth, storeId);
-
     const cachedDates = datesWithDataCacheRef.current[cacheKey];
+
     if (cachedDates) {
       setDatesWithData(cachedDates);
     }
 
-    refreshMonthlyStats(yearMonth);
+    await refreshMonthlyStats(yearMonth);
   };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
@@ -312,7 +308,7 @@ const App: React.FC = () => {
       setOriginalCategories(cloneCategories(refreshedCategories));
 
       showToast("메뉴 가격 / 원가가 저장되었습니다.");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Price Save Error:", error);
       showToast("메뉴 가격 저장 중 오류가 발생했습니다.");
     } finally {
@@ -352,7 +348,7 @@ const App: React.FC = () => {
 
       await refreshMonthlyStats(yearMonth);
       showToast("데이터가 삭제되었습니다.");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Delete Error:", error);
       showToast("삭제 중 오류가 발생했습니다.");
     }
@@ -387,48 +383,50 @@ const App: React.FC = () => {
       setSessionChecked(true);
     };
 
-    checkSession();
+    void checkSession();
   }, []);
 
- useEffect(() => {
-  if (!isLoggedIn) return;
-  if (storeId == null) return;
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (storeId == null) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  const initMenuMaster = async () => {
-    try {
-      setMenuMasterLoading(true);
+    const initMenuMaster = async () => {
+      try {
+        setMenuMasterLoading(true);
 
-      const loadedMenuCategories = await loadMenuMaster(storeId);
-      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-      const nextMenuCategories =
-        normalized.length > 0 ? normalized : cloneCategories(initialCategories);
+        const loadedMenuCategories = await loadMenuMaster(storeId);
+        const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+        const nextMenuCategories =
+          normalized.length > 0 ? normalized : cloneCategories(initialCategories);
 
-      if (!isMounted) return;
+        if (!isMounted) return;
+        setMenuMasterCategories(nextMenuCategories);
+      } catch (error) {
+        console.error("Menu Master Load Error:", error);
 
-      setMenuMasterCategories(nextMenuCategories);
-    } catch (error) {
-      console.error("Menu Master Load Error:", error);
+        if (!isMounted) return;
+        setMenuMasterCategories(cloneCategories(initialCategories));
+      } finally {
+        if (isMounted) {
+          setMenuMasterLoading(false);
+        }
+      }
+    };
 
-      if (!isMounted) return;
-      setMenuMasterCategories(cloneCategories(initialCategories));
-    } finally {
-      if (isMounted) setMenuMasterLoading(false);
-    }
-  };
+    void initMenuMaster();
 
-  initMenuMaster();
-
-  return () => {
-    isMounted = false;
-  };
-}, [isLoggedIn, storeId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn, storeId]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
     if (storeId == null) return;
     if (menuMasterLoading) return;
+    if (menuMasterCategories.length === 0) return;
 
     const run = async () => {
       await fetchData(selectedDate, menuMasterCategories);
@@ -439,8 +437,8 @@ const App: React.FC = () => {
   }, [
     selectedDate,
     isLoggedIn,
-    menuMasterLoading,
     storeId,
+    menuMasterLoading,
     menuMasterCategories,
     fetchData,
     refreshMonthlyStats,
@@ -585,7 +583,7 @@ const App: React.FC = () => {
     />
   );
 
-  const renderStoreOwnerApp = () => (
+  return (
     <StoreOwnerShell
       currentPage={storeOwnerPage}
       onChangePage={setStoreOwnerPage}
@@ -603,8 +601,6 @@ const App: React.FC = () => {
       />
     </StoreOwnerShell>
   );
-
-  return renderStoreOwnerApp();
 };
 
 export default App;
