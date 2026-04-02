@@ -103,6 +103,10 @@ const App: React.FC = () => {
   const targetMonthKey =
     selectedDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
 
+  const selectedYearMonth = useMemo(() => {
+    return selectedDate.substring(0, 7);
+  }, [selectedDate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -383,12 +387,7 @@ const App: React.FC = () => {
     if (menuMasterLoading) return;
     if (menuMasterCategories.length === 0) return;
 
-    const run = async () => {
-      await fetchData(selectedDate, menuMasterCategories);
-      await refreshMonthlyStats(selectedDate.substring(0, 7));
-    };
-
-    void run();
+    void fetchData(selectedDate, menuMasterCategories);
   }, [
     selectedDate,
     isLoggedIn,
@@ -396,6 +395,21 @@ const App: React.FC = () => {
     menuMasterLoading,
     menuMasterCategories,
     fetchData,
+  ]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (storeId == null) return;
+    if (menuMasterLoading) return;
+    if (menuMasterCategories.length === 0) return;
+
+    void refreshMonthlyStats(selectedYearMonth);
+  }, [
+    selectedYearMonth,
+    isLoggedIn,
+    storeId,
+    menuMasterLoading,
+    menuMasterCategories.length,
     refreshMonthlyStats,
   ]);
 
