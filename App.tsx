@@ -254,6 +254,28 @@ const handleMonthChange = async (month: Date) => {
 
   await refreshMonthlyStats(yearMonth, { forceDatesRefresh: true });
 };
+
+  const reloadMenuMaster = async () => {
+  if (storeId == null) return;
+
+  try {
+    setMenuMasterLoading(true);
+
+    const loadedMenuCategories = await loadMenuMaster(storeId);
+    const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+    const nextMenuCategories =
+      normalized.length > 0 ? normalized : cloneCategories(initialCategories);
+
+    setMenuMasterCategories(nextMenuCategories);
+    await fetchData(data.date, nextMenuCategories);
+    await refreshMonthlyStats(data.date.substring(0, 7));
+  } catch (error) {
+    console.error("reloadMenuMaster error:", error);
+    showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
+  } finally {
+    setMenuMasterLoading(false);
+  }
+};
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
     setData((prev) => ({
       ...prev,
