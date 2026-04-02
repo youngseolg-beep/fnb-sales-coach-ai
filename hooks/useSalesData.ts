@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
-import { loadDaily } from "../services/salesStorage";
+import { loadDaily, listDatesInMonth } from "../services/salesStorage";
 import { getMenuPricesForDate } from "../services/menuPriceService";
 import type { MenuCategory, SalesReportData } from "../types";
 
@@ -207,6 +207,8 @@ const mergeCategoriesWithBase = (
   return [...mergedBase, ...extraCategories];
 };
 
+const getMonthKey = (dateStr: string) => String(dateStr).slice(0, 7);
+
 type UseSalesDataParams = {
   storeId?: number | null;
   menuMasterCategories?: MenuCategory[];
@@ -237,6 +239,66 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(
     cloneCategories(INITIAL_CATEGORIES)
   );
+
+  const [datesWithData, setDatesWithData] = useState<string[]>([]);
+  const monthDotsCacheRef = useRef<Record<string, string[]>>({});
+
+  const loadDatesInMonthWithCache = useCallback(
+    async (dateStr: string, forceRefresh = false) => {
+      if (storeId == null) return [];
+
+      const monthKey = getMonthKey(dateStr);
+      const cached = monthDotsCacheRef.current[monthKey];
+
+      if (!forceRefresh && cached) {
+        setDatesWithData(cached);
+        return cached;
+      }
+
+      try {
+        const nextDates = await listDatesInMonth(monthKey, storeId);
+        const safeDates = Array.isArray(nextDates) ? nextDates : [];
+
+        monthDotsCacheRef.current[monthKey] = safeDates;
+        setDatesWithData(safeDates);
+
+        return safeDates;
+      } catch (error) {
+        const fallbackDates = monthDotsCacheRef.current[monthKey] ?? [];
+        if (fallbackDates.length > 0) {
+          setDatesWithData(fallbackDates);
+        }
+        console.error("loadDatesInMonthWithCache error:", error);
+        return fallbackDates;
+      }
+    },
+    [storeId]
+  );
+
+  const refreshDatesInMonth = useCallback(
+    async (dateStr?: string) => {
+      const targetDate = dateStr ?? selectedDate;
+      return await loadDatesInMonthWithCache(targetDate, true);
+    },
+    [selectedDate, loadDatesInMonthWithCache]
+  );
+
+  const handleMonthChange = useCallback(
+    async (dateStr: string) => {
+      return await loadDatesInMonthWithCache(dateStr, false);
+    },
+    [loadDatesInMonthWithCache]
+  );
+
+  useEffect(() => {
+    monthDotsCacheRef.current = {};
+    setDatesWithData([]);
+  }, [storeId]);
+
+  useEffect(() => {
+    if (storeId == null) return;
+    loadDatesInMonthWithCache(selectedDate, false);
+  }, [storeId, selectedDate, loadDatesInMonthWithCache]);
 
   const fetchData = useCallback(
     async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
@@ -327,6 +389,9 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     setData,
     originalCategories,
     setOriginalCategories,
+    datesWithData,
+    refreshDatesInMonth,
+    handleMonthChange,
     initialCategories: INITIAL_CATEGORIES,
     cloneCategories,
     normalizeMenuMasterCategories,
