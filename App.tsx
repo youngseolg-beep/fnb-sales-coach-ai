@@ -174,99 +174,86 @@ const App: React.FC = () => {
   };
 
   const refreshMonthlyStats = useCallback(
-    async (yearMonth: string) => {
-      if (storeId == null) return;
-
-      const targetStoreId = storeId;
-      const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
-      const requestKey = `${cacheKey}_${Date.now()}`;
-      monthlyStatsRequestRef.current = requestKey;
-
-      const cachedDates = datesWithDataCacheRef.current[cacheKey];
-      if (cachedDates) {
-        setDatesWithData(cachedDates);
-      }
-
-      try {
-        const [dates, total, target] = await Promise.all([
-          listDatesInMonth(yearMonth, targetStoreId),
-          getMonthlyTotal(yearMonth, targetStoreId),
-          loadMonthlyTarget(yearMonth, targetStoreId),
-        ]);
-
-        if (monthlyStatsRequestRef.current !== requestKey) return;
-
-        datesWithDataCacheRef.current[cacheKey] = dates;
-        setDatesWithData(dates);
-
-        setMonthlyStats({
-          total,
-          avg: dates.length > 0 ? total / dates.length : 0,
-          rate: target > 0 ? (total / target) * 100 : 0,
-        });
-
-        setMonthlyTarget(target);
-
-        setData((prev: any) => {
-          if (prev.date?.substring(0, 7) === yearMonth) {
-            return { ...prev, mtdSales: total, monthlyTarget: target };
-          }
-          return { ...prev, mtdSales: total };
-        });
-      } catch (error) {
-        if (monthlyStatsRequestRef.current !== requestKey) return;
-        console.error("refreshMonthlyStats error:", error);
-
-        if (!cachedDates) {
-          setDatesWithData([]);
-        }
-
-        setMonthlyStats((prev) => ({
-          ...prev,
-          total: 0,
-          avg: 0,
-        }));
-      }
-    },
-    [buildMonthCacheKey, storeId, setMonthlyTarget, setData]
-  );
-
-  const reloadMenuMaster = async () => {
+  async (yearMonth: string, options?: { forceDatesRefresh?: boolean }) => {
     if (storeId == null) return;
 
-    try {
-      setMenuMasterLoading(true);
-
-      const loadedMenuCategories = await loadMenuMaster(storeId);
-      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-      const nextMenuCategories =
-        normalized.length > 0 ? normalized : cloneCategories(initialCategories);
-
-      setMenuMasterCategories(nextMenuCategories);
-      await fetchData(data.date, nextMenuCategories);
-      await refreshMonthlyStats(data.date.substring(0, 7));
-    } catch (error) {
-      console.error("reloadMenuMaster error:", error);
-      showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
-    } finally {
-      setMenuMasterLoading(false);
-    }
-  };
-
-  const handleMonthChange = async (month: Date) => {
-    if (storeId == null) return;
-
-    const yearMonth = formatLocalDate(month).substring(0, 7);
-    const cacheKey = buildMonthCacheKey(yearMonth, storeId);
+    const targetStoreId = storeId;
+    const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
+    const requestKey = `${cacheKey}_${Date.now()}`;
+    monthlyStatsRequestRef.current = requestKey;
 
     const cachedDates = datesWithDataCacheRef.current[cacheKey];
-    if (cachedDates) {
+    const shouldReuseCachedDates =
+      !options?.forceDatesRefresh && Array.isArray(cachedDates);
+
+    if (shouldReuseCachedDates) {
       setDatesWithData(cachedDates);
     }
 
-    refreshMonthlyStats(yearMonth);
-  };
+    try {
+      const datesPromise = shouldReuseCachedDates
+        ? Promise.resolve(cachedDates)
+        : listDatesInMonth(yearMonth, targetStoreId);
 
+      const [dates, total, target] = await Promise.all([
+        datesPromise,
+        getMonthlyTotal(yearMonth, targetStoreId),
+        loadMonthlyTarget(yearMonth, targetStoreId),
+      ]);
+
+      if (monthlyStatsRequestRef.current !== requestKey) return;
+
+      const safeDates = Array.isArray(dates) ? dates : [];
+      datesWithDataCacheRef.current[cacheKey] = safeDates;
+      setDatesWithData(safeDates);
+
+      setMonthlyStats({
+        total,
+        avg: safeDates.length > 0 ? total / safeDates.length : 0,
+        rate: target > 0 ? (total / target) * 100 : 0,
+      });
+
+      setMonthlyTarget(target);
+
+      setData((prev: any) => {
+        if (prev.date?.substring(0, 7) === yearMonth) {
+          return { ...prev, mtdSales: total, monthlyTarget: target };
+        }
+        return { ...prev, mtdSales: total };
+      });
+    } catch (error) {
+      if (monthlyStatsRequestRef.current !== requestKey) return;
+      console.error("refreshMonthlyStats error:", error);
+
+      if (!shouldReuseCachedDates) {
+        setDatesWithData([]);
+      }
+
+      setMonthlyStats((prev) => ({
+        ...prev,
+        total: 0,
+        avg: 0,
+      }));
+    }
+  },
+  [buildMonthCacheKey, storeId, setMonthlyTarget, setData]
+);
+
+const handleMonthChange = async (month: Date) => {
+  if (storeId == null) return;
+
+  const yearMonth = formatLocalDate(month).substring(0, 7);
+  const cacheKey = buildMonthCacheKey(yearMonth, storeId);
+  const cachedDates = datesWithDataCacheRef.current[cacheKey];
+
+  if (Array.isArray(cachedDates)) {
+    setDatesWithData(cachedDates);
+    await refreshMonthlyStats(yearMonth);
+    return;
+  }
+
+  await refreshMonthlyStats(yearMonth, { forceDatesRefresh: true });
+};
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
     setData((prev) => ({
       ...prev,
