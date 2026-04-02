@@ -221,12 +221,12 @@ const App: React.FC = () => {
         }
         return { ...prev, mtdSales: total };
       });
-    } catch (error) {
+       } catch (error) {
       if (monthlyStatsRequestRef.current !== requestKey) return;
       console.error("refreshMonthlyStats error:", error);
 
-      if (!shouldReuseCachedDates) {
-        setDatesWithData([]);
+      if (Array.isArray(cachedDates)) {
+        setDatesWithData(cachedDates);
       }
 
       setMonthlyStats((prev) => ({
