@@ -1,7 +1,12 @@
+[1] hooks/useSalesData.ts 전체 교체
+
 import { useCallback, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
-import { loadDaily } from "../services/salesStorage";
-import { getMenuPricesForDate } from "../services/menuPriceService";
+import { loadDaily, deleteDaily } from "../services/salesStorage";
+import {
+  getMenuPricesForDate,
+  saveMenuPriceHistory,
+} from "../services/menuPriceService";
 import { loadMonthlyTarget } from "../services/monthlyTargetService";
 import type { MenuCategory, SalesReportData } from "../types";
 
@@ -202,12 +207,42 @@ const mergeCategoriesWithBase = (
   return [...mergedBase, ...extraCategories];
 };
 
+const persistMenuPriceHistory = async (
+  categories: MenuCategory[],
+  effectiveDate: string,
+  storeId: number
+) => {
+  const jobs: Promise<any>[] = [];
+
+  for (const cat of categories) {
+    for (const item of cat.items) {
+      if (!item.id) continue;
+
+      jobs.push(
+        saveMenuPriceHistory(
+          item.id,
+          effectiveDate,
+          Number(item.price ?? 0),
+          item.unitCost !== null && item.unitCost !== undefined
+            ? Number(item.unitCost)
+            : undefined,
+          storeId
+        )
+      );
+    }
+  }
+
+  await Promise.all(jobs);
+};
+
 type UseSalesDataParams = {
   storeId?: number | null;
   menuMasterCategories?: MenuCategory[];
   setMonthlyTarget?: (value: number) => void;
   refreshMonthlyStats?: (yearMonth: string) => Promise<void>;
   refreshMonthlyTarget?: (yearMonth: string) => Promise<void>;
+  onShowToast?: (msg: string) => void;
+  onDatesAfterDelete?: (yearMonth: string, targetDate: string) => void;
 };
 
 export const useSalesData = (params?: UseSalesDataParams) => {
@@ -216,6 +251,8 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   const setMonthlyTarget = params?.setMonthlyTarget;
   const refreshMonthlyStats = params?.refreshMonthlyStats;
   const refreshMonthlyTarget = params?.refreshMonthlyTarget;
+  const onShowToast = params?.onShowToast;
+  const onDatesAfterDelete = params?.onDatesAfterDelete;
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDate(new Date());
@@ -241,6 +278,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     cloneCategories(INITIAL_CATEGORIES)
   );
   const [dbLoading, setDbLoading] = useState(false);
+  const [priceSaving, setPriceSaving] = useState(false);
 
   const fetchData = useCallback(
     async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
@@ -333,6 +371,98 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     ]
   );
 
+  const handleSaveMenuPrices = useCallback(async () => {
+    if (storeId == null) return;
+
+    try {
+      setPriceSaving(true);
+
+      await persistMenuPriceHistory(data.categories, data.date, storeId);
+
+      const freshPriceMap = await getMenuPricesForDate(data.date, storeId);
+
+      const refreshedCategories = data.categories.map((cat) => ({
+        ...cat,
+        items: cat.items.map((item) => {
+          const latest = freshPriceMap.get(item.id);
+
+          if (!latest) return { ...item };
+
+          return {
+            ...item,
+            price:
+              latest.price !== null && latest.price !== undefined
+                ? Number(latest.price)
+                : Number(item.price ?? 0),
+            unitCost:
+              latest.unit_cost !== null && latest.unit_cost !== undefined
+                ? Number(latest.unit_cost)
+                : item.unitCost,
+          };
+        }),
+      }));
+
+      setData((prev) => ({
+        ...prev,
+        categories: cloneCategories(refreshedCategories),
+      }));
+      setOriginalCategories(cloneCategories(refreshedCategories));
+      onShowToast?.("메뉴 가격 / 원가가 저장되었습니다.");
+    } catch (error) {
+      console.error("Price Save Error:", error);
+      onShowToast?.("메뉴 가격 저장 중 오류가 발생했습니다.");
+    } finally {
+      setPriceSaving(false);
+    }
+  }, [storeId, data.categories, data.date, onShowToast]);
+
+  const handleDelete = useCallback(async () => {
+    if (storeId == null) return;
+
+    const targetDate = data.date;
+
+    try {
+      setDbLoading(true);
+      await deleteDaily(targetDate, storeId);
+
+      const resetCats = createEmptyCategoriesFromBase(
+        normalizeMenuMasterCategories(menuMasterCategories)
+      );
+
+      setData((prev) => ({
+        ...prev,
+        posSales: 0,
+        deliverySales: 0,
+        orders: 0,
+        visitCount: 0,
+        note: "",
+        categories: resetCats,
+      }));
+      setOriginalCategories(cloneCategories(resetCats));
+
+      const yearMonth = targetDate.substring(0, 7);
+      onDatesAfterDelete?.(yearMonth, targetDate);
+
+      if (refreshMonthlyStats) {
+        await refreshMonthlyStats(yearMonth);
+      }
+
+      onShowToast?.("데이터가 삭제되었습니다.");
+    } catch (error) {
+      console.error("Delete Error:", error);
+      onShowToast?.("삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDbLoading(false);
+    }
+  }, [
+    storeId,
+    data.date,
+    menuMasterCategories,
+    refreshMonthlyStats,
+    onDatesAfterDelete,
+    onShowToast,
+  ]);
+
   return {
     selectedDate,
     setSelectedDate,
@@ -345,6 +475,62 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     normalizeMenuMasterCategories,
     createEmptyCategoriesFromBase,
     dbLoading,
+    priceSaving,
     fetchData,
+    handleSaveMenuPrices,
+    handleDelete,
   };
 };
+
+[2] App.tsx 수정 1
+import 구문에서 아래 삭제
+- deleteDaily
+- getMenuPricesForDate
+- saveMenuPriceHistory
+
+[3] App.tsx 수정 2
+const persistMenuPriceHistory = async (...) => { ... } 전체 삭제
+
+[4] App.tsx 수정 3
+const [priceSaving, setPriceSaving] = useState(false); 삭제
+
+[5] App.tsx 수정 4
+useSalesData 구조분해 전체를 아래로 교체
+
+  const {
+    selectedDate,
+    setSelectedDate,
+    data,
+    setData,
+    originalCategories,
+    setOriginalCategories,
+    normalizeMenuMasterCategories,
+    createEmptyCategoriesFromBase,
+    cloneCategories,
+    dbLoading,
+    priceSaving,
+    fetchData,
+    handleSaveMenuPrices,
+    handleDelete,
+    initialCategories,
+  } = useSalesData({
+    storeId,
+    menuMasterCategories,
+    setMonthlyTarget,
+    refreshMonthlyStats,
+    refreshMonthlyTarget,
+    onShowToast: showToast,
+    onDatesAfterDelete: (yearMonth, targetDate) => {
+      const cacheKey = buildMonthCacheKey(yearMonth, storeId);
+      const prevDates = datesWithDataCacheRef.current[cacheKey] ?? [];
+      const nextDates = prevDates.filter((date) => date !== targetDate);
+      datesWithDataCacheRef.current[cacheKey] = nextDates;
+      setDatesWithData(nextDates);
+    },
+  });
+
+[6] App.tsx 수정 5
+const handleSaveMenuPrices = async () => { ... } 전체 삭제
+
+[7] App.tsx 수정 6
+const handleDelete = async () => { ... } 전체 삭제
