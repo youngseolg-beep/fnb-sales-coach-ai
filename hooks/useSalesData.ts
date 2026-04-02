@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
 import { loadDaily } from "../services/salesStorage";
 import { getMenuPricesForDate } from "../services/menuPriceService";
-import { loadMonthlyTarget } from "../services/monthlyTargetService";
 import type { MenuCategory, SalesReportData } from "../types";
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
@@ -205,19 +204,13 @@ const mergeCategoriesWithBase = (
 type UseSalesDataParams = {
   storeId?: number | null;
   menuMasterCategories?: MenuCategory[];
-  setMonthlyTarget?: (value: number) => void;
-  refreshMonthlyTarget?: (yearMonth: string) => Promise<void>;
 };
 
 export const useSalesData = (params?: UseSalesDataParams) => {
   const storeId = params?.storeId ?? null;
   const menuMasterCategories = params?.menuMasterCategories ?? cloneCategories(INITIAL_CATEGORIES);
-  const setMonthlyTarget = params?.setMonthlyTarget;
-  const refreshMonthlyTarget = params?.refreshMonthlyTarget;
 
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return formatLocalDate(new Date());
-  });
+  const [selectedDate, setSelectedDate] = useState<string>(() => formatLocalDate(new Date()));
 
   const [data, setData] = useState<SalesReportData>(() => {
     const today = formatLocalDate(new Date());
@@ -235,7 +228,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     };
   });
 
-  const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
+  const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(
     cloneCategories(INITIAL_CATEGORIES)
   );
 
@@ -245,7 +238,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
       try {
         const dbData = await loadDaily(dateStr, storeId);
-        const yearMonth = dateStr.substring(0, 7);
         const priceMap = await getMenuPricesForDate(dateStr, storeId);
 
         const activeBaseCategories = normalizeMenuMasterCategories(
@@ -285,17 +277,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           }),
         }));
 
-        let monthTargetFromDb = 0;
-
-        if (setMonthlyTarget) {
-          monthTargetFromDb = await loadMonthlyTarget(yearMonth, storeId);
-          setMonthlyTarget(monthTargetFromDb);
-        }
-
-        if (refreshMonthlyTarget) {
-          await refreshMonthlyTarget(yearMonth);
-        }
-
         setData((prev: any) => ({
           ...prev,
           date: dateStr,
@@ -304,7 +285,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           orders: nextOrders,
           visitCount: nextVisitCount,
           note: nextNote,
-          monthlyTarget: monthTargetFromDb,
           categories: cloneCategories(nextCategories),
         }));
 
@@ -313,7 +293,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         console.error("fetchData error:", error);
       }
     },
-    [storeId, menuMasterCategories, setMonthlyTarget, refreshMonthlyTarget]
+    [storeId, menuMasterCategories]
   );
 
   return {
