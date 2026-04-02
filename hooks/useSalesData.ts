@@ -1,5 +1,3 @@
-[1] hooks/useSalesData.ts 전체 교체
-
 import { useCallback, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
 import { loadDaily, deleteDaily } from "../services/salesStorage";
