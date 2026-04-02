@@ -218,9 +218,34 @@ const mergeCategoriesWithBase = (
 };
 
 const persistMenuPriceHistory = async (
-categories: MenuCategory[],
-effectiveDate: string,
+  categories: MenuCategory[],
+  effectiveDate: string,
+  storeId: number
+) => {
+  const jobs: Promise<any>[] = [];
 
+  for (const cat of categories) {
+    for (const item of cat.items) {
+      if (!item.id) continue;
+
+      jobs.push(
+        saveMenuPriceHistory(
+          item.id,
+          effectiveDate,
+          Number(item.price ?? 0),
+          item.unitCost !== null && item.unitCost !== undefined
+            ? Number(item.unitCost)
+            : undefined,
+          storeId
+        )
+      );
+    }
+  }
+
+  await Promise.all(jobs);
+};
+
+const App: React.FC = () => {
 const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
 const [priceSaving, setPriceSaving] = useState(false);
 
