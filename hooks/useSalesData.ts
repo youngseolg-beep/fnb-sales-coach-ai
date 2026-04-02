@@ -103,7 +103,7 @@ const normalizeMenuMasterCategories = (categories?: MenuCategory[] | null): Menu
           name: String(item.name),
           price:
             item.price === undefined || item.price === null || item.price === ""
-              ? 0
+              ? undefined
               : toSafeNumber(item.price, 0),
           qty: 0,
           unitCost:
@@ -160,7 +160,10 @@ const mergeCategoriesWithBase = (
         return {
           ...baseItem,
           name: String(loadedItem.name ?? baseItem.name),
-          price: toSafeNumber(loadedItem.price, toSafeNumber(baseItem.price, 0)),
+          price:
+            loadedItem.price === undefined || loadedItem.price === null || loadedItem.price === ""
+              ? baseItem.price
+              : toSafeNumber(loadedItem.price, toSafeNumber(baseItem.price, 0)),
           qty: toSafeNumber(loadedItem.qty, 0),
           unitCost:
             loadedItem.unitCost === undefined ||
@@ -189,7 +192,10 @@ const mergeCategoriesWithBase = (
       items: category.items.map((item: any) => ({
         id: String(item.id),
         name: String(item.name),
-        price: toSafeNumber(item.price, 0),
+        price:
+          item.price === undefined || item.price === null || item.price === ""
+            ? undefined
+            : toSafeNumber(item.price, 0),
         qty: toSafeNumber(item.qty, 0),
         unitCost:
           item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
@@ -267,12 +273,30 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           items: cat.items.map((item) => {
             const history = priceMap.get(item.id);
 
-            if (!history) return { ...item };
+            if (history) {
+              return {
+                ...item,
+                price:
+                  history.price !== null && history.price !== undefined
+                    ? Number(history.price)
+                    : item.price,
+                unitCost:
+                  history.unit_cost !== null && history.unit_cost !== undefined
+                    ? Number(history.unit_cost)
+                    : item.unitCost,
+              };
+            }
 
             return {
               ...item,
-              price: history.price != null ? Number(history.price) : Number(item.price ?? 0),
-              unitCost: history.unit_cost != null ? Number(history.unit_cost) : item.unitCost,
+              price:
+                item.price === undefined || item.price === null || item.price === ""
+                  ? 0
+                  : Number(item.price),
+              unitCost:
+                item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
+                  ? undefined
+                  : Number(item.unitCost),
             };
           }),
         }));
