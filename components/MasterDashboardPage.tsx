@@ -219,6 +219,21 @@ export default function MasterDashboardPage() {
 
   const summary = result?.summary;
   const ranking = result?.ranking || [];
+  const groupedByBrand = useMemo(() => {
+  const map: Record<string, typeof ranking> = {};
+
+  for (const row of ranking) {
+    const brand = (row as any).brandName || "Unknown";
+
+    if (!map[brand]) {
+      map[brand] = [];
+    }
+
+    map[brand].push(row);
+  }
+
+  return map;
+}, [ranking]);
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
   const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
@@ -438,28 +453,38 @@ export default function MasterDashboardPage() {
                         <th className="px-3 py-3">Conversion</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {ranking.map((row, index) => {
-                        const isSelected = row.storeId === selectedStoreId;
+                   <tbody>
+  {Object.entries(groupedByBrand).map(([brand, rows]) => (
+    <React.Fragment key={brand}>
+      <tr className="bg-white/5">
+        <td colSpan={6} className="px-3 py-3 text-sm font-semibold text-blue-300">
+          {brand}
+        </td>
+      </tr>
 
-                        return (
-                          <tr
-                            key={row.storeId}
-                            onClick={() => setSelectedStoreId(row.storeId)}
-                            className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
-                              isSelected ? "bg-blue-500/10" : ""
-                            }`}
-                          >
-                            <td className="px-3 py-3">{index + 1}</td>
-                            <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
-                            <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
-                            <td className="px-3 py-3">{formatNumber(row.orders)}</td>
-                            <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
-                            <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+      {rows.map((row, index) => {
+        const isSelected = row.storeId === selectedStoreId;
+
+        return (
+          <tr
+            key={row.storeId}
+            onClick={() => setSelectedStoreId(row.storeId)}
+            className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
+              isSelected ? "bg-blue-500/10" : ""
+            }`}
+          >
+            <td className="px-3 py-3">{index + 1}</td>
+            <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
+            <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
+            <td className="px-3 py-3">{formatNumber(row.orders)}</td>
+            <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
+            <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
+          </tr>
+        );
+      })}
+    </React.Fragment>
+  ))}
+</tbody>
                   </table>
                 </div>
 
