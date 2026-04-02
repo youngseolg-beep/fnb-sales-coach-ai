@@ -5,7 +5,6 @@ import {
 getMonthlyTotal,
 listDatesInMonth,
 deleteDaily,
-@@ -29,209 +28,6 @@ import { supabase } from "./services/supabaseClient";
 import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
 import StoreOwnerPageRouter from "./components/StoreOwnerPageRouter";
 
@@ -215,7 +214,6 @@ const mergeCategoriesWithBase = (
 const persistMenuPriceHistory = async (
 categories: MenuCategory[],
 effectiveDate: string,
-@@ -271,38 +67,21 @@ const App: React.FC = () => {
 
 const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
 const [priceSaving, setPriceSaving] = useState(false);
@@ -259,7 +257,6 @@ const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 const datesWithDataCacheRef = useRef<Record<string, string[]>>({});
 const monthlyStatsRequestRef = useRef("");
 
-@@ -315,6 +94,28 @@ const App: React.FC = () => {
 setToastSeq((s) => s + 1);
 };
 
@@ -288,7 +285,6 @@ setToastSeq((s) => s + 1);
 const handleLogin = async (e: React.FormEvent) => {
 e.preventDefault();
 
-@@ -407,7 +208,7 @@ const App: React.FC = () => {
 setMonthlyTarget(target);
 
 setData((prev: any) => {
@@ -297,7 +293,6 @@ setData((prev: any) => {
 return { ...prev, mtdSales: total, monthlyTarget: target };
 }
 return { ...prev, mtdSales: total };
-@@ -430,84 +231,6 @@ const App: React.FC = () => {
 [buildMonthCacheKey, storeId, setMonthlyTarget, setData]
 );
 
@@ -382,7 +377,6 @@ return { ...prev, mtdSales: total };
 const reloadMenuMaster = async () => {
 if (storeId == null) return;
 
-@@ -517,10 +240,11 @@ const App: React.FC = () => {
 const loadedMenuCategories = await loadMenuMaster(storeId);
 const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
 const nextMenuCategories =
@@ -395,7 +389,6 @@ await fetchData(data.date, nextMenuCategories);
 } catch (error) {
 console.error("reloadMenuMaster error:", error);
 showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
-@@ -602,7 +326,6 @@ const App: React.FC = () => {
 const targetDate = data.date;
 
 try {
@@ -403,7 +396,6 @@ try {
 await deleteDaily(targetDate, storeId);
 
 const resetCats = createEmptyCategoriesFromBase(
-@@ -632,8 +355,6 @@ const App: React.FC = () => {
 } catch (error: any) {
 console.error("Delete Error:", error);
 showToast("삭제 중 오류가 발생했습니다.");
@@ -412,7 +404,6 @@ showToast("삭제 중 오류가 발생했습니다.");
 }
 };
 
-@@ -682,7 +403,7 @@ const App: React.FC = () => {
 const loadedMenuCategories = await loadMenuMaster(storeId);
 const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
 const nextMenuCategories =
@@ -421,7 +412,6 @@ const nextMenuCategories =
 
 if (!isMounted) return;
 
-@@ -691,9 +412,10 @@ const App: React.FC = () => {
 console.error("Menu Master Load Error:", error);
 if (!isMounted) return;
 
@@ -433,7 +423,6 @@ await fetchData(selectedDate, fallbackCategories);
 } finally {
 if (isMounted) setMenuMasterLoading(false);
 }
-@@ -704,16 +426,37 @@ const App: React.FC = () => {
 return () => {
 isMounted = false;
 };
