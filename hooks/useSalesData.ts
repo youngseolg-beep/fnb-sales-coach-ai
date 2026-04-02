@@ -346,14 +346,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         }));
 
         setOriginalCategories(cloneCategories(nextCategories));
-
-        if (refreshMonthlyStats) {
-          await refreshMonthlyStats(yearMonth);
-        }
-
-        if (refreshMonthlyTarget) {
-          await refreshMonthlyTarget(yearMonth);
-        }
       } catch (error) {
         console.error("fetchData error:", error);
       } finally {
