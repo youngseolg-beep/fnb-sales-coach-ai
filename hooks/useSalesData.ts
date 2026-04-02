@@ -7,7 +7,6 @@ import { loadMonthlyTarget } from "../services/monthlyTargetService";
 import type { MenuCategory, SalesReportData } from "../types";
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
-@@ -83,7 +86,137 @@ const cloneCategories = (categories: MenuCategory[]): MenuCategory[] =>
 items: category.items.map((item) => ({ ...item })),
 }));
 
@@ -146,7 +145,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 const [selectedDate, setSelectedDate] = useState<string>(() => {
 return formatLocalDate(new Date());
 });
-@@ -107,6 +240,98 @@ export const useSalesData = () => {
 const [originalCategories, setOriginalCategories] = useState<MenuCategory[]>(() =>
 cloneCategories(INITIAL_CATEGORIES)
 );
@@ -245,7 +243,6 @@ cloneCategories(INITIAL_CATEGORIES)
 
 return {
 selectedDate,
-@@ -117,5 +342,9 @@ export const useSalesData = () => {
 setOriginalCategories,
 initialCategories: INITIAL_CATEGORIES,
 cloneCategories,
