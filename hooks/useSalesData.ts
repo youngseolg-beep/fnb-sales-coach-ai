@@ -242,6 +242,13 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
   const monthDotsCacheRef = useRef<Record<string, string[]>>({});
+  const lastDotsMonthRef = useRef<string>("");
+  const fetchRequestIdRef = useRef(0);
+  const menuMasterCategoriesRef = useRef<MenuCategory[]>(menuMasterCategories);
+
+  useEffect(() => {
+    menuMasterCategoriesRef.current = menuMasterCategories;
+  }, [menuMasterCategories]);
 
   const loadDatesInMonthWithCache = useCallback(
     async (dateStr: string, forceRefresh = false) => {
@@ -252,6 +259,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
       if (!forceRefresh && cached) {
         setDatesWithData(cached);
+        lastDotsMonthRef.current = monthKey;
         return cached;
       }
 
@@ -261,12 +269,14 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
         monthDotsCacheRef.current[monthKey] = safeDates;
         setDatesWithData(safeDates);
+        lastDotsMonthRef.current = monthKey;
 
         return safeDates;
       } catch (error) {
         const fallbackDates = monthDotsCacheRef.current[monthKey] ?? [];
         if (fallbackDates.length > 0) {
           setDatesWithData(fallbackDates);
+          lastDotsMonthRef.current = monthKey;
         }
         console.error("loadDatesInMonthWithCache error:", error);
         return fallbackDates;
@@ -292,24 +302,36 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
   useEffect(() => {
     monthDotsCacheRef.current = {};
+    lastDotsMonthRef.current = "";
+    fetchRequestIdRef.current = 0;
     setDatesWithData([]);
   }, [storeId]);
 
   useEffect(() => {
     if (storeId == null) return;
-    loadDatesInMonthWithCache(selectedDate, false);
+
+    const monthKey = getMonthKey(selectedDate);
+    if (lastDotsMonthRef.current === monthKey && monthDotsCacheRef.current[monthKey]) {
+      return;
+    }
+
+    void loadDatesInMonthWithCache(selectedDate, false);
   }, [storeId, selectedDate, loadDatesInMonthWithCache]);
 
   const fetchData = useCallback(
     async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
       if (storeId == null) return;
 
+      const requestId = ++fetchRequestIdRef.current;
+
       try {
         const dbData = await loadDaily(dateStr, storeId);
         const priceMap = await getMenuPricesForDate(dateStr, storeId);
 
+        if (requestId !== fetchRequestIdRef.current) return;
+
         const activeBaseCategories = normalizeMenuMasterCategories(
-          nextMenuMasterCategories ?? menuMasterCategories
+          nextMenuMasterCategories ?? menuMasterCategoriesRef.current
         );
 
         let nextCategories: MenuCategory[];
@@ -363,6 +385,8 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           }),
         }));
 
+        if (requestId !== fetchRequestIdRef.current) return;
+
         setData((prev: any) => ({
           ...prev,
           date: dateStr,
@@ -376,10 +400,11 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
         setOriginalCategories(cloneCategories(nextCategories));
       } catch (error) {
+        if (requestId !== fetchRequestIdRef.current) return;
         console.error("fetchData error:", error);
       }
     },
-    [storeId, menuMasterCategories]
+    [storeId]
   );
 
   return {
