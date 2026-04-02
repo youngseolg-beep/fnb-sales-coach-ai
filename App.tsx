@@ -400,51 +400,37 @@ const handleMonthChange = async (month: Date) => {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-    if (storeId == null) return;
+  if (!isLoggedIn) return;
+  if (storeId == null) return;
 
-    let isMounted = true;
+  let isMounted = true;
 
-    const initMenuMaster = async () => {
-      try {
-        setMenuMasterLoading(true);
+  const initMenuMaster = async () => {
+    try {
+      setMenuMasterLoading(true);
 
-        const loadedMenuCategories = await loadMenuMaster(storeId);
-        const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-        const nextMenuCategories =
-          normalized.length > 0 ? normalized : cloneCategories(initialCategories);
+      const loadedMenuCategories = await loadMenuMaster(storeId);
+      const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
+      const nextMenuCategories =
+        normalized.length > 0 ? normalized : cloneCategories(initialCategories);
 
-        if (!isMounted) return;
+      if (!isMounted) return;
+      setMenuMasterCategories(nextMenuCategories);
+    } catch (error) {
+      console.error("Menu Master Load Error:", error);
+      if (!isMounted) return;
+      setMenuMasterCategories(cloneCategories(initialCategories));
+    } finally {
+      if (isMounted) setMenuMasterLoading(false);
+    }
+  };
 
-        setMenuMasterCategories(nextMenuCategories);
-      } catch (error) {
-        console.error("Menu Master Load Error:", error);
-        if (!isMounted) return;
+  initMenuMaster();
 
-        const fallbackCategories = cloneCategories(initialCategories);
-        setMenuMasterCategories(fallbackCategories);
-        await fetchData(selectedDate, fallbackCategories);
-        await refreshMonthlyStats(selectedDate.substring(0, 7));
-      } finally {
-        if (isMounted) setMenuMasterLoading(false);
-      }
-    };
-
-    initMenuMaster();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    isLoggedIn,
-    storeId,
-    selectedDate,
-    normalizeMenuMasterCategories,
-    cloneCategories,
-    initialCategories,
-    fetchData,
-    refreshMonthlyStats,
-  ]);
+  return () => {
+    isMounted = false;
+  };
+}, [isLoggedIn, storeId]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
