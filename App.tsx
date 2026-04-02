@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   getMonthlyTotal,
-  listDatesInMonth,
   deleteDaily,
 } from "./services/salesStorage";
 
@@ -70,18 +69,11 @@ const App: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
-  const [datesWithData, setDatesWithData] = useState<string[]>([]);
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
   const { monthlyTarget, setMonthlyTarget, handleSaveMonthlyTarget } = useMonthlyTarget(storeId);
-
-  const datesWithDataCacheRef = useRef<Record<string, string[]>>({});
   const monthlyStatsRequestRef = useRef("");
-
-  const buildMonthCacheKey = useCallback((yearMonth: string, targetStoreId: number | null) => {
-    return `${targetStoreId ?? "no-store"}_${yearMonth}`;
-  }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -95,6 +87,9 @@ const App: React.FC = () => {
     setData,
     originalCategories,
     setOriginalCategories,
+    datesWithData,
+    refreshDatesInMonth,
+    handleMonthChange,
     normalizeMenuMasterCategories,
     createEmptyCategoriesFromBase,
     cloneCategories,
@@ -161,10 +156,8 @@ const App: React.FC = () => {
     setEmail("");
     setPassword("");
     setAuthError("");
-    setDatesWithData([]);
     setMenuMasterCategories([]);
     setMenuMasterLoading(true);
-    datesWithDataCacheRef.current = {};
     monthlyStatsRequestRef.current = "";
   };
 
@@ -172,28 +165,18 @@ const App: React.FC = () => {
     async (yearMonth: string) => {
       if (storeId == null) return;
 
-      const targetStoreId = storeId;
-      const cacheKey = buildMonthCacheKey(yearMonth, targetStoreId);
-      const requestKey = `${cacheKey}_${Date.now()}`;
+      const requestKey = `${storeId}_${yearMonth}_${Date.now()}`;
       monthlyStatsRequestRef.current = requestKey;
 
-      const cachedDates = datesWithDataCacheRef.current[cacheKey];
-      if (cachedDates) {
-        setDatesWithData(cachedDates);
-      }
-
       try {
-        const [dates, total, target] = await Promise.all([
-          listDatesInMonth(yearMonth, targetStoreId),
-          getMonthlyTotal(yearMonth, targetStoreId),
-          loadMonthlyTarget(yearMonth, targetStoreId),
+        const [total, target] = await Promise.all([
+          getMonthlyTotal(yearMonth, storeId),
+          loadMonthlyTarget(yearMonth, storeId),
         ]);
 
         if (monthlyStatsRequestRef.current !== requestKey) return;
 
-        const safeDates = Array.isArray(dates) ? dates : [];
-        datesWithDataCacheRef.current[cacheKey] = safeDates;
-        setDatesWithData(safeDates);
+        const safeDates = await refreshDatesInMonth(`${yearMonth}-01`);
 
         setMonthlyStats({
           total,
@@ -212,19 +195,9 @@ const App: React.FC = () => {
       } catch (error) {
         if (monthlyStatsRequestRef.current !== requestKey) return;
         console.error("refreshMonthlyStats error:", error);
-
-        if (cachedDates) {
-          setDatesWithData(cachedDates);
-        }
-
-        setMonthlyStats((prev) => ({
-          ...prev,
-          total: prev.total,
-          avg: prev.avg,
-        }));
       }
     },
-    [buildMonthCacheKey, storeId, setMonthlyTarget, setData]
+    [storeId, refreshDatesInMonth, setMonthlyTarget, setData]
   );
 
   const reloadMenuMaster = async () => {
@@ -247,20 +220,6 @@ const App: React.FC = () => {
     } finally {
       setMenuMasterLoading(false);
     }
-  };
-
-  const handleMonthChange = async (month: Date) => {
-    if (storeId == null) return;
-
-    const yearMonth = formatLocalDate(month).substring(0, 7);
-    const cacheKey = buildMonthCacheKey(yearMonth, storeId);
-    const cachedDates = datesWithDataCacheRef.current[cacheKey];
-
-    if (cachedDates) {
-      setDatesWithData(cachedDates);
-    }
-
-    await refreshMonthlyStats(yearMonth);
   };
 
   const handleMenuSettingsCategoriesChange = (nextCategories: MenuCategory[]) => {
@@ -340,13 +299,9 @@ const App: React.FC = () => {
       setOriginalCategories(cloneCategories(resetCats));
 
       const yearMonth = targetDate.substring(0, 7);
-      const cacheKey = buildMonthCacheKey(yearMonth, storeId);
-      const prevDates = datesWithDataCacheRef.current[cacheKey] ?? [];
-      const nextDates = prevDates.filter((date) => date !== targetDate);
-      datesWithDataCacheRef.current[cacheKey] = nextDates;
-      setDatesWithData(nextDates);
-
+      await refreshDatesInMonth(targetDate);
       await refreshMonthlyStats(yearMonth);
+
       showToast("데이터가 삭제되었습니다.");
     } catch (error) {
       console.error("Delete Error:", error);
@@ -559,7 +514,11 @@ const App: React.FC = () => {
       setData={setData}
       setSelectedDate={setSelectedDate}
       datesWithData={datesWithData}
-      onMonthChange={handleMonthChange}
+      onMonthChange={(month) => {
+        const monthDate = formatLocalDate(month);
+        void handleMonthChange(monthDate);
+        void refreshMonthlyStats(monthDate.substring(0, 7));
+      }}
       refreshMonthlyStats={refreshMonthlyStats}
       showToast={showToast}
       onDelete={handleDelete}
