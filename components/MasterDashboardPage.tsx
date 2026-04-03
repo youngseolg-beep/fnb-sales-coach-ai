@@ -172,9 +172,10 @@ export default function MasterDashboardPage() {
   const [preset, setPreset] = useState<MasterDatePreset>("today");
   const [range, setRange] = useState<MasterDateRange>(getMasterDateRange("today"));
   const [result, setResult] = useState<MasterDashboardViewData | null>(null);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+ const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
 
   useEffect(() => {
