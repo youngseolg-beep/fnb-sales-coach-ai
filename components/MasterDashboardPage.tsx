@@ -239,6 +239,28 @@ export default function MasterDashboardPage() {
   return ["ALL", ...Object.keys(groupedByBrand)];
 }, [groupedByBrand]);
   const brandSummaryCards = useMemo(() => {
+    const selectedBrandData = useMemo(() => {
+  if (selectedBrand === "ALL") return null;
+
+  const rows = groupedByBrand[selectedBrand] || [];
+
+  const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
+  const totalOrders = rows.reduce((sum, r) => sum + r.orders, 0);
+  const totalVisit = rows.reduce((sum, r) => sum + r.visitCount, 0);
+
+  const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
+
+  const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0];
+
+  return {
+    totalSales,
+    totalOrders,
+    aov,
+    conversion,
+    topStore,
+  };
+}, [selectedBrand, groupedByBrand]);
   return Object.entries(groupedByBrand).map(([brandName, rows]) => {
     const storeCount = rows.length;
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
@@ -417,6 +439,58 @@ export default function MasterDashboardPage() {
             </div>
 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
   {brandSummaryCards.map((card) => {
+  {selectedBrandData && (
+  <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
+    <div className="mb-4 flex items-center justify-between">
+      <div>
+        <div className="text-sm text-blue-200">Selected Brand</div>
+        <div className="text-xl font-semibold text-white">{selectedBrand}</div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <div className="text-slate-400 text-sm">Sales</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {formatCurrency(selectedBrandData.totalSales)}
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <div className="text-slate-400 text-sm">Orders</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {formatNumber(selectedBrandData.totalOrders)}
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <div className="text-slate-400 text-sm">AOV</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {formatCurrency(selectedBrandData.aov)}
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <div className="text-slate-400 text-sm">Conversion</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {formatPercent(selectedBrandData.conversion)}
+        </div>
+      </div>
+    </div>
+
+    {selectedBrandData.topStore && (
+      <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
+        <div className="text-sm text-slate-400">Top Store</div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          {selectedBrandData.topStore.storeName}
+        </div>
+        <div className="text-sm text-slate-300">
+          {formatCurrency(selectedBrandData.topStore.totalSales)}
+        </div>
+      </div>
+    )}
+  </div>
+)}
     const isSelected = selectedBrand === card.brandName;
 
     return (
