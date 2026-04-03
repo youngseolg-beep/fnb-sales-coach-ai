@@ -70,10 +70,18 @@ export type MasterDashboardSummary = {
   growth: DashboardGrowth;
 };
 
+export type TopMenuRow = {
+  name: string;
+  qty: number;
+  sales: number;
+};
+
 export type MasterDashboardResult = {
   summary: MasterDashboardSummary;
   ranking: StoreKpiRow[];
   risks: RiskCard[];
+  topMenus: TopMenuRow[];
+  topMenusByBrand: Record<string, TopMenuRow[]>;
 };
 
 type SalesDailyRow = {
@@ -461,37 +469,10 @@ async function fetchStores() {
   return (data || []) as StoreRow[];
 }
 
-export async function loadAllStoresRange(startDate: string, endDate: string): Promise<MasterSalesRow[]> {
-  const rows = await fetchSalesRows(startDate, endDate);
+function buildTopMenus(rows: SalesDailyRow[]) {
+  const menuMap = new Map<string, TopMenuRow>();
 
-  return rows.map((row) => ({
-    date: row.date || "",
-    store_id: row.store_id,
-    total_sales: safeNumber(row.total_sales),
-    orders: safeNumber(row.orders),
-    visit_count: safeNumber(row.visit_count),
-    payload: row.payload || null,
-  }));
-}
-
-export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult & { topMenus: { name: string; qty: number; sales: number }[] }> {
-  const previousRange = getPreviousRange(range);
-
-  const [stores, currentRows, previousRows] = await Promise.all([
-    fetchStores(),
-    fetchSalesRows(range.startDate, range.endDate),
-    fetchSalesRows(previousRange.startDate, previousRange.endDate),
-  ]);
-
-  const storeMetaMap = buildStoreMetaMap(stores);
-  const ranking = aggregateRows(currentRows, storeMetaMap);
-  const previousRanking = aggregateRows(previousRows, storeMetaMap);
-  const summary = buildSummary(ranking, previousRanking);
-  const risks = buildRisks(ranking);
-
-  const menuMap = new Map<string, { name: string; qty: number; sales: number }>();
-
-  for (const row of currentRows) {
+  for (const row of rows) {
     const payload = row.payload as any;
     if (!payload || !payload.categories) continue;
 
@@ -505,20 +486,80 @@ export async function loadMasterDashboard(range: MasterDateRange): Promise<Maste
         const prev = menuMap.get(name) || { name, qty: 0, sales: 0 };
         prev.qty += qty;
         prev.sales += sales;
-
         menuMap.set(name, prev);
       }
     }
   }
 
-  const topMenus = Array.from(menuMap.values())
+  return Array.from(menuMap.values())
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 10);
+}
+
+function buildTopMenusByBrand(
+  rows: SalesDailyRow[],
+  storeMetaMap: Map<number, { storeName: string; brandName: string }>
+) {
+  const rowsByBrand: Record<string, SalesDailyRow[]> = {};
+
+  for (const row of rows) {
+    const storeId = safeNumber(row.store_id);
+    if (!storeId) continue;
+
+    const meta = storeMetaMap.get(storeId);
+    const brandName = meta?.brandName || "Unknown";
+
+    if (!rowsByBrand[brandName]) {
+      rowsByBrand[brandName] = [];
+    }
+
+    rowsByBrand[brandName].push(row);
+  }
+
+  const result: Record<string, TopMenuRow[]> = {};
+
+  for (const [brandName, brandRows] of Object.entries(rowsByBrand)) {
+    result[brandName] = buildTopMenus(brandRows);
+  }
+
+  return result;
+}
+
+export async function loadAllStoresRange(startDate: string, endDate: string): Promise<MasterSalesRow[]> {
+  const rows = await fetchSalesRows(startDate, endDate);
+
+  return rows.map((row) => ({
+    date: row.date || "",
+    store_id: row.store_id,
+    total_sales: safeNumber(row.total_sales),
+    orders: safeNumber(row.orders),
+    visit_count: safeNumber(row.visit_count),
+    payload: row.payload || null,
+  }));
+}
+
+export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {
+  const previousRange = getPreviousRange(range);
+
+  const [stores, currentRows, previousRows] = await Promise.all([
+    fetchStores(),
+    fetchSalesRows(range.startDate, range.endDate),
+    fetchSalesRows(previousRange.startDate, previousRange.endDate),
+  ]);
+
+  const storeMetaMap = buildStoreMetaMap(stores);
+  const ranking = aggregateRows(currentRows, storeMetaMap);
+  const previousRanking = aggregateRows(previousRows, storeMetaMap);
+  const summary = buildSummary(ranking, previousRanking);
+  const risks = buildRisks(ranking);
+  const topMenus = buildTopMenus(currentRows);
+  const topMenusByBrand = buildTopMenusByBrand(currentRows, storeMetaMap);
 
   return {
     summary,
     ranking,
     risks,
     topMenus,
+    topMenusByBrand,
   };
 }
