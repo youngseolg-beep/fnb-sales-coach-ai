@@ -176,7 +176,6 @@ export default function MasterDashboardPage() {
 const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
 
   useEffect(() => {
     if (preset !== "custom") {
