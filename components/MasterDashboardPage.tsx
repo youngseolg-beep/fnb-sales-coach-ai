@@ -222,7 +222,6 @@ export default function MasterDashboardPage() {
   const ranking = result?.ranking || [];
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
-  const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
 
   const groupedByBrand = useMemo(() => {
     const map: Record<string, StoreKpiRow[]> = {};
@@ -257,6 +256,24 @@ export default function MasterDashboardPage() {
       };
     });
   }, [groupedByBrand]);
+
+  const selectedBrandRows = useMemo(() => {
+    if (selectedBrand === "ALL") return ranking;
+    return groupedByBrand[selectedBrand] || [];
+  }, [selectedBrand, ranking, groupedByBrand]);
+
+  const selectedBrandStoreIds = useMemo(() => {
+    return new Set(selectedBrandRows.map((row) => row.storeId));
+  }, [selectedBrandRows]);
+
+  const filteredRisks = useMemo(() => {
+    if (selectedBrand === "ALL") return risks;
+    return risks.filter((risk) => selectedBrandStoreIds.has(risk.storeId));
+  }, [selectedBrand, risks, selectedBrandStoreIds]);
+
+  const filteredActionCards = useMemo(() => {
+    return buildActionCards(filteredRisks, topMenus);
+  }, [filteredRisks, topMenus]);
 
   const selectedBrandData = useMemo(() => {
     if (selectedBrand === "ALL") return null;
@@ -481,6 +498,7 @@ export default function MasterDashboardPage() {
                     <div className="text-sm text-blue-200">Selected Brand</div>
                     <div className="text-xl font-semibold text-white">{selectedBrand}</div>
                   </div>
+                  <div className="text-sm text-blue-200">{formatNumber(selectedBrandRows.length)} stores</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -530,15 +548,17 @@ export default function MasterDashboardPage() {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-slate-400">문제 매장 액션 제안</div>
+                  <div className="text-sm text-slate-400">
+                    {selectedBrand === "ALL" ? "문제 매장 액션 제안" : `${selectedBrand} 액션 제안`}
+                  </div>
                   <div className="mt-1 text-lg font-semibold">Recommended Actions</div>
                 </div>
-                <div className="text-sm text-slate-500">{actionCards.length} actions</div>
+                <div className="text-sm text-slate-500">{filteredActionCards.length} actions</div>
               </div>
 
-              {actionCards.length > 0 ? (
+              {filteredActionCards.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-                  {actionCards.map((card, index) => (
+                  {filteredActionCards.map((card, index) => (
                     <div
                       key={`${card.storeName}-${card.title}-${index}`}
                       className={`rounded-2xl border p-4 ${actionTone(card.priority)}`}
@@ -582,7 +602,7 @@ export default function MasterDashboardPage() {
                         </option>
                       ))}
                     </select>
-                    <div className="text-sm text-slate-500">{ranking.length} stores</div>
+                    <div className="text-sm text-slate-500">{selectedBrandRows.length} stores</div>
                   </div>
                 </div>
 
@@ -682,12 +702,14 @@ export default function MasterDashboardPage() {
                 </div>
 
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <div className="text-sm text-slate-400">문제 매장 자동 탐지</div>
+                  <div className="text-sm text-slate-400">
+                    {selectedBrand === "ALL" ? "문제 매장 자동 탐지" : `${selectedBrand} 문제 매장 자동 탐지`}
+                  </div>
                   <div className="mt-1 text-lg font-semibold">Risk Cards</div>
 
                   <div className="mt-4 flex flex-col gap-3">
-                    {risks.length > 0 ? (
-                      risks.map((risk, index) => (
+                    {filteredRisks.length > 0 ? (
+                      filteredRisks.map((risk, index) => (
                         <div
                           key={`${risk.storeId}-${risk.type}-${index}`}
                           className={`rounded-2xl border p-3 ${riskTone(risk.level)}`}
