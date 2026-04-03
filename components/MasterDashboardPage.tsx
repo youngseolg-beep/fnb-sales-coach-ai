@@ -253,21 +253,6 @@ const [error, setError] = useState("");
     };
   });
 }, [groupedByBrand]);
- const brandSummaryCards = useMemo(() => {
-  return Object.entries(groupedByBrand).map(([brandName, rows]) => {
-    const storeCount = rows.length;
-    const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
-    const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-    const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-    return {
-      brandName,
-      storeCount,
-      totalSales,
-      averageAov,
-    };
-  });
-}, [groupedByBrand]);
 
 const selectedBrandData = useMemo(() => {
   if (selectedBrand === "ALL") return null;
