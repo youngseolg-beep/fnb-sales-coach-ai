@@ -238,29 +238,7 @@ export default function MasterDashboardPage() {
   const brandList = useMemo(() => {
   return ["ALL", ...Object.keys(groupedByBrand)];
 }, [groupedByBrand]);
-  const brandSummaryCards = useMemo(() => {
-    const selectedBrandData = useMemo(() => {
-  if (selectedBrand === "ALL") return null;
-
-  const rows = groupedByBrand[selectedBrand] || [];
-
-  const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
-  const totalOrders = rows.reduce((sum, r) => sum + r.orders, 0);
-  const totalVisit = rows.reduce((sum, r) => sum + r.visitCount, 0);
-
-  const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
-  const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
-
-  const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0];
-
-  return {
-    totalSales,
-    totalOrders,
-    aov,
-    conversion,
-    topStore,
-  };
-}, [selectedBrand, groupedByBrand]);
+ const brandSummaryCards = useMemo(() => {
   return Object.entries(groupedByBrand).map(([brandName, rows]) => {
     const storeCount = rows.length;
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
@@ -275,13 +253,32 @@ export default function MasterDashboardPage() {
     };
   });
 }, [groupedByBrand]);
-  const risks = result?.risks || [];
-  const topMenus = result?.topMenus || [];
-  const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
 
-  const selectedStore = useMemo(() => {
-    return ranking.find((row) => row.storeId === selectedStoreId) || null;
-  }, [ranking, selectedStoreId]);
+const selectedBrandData = useMemo(() => {
+  if (selectedBrand === "ALL") return null;
+
+  const rows = groupedByBrand[selectedBrand] || [];
+
+  const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
+  const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+  const totalVisit = rows.reduce((sum, row) => sum + row.visitCount, 0);
+
+  const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
+  const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0] || null;
+
+  return {
+    totalSales,
+    totalOrders,
+    aov,
+    conversion,
+    topStore,
+  };
+}, [selectedBrand, groupedByBrand]);
+
+const selectedStore = useMemo(() => {
+  return ranking.find((row) => row.storeId === selectedStoreId) || null;
+}, [ranking, selectedStoreId]);
 
   const handlePresetChange = (nextPreset: MasterDatePreset) => {
     setPreset(nextPreset);
