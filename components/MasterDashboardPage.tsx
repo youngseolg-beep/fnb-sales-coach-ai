@@ -238,6 +238,21 @@ export default function MasterDashboardPage() {
   const brandList = useMemo(() => {
   return ["ALL", ...Object.keys(groupedByBrand)];
 }, [groupedByBrand]);
+  const brandSummaryCards = useMemo(() => {
+  return Object.entries(groupedByBrand).map(([brandName, rows]) => {
+    const storeCount = rows.length;
+    const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
+    const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+    const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+    return {
+      brandName,
+      storeCount,
+      totalSales,
+      averageAov,
+    };
+  });
+}, [groupedByBrand]);
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
   const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
@@ -400,7 +415,42 @@ export default function MasterDashboardPage() {
                 </div>
               </div>
             </div>
+<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {brandSummaryCards.map((card) => {
+    const isSelected = selectedBrand === card.brandName;
 
+    return (
+      <button
+        key={card.brandName}
+        type="button"
+        onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
+        className={`rounded-3xl border p-5 text-left transition ${
+          isSelected
+            ? "border-blue-400/40 bg-blue-500/10"
+            : "border-white/10 bg-white/5 hover:bg-white/10"
+        }`}
+      >
+        <div className="text-sm text-slate-400">Brand</div>
+        <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div className="rounded-2xl bg-slate-900/70 p-3">
+            <div className="text-slate-400">Stores</div>
+            <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-900/70 p-3">
+            <div className="text-slate-400">Sales</div>
+            <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-900/70 p-3">
+            <div className="text-slate-400">Avg AOV</div>
+            <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
+          </div>
+        </div>
+      </button>
+    );
+  })}
+</div>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
