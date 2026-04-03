@@ -172,10 +172,10 @@ export default function MasterDashboardPage() {
   const [preset, setPreset] = useState<MasterDatePreset>("today");
   const [range, setRange] = useState<MasterDateRange>(getMasterDateRange("today"));
   const [result, setResult] = useState<MasterDashboardViewData | null>(null);
- const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (preset !== "custom") {
@@ -220,65 +220,67 @@ const [error, setError] = useState("");
 
   const summary = result?.summary;
   const ranking = result?.ranking || [];
+  const risks = result?.risks || [];
+  const topMenus = result?.topMenus || [];
+  const actionCards = useMemo(() => buildActionCards(risks, topMenus), [risks, topMenus]);
+
   const groupedByBrand = useMemo(() => {
-  const map: Record<string, typeof ranking> = {};
+    const map: Record<string, StoreKpiRow[]> = {};
 
-  for (const row of ranking) {
-    const brand = (row as any).brandName || "Unknown";
-
-    if (!map[brand]) {
-      map[brand] = [];
+    for (const row of ranking) {
+      const brand = row.brandName || "Unknown";
+      if (!map[brand]) {
+        map[brand] = [];
+      }
+      map[brand].push(row);
     }
 
-    map[brand].push(row);
-  }
+    return map;
+  }, [ranking]);
 
-  return map;
-}, [ranking]);
   const brandList = useMemo(() => {
-  return ["ALL", ...Object.keys(groupedByBrand)];
-}, [groupedByBrand]);
+    return ["ALL", ...Object.keys(groupedByBrand)];
+  }, [groupedByBrand]);
+
   const brandSummaryCards = useMemo(() => {
-  return Object.entries(groupedByBrand).map(([brandName, rows]) => {
-    const storeCount = rows.length;
+    return Object.entries(groupedByBrand).map(([brandName, rows]) => {
+      const storeCount = rows.length;
+      const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
+      const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+      const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+      return {
+        brandName,
+        storeCount,
+        totalSales,
+        averageAov,
+      };
+    });
+  }, [groupedByBrand]);
+
+  const selectedBrandData = useMemo(() => {
+    if (selectedBrand === "ALL") return null;
+
+    const rows = groupedByBrand[selectedBrand] || [];
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
     const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-    const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+    const totalVisit = rows.reduce((sum, row) => sum + row.visitCount, 0);
+    const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
+    const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
+    const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0] || null;
 
     return {
-      brandName,
-      storeCount,
       totalSales,
-      averageAov,
+      totalOrders,
+      aov,
+      conversion,
+      topStore,
     };
-  });
-}, [groupedByBrand]);
+  }, [selectedBrand, groupedByBrand]);
 
-const selectedBrandData = useMemo(() => {
-  if (selectedBrand === "ALL") return null;
-
-  const rows = groupedByBrand[selectedBrand] || [];
-
-  const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
-  const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-  const totalVisit = rows.reduce((sum, row) => sum + row.visitCount, 0);
-
-  const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
-  const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
-  const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0] || null;
-
-  return {
-    totalSales,
-    totalOrders,
-    aov,
-    conversion,
-    topStore,
-  };
-}, [selectedBrand, groupedByBrand]);
-
-const selectedStore = useMemo(() => {
-  return ranking.find((row) => row.storeId === selectedStoreId) || null;
-}, [ranking, selectedStoreId]);
+  const selectedStore = useMemo(() => {
+    return ranking.find((row) => row.storeId === selectedStoreId) || null;
+  }, [ranking, selectedStoreId]);
 
   const handlePresetChange = (nextPreset: MasterDatePreset) => {
     setPreset(nextPreset);
@@ -434,94 +436,97 @@ const selectedStore = useMemo(() => {
                 </div>
               </div>
             </div>
-<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-  {brandSummaryCards.map((card) => {
-  {selectedBrandData && (
-  <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
-    <div className="mb-4 flex items-center justify-between">
-      <div>
-        <div className="text-sm text-blue-200">Selected Brand</div>
-        <div className="text-xl font-semibold text-white">{selectedBrand}</div>
-      </div>
-    </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div className="rounded-2xl bg-slate-900/70 p-4">
-        <div className="text-slate-400 text-sm">Sales</div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          {formatCurrency(selectedBrandData.totalSales)}
-        </div>
-      </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {brandSummaryCards.map((card) => {
+                const isSelected = selectedBrand === card.brandName;
 
-      <div className="rounded-2xl bg-slate-900/70 p-4">
-        <div className="text-slate-400 text-sm">Orders</div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          {formatNumber(selectedBrandData.totalOrders)}
-        </div>
-      </div>
+                return (
+                  <button
+                    key={card.brandName}
+                    type="button"
+                    onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
+                    className={`rounded-3xl border p-5 text-left transition ${
+                      isSelected
+                        ? "border-blue-400/40 bg-blue-500/10"
+                        : "border-white/10 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="text-sm text-slate-400">Brand</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
 
-      <div className="rounded-2xl bg-slate-900/70 p-4">
-        <div className="text-slate-400 text-sm">AOV</div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          {formatCurrency(selectedBrandData.aov)}
-        </div>
-      </div>
+                    <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                      <div className="rounded-2xl bg-slate-900/70 p-3">
+                        <div className="text-slate-400">Stores</div>
+                        <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-slate-900/70 p-3">
+                        <div className="text-slate-400">Sales</div>
+                        <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-slate-900/70 p-3">
+                        <div className="text-slate-400">Avg AOV</div>
+                        <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-      <div className="rounded-2xl bg-slate-900/70 p-4">
-        <div className="text-slate-400 text-sm">Conversion</div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          {formatPercent(selectedBrandData.conversion)}
-        </div>
-      </div>
-    </div>
+            {selectedBrandData && (
+              <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-blue-200">Selected Brand</div>
+                    <div className="text-xl font-semibold text-white">{selectedBrand}</div>
+                  </div>
+                </div>
 
-    {selectedBrandData.topStore && (
-      <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
-        <div className="text-sm text-slate-400">Top Store</div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          {selectedBrandData.topStore.storeName}
-        </div>
-        <div className="text-sm text-slate-300">
-          {formatCurrency(selectedBrandData.topStore.totalSales)}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-    const isSelected = selectedBrand === card.brandName;
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <div className="rounded-2xl bg-slate-900/70 p-4">
+                    <div className="text-sm text-slate-400">Sales</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {formatCurrency(selectedBrandData.totalSales)}
+                    </div>
+                  </div>
 
-    return (
-      <button
-        key={card.brandName}
-        type="button"
-        onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
-        className={`rounded-3xl border p-5 text-left transition ${
-          isSelected
-            ? "border-blue-400/40 bg-blue-500/10"
-            : "border-white/10 bg-white/5 hover:bg-white/10"
-        }`}
-      >
-        <div className="text-sm text-slate-400">Brand</div>
-        <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
+                  <div className="rounded-2xl bg-slate-900/70 p-4">
+                    <div className="text-sm text-slate-400">Orders</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {formatNumber(selectedBrandData.totalOrders)}
+                    </div>
+                  </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-          <div className="rounded-2xl bg-slate-900/70 p-3">
-            <div className="text-slate-400">Stores</div>
-            <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
-          </div>
-          <div className="rounded-2xl bg-slate-900/70 p-3">
-            <div className="text-slate-400">Sales</div>
-            <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
-          </div>
-          <div className="rounded-2xl bg-slate-900/70 p-3">
-            <div className="text-slate-400">Avg AOV</div>
-            <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
-          </div>
-        </div>
-      </button>
-    );
-  })}
-</div>
+                  <div className="rounded-2xl bg-slate-900/70 p-4">
+                    <div className="text-sm text-slate-400">AOV</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {formatCurrency(selectedBrandData.aov)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-900/70 p-4">
+                    <div className="text-sm text-slate-400">Conversion</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {formatPercent(selectedBrandData.conversion)}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedBrandData.topStore && (
+                  <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
+                    <div className="text-sm text-slate-400">Top Store</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {selectedBrandData.topStore.storeName}
+                    </div>
+                    <div className="text-sm text-slate-300">
+                      {formatCurrency(selectedBrandData.topStore.totalSales)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -559,27 +564,27 @@ const selectedStore = useMemo(() => {
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-  <div>
-    <div className="text-sm text-slate-400">매장별 매출 순위</div>
-    <div className="mt-1 text-lg font-semibold">Store Ranking</div>
-  </div>
+                  <div>
+                    <div className="text-sm text-slate-400">매장별 매출 순위</div>
+                    <div className="mt-1 text-lg font-semibold">Store Ranking</div>
+                  </div>
 
-  <div className="flex items-center gap-2">
-    <span className="text-sm text-slate-400">Brand</span>
-    <select
-      value={selectedBrand}
-      onChange={(e) => setSelectedBrand(e.target.value)}
-      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
-    >
-      {brandList.map((brand) => (
-        <option key={brand} value={brand}>
-          {brand}
-        </option>
-      ))}
-    </select>
-    <div className="text-sm text-slate-500">{ranking.length} stores</div>
-  </div>
-</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-400">Brand</span>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
+                    >
+                      {brandList.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-sm text-slate-500">{ranking.length} stores</div>
+                  </div>
+                </div>
 
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
@@ -593,39 +598,40 @@ const selectedStore = useMemo(() => {
                         <th className="px-3 py-3">Conversion</th>
                       </tr>
                     </thead>
-                   <tbody>
-{Object.entries(groupedByBrand)
-  .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
-  .map(([brand, rows]) => (    <React.Fragment key={brand}>
-      <tr className="bg-white/5">
-        <td colSpan={6} className="px-3 py-3 text-sm font-semibold text-blue-300">
-          {brand}
-        </td>
-      </tr>
+                    <tbody>
+                      {Object.entries(groupedByBrand)
+                        .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
+                        .map(([brand, rows]) => (
+                          <React.Fragment key={brand}>
+                            <tr className="bg-white/5">
+                              <td colSpan={6} className="px-3 py-3 text-sm font-semibold text-blue-300">
+                                {brand}
+                              </td>
+                            </tr>
 
-      {rows.map((row, index) => {
-        const isSelected = row.storeId === selectedStoreId;
+                            {rows.map((row, index) => {
+                              const isSelected = row.storeId === selectedStoreId;
 
-        return (
-          <tr
-            key={row.storeId}
-            onClick={() => setSelectedStoreId(row.storeId)}
-            className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
-              isSelected ? "bg-blue-500/10" : ""
-            }`}
-          >
-            <td className="px-3 py-3">{index + 1}</td>
-            <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
-            <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
-            <td className="px-3 py-3">{formatNumber(row.orders)}</td>
-            <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
-            <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
-          </tr>
-        );
-      })}
-    </React.Fragment>
-  ))}
-</tbody>
+                              return (
+                                <tr
+                                  key={row.storeId}
+                                  onClick={() => setSelectedStoreId(row.storeId)}
+                                  className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
+                                    isSelected ? "bg-blue-500/10" : ""
+                                  }`}
+                                >
+                                  <td className="px-3 py-3">{index + 1}</td>
+                                  <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
+                                  <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
+                                  <td className="px-3 py-3">{formatNumber(row.orders)}</td>
+                                  <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
+                                  <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
+                        ))}
+                    </tbody>
                   </table>
                 </div>
 
