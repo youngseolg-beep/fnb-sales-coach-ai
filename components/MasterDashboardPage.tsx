@@ -6,13 +6,8 @@ import {
   type MasterDateRange,
   type RiskCard,
   type StoreKpiRow,
+  type TopMenuRow,
 } from "../services/masterDashboardService";
-
-type TopMenuRow = {
-  name: string;
-  qty: number;
-  sales: number;
-};
 
 type GrowthValue = {
   current: number;
@@ -39,6 +34,7 @@ type MasterDashboardViewData = {
   ranking: StoreKpiRow[];
   risks: RiskCard[];
   topMenus: TopMenuRow[];
+  topMenusByBrand: Record<string, TopMenuRow[]>;
 };
 
 type ActionCard = {
@@ -216,12 +212,13 @@ export default function MasterDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [range.startDate, range.endDate]);
+  }, [range.startDate, range.endDate, selectedStoreId]);
 
   const summary = result?.summary;
   const ranking = result?.ranking || [];
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
+  const topMenusByBrand = result?.topMenusByBrand || {};
 
   const groupedByBrand = useMemo(() => {
     const map: Record<string, StoreKpiRow[]> = {};
@@ -271,9 +268,14 @@ export default function MasterDashboardPage() {
     return risks.filter((risk) => selectedBrandStoreIds.has(risk.storeId));
   }, [selectedBrand, risks, selectedBrandStoreIds]);
 
+  const filteredTopMenus = useMemo(() => {
+    if (selectedBrand === "ALL") return topMenus;
+    return topMenusByBrand[selectedBrand] || [];
+  }, [selectedBrand, topMenus, topMenusByBrand]);
+
   const filteredActionCards = useMemo(() => {
-    return buildActionCards(filteredRisks, topMenus);
-  }, [filteredRisks, topMenus]);
+    return buildActionCards(filteredRisks, filteredTopMenus);
+  }, [filteredRisks, filteredTopMenus]);
 
   const selectedBrandData = useMemo(() => {
     if (selectedBrand === "ALL") return null;
@@ -736,15 +738,17 @@ export default function MasterDashboardPage() {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-slate-400">전체 기준 Top 메뉴</div>
+                  <div className="text-sm text-slate-400">
+                    {selectedBrand === "ALL" ? "전체 기준 Top 메뉴" : `${selectedBrand} Top 메뉴`}
+                  </div>
                   <div className="mt-1 text-lg font-semibold">Top 10 Menus</div>
                 </div>
-                <div className="text-sm text-slate-500">{topMenus.length} items</div>
+                <div className="text-sm text-slate-500">{filteredTopMenus.length} items</div>
               </div>
 
-              {topMenus.length > 0 ? (
+              {filteredTopMenus.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-                  {topMenus.map((menu, index) => (
+                  {filteredTopMenus.map((menu, index) => (
                     <div
                       key={`${menu.name}-${index}`}
                       className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
