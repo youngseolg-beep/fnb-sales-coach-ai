@@ -445,7 +445,49 @@ function buildSummary(currentRanking: StoreKpiRow[], previousRanking: StoreKpiRo
     },
   };
 }
+function buildBrandGrowth(
+  currentRanking: StoreKpiRow[],
+  previousRanking: StoreKpiRow[]
+) {
+  const map: Record<string, { current: number; previous: number; rate: number | null }> = {};
 
+  function aggregate(rows: StoreKpiRow[]) {
+    const brandMap: Record<string, number> = {};
+
+    for (const row of rows) {
+      const brand = row.brandName || "Unknown";
+      brandMap[brand] = (brandMap[brand] || 0) + row.totalSales;
+    }
+
+    return brandMap;
+  }
+
+  const currentMap = aggregate(currentRanking);
+  const previousMap = aggregate(previousRanking);
+
+  const allBrands = new Set([
+    ...Object.keys(currentMap),
+    ...Object.keys(previousMap),
+  ]);
+
+  for (const brand of allBrands) {
+    const current = currentMap[brand] || 0;
+    const previous = previousMap[brand] || 0;
+
+    let rate: number | null = null;
+    if (previous > 0) {
+      rate = ((current - previous) / previous) * 100;
+    }
+
+    map[brand] = {
+      current,
+      previous,
+      rate,
+    };
+  }
+
+  return map;
+}
 async function fetchSalesRows(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("sales_daily")
@@ -559,5 +601,6 @@ export async function loadMasterDashboard(range: MasterDateRange): Promise<Maste
     risks: buildRisks(currentRanking),
     topMenus: buildTopMenus(currentRows),
     topMenusByBrand: buildTopMenusByBrand(currentRows, storeMetaMap),
+    brandGrowth: buildBrandGrowth(currentRanking, previousRanking),
   };
 }
