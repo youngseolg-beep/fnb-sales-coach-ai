@@ -824,6 +824,12 @@ export default function MasterDashboardPage() {
                         <div className="text-slate-400">Risk Check</div>
                         <div className="mt-1 font-semibold">{buildDetailRiskText(selectedStore)}</div>
                       </div>
+                      <div className="rounded-2xl bg-slate-900/70 p-3">
+  <div className="text-slate-400">Sales Growth</div>
+  <div className={`mt-1 font-semibold ${growthTone(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}`}>
+    {formatGrowth(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}
+  </div>
+</div>
                     </div>
                   ) : (
                     <div className="mt-4 rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-500">
