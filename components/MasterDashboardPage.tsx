@@ -78,7 +78,7 @@ function formatPercent(value: number | null | undefined, digits = 1) {
 
 function formatGrowth(rate: number | null | undefined) {
   if (rate === null || rate === undefined || !Number.isFinite(rate)) {
-    return "-";
+    return "No previous data";
   }
 
   const sign = rate > 0 ? "+" : "";
@@ -95,6 +95,14 @@ function growthTone(rate: number | null | undefined) {
   if (rate === 0) return "text-slate-300";
   if (rate > -5) return "text-rose-300";
   return "text-rose-400 font-semibold";
+}
+function formatCompactGrowth(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
+    return "No previous data";
+  }
+
+  const sign = rate > 0 ? "+" : "";
+  return `${sign}${rate.toFixed(1)}%`;
 }
 
 function aovTone(value: number | null | undefined) {
@@ -533,7 +541,7 @@ export default function MasterDashboardPage() {
   <div className="mt-2 text-sm text-slate-300">{formatCurrency(summary.topStoreSales)}</div>
 
   <div className={`mt-2 text-sm font-medium ${growthTone(result?.storeGrowth?.[ranking[0]?.storeId]?.rate ?? null)}`}>
-    {formatGrowth(result?.storeGrowth?.[ranking[0]?.storeId]?.rate ?? null)}
+    {formatCompactGrowth(result?.storeGrowth?.[ranking[0]?.storeId]?.rate ?? null)}
   </div>
 </div>
 
@@ -806,7 +814,7 @@ export default function MasterDashboardPage() {
                                       {formatPercent(row.conversionRate)}
                                     </td>
                                     <td className={`px-3 py-3 ${growthTone(storeGrowthRate)}`}>
-                                      {formatGrowth(storeGrowthRate)}
+                                      {formatCompactGrowth(storeGrowthRate)}
                                     </td>
                                   </tr>
                                 );
@@ -861,7 +869,7 @@ export default function MasterDashboardPage() {
                       <div className="rounded-2xl bg-slate-900/70 p-3">
   <div className="text-slate-400">Sales Growth</div>
   <div className={`mt-1 font-semibold ${growthTone(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}`}>
-    {formatGrowth(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}
+    {formatCompactGrowth(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}
   </div>
 </div>
                     </div>
