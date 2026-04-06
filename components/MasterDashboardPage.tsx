@@ -94,6 +94,25 @@ function growthTone(rate: number | null | undefined) {
   if (rate > -5) return "text-rose-300";
   return "text-rose-400 font-semibold";
 }
+function aovTone(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "text-slate-400";
+  }
+
+  if (value >= 18) return "text-emerald-400 font-semibold";
+  if (value >= 14) return "text-slate-200";
+  return "text-rose-400 font-semibold";
+}
+
+function conversionTone(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "text-slate-400";
+  }
+
+  if (value >= 18) return "text-emerald-400 font-semibold";
+  if (value >= 12) return "text-slate-200";
+  return "text-rose-400 font-semibold";
+}
 
 function riskTone(level: RiskCard["level"]) {
   if (level === "danger") {
