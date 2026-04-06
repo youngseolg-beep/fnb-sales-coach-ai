@@ -35,7 +35,63 @@ type MasterDashboardViewData = {
   risks: RiskCard[];
   topMenus: TopMenuRow[];
   topMenusByBrand: Record<string, TopMenuRow[]>;
+  brandGrowth?: Record<string, { current: number; previous: number; rate: number | null }>;
+  storeGrowth?: Record<number, { current: number; previous: number; rate: number | null }>;
 };
+
+<thead>
+  <tr className="border-b border-white/10 text-left text-slate-400">
+    <th className="px-3 py-3">#</th>
+    <th className="px-3 py-3">Store</th>
+    <th className="px-3 py-3">Sales</th>
+    <th className="px-3 py-3">Orders</th>
+    <th className="px-3 py-3">AOV</th>
+    <th className="px-3 py-3">Conversion</th>
+    <th className="px-3 py-3">Growth</th>
+  </tr>
+</thead>
+<tbody>
+  {Object.entries(groupedByBrand)
+    .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
+    .map(([brand, rows]) => (
+      <React.Fragment key={brand}>
+        <tr className="bg-white/5">
+          <td colSpan={7} className="px-3 py-3 text-sm font-semibold text-blue-300">
+            {brand}
+          </td>
+        </tr>
+
+        {rows.map((row, index) => {
+          const isSelected = row.storeId === selectedStoreId;
+          const storeGrowthRate = result?.storeGrowth?.[row.storeId]?.rate ?? null;
+
+          return (
+            <tr
+              key={row.storeId}
+              onClick={() => setSelectedStoreId(row.storeId)}
+              className={`cursor-pointer border-b border-white/5 transition ${
+                isSelected
+                  ? "bg-blue-500/15 shadow-[inset_3px_0_0_0_rgba(96,165,250,1)]"
+                  : "hover:bg-white/5"
+              }`}
+            >
+              <td className="px-3 py-3">{index + 1}</td>
+              <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
+              <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
+              <td className="px-3 py-3">{formatNumber(row.orders)}</td>
+              <td className={`px-3 py-3 ${aovTone(row.aov)}`}>{formatCurrency(row.aov)}</td>
+              <td className={`px-3 py-3 ${conversionTone(row.conversionRate)}`}>
+                {formatPercent(row.conversionRate)}
+              </td>
+              <td className={`px-3 py-3 ${growthTone(storeGrowthRate)}`}>
+                {formatGrowth(storeGrowthRate)}
+              </td>
+            </tr>
+          );
+        })}
+      </React.Fragment>
+    ))}
+</tbody>
 
 type ActionCard = {
   title: string;
