@@ -377,9 +377,23 @@ export default function MasterDashboardPage() {
             <div>
               <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Master Dashboard</h1>
-              <div className="mt-2 text-sm text-slate-400">
-                {getPresetLabel(preset)} · {getRangeLabel(range)}
-              </div>
+             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {selectedBrand === "ALL" ? "Viewing: ALL Brands" : `Viewing: ${selectedBrand}`}
+  </span>
+
+  <span className="text-slate-500">·</span>
+
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {getPresetLabel(preset)}
+  </span>
+
+  <span className="text-slate-500">·</span>
+
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {getRangeLabel(range)}
+  </span>
+</div>
             </div>
 
             <div className="flex flex-col gap-3">
