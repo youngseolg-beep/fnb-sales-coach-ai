@@ -145,7 +145,18 @@ function getPresetLabel(preset: MasterDatePreset) {
 function getRangeLabel(range: MasterDateRange) {
   return `${range.startDate} ~ ${range.endDate}`;
 }
+function getComparisonLabel(range: MasterDateRange) {
+  if (range.preset === "today") return "Compare: Previous day";
+  if (range.preset === "thisWeek") return "Compare: Previous week";
+  if (range.preset === "thisMonth") return "Compare: Previous month";
 
+  const start = new Date(range.startDate);
+  const end = new Date(range.endDate);
+  const diff = end.getTime() - start.getTime();
+  const dayCount = Math.floor(diff / 86400000) + 1;
+
+  return `Compare: Previous ${dayCount} day${dayCount > 1 ? "s" : ""}`;
+}
 function buildDetailRiskText(row: StoreKpiRow) {
   const items: string[] = [];
 
@@ -381,22 +392,28 @@ export default function MasterDashboardPage() {
               <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-2xl">Master Dashboard</h1>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-                  {selectedBrand === "ALL" ? "Viewing: ALL Brands" : `Viewing: ${selectedBrand}`}
-                </span>
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {selectedBrand === "ALL" ? "Viewing: ALL Brands" : `Viewing: ${selectedBrand}`}
+  </span>
 
-                <span className="text-slate-500">·</span>
+  <span className="text-slate-500">·</span>
 
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-                  {getPresetLabel(preset)}
-                </span>
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {getPresetLabel(preset)}
+  </span>
 
-                <span className="text-slate-500">·</span>
+  <span className="text-slate-500">·</span>
 
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-                  {getRangeLabel(range)}
-                </span>
-              </div>
+  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+    {getRangeLabel(range)}
+  </span>
+
+  <span className="text-slate-500">·</span>
+
+  <span className="rounded-full bg-blue-500/15 px-3 py-1 text-blue-200">
+    {getComparisonLabel(range)}
+  </span>
+</div>
             </div>
 
             <div className="flex flex-col gap-3">
