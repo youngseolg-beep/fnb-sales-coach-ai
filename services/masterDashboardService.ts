@@ -82,6 +82,8 @@ export type MasterDashboardResult = {
   risks: RiskCard[];
   topMenus: TopMenuRow[];
   topMenusByBrand: Record<string, TopMenuRow[]>;
+  brandGrowth: Record<string, { current: number; previous: number; rate: number | null }>;
+  storeGrowth: Record<number, { current: number; previous: number; rate: number | null }>;
 };
 
 type SalesDailyRow = {
@@ -281,10 +283,7 @@ function calcRate(current: number, previous: number) {
   return ((current - previous) / previous) * 100;
 }
 
-function aggregateRows(
-  rows: SalesDailyRow[],
-  storeMetaMap: Map<number, { storeName: string; brandName: string }>
-) {
+function aggregateRows(rows: SalesDailyRow[], storeMetaMap: Map<number, { storeName: string; brandName: string }>) {
   const storeMap = new Map<number, StoreKpiRow>();
 
   for (const row of rows) {
@@ -445,10 +444,8 @@ function buildSummary(currentRanking: StoreKpiRow[], previousRanking: StoreKpiRo
     },
   };
 }
-function buildBrandGrowth(
-  currentRanking: StoreKpiRow[],
-  previousRanking: StoreKpiRow[]
-) {
+
+function buildBrandGrowth(currentRanking: StoreKpiRow[], previousRanking: StoreKpiRow[]) {
   const map: Record<string, { current: number; previous: number; rate: number | null }> = {};
 
   function aggregate(rows: StoreKpiRow[]) {
@@ -465,35 +462,24 @@ function buildBrandGrowth(
   const currentMap = aggregate(currentRanking);
   const previousMap = aggregate(previousRanking);
 
-  const allBrands = new Set([
-    ...Object.keys(currentMap),
-    ...Object.keys(previousMap),
-  ]);
+  const allBrands = new Set([...Object.keys(currentMap), ...Object.keys(previousMap)]);
 
   for (const brand of allBrands) {
     const current = currentMap[brand] || 0;
     const previous = previousMap[brand] || 0;
 
-    let rate: number | null = null;
-    if (previous > 0) {
-      rate = ((current - previous) / previous) * 100;
-    }
-
     map[brand] = {
       current,
       previous,
-      rate,
+      rate: calcRate(current, previous),
     };
   }
 
   return map;
 }
-function buildStoreGrowth(
-  currentRanking: StoreKpiRow[],
-  previousRanking: StoreKpiRow[]
-) {
-  const map: Record<number, { current: number; previous: number; rate: number | null }> = {};
 
+function buildStoreGrowth(currentRanking: StoreKpiRow[], previousRanking: StoreKpiRow[]) {
+  const map: Record<number, { current: number; previous: number; rate: number | null }> = {};
   const previousMap = new Map<number, number>();
 
   for (const row of previousRanking) {
@@ -504,15 +490,10 @@ function buildStoreGrowth(
     const current = row.totalSales;
     const previous = previousMap.get(row.storeId) || 0;
 
-    let rate: number | null = null;
-    if (previous > 0) {
-      rate = ((current - previous) / previous) * 100;
-    }
-
     map[row.storeId] = {
       current,
       previous,
-      rate,
+      rate: calcRate(current, previous),
     };
   }
 
@@ -528,6 +509,7 @@ function buildStoreGrowth(
 
   return map;
 }
+
 async function fetchSalesRows(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("sales_daily")
@@ -624,10 +606,12 @@ export async function loadAllStoresRange(startDate: string, endDate: string): Pr
 }
 
 export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {
+  const previousRange = getPreviousRange(range);
+
   const [stores, currentRows, previousRows] = await Promise.all([
     fetchStores(),
     fetchSalesRows(range.startDate, range.endDate),
-    fetchSalesRows(getPreviousRange(range).startDate, getPreviousRange(range).endDate),
+    fetchSalesRows(previousRange.startDate, previousRange.endDate),
   ]);
 
   const storeMetaMap = buildStoreMetaMap(stores);
@@ -642,5 +626,6 @@ export async function loadMasterDashboard(range: MasterDateRange): Promise<Maste
     topMenus: buildTopMenus(currentRows),
     topMenusByBrand: buildTopMenusByBrand(currentRows, storeMetaMap),
     brandGrowth: buildBrandGrowth(currentRanking, previousRanking),
+    storeGrowth: buildStoreGrowth(currentRanking, previousRanking),
   };
 }
