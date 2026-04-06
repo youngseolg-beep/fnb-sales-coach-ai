@@ -283,25 +283,17 @@ const brandSummaryCards = useMemo(() => {
     const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
     const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
 
-    // WoW 계산용 (임시: 현재 데이터 기준 7일 이전 비교)
-    const previousSales = totalSales * (Math.random() * 0.4 + 0.8); 
-    // ↑ 임시 mock (실제 다음 단계에서 service에서 계산)
-
-    let growthRate: number | null = null;
-
-    if (previousSales > 0) {
-      growthRate = ((totalSales - previousSales) / previousSales) * 100;
-    }
+    const growth = result?.brandGrowth?.[brandName];
 
     return {
       brandName,
       storeCount,
       totalSales,
       averageAov,
-      growthRate,
+      growthRate: growth?.rate ?? null,
     };
   });
-}, [groupedByBrand]);
+}, [groupedByBrand, result]);
 
   const selectedBrandRows = useMemo(() => {
     if (selectedBrand === "ALL") return ranking;
