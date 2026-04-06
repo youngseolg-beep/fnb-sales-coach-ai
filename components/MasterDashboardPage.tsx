@@ -682,28 +682,39 @@ export default function MasterDashboardPage() {
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="text-sm text-slate-400">매장별 매출 순위</div>
-                    <div className="mt-1 text-lg font-semibold">Store Ranking</div>
-                  </div>
+               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+  <div>
+    <div className="text-sm text-slate-400">매장별 매출 순위</div>
+    <div className="mt-1 text-lg font-semibold">Store Ranking</div>
+  </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">Brand</span>
-                    <select
-                      value={selectedBrand}
-                      onChange={(e) => setSelectedBrand(e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
-                    >
-                      {brandList.map((brand) => (
-                        <option key={brand} value={brand}>
-                          {brand}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="text-sm text-slate-500">{selectedBrandRows.length} stores</div>
-                  </div>
-                </div>
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="text-sm text-slate-400">Brand</span>
+    <select
+      value={selectedBrand}
+      onChange={(e) => setSelectedBrand(e.target.value)}
+      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
+    >
+      {brandList.map((brand) => (
+        <option key={brand} value={brand}>
+          {brand}
+        </option>
+      ))}
+    </select>
+
+    {selectedBrand !== "ALL" ? (
+      <button
+        type="button"
+        onClick={() => setSelectedBrand("ALL")}
+        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+      >
+        Clear
+      </button>
+    ) : null}
+
+    <div className="text-sm text-slate-500">{selectedBrandRows.length} stores</div>
+  </div>
+</div>
 
                 {selectedBrandRows.length > 0 ? (
                   <div className="overflow-x-auto">
