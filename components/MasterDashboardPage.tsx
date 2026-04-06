@@ -237,20 +237,83 @@ function buildActionCards(risks: RiskCard[], topMenus: TopMenuRow[]) {
 }
 
 export default function MasterDashboardPage() {
-  const [preset, setPreset] = useState<MasterDatePreset>("today");
-  const [range, setRange] = useState<MasterDateRange>(getMasterDateRange("today"));
-  const [result, setResult] = useState<MasterDashboardViewData | null>(null);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+const [preset, setPreset] = useState<MasterDatePreset>(() => {
+  if (typeof window === "undefined") return "today";
+  const saved = localStorage.getItem("masterDashboardPreset");
+  if (
+    saved === "today" ||
+    saved === "thisWeek" ||
+    saved === "thisMonth" ||
+    saved === "last30Days" ||
+    saved === "custom"
+  ) {
+    return saved;
+  }
+  return "today";
+});
+
+const [range, setRange] = useState<MasterDateRange>(() => {
+  if (typeof window === "undefined") return getMasterDateRange("today");
+
+  const savedPreset = localStorage.getItem("masterDashboardPreset");
+  const savedStartDate = localStorage.getItem("masterDashboardStartDate");
+  const savedEndDate = localStorage.getItem("masterDashboardEndDate");
+
+  if (
+    savedPreset === "custom" &&
+    savedStartDate &&
+    savedEndDate
+  ) {
+    return {
+      startDate: savedStartDate,
+      endDate: savedEndDate,
+      preset: "custom",
+    };
+  }
+
+  if (
+    savedPreset === "today" ||
+    savedPreset === "thisWeek" ||
+    savedPreset === "thisMonth" ||
+    savedPreset === "last30Days"
+  ) {
+    return getMasterDateRange(savedPreset);
+  }
+
+  return getMasterDateRange("today");
+});
+
+const [result, setResult] = useState<MasterDashboardViewData | null>(null);
+const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+
+const [selectedBrand, setSelectedBrand] = useState<string>(() => {
+  if (typeof window === "undefined") return "ALL";
+  return localStorage.getItem("masterDashboardSelectedBrand") || "ALL";
+});
+
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
 
   useEffect(() => {
     if (preset !== "custom") {
       setRange(getMasterDateRange(preset));
     }
   }, [preset]);
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("masterDashboardPreset", preset);
+}, [preset]);
 
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("masterDashboardSelectedBrand", selectedBrand);
+}, [selectedBrand]);
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("masterDashboardStartDate", range.startDate);
+  localStorage.setItem("masterDashboardEndDate", range.endDate);
+}, [range.startDate, range.endDate]);
   useEffect(() => {
     let cancelled = false;
 
