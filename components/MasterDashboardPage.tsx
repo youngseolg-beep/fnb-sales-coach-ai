@@ -371,13 +371,13 @@ export default function MasterDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur md:p-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 md:px-6 lg:px-8">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur md:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Master Dashboard</h1>
-             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-2xl font-semibold tracking-tight">Master Dashboard</h1>
+             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
   <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
     {selectedBrand === "ALL" ? "Viewing: ALL Brands" : `Viewing: ${selectedBrand}`}
   </span>
@@ -450,76 +450,76 @@ export default function MasterDashboardPage() {
         {!loading && summary && (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">전체 매출</div>
-                <div className="mt-2 text-3xl font-semibold">{formatCurrency(summary.totalSales)}</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">전체 매출</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight font-semibold">{formatCurrency(summary.totalSales)}</div>
                 <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.sales.rate)}`}>
                   {formatGrowth(summary.growth.sales.rate)}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">전체 주문 수</div>
-                <div className="mt-2 text-3xl font-semibold">{formatNumber(summary.totalOrders)}</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">전체 주문 수</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight font-semibold">{formatNumber(summary.totalOrders)}</div>
                 <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.orders.rate)}`}>
                   {formatGrowth(summary.growth.orders.rate)}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">평균 매출</div>
-                <div className="mt-2 text-3xl font-semibold">{formatCurrency(summary.averageSales)}</div>
-                <div className="mt-2 text-sm text-slate-400">매장당 평균</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">평균 매출</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight font-semibold">{formatCurrency(summary.averageSales)}</div>
+                <div className="mt-2 text-xs text-slate-400">매장당 평균</div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">전체 평균 AOV</div>
-                <div className={`mt-2 text-3xl ${aovTone(summary.averageAov)}`}>{formatCurrency(summary.averageAov)}</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">전체 평균 AOV</div>
+                <div className={`mt-2 text-2xl font-semibold tracking-tight ${aovTone(summary.averageAov)}`}>{formatCurrency(summary.averageAov)}</div>
                 <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.aov.rate)}`}>
                   {formatGrowth(summary.growth.aov.rate)}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">전체 전환율</div>
-                <div className={`mt-2 text-3xl ${conversionTone(summary.overallConversionRate)}`}>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">전체 전환율</div>
+                <div className={`mt-2 text-2xl font-semibold tracking-tight ${conversionTone(summary.overallConversionRate)}`}>
                   {formatPercent(summary.overallConversionRate)}
                 </div>
-                <div className="mt-2 text-sm text-slate-400">
+                <div className="mt-2 text-xs text-slate-400">
                   방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">Top Store</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">Top Store</div>
                 <div className="mt-2 text-2xl font-semibold">{summary.topStoreName || "-"}</div>
                 <div className="mt-2 text-sm text-slate-300">{formatCurrency(summary.topStoreSales)}</div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">매출 성장률</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">매출 성장률</div>
                 <div className={`mt-2 text-2xl font-semibold ${growthTone(summary.growth.sales.rate)}`}>
                   {formatGrowth(summary.growth.sales.rate)}
                 </div>
-                <div className="mt-2 text-sm text-slate-400">
+                <div className="mt-2 text-xs text-slate-400">
                   현재 {formatCurrency(summary.growth.sales.current)} / 이전 {formatCurrency(summary.growth.sales.previous)}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="text-sm text-slate-400">주문/AOV 성장률</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="text-xs text-slate-400">주문/AOV 성장률</div>
                 <div className="mt-2 flex items-center gap-4">
                   <div>
                     <div className="text-xs text-slate-500">Orders</div>
-                    <div className={`text-lg font-semibold ${growthTone(summary.growth.orders.rate)}`}>
+                    <div className={`text-base font-semibold tracking-tight ${growthTone(summary.growth.orders.rate)}`}>
                       {formatGrowth(summary.growth.orders.rate)}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-500">AOV</div>
-                    <div className={`text-lg font-semibold ${growthTone(summary.growth.aov.rate)}`}>
+                    <div className={`text-base font-semibold tracking-tight ${growthTone(summary.growth.aov.rate)}`}>
                       {formatGrowth(summary.growth.aov.rate)}
                     </div>
                   </div>
@@ -545,7 +545,7 @@ export default function MasterDashboardPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-sm text-slate-400">Brand</div>
+                          <div className="text-xs text-slate-400">Brand</div>
                           <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
                         </div>
 
@@ -594,28 +594,28 @@ export default function MasterDashboardPage() {
 
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-sm text-slate-400">Sales</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className="text-xs text-slate-400">Sales</div>
+                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
                           {formatCurrency(selectedBrandData.totalSales)}
                         </div>
                       </div>
 
                       <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-sm text-slate-400">Orders</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className="text-xs text-slate-400">Orders</div>
+                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
                           {formatNumber(selectedBrandData.totalOrders)}
                         </div>
                       </div>
 
                       <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-sm text-slate-400">AOV</div>
+                        <div className="text-xs text-slate-400">AOV</div>
                         <div className={`mt-1 text-lg ${aovTone(selectedBrandData.aov)}`}>
                           {formatCurrency(selectedBrandData.aov)}
                         </div>
                       </div>
 
                       <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-sm text-slate-400">Conversion</div>
+                        <div className="text-xs text-slate-400">Conversion</div>
                         <div className={`mt-1 text-lg ${conversionTone(selectedBrandData.conversion)}`}>
                           {formatPercent(selectedBrandData.conversion)}
                         </div>
@@ -624,8 +624,8 @@ export default function MasterDashboardPage() {
 
                     {selectedBrandData.topStore && (
                       <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-sm text-slate-400">Top Store</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className="text-xs text-slate-400">Top Store</div>
+                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
                           {selectedBrandData.topStore.storeName || "-"}
                         </div>
                         <div className="text-sm text-slate-300">
@@ -642,13 +642,13 @@ export default function MasterDashboardPage() {
               </>
             )}
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-slate-400">
+                  <div className="text-xs text-slate-400">
                     {selectedBrand === "ALL" ? "문제 매장 액션 제안" : `${selectedBrand} 액션 제안`}
                   </div>
-                  <div className="mt-1 text-lg font-semibold">Recommended Actions</div>
+                  <div className="mt-1 text-base font-semibold tracking-tight">Recommended Actions</div>
                 </div>
                 <div className="text-sm text-slate-500">{filteredActionCards.length} actions</div>
               </div>
@@ -681,15 +681,15 @@ export default function MasterDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
   <div>
-    <div className="text-sm text-slate-400">매장별 매출 순위</div>
-    <div className="mt-1 text-lg font-semibold">Store Ranking</div>
+    <div className="text-xs text-slate-400">매장별 매출 순위</div>
+    <div className="mt-1 text-base font-semibold tracking-tight">Store Ranking</div>
   </div>
 
   <div className="flex flex-wrap items-center gap-2">
-    <span className="text-sm text-slate-400">Brand</span>
+    <span className="text-xs text-slate-400">Brand</span>
     <select
       value={selectedBrand}
       onChange={(e) => setSelectedBrand(e.target.value)}
@@ -779,9 +779,9 @@ export default function MasterDashboardPage() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <div className="text-sm text-slate-400">선택 매장 상세</div>
-                  <div className="mt-1 text-lg font-semibold">{selectedStore?.storeName || "-"}</div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                  <div className="text-xs text-slate-400">선택 매장 상세</div>
+                  <div className="mt-1 text-base font-semibold tracking-tight">{selectedStore?.storeName || "-"}</div>
 
                   {selectedStore && selectedBrandStoreIds.has(selectedStore.storeId) ? (
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -821,11 +821,11 @@ export default function MasterDashboardPage() {
                   )}
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <div className="text-sm text-slate-400">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                  <div className="text-xs text-slate-400">
                     {selectedBrand === "ALL" ? "문제 매장 자동 탐지" : `${selectedBrand} 문제 매장 자동 탐지`}
                   </div>
-                  <div className="mt-1 text-lg font-semibold">Risk Cards</div>
+                  <div className="mt-1 text-base font-semibold tracking-tight">Risk Cards</div>
 
                   <div className="mt-4 flex flex-col gap-3">
                     {filteredRisks.length > 0 ? (
@@ -855,13 +855,13 @@ export default function MasterDashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-slate-400">
+                  <div className="text-xs text-slate-400">
                     {selectedBrand === "ALL" ? "전체 기준 Top 메뉴" : `${selectedBrand} Top 메뉴`}
                   </div>
-                  <div className="mt-1 text-lg font-semibold">Top 10 Menus</div>
+                  <div className="mt-1 text-base font-semibold tracking-tight">Top 10 Menus</div>
                 </div>
                 <div className="text-sm text-slate-500">{filteredTopMenus.length} items</div>
               </div>
@@ -877,7 +877,7 @@ export default function MasterDashboardPage() {
                       <div className="mt-2 line-clamp-2 min-h-[40px] text-sm font-semibold text-slate-100">
                         {menu.name}
                       </div>
-                      <div className="mt-3 text-lg font-semibold">{formatCurrency(menu.sales)}</div>
+                      <div className="mt-3 text-base font-semibold tracking-tight">{formatCurrency(menu.sales)}</div>
                       <div className="mt-1 text-xs text-slate-400">판매수량 {formatNumber(menu.qty)}</div>
                     </div>
                   ))}
