@@ -281,7 +281,10 @@ function calcRate(current: number, previous: number) {
   return ((current - previous) / previous) * 100;
 }
 
-function aggregateRows(rows: SalesDailyRow[], storeMetaMap: Map<number, { storeName: string; brandName: string }>) {
+function aggregateRows(
+  rows: SalesDailyRow[],
+  storeMetaMap: Map<number, { storeName: string; brandName: string }>
+) {
   const storeMap = new Map<number, StoreKpiRow>();
 
   for (const row of rows) {
@@ -538,89 +541,23 @@ export async function loadAllStoresRange(startDate: string, endDate: string): Pr
   }));
 }
 
-export async function loadMasterDashboard(range: MasterDateRange) {
-  const currentRows = await loadAllStoresRange(
-    range.startDate,
-    range.endDate
-  );
+export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {
+  const [stores, currentRows, previousRows] = await Promise.all([
+    fetchStores(),
+    fetchSalesRows(range.startDate, range.endDate),
+    fetchSalesRows(getPreviousRange(range).startDate, getPreviousRange(range).endDate),
+  ]);
 
-  // 이전 기간 계산
-  const start = new Date(range.startDate);
-  const end = new Date(range.endDate);
+  const storeMetaMap = buildStoreMetaMap(stores);
 
-  const diff = end.getTime() - start.getTime();
-
-  const prevEnd = new Date(start.getTime() - 1);
-  const prevStart = new Date(prevEnd.getTime() - diff);
-
-  const prevStartStr = prevStart.toISOString().slice(0, 10);
-  const prevEndStr = prevEnd.toISOString().slice(0, 10);
-
-  const previousRows = await loadAllStoresRange(
-    prevStartStr,
-    prevEndStr
-  );
-
-  function aggregate(rows: any[]) {
-    let totalSales = 0;
-    let totalOrders = 0;
-
-    for (const r of rows) {
-      totalSales += r.totalSales || 0;
-      totalOrders += r.orders || 0;
-    }
-
-    return { totalSales, totalOrders };
-  }
-
-  const currentAgg = aggregate(currentRows);
-  const prevAgg = aggregate(previousRows);
-
-  function calcGrowth(current: number, prev: number) {
-    if (!prev || prev === 0) return null;
-    return ((current - prev) / prev) * 100;
-  }
-
-  const salesGrowth = calcGrowth(currentAgg.totalSales, prevAgg.totalSales);
-  const ordersGrowth = calcGrowth(currentAgg.totalOrders, prevAgg.totalOrders);
-
-  // 기존 로직 유지하면서 growth 추가
-  const base = buildMasterDashboardData(currentRows);
+  const currentRanking = aggregateRows(currentRows, storeMetaMap);
+  const previousRanking = aggregateRows(previousRows, storeMetaMap);
 
   return {
-    ...base,
-    summary: {
-      ...base.summary,
-      growth: {
-        sales: {
-          current: currentAgg.totalSales,
-          previous: prevAgg.totalSales,
-          rate: salesGrowth,
-        },
-        orders: {
-          current: currentAgg.totalOrders,
-          previous: prevAgg.totalOrders,
-          rate: ordersGrowth,
-        },
-        aov: {
-          current:
-            currentAgg.totalOrders > 0
-              ? currentAgg.totalSales / currentAgg.totalOrders
-              : 0,
-          previous:
-            prevAgg.totalOrders > 0
-              ? prevAgg.totalSales / prevAgg.totalOrders
-              : 0,
-          rate: calcGrowth(
-            currentAgg.totalOrders > 0
-              ? currentAgg.totalSales / currentAgg.totalOrders
-              : 0,
-            prevAgg.totalOrders > 0
-              ? prevAgg.totalSales / prevAgg.totalOrders
-              : 0
-          ),
-        },
-      },
-    },
+    summary: buildSummary(currentRanking, previousRanking),
+    ranking: currentRanking,
+    risks: buildRisks(currentRanking),
+    topMenus: buildTopMenus(currentRows),
+    topMenusByBrand: buildTopMenusByBrand(currentRows, storeMetaMap),
   };
 }
