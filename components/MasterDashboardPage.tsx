@@ -281,6 +281,8 @@ export default function MasterDashboardPage() {
     if (selectedBrand === "ALL") return null;
 
     const rows = groupedByBrand[selectedBrand] || [];
+    if (!rows.length) return null;
+
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
     const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
     const totalVisit = rows.reduce((sum, row) => sum + row.visitCount, 0);
@@ -457,94 +459,108 @@ export default function MasterDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {brandSummaryCards.map((card) => {
-                const isSelected = selectedBrand === card.brandName;
+              {brandSummaryCards.length > 0 ? (
+                brandSummaryCards.map((card) => {
+                  const isSelected = selectedBrand === card.brandName;
 
-                return (
-                  <button
-                    key={card.brandName}
-                    type="button"
-                    onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
-                    className={`rounded-3xl border p-5 text-left transition ${
-                      isSelected
-                        ? "border-blue-400/40 bg-blue-500/10"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
-                  >
-                    <div className="text-sm text-slate-400">Brand</div>
-                    <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
+                  return (
+                    <button
+                      key={card.brandName}
+                      type="button"
+                      onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
+                      className={`rounded-3xl border p-5 text-left transition ${
+                        isSelected
+                          ? "border-blue-400/40 bg-blue-500/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="text-sm text-slate-400">Brand</div>
+                      <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
 
-                    <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                      <div className="rounded-2xl bg-slate-900/70 p-3">
-                        <div className="text-slate-400">Stores</div>
-                        <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
+                      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                        <div className="rounded-2xl bg-slate-900/70 p-3">
+                          <div className="text-slate-400">Stores</div>
+                          <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-900/70 p-3">
+                          <div className="text-slate-400">Sales</div>
+                          <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-900/70 p-3">
+                          <div className="text-slate-400">Avg AOV</div>
+                          <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
+                        </div>
                       </div>
-                      <div className="rounded-2xl bg-slate-900/70 p-3">
-                        <div className="text-slate-400">Sales</div>
-                        <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
-                      </div>
-                      <div className="rounded-2xl bg-slate-900/70 p-3">
-                        <div className="text-slate-400">Avg AOV</div>
-                        <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="md:col-span-2 xl:col-span-3 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-500">
+                  등록된 브랜드 데이터가 없습니다.
+                </div>
+              )}
             </div>
 
-            {selectedBrandData && (
-              <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-blue-200">Selected Brand</div>
-                    <div className="text-xl font-semibold text-white">{selectedBrand}</div>
-                  </div>
-                  <div className="text-sm text-blue-200">{formatNumber(selectedBrandRows.length)} stores</div>
-                </div>
+            {selectedBrand !== "ALL" && (
+              <>
+                {selectedBrandData ? (
+                  <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-blue-200">Selected Brand</div>
+                        <div className="text-xl font-semibold text-white">{selectedBrand}</div>
+                      </div>
+                      <div className="text-sm text-blue-200">{formatNumber(selectedBrandRows.length)} stores</div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  <div className="rounded-2xl bg-slate-900/70 p-4">
-                    <div className="text-sm text-slate-400">Sales</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {formatCurrency(selectedBrandData.totalSales)}
-                    </div>
-                  </div>
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                      <div className="rounded-2xl bg-slate-900/70 p-4">
+                        <div className="text-sm text-slate-400">Sales</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
+                          {formatCurrency(selectedBrandData.totalSales)}
+                        </div>
+                      </div>
 
-                  <div className="rounded-2xl bg-slate-900/70 p-4">
-                    <div className="text-sm text-slate-400">Orders</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {formatNumber(selectedBrandData.totalOrders)}
-                    </div>
-                  </div>
+                      <div className="rounded-2xl bg-slate-900/70 p-4">
+                        <div className="text-sm text-slate-400">Orders</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
+                          {formatNumber(selectedBrandData.totalOrders)}
+                        </div>
+                      </div>
 
-                  <div className="rounded-2xl bg-slate-900/70 p-4">
-                    <div className="text-sm text-slate-400">AOV</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {formatCurrency(selectedBrandData.aov)}
-                    </div>
-                  </div>
+                      <div className="rounded-2xl bg-slate-900/70 p-4">
+                        <div className="text-sm text-slate-400">AOV</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
+                          {formatCurrency(selectedBrandData.aov)}
+                        </div>
+                      </div>
 
-                  <div className="rounded-2xl bg-slate-900/70 p-4">
-                    <div className="text-sm text-slate-400">Conversion</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {formatPercent(selectedBrandData.conversion)}
+                      <div className="rounded-2xl bg-slate-900/70 p-4">
+                        <div className="text-sm text-slate-400">Conversion</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
+                          {formatPercent(selectedBrandData.conversion)}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {selectedBrandData.topStore && (
-                  <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
-                    <div className="text-sm text-slate-400">Top Store</div>
-                    <div className="mt-1 text-lg font-semibold text-white">
-                      {selectedBrandData.topStore.storeName}
-                    </div>
-                    <div className="text-sm text-slate-300">
-                      {formatCurrency(selectedBrandData.topStore.totalSales)}
-                    </div>
+                    {selectedBrandData.topStore && (
+                      <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
+                        <div className="text-sm text-slate-400">Top Store</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
+                          {selectedBrandData.topStore.storeName}
+                        </div>
+                        <div className="text-sm text-slate-300">
+                          {formatCurrency(selectedBrandData.topStore.totalSales)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-dashed border-blue-400/20 bg-blue-500/5 p-6 text-center text-sm text-blue-200">
+                    선택한 브랜드에 해당 기간 데이터가 없습니다.
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -578,7 +594,9 @@ export default function MasterDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                  현재 추천 액션이 없습니다.
+                  {selectedBrand === "ALL"
+                    ? "현재 추천 액션이 없습니다."
+                    : `${selectedBrand}에 대한 추천 액션이 없습니다.`}
                 </div>
               )}
             </div>
@@ -608,58 +626,60 @@ export default function MasterDashboardPage() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10 text-left text-slate-400">
-                        <th className="px-3 py-3">#</th>
-                        <th className="px-3 py-3">Store</th>
-                        <th className="px-3 py-3">Sales</th>
-                        <th className="px-3 py-3">Orders</th>
-                        <th className="px-3 py-3">AOV</th>
-                        <th className="px-3 py-3">Conversion</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(groupedByBrand)
-                        .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
-                        .map(([brand, rows]) => (
-                          <React.Fragment key={brand}>
-                            <tr className="bg-white/5">
-                              <td colSpan={6} className="px-3 py-3 text-sm font-semibold text-blue-300">
-                                {brand}
-                              </td>
-                            </tr>
+                {selectedBrandRows.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10 text-left text-slate-400">
+                          <th className="px-3 py-3">#</th>
+                          <th className="px-3 py-3">Store</th>
+                          <th className="px-3 py-3">Sales</th>
+                          <th className="px-3 py-3">Orders</th>
+                          <th className="px-3 py-3">AOV</th>
+                          <th className="px-3 py-3">Conversion</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(groupedByBrand)
+                          .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
+                          .map(([brand, rows]) => (
+                            <React.Fragment key={brand}>
+                              <tr className="bg-white/5">
+                                <td colSpan={6} className="px-3 py-3 text-sm font-semibold text-blue-300">
+                                  {brand}
+                                </td>
+                              </tr>
 
-                            {rows.map((row, index) => {
-                              const isSelected = row.storeId === selectedStoreId;
+                              {rows.map((row, index) => {
+                                const isSelected = row.storeId === selectedStoreId;
 
-                              return (
-                                <tr
-                                  key={row.storeId}
-                                  onClick={() => setSelectedStoreId(row.storeId)}
-                                  className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
-                                    isSelected ? "bg-blue-500/10" : ""
-                                  }`}
-                                >
-                                  <td className="px-3 py-3">{index + 1}</td>
-                                  <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
-                                  <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
-                                  <td className="px-3 py-3">{formatNumber(row.orders)}</td>
-                                  <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
-                                  <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
-                                </tr>
-                              );
-                            })}
-                          </React.Fragment>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {ranking.length === 0 && (
+                                return (
+                                  <tr
+                                    key={row.storeId}
+                                    onClick={() => setSelectedStoreId(row.storeId)}
+                                    className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
+                                      isSelected ? "bg-blue-500/10" : ""
+                                    }`}
+                                  >
+                                    <td className="px-3 py-3">{index + 1}</td>
+                                    <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
+                                    <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
+                                    <td className="px-3 py-3">{formatNumber(row.orders)}</td>
+                                    <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
+                                    <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </React.Fragment>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
                   <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                    해당 기간 데이터가 없습니다.
+                    {selectedBrand === "ALL"
+                      ? "해당 기간 데이터가 없습니다."
+                      : `${selectedBrand} 브랜드에 해당 기간 데이터가 없습니다.`}
                   </div>
                 )}
               </div>
@@ -669,7 +689,7 @@ export default function MasterDashboardPage() {
                   <div className="text-sm text-slate-400">선택 매장 상세</div>
                   <div className="mt-1 text-lg font-semibold">{selectedStore?.storeName || "-"}</div>
 
-                  {selectedStore ? (
+                  {selectedStore && selectedBrandStoreIds.has(selectedStore.storeId) ? (
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-2xl bg-slate-900/70 p-3">
                         <div className="text-slate-400">매출</div>
@@ -698,7 +718,9 @@ export default function MasterDashboardPage() {
                     </div>
                   ) : (
                     <div className="mt-4 rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-500">
-                      순위표에서 매장을 선택하세요.
+                      {selectedBrandRows.length === 0
+                        ? "선택한 조건에 표시할 매장 데이터가 없습니다."
+                        : "순위표에서 매장을 선택하세요."}
                     </div>
                   )}
                 </div>
@@ -727,7 +749,9 @@ export default function MasterDashboardPage() {
                       ))
                     ) : (
                       <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-500">
-                        현재 위험 카드가 없습니다.
+                        {selectedBrand === "ALL"
+                          ? "현재 위험 카드가 없습니다."
+                          : `${selectedBrand}에 표시할 위험 카드가 없습니다.`}
                       </div>
                     )}
                   </div>
@@ -764,7 +788,9 @@ export default function MasterDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                  해당 기간 Top 메뉴 데이터가 없습니다.
+                  {selectedBrand === "ALL"
+                    ? "해당 기간 Top 메뉴 데이터가 없습니다."
+                    : `${selectedBrand}에 해당 기간 Top 메뉴 데이터가 없습니다.`}
                 </div>
               )}
             </div>
