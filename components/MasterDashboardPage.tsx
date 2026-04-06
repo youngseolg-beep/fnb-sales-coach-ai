@@ -276,21 +276,32 @@ export default function MasterDashboardPage() {
     return ["ALL", ...Object.keys(groupedByBrand)];
   }, [groupedByBrand]);
 
-  const brandSummaryCards = useMemo(() => {
-    return Object.entries(groupedByBrand).map(([brandName, rows]) => {
-      const storeCount = rows.length;
-      const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
-      const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-      const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+const brandSummaryCards = useMemo(() => {
+  return Object.entries(groupedByBrand).map(([brandName, rows]) => {
+    const storeCount = rows.length;
+    const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
+    const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+    const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
 
-      return {
-        brandName,
-        storeCount,
-        totalSales,
-        averageAov,
-      };
-    });
-  }, [groupedByBrand]);
+    // WoW 계산용 (임시: 현재 데이터 기준 7일 이전 비교)
+    const previousSales = totalSales * (Math.random() * 0.4 + 0.8); 
+    // ↑ 임시 mock (실제 다음 단계에서 service에서 계산)
+
+    let growthRate: number | null = null;
+
+    if (previousSales > 0) {
+      growthRate = ((totalSales - previousSales) / previousSales) * 100;
+    }
+
+    return {
+      brandName,
+      storeCount,
+      totalSales,
+      averageAov,
+      growthRate,
+    };
+  });
+}, [groupedByBrand]);
 
   const selectedBrandRows = useMemo(() => {
     if (selectedBrand === "ALL") return ranking;
@@ -548,7 +559,10 @@ export default function MasterDashboardPage() {
                           <div className="text-xs text-slate-400">Brand</div>
                           <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
                         </div>
-
+<div className={`mt-1 text-sm ${growthTone(card.growthRate)}`}>
+  {formatGrowth(card.growthRate)}
+</div>
+                        
                         {isSelected ? (
                           <div className="rounded-full border border-blue-200/30 bg-blue-300/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-100">
                             Selected
