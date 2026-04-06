@@ -297,6 +297,21 @@ export default function MasterDashboardPage() {
     return groupedByBrand[selectedBrand] || [];
   }, [selectedBrand, ranking, groupedByBrand]);
 
+  useEffect(() => {
+  if (!selectedBrandRows.length) {
+    setSelectedStoreId(null);
+    return;
+  }
+
+  const exists = selectedBrandRows.some(
+    (row) => row.storeId === selectedStoreId
+  );
+
+  if (!exists) {
+    setSelectedStoreId(selectedBrandRows[0].storeId);
+  }
+}, [selectedBrandRows, selectedStoreId]);
+  
   const selectedBrandStoreIds = useMemo(() => {
     return new Set(selectedBrandRows.map((row) => row.storeId));
   }, [selectedBrandRows]);
