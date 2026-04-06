@@ -212,7 +212,7 @@ export default function MasterDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [range.startDate, range.endDate, selectedStoreId]);
+  }, [range.startDate, range.endDate]);
 
   const summary = result?.summary;
   const ranking = result?.ranking || [];
