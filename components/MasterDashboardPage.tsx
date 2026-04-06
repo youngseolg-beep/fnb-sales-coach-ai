@@ -528,7 +528,7 @@ export default function MasterDashboardPage() {
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-  <div className="text-xs text-slate-400">Top Store</div>
+  <div className="text-xs text-slate-400">{`Top Store vs ${getComparisonShortLabel(range)}`}</div>
   <div className="mt-2 text-2xl font-semibold">{summary.topStoreName || "-"}</div>
   <div className="mt-2 text-sm text-slate-300">{formatCurrency(summary.topStoreSales)}</div>
 
@@ -666,7 +666,7 @@ export default function MasterDashboardPage() {
 
                     {selectedBrandData.topStore && (
                       <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">Top Store</div>
+                        <div className="text-xs text-slate-400">{`Top Store vs ${getComparisonShortLabel(range)}`}</div>
                         <div className="mt-1 text-base font-semibold tracking-tight text-white">
                           {selectedBrandData.topStore.storeName || "-"}
                         </div>
