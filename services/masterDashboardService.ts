@@ -488,6 +488,46 @@ function buildBrandGrowth(
 
   return map;
 }
+function buildStoreGrowth(
+  currentRanking: StoreKpiRow[],
+  previousRanking: StoreKpiRow[]
+) {
+  const map: Record<number, { current: number; previous: number; rate: number | null }> = {};
+
+  const previousMap = new Map<number, number>();
+
+  for (const row of previousRanking) {
+    previousMap.set(row.storeId, row.totalSales);
+  }
+
+  for (const row of currentRanking) {
+    const current = row.totalSales;
+    const previous = previousMap.get(row.storeId) || 0;
+
+    let rate: number | null = null;
+    if (previous > 0) {
+      rate = ((current - previous) / previous) * 100;
+    }
+
+    map[row.storeId] = {
+      current,
+      previous,
+      rate,
+    };
+  }
+
+  for (const row of previousRanking) {
+    if (map[row.storeId]) continue;
+
+    map[row.storeId] = {
+      current: 0,
+      previous: row.totalSales,
+      rate: row.totalSales > 0 ? -100 : null,
+    };
+  }
+
+  return map;
+}
 async function fetchSalesRows(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("sales_daily")
