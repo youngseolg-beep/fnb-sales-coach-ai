@@ -44,26 +44,41 @@ type ActionCard = {
   priority: "high" | "medium";
 };
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
-  }).format(value || 0);
+  }).format(value);
 }
 
-function formatNumber(value: number) {
+function formatNumber(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(value || 0);
+  }).format(value);
 }
 
-function formatPercent(value: number, digits = 1) {
-  return `${(value || 0).toFixed(digits)}%`;
+function formatPercent(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${value.toFixed(digits)}%`;
 }
 
-function formatGrowth(rate: number | null) {
-  if (rate === null || !Number.isFinite(rate)) return "-";
+function formatGrowth(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
+    return "-";
+  }
+
   const sign = rate > 0 ? "+" : "";
   return `${sign}${rate.toFixed(1)}%`;
 }
@@ -425,7 +440,7 @@ export default function MasterDashboardPage() {
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-slate-400">Top Store</div>
-                <div className="mt-2 text-2xl font-semibold">{summary.topStoreName}</div>
+                <div className="mt-2 text-2xl font-semibold">{summary.topStoreName || "-"}</div>
                 <div className="mt-2 text-sm text-slate-300">{formatCurrency(summary.topStoreSales)}</div>
               </div>
 
@@ -547,7 +562,7 @@ export default function MasterDashboardPage() {
                       <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
                         <div className="text-sm text-slate-400">Top Store</div>
                         <div className="mt-1 text-lg font-semibold text-white">
-                          {selectedBrandData.topStore.storeName}
+                          {selectedBrandData.topStore.storeName || "-"}
                         </div>
                         <div className="text-sm text-slate-300">
                           {formatCurrency(selectedBrandData.topStore.totalSales)}
