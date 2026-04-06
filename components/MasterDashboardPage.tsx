@@ -157,6 +157,19 @@ function getComparisonLabel(range: MasterDateRange) {
 
   return `Compare: Previous ${dayCount} day${dayCount > 1 ? "s" : ""}`;
 }
+function getComparisonShortLabel(range: MasterDateRange) {
+  if (range.preset === "today") return "Previous day";
+  if (range.preset === "thisWeek") return "Previous week";
+  if (range.preset === "thisMonth") return "Previous month";
+
+  const start = new Date(range.startDate);
+  const end = new Date(range.endDate);
+  const diff = end.getTime() - start.getTime();
+  const dayCount = Math.floor(diff / 86400000) + 1;
+
+  return `Previous ${dayCount} day${dayCount > 1 ? "s" : ""}`;
+}
+
 function buildDetailRiskText(row: StoreKpiRow) {
   const items: string[] = [];
 
@@ -525,7 +538,7 @@ export default function MasterDashboardPage() {
 </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">매출 성장률</div>
+                <div className="text-xs text-slate-400">{`Sales Growth vs ${getComparisonShortLabel(range)}`}</div>
                 <div className={`mt-2 text-2xl font-semibold ${growthTone(summary.growth.sales.rate)}`}>
                   {formatGrowth(summary.growth.sales.rate)}
                 </div>
@@ -535,7 +548,7 @@ export default function MasterDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">주문/AOV 성장률</div>
+                <div className="text-xs text-slate-400">{`Orders / AOV vs ${getComparisonShortLabel(range)}`}</div>
                 <div className="mt-2 flex items-center gap-4">
                   <div>
                     <div className="text-xs text-slate-500">Orders</div>
