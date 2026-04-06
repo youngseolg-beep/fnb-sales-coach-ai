@@ -83,13 +83,16 @@ function formatGrowth(rate: number | null | undefined) {
   return `${sign}${rate.toFixed(1)}%`;
 }
 
-function growthTone(rate: number | null) {
-  if (rate === null || !Number.isFinite(rate)) {
+function growthTone(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
     return "text-slate-400";
   }
-  if (rate > 0) return "text-emerald-400";
-  if (rate < 0) return "text-rose-400";
-  return "text-slate-300";
+
+  if (rate >= 5) return "text-emerald-400 font-semibold";
+  if (rate > 0) return "text-emerald-300";
+  if (rate === 0) return "text-slate-300";
+  if (rate > -5) return "text-rose-300";
+  return "text-rose-400 font-semibold";
 }
 
 function riskTone(level: RiskCard["level"]) {
