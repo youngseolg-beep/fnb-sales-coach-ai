@@ -94,6 +94,7 @@ function growthTone(rate: number | null | undefined) {
   if (rate > -5) return "text-rose-300";
   return "text-rose-400 font-semibold";
 }
+
 function aovTone(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "text-slate-400";
@@ -444,7 +445,7 @@ export default function MasterDashboardPage() {
 
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-slate-400">전체 평균 AOV</div>
-                <div className="mt-2 text-3xl font-semibold">{formatCurrency(summary.averageAov)}</div>
+                <div className={`mt-2 text-3xl ${aovTone(summary.averageAov)}`}>{formatCurrency(summary.averageAov)}</div>
                 <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.aov.rate)}`}>
                   {formatGrowth(summary.growth.aov.rate)}
                 </div>
@@ -452,7 +453,9 @@ export default function MasterDashboardPage() {
 
               <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
                 <div className="text-sm text-slate-400">전체 전환율</div>
-                <div className="mt-2 text-3xl font-semibold">{formatPercent(summary.overallConversionRate)}</div>
+                <div className={`mt-2 text-3xl ${conversionTone(summary.overallConversionRate)}`}>
+                  {formatPercent(summary.overallConversionRate)}
+                </div>
                 <div className="mt-2 text-sm text-slate-400">
                   방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
                 </div>
@@ -505,14 +508,24 @@ export default function MasterDashboardPage() {
                       key={card.brandName}
                       type="button"
                       onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
-                      className={`rounded-3xl border p-5 text-left transition ${
+                      className={`relative rounded-3xl border p-5 text-left transition ${
                         isSelected
-                          ? "border-blue-400/40 bg-blue-500/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                          ? "border-blue-300 bg-blue-500/15 shadow-[0_0_0_1px_rgba(147,197,253,0.35)]"
+                          : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
                       }`}
                     >
-                      <div className="text-sm text-slate-400">Brand</div>
-                      <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm text-slate-400">Brand</div>
+                          <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
+                        </div>
+
+                        {isSelected ? (
+                          <div className="rounded-full border border-blue-200/30 bg-blue-300/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-100">
+                            Selected
+                          </div>
+                        ) : null}
+                      </div>
 
                       <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                         <div className="rounded-2xl bg-slate-900/70 p-3">
@@ -525,7 +538,7 @@ export default function MasterDashboardPage() {
                         </div>
                         <div className="rounded-2xl bg-slate-900/70 p-3">
                           <div className="text-slate-400">Avg AOV</div>
-                          <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.averageAov)}</div>
+                          <div className={`mt-1 ${aovTone(card.averageAov)}`}>{formatCurrency(card.averageAov)}</div>
                         </div>
                       </div>
                     </button>
@@ -567,14 +580,14 @@ export default function MasterDashboardPage() {
 
                       <div className="rounded-2xl bg-slate-900/70 p-4">
                         <div className="text-sm text-slate-400">AOV</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className={`mt-1 text-lg ${aovTone(selectedBrandData.aov)}`}>
                           {formatCurrency(selectedBrandData.aov)}
                         </div>
                       </div>
 
                       <div className="rounded-2xl bg-slate-900/70 p-4">
                         <div className="text-sm text-slate-400">Conversion</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className={`mt-1 text-lg ${conversionTone(selectedBrandData.conversion)}`}>
                           {formatPercent(selectedBrandData.conversion)}
                         </div>
                       </div>
@@ -694,16 +707,20 @@ export default function MasterDashboardPage() {
                                   <tr
                                     key={row.storeId}
                                     onClick={() => setSelectedStoreId(row.storeId)}
-                                    className={`cursor-pointer border-b border-white/5 transition hover:bg-white/5 ${
-                                      isSelected ? "bg-blue-500/10" : ""
+                                    className={`cursor-pointer border-b border-white/5 transition ${
+                                      isSelected
+                                        ? "bg-blue-500/15 shadow-[inset_3px_0_0_0_rgba(96,165,250,1)]"
+                                        : "hover:bg-white/5"
                                     }`}
                                   >
                                     <td className="px-3 py-3">{index + 1}</td>
                                     <td className="px-3 py-3 font-medium text-slate-100">{row.storeName}</td>
                                     <td className="px-3 py-3">{formatCurrency(row.totalSales)}</td>
                                     <td className="px-3 py-3">{formatNumber(row.orders)}</td>
-                                    <td className="px-3 py-3">{formatCurrency(row.aov)}</td>
-                                    <td className="px-3 py-3">{formatPercent(row.conversionRate)}</td>
+                                    <td className={`px-3 py-3 ${aovTone(row.aov)}`}>{formatCurrency(row.aov)}</td>
+                                    <td className={`px-3 py-3 ${conversionTone(row.conversionRate)}`}>
+                                      {formatPercent(row.conversionRate)}
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -742,11 +759,13 @@ export default function MasterDashboardPage() {
                       </div>
                       <div className="rounded-2xl bg-slate-900/70 p-3">
                         <div className="text-slate-400">AOV</div>
-                        <div className="mt-1 font-semibold">{formatCurrency(selectedStore.aov)}</div>
+                        <div className={`mt-1 ${aovTone(selectedStore.aov)}`}>{formatCurrency(selectedStore.aov)}</div>
                       </div>
                       <div className="rounded-2xl bg-slate-900/70 p-3">
                         <div className="text-slate-400">Conversion</div>
-                        <div className="mt-1 font-semibold">{formatPercent(selectedStore.conversionRate)}</div>
+                        <div className={`mt-1 ${conversionTone(selectedStore.conversionRate)}`}>
+                          {formatPercent(selectedStore.conversionRate)}
+                        </div>
                       </div>
                       <div className="rounded-2xl bg-slate-900/70 p-3">
                         <div className="text-slate-400">Risk Check</div>
