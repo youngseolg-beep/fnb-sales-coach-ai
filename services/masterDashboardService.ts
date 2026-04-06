@@ -585,7 +585,7 @@ export async function loadMasterDashboard(range: MasterDateRange) {
   const ordersGrowth = calcGrowth(currentAgg.totalOrders, prevAgg.totalOrders);
 
   // 기존 로직 유지하면서 growth 추가
-  const base = buildMasterDashboard(currentRows);
+  const base = buildMasterDashboardData(currentRows);
 
   return {
     ...base,
