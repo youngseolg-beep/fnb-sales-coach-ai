@@ -554,48 +554,54 @@ useEffect(() => {
         {!loading && summary && (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">전체 매출</div>
-                <div className="mt-2 text-2xl font-semibold tracking-tight">{formatCurrency(summary.totalSales)}</div>
-                <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.sales.rate)}`}>
-                  {formatGrowth(summary.growth.sales.rate)}
-                </div>
-              </div>
+  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
+    <div className="text-xs text-slate-400">전체 매출</div>
+    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+      {formatCurrency(summary.totalSales)}
+    </div>
+    <div className={`mt-2 text-sm ${growthTone(summary.growth.sales.rate)}`}>
+      {formatGrowth(summary.growth.sales.rate)}
+    </div>
+  </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">전체 주문 수</div>
-                <div className="mt-2 text-2xl font-semibold tracking-tight">{formatNumber(summary.totalOrders)}</div>
-                <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.orders.rate)}`}>
-                  {formatGrowth(summary.growth.orders.rate)}
-                </div>
-              </div>
+  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
+    <div className="text-xs text-slate-400">전체 주문 수</div>
+    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+      {formatNumber(summary.totalOrders)}
+    </div>
+    <div className={`mt-2 text-sm ${growthTone(summary.growth.orders.rate)}`}>
+      {formatGrowth(summary.growth.orders.rate)}
+    </div>
+  </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">평균 매출</div>
-                <div className="mt-2 text-2xl font-semibold tracking-tight">{formatCurrency(summary.averageSales)}</div>
-                <div className="mt-2 text-xs text-slate-400">매장당 평균</div>
-              </div>
+  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
+    <div className="text-xs text-slate-400">평균 매출</div>
+    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+      {formatCurrency(summary.averageSales)}
+    </div>
+    <div className="mt-2 text-xs text-slate-500">매장당 평균</div>
+  </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">전체 평균 AOV</div>
-                <div className={`mt-2 text-2xl font-semibold tracking-tight ${aovTone(summary.averageAov)}`}>
-                  {formatCurrency(summary.averageAov)}
-                </div>
-                <div className={`mt-2 text-sm font-medium ${growthTone(summary.growth.aov.rate)}`}>
-                  {formatGrowth(summary.growth.aov.rate)}
-                </div>
-              </div>
+  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
+    <div className="text-xs text-slate-400">전체 평균 AOV</div>
+    <div className={`mt-2 text-3xl font-semibold tracking-tight ${aovTone(summary.averageAov)}`}>
+      {formatCurrency(summary.averageAov)}
+    </div>
+    <div className={`mt-2 text-sm ${growthTone(summary.growth.aov.rate)}`}>
+      {formatGrowth(summary.growth.aov.rate)}
+    </div>
+  </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">전체 전환율</div>
-                <div className={`mt-2 text-2xl font-semibold tracking-tight ${conversionTone(summary.overallConversionRate)}`}>
-                  {formatPercent(summary.overallConversionRate)}
-                </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
-                </div>
-              </div>
-            </div>
+  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
+    <div className="text-xs text-slate-400">전체 전환율</div>
+    <div className={`mt-2 text-3xl font-semibold tracking-tight ${conversionTone(summary.overallConversionRate)}`}>
+      {formatPercent(summary.overallConversionRate)}
+    </div>
+    <div className="mt-2 text-xs text-slate-500">
+      방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
+    </div>
+  </div>
+</div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
