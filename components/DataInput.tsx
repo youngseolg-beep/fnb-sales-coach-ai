@@ -168,7 +168,19 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       }
     });
   };
-
+const focusNextBaseInput = (currentKey: string) => {
+  requestAnimationFrame(() => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>('[data-base-input="true"]')
+    );
+    const currentIndex = inputs.findIndex((input) => input.dataset.baseKey === currentKey);
+    const nextInput = inputs[currentIndex + 1];
+    if (nextInput) {
+      nextInput.focus();
+      nextInput.select();
+    }
+  });
+};
   const inputClasses =
     "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
   const numericInputClasses = `${inputClasses} text-right pr-12`;
@@ -1115,15 +1127,22 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
             <div className="relative">
-              <input
-                type="number"
-                value={(data as any).deliverySales || ""}
-                onChange={(e) =>
-                  updateBaseField("deliverySales" as any, Number(e.target.value))
-                }
-                className={numericInputClasses}
-                placeholder="0"
-              />
+             <input
+  data-base-input="true"
+  data-base-key="posSales"
+  type="number"
+  value={data.posSales || ""}
+  onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
+  onFocus={(e) => e.target.select()}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      focusNextBaseInput("posSales");
+    }
+  }}
+  className={numericInputClasses}
+  placeholder="0"
+/>
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
                 USD
               </span>
@@ -1134,12 +1153,23 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
             <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
               <input
-                type="number"
-                value={data.visitCount || ""}
-                onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
-                className={numericInputClasses}
-                placeholder="0"
-              />
+  data-base-input="true"
+  data-base-key="deliverySales"
+  type="number"
+  value={(data as any).deliverySales || ""}
+  onChange={(e) =>
+    updateBaseField("deliverySales" as any, Number(e.target.value))
+  }
+  onFocus={(e) => e.target.select()}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      focusNextBaseInput("deliverySales");
+    }
+  }}
+  className={numericInputClasses}
+  placeholder="0"
+/>
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
                 명
               </span>
@@ -1148,19 +1178,27 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
-            <div className="relative">
-              <input
-                type="number"
-                value={data.orders || ""}
-                onChange={(e) => updateBaseField("orders", Number(e.target.value))}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                건
-              </span>
-            </div>
-          </div>
+           <div className="relative">
+  <input
+    data-base-input="true"
+    data-base-key="orders"
+    type="number"
+    value={data.orders || ""}
+    onChange={(e) => updateBaseField("orders", Number(e.target.value))}
+    onFocus={(e) => e.target.select()}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        focusNextBaseInput("orders");
+      }
+    }}
+    className={numericInputClasses}
+    placeholder="0"
+  />
+  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+    건
+  </span>
+</div>
 
           <div className="lg:col-span-3">
             <label className="block text-xs font-bold text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
