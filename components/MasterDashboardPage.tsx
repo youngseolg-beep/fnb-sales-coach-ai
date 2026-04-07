@@ -1138,41 +1138,59 @@ useEffect(() => {
 </div>
 </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-slate-400">
-                    {selectedBrand === "ALL" ? "전체 기준 Top 메뉴" : `${selectedBrand} Top 메뉴`}
-                  </div>
-                  <div className="mt-1 text-base font-semibold tracking-tight">Top 10 Menus</div>
-                </div>
-                <div className="text-sm text-slate-500">{filteredTopMenus.length} items</div>
-              </div>
+           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+  <div className="mb-4 flex items-center justify-between">
+    <div>
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+        {selectedBrand === "ALL" ? "Top Menu Snapshot" : `${selectedBrand} Top Menu Snapshot`}
+      </div>
+      <div className="mt-2 text-base font-semibold tracking-tight text-white">Top 10 Menus</div>
+    </div>
+    <div className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-400">
+      {filteredTopMenus.length} items
+    </div>
+  </div>
 
-              {filteredTopMenus.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-                  {filteredTopMenus.map((menu, index) => (
-                    <div
-                      key={`${menu.name}-${index}`}
-                      className="rounded-2xl border border-white/10 bg-slate-900/60 p-4"
-                    >
-                      <div className="text-xs font-medium text-slate-500">#{index + 1}</div>
-                      <div className="mt-2 line-clamp-2 min-h-[40px] text-sm font-semibold text-slate-100">
-                        {menu.name}
-                      </div>
-                      <div className="mt-3 text-base font-semibold tracking-tight">{formatCurrency(menu.sales)}</div>
-                      <div className="mt-1 text-xs text-slate-400">판매수량 {formatNumber(menu.qty)}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                  {selectedBrand === "ALL"
-                    ? "해당 기간 Top 메뉴 데이터가 없습니다."
-                    : `${selectedBrand}에 해당 기간 Top 메뉴 데이터가 없습니다.`}
-                </div>
-              )}
+  {filteredTopMenus.length > 0 ? (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      {filteredTopMenus.map((menu, index) => (
+        <div
+          key={`${menu.name}-${index}`}
+          className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-slate-900/90"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="rounded-full border border-blue-300/20 bg-blue-400/10 px-2.5 py-1 text-[11px] font-semibold text-blue-100">
+              #{index + 1}
             </div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">Menu</div>
+          </div>
+
+          <div className="mt-3 line-clamp-2 min-h-[44px] text-sm font-semibold leading-6 text-slate-100">
+            {menu.name}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/8 bg-slate-950/60 p-3">
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales</div>
+            <div className="mt-1 text-lg font-semibold tracking-tight text-white">
+              {formatCurrency(menu.sales)}
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs">
+            <span className="text-slate-500">판매수량</span>
+            <span className="font-semibold text-slate-200">{formatNumber(menu.qty)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/35 p-8 text-center text-slate-500">
+      {selectedBrand === "ALL"
+        ? "해당 기간 Top 메뉴 데이터가 없습니다."
+        : `${selectedBrand}에 해당 기간 Top 메뉴 데이터가 없습니다.`}
+    </div>
+  )}
+</div>
           </>
         )}
       </div>
