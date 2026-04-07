@@ -619,13 +619,36 @@ export async function loadMasterDashboard(range: MasterDateRange): Promise<Maste
   const currentRanking = aggregateRows(currentRows, storeMetaMap);
   const previousRanking = aggregateRows(previousRows, storeMetaMap);
 
-  return {
-    summary: buildSummary(currentRanking, previousRanking),
-    ranking: currentRanking,
-    risks: buildRisks(currentRanking),
-    topMenus: buildTopMenus(currentRows),
-    topMenusByBrand: buildTopMenusByBrand(currentRows, storeMetaMap),
-    brandGrowth: buildBrandGrowth(currentRanking, previousRanking),
-    storeGrowth: buildStoreGrowth(currentRanking, previousRanking),
-  };
+ return {
+  summary: buildSummary(currentRanking, previousRanking),
+  ranking: currentRanking,
+  risks: buildRisks(currentRanking),
+  topMenus: buildTopMenus(currentRows),
+  topMenusByBrand: buildTopMenusByBrand(currentRows, storeMetaMap),
+  topMenusByStore: buildTopMenusByStore(currentRows),
+  brandGrowth: buildBrandGrowth(currentRanking, previousRanking),
+  storeGrowth: buildStoreGrowth(currentRanking, previousRanking),
+};
+}
+function buildTopMenusByStore(rows: SalesDailyRow[]) {
+  const rowsByStore: Record<number, SalesDailyRow[]> = {};
+
+  for (const row of rows) {
+    const storeId = safeNumber(row.store_id);
+    if (!storeId) continue;
+
+    if (!rowsByStore[storeId]) {
+      rowsByStore[storeId] = [];
+    }
+
+    rowsByStore[storeId].push(row);
+  }
+
+  const result: Record<number, TopMenuRow[]> = {};
+
+  for (const [storeId, storeRows] of Object.entries(rowsByStore)) {
+    result[Number(storeId)] = buildTopMenus(storeRows);
+  }
+
+  return result;
 }
