@@ -142,8 +142,6 @@ type FileStatus = {
 };
 
 const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWithData, onMonthChange }) => {
-  const menuQtyRefs = useRef<Array<HTMLInputElement | null>>([]);
-
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -159,11 +157,16 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const focusNextMenuQtyInput = (currentFlatIndex: number) => {
-    const nextInput = menuQtyRefs.current[currentFlatIndex + 1];
-    if (nextInput) {
-      nextInput.focus();
-      nextInput.select();
-    }
+    requestAnimationFrame(() => {
+      const inputs = Array.from(
+        document.querySelectorAll<HTMLInputElement>('[data-menu-qty-input="true"]')
+      );
+      const nextInput = inputs[currentFlatIndex + 1];
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+    });
   };
 
   const inputClasses =
@@ -259,10 +262,6 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
     setThumbUrls(next);
   }, [ocrFiles]);
-
-  useEffect(() => {
-    menuQtyRefs.current = [];
-  }, [data.categories]);
 
   const normalizeName = (name: string): string => {
     return name
@@ -1197,9 +1196,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                       </span>
                       <div className="relative w-16">
                         <input
-                          ref={(el) => {
-                            menuQtyRefs.current[currentFlatIndex] = el;
-                          }}
+                          data-menu-qty-input="true"
                           type="number"
                           min="0"
                           value={item.qty || ""}
