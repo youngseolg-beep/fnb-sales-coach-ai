@@ -507,9 +507,9 @@ const topMenusByStore = result?.topMenusByStore || {};
 
   <span className="text-slate-500">·</span>
 
-  <span className="rounded-full bg-blue-500/15 px-3 py-1 text-blue-200">
-    {getComparisonLabel(range)}
-  </span>
+  <span className="rounded-full border border-blue-300/30 bg-blue-500/10 px-3 py-1 text-blue-200 font-medium tracking-wide">
+  {getComparisonLabel(range)}
+</span>
 </div>
             </div>
 
@@ -568,7 +568,12 @@ const topMenusByStore = result?.topMenusByStore || {};
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
   <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-    <div className="text-xs text-slate-400">전체 매출</div>
+   <div className="text-xs text-slate-400">
+  전체 매출
+  <span className="ml-1 text-[10px] text-slate-500">
+    ({getComparisonShortLabel(range)})
+  </span>
+</div>
     <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
       {formatCurrency(summary.totalSales)}
     </div>
