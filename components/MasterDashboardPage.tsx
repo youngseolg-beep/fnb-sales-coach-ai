@@ -35,6 +35,7 @@ type MasterDashboardViewData = {
   risks: RiskCard[];
   topMenus: TopMenuRow[];
   topMenusByBrand: Record<string, TopMenuRow[]>;
+  topMenusByStore?: Record<number, TopMenuRow[]>;
   brandGrowth?: Record<string, { current: number; previous: number; rate: number | null }>;
   storeGrowth?: Record<number, { current: number; previous: number; rate: number | null }>;
 };
@@ -353,7 +354,8 @@ useEffect(() => {
   const ranking = result?.ranking || [];
   const risks = result?.risks || [];
   const topMenus = result?.topMenus || [];
-  const topMenusByBrand = result?.topMenusByBrand || {};
+const topMenusByBrand = result?.topMenusByBrand || {};
+const topMenusByStore = result?.topMenusByStore || {};
 
   const groupedByBrand = useMemo(() => {
     const map: Record<string, StoreKpiRow[]> = {};
@@ -420,9 +422,16 @@ useEffect(() => {
   }, [selectedBrand, risks, selectedBrandStoreIds]);
 
   const filteredTopMenus = useMemo(() => {
-    if (selectedBrand === "ALL") return topMenus;
+  if (selectedStoreId && topMenusByStore[selectedStoreId]) {
+    return topMenusByStore[selectedStoreId];
+  }
+
+  if (selectedBrand !== "ALL") {
     return topMenusByBrand[selectedBrand] || [];
-  }, [selectedBrand, topMenus, topMenusByBrand]);
+  }
+
+  return topMenus;
+}, [selectedStoreId, selectedBrand, topMenus, topMenusByBrand, topMenusByStore]);
 
   const filteredActionCards = useMemo(() => {
     return buildActionCards(filteredRisks, filteredTopMenus);
@@ -1141,9 +1150,13 @@ useEffect(() => {
            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
   <div className="mb-4 flex items-center justify-between">
     <div>
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-        {selectedBrand === "ALL" ? "Top Menu Snapshot" : `${selectedBrand} Top Menu Snapshot`}
-      </div>
+     <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+  {selectedStore?.storeName
+    ? `${selectedStore.storeName} Top Menu Snapshot`
+    : selectedBrand === "ALL"
+    ? "Top Menu Snapshot"
+    : `${selectedBrand} Top Menu Snapshot`}
+</div>
       <div className="mt-2 text-base font-semibold tracking-tight text-white">Top 10 Menus</div>
     </div>
     <div className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-400">
