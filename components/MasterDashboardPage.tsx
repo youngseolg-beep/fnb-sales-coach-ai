@@ -1060,39 +1060,81 @@ useEffect(() => {
   )}
 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                  <div className="text-xs text-slate-400">
-                    {selectedBrand === "ALL" ? "문제 매장 자동 탐지" : `${selectedBrand} 문제 매장 자동 탐지`}
-                  </div>
-                  <div className="mt-1 text-base font-semibold tracking-tight">Risk Cards</div>
+               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+  <div className="flex items-start justify-between gap-3">
+    <div>
+      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+        {selectedBrand === "ALL" ? "Risk Monitor" : `${selectedBrand} Risk Monitor`}
+      </div>
+      <div className="mt-2 text-base font-semibold tracking-tight text-white">Risk Cards</div>
+    </div>
 
-                  <div className="mt-4 flex flex-col gap-3">
-                    {filteredRisks.length > 0 ? (
-                      filteredRisks.map((risk, index) => (
-                        <div
-                          key={`${risk.storeId}-${risk.type}-${index}`}
-                          className={`rounded-2xl border p-3 ${riskTone(risk.level)}`}
-                        >
-                          <div className="text-sm font-semibold">{risk.label}</div>
-                          <div className="mt-1 text-sm">{risk.storeName}</div>
-                          <div className="mt-1 text-xs opacity-80">
-                            {risk.type === "sales" && formatCurrency(risk.value)}
-                            {risk.type === "aov" && formatCurrency(risk.value)}
-                            {risk.type === "conversion" && formatPercent(risk.value)}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-500">
-                        {selectedBrand === "ALL"
-                          ? "현재 위험 카드가 없습니다."
-                          : `${selectedBrand}에 표시할 위험 카드가 없습니다.`}
-                      </div>
-                    )}
-                  </div>
-                </div>
+    <div className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-400">
+      {filteredRisks.length} items
+    </div>
+  </div>
+
+  <div className="mt-5 flex flex-col gap-3">
+    {filteredRisks.length > 0 ? (
+      filteredRisks.map((risk, index) => {
+        const toneClass =
+          risk.level === "danger"
+            ? "border-rose-400/30 bg-rose-500/12"
+            : risk.level === "warning"
+            ? "border-amber-400/30 bg-amber-500/12"
+            : "border-emerald-400/30 bg-emerald-500/12";
+
+        const badgeClass =
+          risk.level === "danger"
+            ? "border-rose-300/30 bg-rose-400/15 text-rose-200"
+            : risk.level === "warning"
+            ? "border-amber-300/30 bg-amber-400/15 text-amber-200"
+            : "border-emerald-300/30 bg-emerald-400/15 text-emerald-200";
+
+        return (
+          <div
+            key={`${risk.storeId}-${risk.type}-${index}`}
+            className={`rounded-2xl border p-4 ${toneClass}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white">{risk.label}</div>
+                <div className="mt-1 text-sm text-slate-300">{risk.storeName}</div>
+              </div>
+
+              <div className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${badgeClass}`}>
+                {risk.level}
               </div>
             </div>
+
+            <div className="mt-4 flex items-end justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-500">Current Value</div>
+                <div className="mt-1 text-base font-semibold text-white">
+                  {risk.type === "sales" && formatCurrency(risk.value)}
+                  {risk.type === "aov" && formatCurrency(risk.value)}
+                  {risk.type === "conversion" && formatPercent(risk.value)}
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-400">
+                {risk.type === "sales" && "Sales Risk"}
+                {risk.type === "aov" && "AOV Risk"}
+                {risk.type === "conversion" && "Conversion Risk"}
+              </div>
+            </div>
+          </div>
+        );
+      })
+    ) : (
+      <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/35 p-6 text-sm text-slate-500">
+        {selectedBrand === "ALL"
+          ? "현재 위험 카드가 없습니다."
+          : `${selectedBrand}에 표시할 위험 카드가 없습니다.`}
+      </div>
+    )}
+  </div>
+</div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="mb-4 flex items-center justify-between">
