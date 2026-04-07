@@ -417,9 +417,13 @@ const topMenusByStore = result?.topMenusByStore || {};
   }, [selectedBrandRows]);
 
   const filteredRisks = useMemo(() => {
-    if (selectedBrand === "ALL") return risks;
-    return risks.filter((risk) => selectedBrandStoreIds.has(risk.storeId));
-  }, [selectedBrand, risks, selectedBrandStoreIds]);
+  if (selectedStoreId) {
+    return risks.filter((risk) => risk.storeId === selectedStoreId);
+  }
+
+  if (selectedBrand === "ALL") return risks;
+  return risks.filter((risk) => selectedBrandStoreIds.has(risk.storeId));
+}, [selectedStoreId, selectedBrand, risks, selectedBrandStoreIds]);
 
   const filteredTopMenus = useMemo(() => {
   if (selectedStoreId && topMenusByStore[selectedStoreId]) {
@@ -797,8 +801,12 @@ const topMenusByStore = result?.topMenusByStore || {};
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <div className="text-xs text-slate-400">
-                    {selectedBrand === "ALL" ? "문제 매장 액션 제안" : `${selectedBrand} 액션 제안`}
-                  </div>
+  {selectedStore?.storeName
+    ? `${selectedStore.storeName} 액션 제안`
+    : selectedBrand === "ALL"
+    ? "문제 매장 액션 제안"
+    : `${selectedBrand} 액션 제안`}
+</div>
                   <div className="mt-1 text-base font-semibold tracking-tight">Recommended Actions</div>
                 </div>
                 <div className="text-sm text-slate-500">{filteredActionCards.length} actions</div>
@@ -1072,9 +1080,13 @@ const topMenusByStore = result?.topMenusByStore || {};
                <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
   <div className="flex items-start justify-between gap-3">
     <div>
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-        {selectedBrand === "ALL" ? "Risk Monitor" : `${selectedBrand} Risk Monitor`}
-      </div>
+     <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+  {selectedStore?.storeName
+    ? `${selectedStore.storeName} Risk Monitor`
+    : selectedBrand === "ALL"
+    ? "Risk Monitor"
+    : `${selectedBrand} Risk Monitor`}
+</div>
       <div className="mt-2 text-base font-semibold tracking-tight text-white">Risk Cards</div>
     </div>
 
