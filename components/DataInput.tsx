@@ -142,6 +142,8 @@ type FileStatus = {
 };
 
 const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWithData, onMonthChange }) => {
+  const menuQtyRefs = useRef<Array<HTMLInputElement | null>>([]);
+
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -154,6 +156,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       ),
     }));
     onChange({ ...data, categories: newCategories });
+  };
+
+  const focusNextMenuQtyInput = (currentFlatIndex: number) => {
+    const nextInput = menuQtyRefs.current[currentFlatIndex + 1];
+    if (nextInput) {
+      nextInput.focus();
+      nextInput.select();
+    }
   };
 
   const inputClasses =
@@ -249,6 +259,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
     setThumbUrls(next);
   }, [ocrFiles]);
+
+  useEffect(() => {
+    menuQtyRefs.current = [];
+  }, [data.categories]);
 
   const normalizeName = (name: string): string => {
     return name
@@ -1163,32 +1177,51 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {data.categories.map((cat, catIdx) => (
-          <div key={cat.name} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-indigo-50/50 border-b border-indigo-100 px-6 py-3">
-              <h3 className="font-bold text-indigo-900 text-sm">{cat.name}</h3>
+        {(() => {
+          let flatInputIndex = 0;
+
+          return data.categories.map((cat, catIdx) => (
+            <div key={cat.name} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-indigo-50/50 border-b border-indigo-100 px-6 py-3">
+                <h3 className="font-bold text-indigo-900 text-sm">{cat.name}</h3>
+              </div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                {cat.items.map((item, itemIdx) => {
+                  const currentFlatIndex = flatInputIndex;
+                  flatInputIndex += 1;
+
+                  return (
+                    <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
+                      <span className="text-sm font-medium text-slate-700 truncate flex-1">
+                        {item.name} <span className="text-[10px] text-slate-400 font-normal">(${item.price})</span>
+                      </span>
+                      <div className="relative w-16">
+                        <input
+                          ref={(el) => {
+                            menuQtyRefs.current[currentFlatIndex] = el;
+                          }}
+                          type="number"
+                          min="0"
+                          value={item.qty || ""}
+                          onChange={(e) => updateQty(catIdx, itemIdx, Number(e.target.value))}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              focusNextMenuQtyInput(currentFlatIndex);
+                            }
+                          }}
+                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-              {cat.items.map((item, itemIdx) => (
-                <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
-                  <span className="text-sm font-medium text-slate-700 truncate flex-1">
-                    {item.name} <span className="text-[10px] text-slate-400 font-normal">(${item.price})</span>
-                  </span>
-                  <div className="relative w-16">
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.qty || ""}
-                      onChange={(e) => updateQty(catIdx, itemIdx, Number(e.target.value))}
-                      className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          ));
+        })()}
       </div>
     </div>
   );
