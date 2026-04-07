@@ -21,7 +21,7 @@ const SummaryPage: React.FC<Props> = ({
   onSaveTarget,
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-slate-900">
       <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 md:px-8 md:py-4 flex items-center justify-between">
           <h3 className="font-bold text-slate-800 text-sm md:text-base">
