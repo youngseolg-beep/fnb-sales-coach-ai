@@ -1133,7 +1133,9 @@ useEffect(() => {
           : `${selectedBrand}에 표시할 위험 카드가 없습니다.`}
       </div>
     )}
-  </div>
+ </div>
+</div>
+</div>
 </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
