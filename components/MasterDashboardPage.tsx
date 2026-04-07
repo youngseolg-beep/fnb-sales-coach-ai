@@ -643,61 +643,84 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {brandSummaryCards.length > 0 ? (
-                brandSummaryCards.map((card) => {
-                  const isSelected = selectedBrand === card.brandName;
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {brandSummaryCards.length > 0 ? (
+    brandSummaryCards.map((card) => {
+      const isSelected = selectedBrand === card.brandName;
 
-                  return (
-                    <button
-                      key={card.brandName}
-                      type="button"
-                      onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
-                      className={`relative rounded-3xl border p-5 text-left transition ${
-                        isSelected
-                          ? "border-blue-300 bg-blue-500/15 shadow-[0_0_0_1px_rgba(147,197,253,0.35)]"
-                          : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-xs text-slate-400">Brand</div>
-                          <div className="mt-1 text-xl font-semibold text-slate-100">{card.brandName}</div>
-                          <div className={`mt-1 text-sm ${growthTone(card.growthRate)}`}>
-                            {formatGrowth(card.growthRate)}
-                          </div>
-                        </div>
+      return (
+        <button
+          key={card.brandName}
+          type="button"
+          onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
+          className={`relative overflow-hidden rounded-3xl border p-5 text-left transition-all duration-200 ${
+            isSelected
+              ? "border-blue-300/70 bg-blue-500/15 shadow-[0_0_0_1px_rgba(147,197,253,0.35),0_20px_50px_rgba(30,41,59,0.45)]"
+              : "border-white/10 bg-white/5 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_16px_40px_rgba(15,23,42,0.35)]"
+          }`}
+        >
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${
+              isSelected ? "bg-blue-300/90" : "bg-white/10"
+            }`}
+          />
 
-                        {isSelected ? (
-                          <div className="rounded-full border border-blue-200/30 bg-blue-300/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-100">
-                            Selected
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                        <div className="rounded-2xl bg-slate-900/70 p-3">
-                          <div className="text-slate-400">Stores</div>
-                          <div className="mt-1 font-semibold text-slate-100">{formatNumber(card.storeCount)}</div>
-                        </div>
-                        <div className="rounded-2xl bg-slate-900/70 p-3">
-                          <div className="text-slate-400">Sales</div>
-                          <div className="mt-1 font-semibold text-slate-100">{formatCurrency(card.totalSales)}</div>
-                        </div>
-                        <div className="rounded-2xl bg-slate-900/70 p-3">
-                          <div className="text-slate-400">Avg AOV</div>
-                          <div className={`mt-1 ${aovTone(card.averageAov)}`}>{formatCurrency(card.averageAov)}</div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="md:col-span-2 xl:col-span-3 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-500">
-                  등록된 브랜드 데이터가 없습니다.
-                </div>
-              )}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                Brand Overview
+              </div>
+              <div className="mt-2 text-xl font-semibold tracking-tight text-slate-100">
+                {card.brandName}
+              </div>
+              <div className={`mt-2 text-sm ${growthTone(card.growthRate)}`}>
+                {formatGrowth(card.growthRate)}
+              </div>
             </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              {isSelected ? (
+                <div className="rounded-full border border-blue-200/30 bg-blue-300/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-100">
+                  Selected
+                </div>
+              ) : null}
+              <div className="rounded-full border border-white/10 bg-slate-900/70 px-2.5 py-1 text-[11px] text-slate-400">
+                {formatNumber(card.storeCount)} stores
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
+              <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales</div>
+              <div className="mt-2 text-lg font-semibold tracking-tight text-white">
+                {formatCurrency(card.totalSales)}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
+              <div className="text-[11px] uppercase tracking-wide text-slate-500">Avg AOV</div>
+              <div className={`mt-2 text-lg font-semibold tracking-tight ${aovTone(card.averageAov)}`}>
+                {formatCurrency(card.averageAov)}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
+              <div className="text-[11px] uppercase tracking-wide text-slate-500">Growth</div>
+              <div className={`mt-2 text-lg font-semibold tracking-tight ${growthTone(card.growthRate)}`}>
+                {formatCompactGrowth(card.growthRate)}
+              </div>
+            </div>
+          </div>
+        </button>
+      );
+    })
+  ) : (
+    <div className="md:col-span-2 xl:col-span-3 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-500">
+      등록된 브랜드 데이터가 없습니다.
+    </div>
+  )}
+</div>
 
             {selectedBrand !== "ALL" && (
               <>
