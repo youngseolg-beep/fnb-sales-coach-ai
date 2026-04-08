@@ -1,17 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import ReportDisplay from "./ReportDisplay";
 import { generateCoachingReport } from "../services/geminiService";
 import type { SalesReportData, CalculationResult } from "../types";
-
-const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
-
-type StoredReport = {
-  report: string;
-  date: string;
-  generatedAt: string;
-};
-
-type StoredReportMap = Record<string, StoredReport>;
 
 type Props = {
   selectedDate: string;
@@ -20,44 +10,9 @@ type Props = {
 };
 
 const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
-  const [storedReport, setStoredReport] = useState<StoredReport | null>(null);
+  const [report, setReport] = useState("");
+  const [reportDate, setReportDate] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const loadStoredReport = () => {
-    try {
-      const raw = localStorage.getItem(DETAIL_REPORT_STORAGE_KEY);
-      if (!raw) {
-        setStoredReport(null);
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as StoredReportMap;
-      const reportForDate = parsed?.[selectedDate];
-
-      if (!reportForDate?.report) {
-        setStoredReport(null);
-        return;
-      }
-
-      setStoredReport(reportForDate);
-    } catch (error) {
-      console.error("DetailPage localStorage parse error:", error);
-      setStoredReport(null);
-    }
-  };
-
-  useEffect(() => {
-    loadStoredReport();
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === DETAIL_REPORT_STORAGE_KEY) {
-        loadStoredReport();
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [selectedDate]);
 
   const results = useMemo((): CalculationResult => {
     const deliverySales = Number(data.deliverySales || 0);
@@ -92,26 +47,33 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
     };
   }, [data]);
 
+  const hasMeaningfulData = useMemo(() => {
+    const hasBase =
+      Number(data.posSales || 0) > 0 ||
+      Number(data.deliverySales || 0) > 0 ||
+      Number(data.orders || 0) > 0 ||
+      Number(data.visitCount || 0) > 0 ||
+      String(data.note || "").trim().length > 0;
+
+    const hasMenu = data.categories.some((cat) =>
+      cat.items.some((item) => Number(item.qty || 0) > 0)
+    );
+
+    return hasBase || hasMenu;
+  }, [data]);
+
   const handleGenerateReport = async () => {
+    if (!hasMeaningfulData) {
+      showToast("해당 날짜에 생성할 매출 데이터가 없습니다.");
+      return;
+    }
+
     setLoading(true);
     try {
       const coachOnlyMenuEngineering = null;
       const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
-
-      const raw = localStorage.getItem(DETAIL_REPORT_STORAGE_KEY);
-      const prevMap: StoredReportMap = raw ? JSON.parse(raw) : {};
-
-      const nextMap: StoredReportMap = {
-        ...prevMap,
-        [selectedDate]: {
-          report: result,
-          date: selectedDate,
-          generatedAt: new Date().toISOString(),
-        },
-      };
-
-      localStorage.setItem(DETAIL_REPORT_STORAGE_KEY, JSON.stringify(nextMap));
-      setStoredReport(nextMap[selectedDate]);
+      setReport(result);
+      setReportDate(selectedDate);
       showToast("코칭 리포트 생성 완료");
     } catch (error) {
       console.error("DetailPage generate report error:", error);
@@ -120,6 +82,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
       setLoading(false);
     }
   };
+
+  const isShowingCurrentDateReport = reportDate === selectedDate && !!report;
 
   return (
     <div className="space-y-5 text-slate-900">
@@ -149,7 +113,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
           <div className="flex flex-col items-start gap-2 md:items-end">
             <div className="text-right text-xs font-bold text-slate-400">
               <div>기준일: {selectedDate}</div>
-              {storedReport && <div>저장된 리포트 표시중</div>}
+              {isShowingCurrentDateReport && <div>현재 날짜 리포트 표시중</div>}
             </div>
 
             <button
@@ -164,9 +128,9 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
         </div>
 
         <div className="mt-4">
-          {storedReport ? (
+          {isShowingCurrentDateReport ? (
             <ReportDisplay
-              report={storedReport.report}
+              report={report}
               loading={false}
               menuEngineeringResult={null}
               sortedMenuEngineering={null}
@@ -174,7 +138,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast }) => {
             />
           ) : (
             <div className="rounded-2xl bg-slate-50 p-5 text-sm font-medium text-slate-500">
-              해당 날짜에 저장된 코칭 리포트가 없습니다.
+              아직 이 날짜의 코칭 리포트가 생성되지 않았습니다. 코칭 리포트 생성 버튼을 눌러 바로 확인하세요.
             </div>
           )}
         </div>
