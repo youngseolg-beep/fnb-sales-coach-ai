@@ -1,4 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu";
 
@@ -12,6 +14,8 @@ type Props = {
   currentPage: StoreOwnerPageKey;
   onChangePage: (page: StoreOwnerPageKey) => void;
   onChangeDate: (date: string) => void;
+  onMonthChange: (month: Date) => void;
+  datesWithData: string[];
   onLogout: () => void;
   children: ReactNode;
   title?: string;
@@ -44,10 +48,24 @@ const MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+const parseLocalDate = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+
+const formatLocalDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export default function StoreOwnerShell({
   currentPage,
   onChangePage,
   onChangeDate,
+  onMonthChange,
+  datesWithData,
   onLogout,
   children,
   title = "Sales Coach AI",
@@ -57,15 +75,67 @@ export default function StoreOwnerShell({
   monthlyRate,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
+  const [calendarRenderKey, setCalendarRenderKey] = useState(0);
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
+  const dateButtonRef = useRef<HTMLButtonElement>(null);
 
   const activeMenu = useMemo(() => {
     return MENU_ITEMS.find((item) => item.key === currentPage) ?? MENU_ITEMS[0];
   }, [currentPage]);
 
+  const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
+
   const handleMove = (page: StoreOwnerPageKey) => {
     onChangePage(page);
     setOpen(false);
   };
+
+  const toggleCalendar = () => {
+    if (!showCalendar && dateButtonRef.current) {
+      const rect = dateButtonRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const popupWidth = 320;
+
+      let left = rect.left;
+      if (left + popupWidth > windowWidth) left = windowWidth - popupWidth - 20;
+      if (left < 20) left = 20;
+
+      const currentMonth = parseLocalDate(selectedDate);
+
+      setCalendarPos({
+        top: rect.bottom + window.scrollY + 8,
+        left,
+      });
+      setCalendarMonth(currentMonth);
+      setCalendarRenderKey((prev) => prev + 1);
+      onMonthChange(currentMonth);
+      setShowCalendar(true);
+      return;
+    }
+
+    setShowCalendar(false);
+  };
+
+  useEffect(() => {
+    if (!showCalendar) return;
+    const close = () => setShowCalendar(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [showCalendar]);
+
+  useEffect(() => {
+    const nextMonth = parseLocalDate(selectedDate);
+    setCalendarMonth(nextMonth);
+    if (showCalendar) {
+      setCalendarRenderKey((prev) => prev + 1);
+    }
+  }, [selectedDate, showCalendar]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -81,12 +151,14 @@ export default function StoreOwnerShell({
             </button>
 
             <div>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => onChangeDate(e.target.value)}
-                className="text-sm font-black text-slate-900 bg-transparent outline-none cursor-pointer"
-              />
+              <button
+                ref={dateButtonRef}
+                type="button"
+                onClick={toggleCalendar}
+                className="text-sm font-black text-slate-900 hover:text-indigo-600 transition-colors"
+              >
+                {selectedDate}
+              </button>
               <div className="text-[10px] font-black text-slate-400 tracking-widest">
                 POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
               </div>
@@ -110,6 +182,55 @@ export default function StoreOwnerShell({
           </div>
         </div>
       </header>
+
+      {showCalendar && (
+        <div
+          className="fixed z-[9998] w-[320px] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl"
+          style={{
+            top: `${calendarPos.top}px`,
+            left: `${calendarPos.left}px`,
+          }}
+        >
+          <DayPicker
+            key={calendarRenderKey}
+            mode="single"
+            month={calendarMonth}
+            selected={parseLocalDate(selectedDate)}
+            onMonthChange={(month) => {
+              setCalendarMonth(month);
+              onMonthChange(month);
+            }}
+            onSelect={(date) => {
+              if (!date) return;
+              onChangeDate(formatLocalDate(date));
+              setShowCalendar(false);
+            }}
+            modifiers={{
+              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
+            }}
+            modifiersClassNames={{
+              hasData: "has-data-day",
+            }}
+          />
+
+          <style>{`
+            .has-data-day {
+              position: relative;
+            }
+            .has-data-day::after {
+              content: "";
+              position: absolute;
+              bottom: 6px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 6px;
+              height: 6px;
+              border-radius: 9999px;
+              background: #4f46e5;
+            }
+          `}</style>
+        </div>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50">
