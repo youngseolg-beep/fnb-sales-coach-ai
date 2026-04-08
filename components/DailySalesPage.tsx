@@ -100,7 +100,7 @@ const SOFT_DRINKS = [
 ];
 
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
-const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report";
+const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
 const DailySalesPage: React.FC<Props> = ({
   data,
   setData,
@@ -882,21 +882,23 @@ const handleGenerate = async () => {
     if (!saved) return;
 
     const coachOnlyMenuEngineering = null;
-
     const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
 
     setReport(result);
     setReportGenerated(true);
 
     if (typeof window !== "undefined") {
-      localStorage.setItem(
-        DETAIL_REPORT_STORAGE_KEY,
-        JSON.stringify({
+      const raw = localStorage.getItem(DETAIL_REPORT_STORAGE_KEY);
+      const prevMap = raw ? JSON.parse(raw) : {};
+      const nextMap = {
+        ...prevMap,
+        [data.date]: {
           report: result,
           date: data.date,
           generatedAt: new Date().toISOString(),
-        })
-      );
+        },
+      };
+      localStorage.setItem(DETAIL_REPORT_STORAGE_KEY, JSON.stringify(nextMap));
     }
 
     showToast("AI 코칭 리포트 생성 완료");
@@ -954,50 +956,33 @@ const handleGenerate = async () => {
     </div>
 
     <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
-      <div className="max-w-6xl mx-auto pointer-events-auto">
-        <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4">
-          <button
-            type="button"
-            onClick={() => setShowResetModal(true)}
-            className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
-          >
-            <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
-            일 데이터 리셋
-          </button>
+  <div className="max-w-6xl mx-auto pointer-events-auto">
+    <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:gap-4">
+      <button
+        type="button"
+        onClick={() => setShowResetModal(true)}
+        className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
+      >
+        <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
+        일 데이터 리셋
+      </button>
 
-          <button
-            type="button"
-            onClick={() => handleSave(false)}
-            className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
-              ocrApplied && !dataSaved
-                ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
-                : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
-            매출 데이터 저장
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleGenerate()}
-            disabled={loading}
-            className={`col-span-2 md:col-span-1 px-3 py-3 md:px-10 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ${
-              dataSaved && !reportGenerated
-                ? "bg-emerald-600 text-white ring-2 ring-emerald-300 hover:bg-emerald-700"
-                : "bg-slate-900 text-white hover:bg-indigo-600 disabled:bg-slate-300"
-            }`}
-          >
-            {loading ? (
-              <i className="fa-solid fa-spinner fa-spin text-sm md:text-base"></i>
-            ) : (
-              <i className="fa-solid fa-wand-magic-sparkles text-sm md:text-base"></i>
-            )}
-            코칭 리포트 생성
-          </button>
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={() => handleSave(false)}
+        className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
+          ocrApplied && !dataSaved
+            ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
+            : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
+        }`}
+      >
+        <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
+        매출 데이터 저장
+      </button>
     </div>
+  </div>
+</div>
+
 
     {showResetModal && (
       <div
