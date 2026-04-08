@@ -100,7 +100,7 @@ const SOFT_DRINKS = [
 ];
 
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
-
+const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report";
 const DailySalesPage: React.FC<Props> = ({
   data,
   setData,
@@ -884,8 +884,21 @@ const handleGenerate = async () => {
     const coachOnlyMenuEngineering = null;
 
     const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
+
     setReport(result);
     setReportGenerated(true);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        DETAIL_REPORT_STORAGE_KEY,
+        JSON.stringify({
+          report: result,
+          date: data.date,
+          generatedAt: new Date().toISOString(),
+        })
+      );
+    }
+
     showToast("AI 코칭 리포트 생성 완료");
   } catch (error: any) {
     console.error("Process Error:", error);
