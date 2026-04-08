@@ -1043,161 +1043,106 @@ const focusNextBaseInput = (currentKey: string) => {
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-1 relative">
-            <label className="block text-xs font-bold text-slate-500 mb-1">날짜 선택</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <button
-                  ref={calendarButtonRef}
-                  onClick={toggleCalendar}
-                  className={`${inputClasses} w-full text-left flex items-center justify-between`}
-                >
-                  {data.date}
-                  <i className="fa-solid fa-calendar text-slate-400"></i>
-                </button>
+        <div>
+  <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
+  <div className="relative">
+    <input
+      data-base-input="true"
+      data-base-key="posSales"
+      type="number"
+      value={data.posSales || ""}
+      onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
+      onFocus={(e) => e.target.select()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextBaseInput("posSales");
+        }
+      }}
+      className={numericInputClasses}
+      placeholder="0"
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      USD
+    </span>
+  </div>
+</div>
 
-                {showCalendar && (
-                  <div
-                    style={{
-                      position: "fixed",
-                      top: calendarPos.top - window.scrollY,
-                      left: calendarPos.left,
-                      zIndex: 9999,
-                    }}
-                    className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 min-w-[320px]"
-                  >
-                    <DayPicker
-                      key={`${calendarRenderKey}_${calendarMonth.getFullYear()}-${calendarMonth.getMonth()}_${(datesWithData || []).join(",")}`}
-                      mode="single"
-                      month={calendarMonth}
-                      selected={parseLocalDate(data.date)}
-                      onSelect={(date) => {
-                        if (date) {
-                          updateBaseField("date", formatLocalDate(date));
-                          setShowCalendar(false);
-                        }
-                      }}
-                      onMonthChange={(month) => {
-                        setCalendarMonth(month);
-                        setCalendarRenderKey((prev) => prev + 1);
-                        onMonthChange?.(month);
-                      }}
-                      modifiers={{
-                        hasData: (date) => {
-                          const key = formatLocalDate(date);
-                          return hasDataDateSet.has(key);
-                        },
-                      }}
-                      modifiersClassNames={{
-                        hasData: "has-data",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => {
-                  const today = formatLocalDate(new Date());
-                  updateBaseField("date", today);
-                }}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-colors uppercase"
-              >
-                Today
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
-            <div className="relative">
-              <input
-                type="number"
-                value={data.posSales || ""}
-                onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                USD
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
-            <div className="relative">
-             <input
-  data-base-input="true"
-  data-base-key="posSales"
-  type="number"
-  value={data.posSales || ""}
-  onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
-  onFocus={(e) => e.target.select()}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      focusNextBaseInput("posSales");
-    }
-  }}
-  className={numericInputClasses}
-  placeholder="0"
-/>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                USD
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
-            <div className="relative">
-              <input
-  data-base-input="true"
-  data-base-key="deliverySales"
-  type="number"
-  value={(data as any).deliverySales || ""}
-  onChange={(e) =>
-    updateBaseField("deliverySales" as any, Number(e.target.value))
-  }
-  onFocus={(e) => e.target.select()}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      focusNextBaseInput("deliverySales");
-    }
-  }}
-  className={numericInputClasses}
-  placeholder="0"
-/>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                명
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
-           <div className="relative">
-  <input
-    data-base-input="true"
-    data-base-key="orders"
-    type="number"
-    value={data.orders || ""}
-    onChange={(e) => updateBaseField("orders", Number(e.target.value))}
-    onFocus={(e) => e.target.select()}
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        focusNextBaseInput("orders");
+<div>
+  <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
+  <div className="relative">
+    <input
+      data-base-input="true"
+      data-base-key="deliverySales"
+      type="number"
+      value={(data as any).deliverySales || ""}
+      onChange={(e) =>
+        updateBaseField("deliverySales" as any, Number(e.target.value))
       }
-    }}
-    className={numericInputClasses}
-    placeholder="0"
-  />
-  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-    건
-  </span>
+      onFocus={(e) => e.target.select()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextBaseInput("deliverySales");
+        }
+      }}
+      className={numericInputClasses}
+      placeholder="0"
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      USD
+    </span>
+  </div>
+</div>
+
+<div>
+  <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
+  <div className="relative">
+    <input
+      data-base-input="true"
+      data-base-key="visitCount"
+      type="number"
+      value={data.visitCount || ""}
+      onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
+      onFocus={(e) => e.target.select()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextBaseInput("visitCount");
+        }
+      }}
+      className={numericInputClasses}
+      placeholder="0"
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      명
+    </span>
+  </div>
+</div>
+
+<div>
+  <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
+  <div className="relative">
+    <input
+      data-base-input="true"
+      data-base-key="orders"
+      type="number"
+      value={data.orders || ""}
+      onChange={(e) => updateBaseField("orders", Number(e.target.value))}
+      onFocus={(e) => e.target.select()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextBaseInput("orders");
+        }
+      }}
+      className={numericInputClasses}
+      placeholder="0"
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      건
+    </span>
+  </div>
 </div>
 
           <div className="lg:col-span-3">
