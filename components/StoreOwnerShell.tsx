@@ -11,6 +11,8 @@ type MenuItem = {
 type Props = {
   currentPage: StoreOwnerPageKey;
   onChangePage: (page: StoreOwnerPageKey) => void;
+  onChangeDate: (date: string) => void;
+  onLogout: () => void;
   children: ReactNode;
   title?: string;
   subtitle?: string;
@@ -45,6 +47,8 @@ const MENU_ITEMS: MenuItem[] = [
 export default function StoreOwnerShell({
   currentPage,
   onChangePage,
+  onChangeDate,
+  onLogout,
   children,
   title = "Sales Coach AI",
   subtitle = "Store Owner Workspace",
@@ -67,7 +71,6 @@ export default function StoreOwnerShell({
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -78,12 +81,12 @@ export default function StoreOwnerShell({
             </button>
 
             <div>
-             <input
-  type="date"
-  value={selectedDate}
-  onChange={() => {}}
-  className="text-sm font-black text-slate-900 bg-transparent outline-none cursor-pointer"
-/>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => onChangeDate(e.target.value)}
+                className="text-sm font-black text-slate-900 bg-transparent outline-none cursor-pointer"
+              />
               <div className="text-[10px] font-black text-slate-400 tracking-widest">
                 POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
               </div>
@@ -91,7 +94,6 @@ export default function StoreOwnerShell({
           </div>
 
           <div className="flex items-center gap-4">
-
             <div className="text-right">
               <div className="text-[10px] text-slate-400">월 목표</div>
               <div className="text-sm font-black text-slate-900">
@@ -105,7 +107,6 @@ export default function StoreOwnerShell({
                 {monthlyRate.toFixed(1)}%
               </div>
             </div>
-
           </div>
         </div>
       </header>
@@ -161,6 +162,17 @@ export default function StoreOwnerShell({
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="mt-6 border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-left text-rose-600 hover:bg-rose-100"
+                >
+                  <div className="text-sm font-semibold">Logout</div>
+                  <div className="mt-1 text-xs text-rose-400">현재 계정에서 로그아웃</div>
+                </button>
               </div>
             </nav>
           </aside>
