@@ -78,9 +78,12 @@ export default function StoreOwnerShell({
             </button>
 
             <div>
-              <div className="text-sm font-black text-slate-900">
-                {selectedDate}
-              </div>
+             <input
+  type="date"
+  value={selectedDate}
+  onChange={() => {}}
+  className="text-sm font-black text-slate-900 bg-transparent outline-none cursor-pointer"
+/>
               <div className="text-[10px] font-black text-slate-400 tracking-widest">
                 POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
               </div>
