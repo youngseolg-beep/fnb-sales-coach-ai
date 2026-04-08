@@ -170,14 +170,25 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 const focusNextBaseInput = (currentKey: string) => {
   requestAnimationFrame(() => {
-    const inputs = Array.from(
+    const baseInputs = Array.from(
       document.querySelectorAll<HTMLInputElement>('[data-base-input="true"]')
     );
-    const currentIndex = inputs.findIndex((input) => input.dataset.baseKey === currentKey);
-    const nextInput = inputs[currentIndex + 1];
-    if (nextInput) {
-      nextInput.focus();
-      nextInput.select();
+    const currentIndex = baseInputs.findIndex((input) => input.dataset.baseKey === currentKey);
+    const nextBaseInput = baseInputs[currentIndex + 1];
+
+    if (nextBaseInput) {
+      nextBaseInput.focus();
+      nextBaseInput.select();
+      return;
+    }
+
+    const firstMenuInput = document.querySelector<HTMLInputElement>(
+      '[data-menu-qty-input="true"]'
+    );
+
+    if (firstMenuInput) {
+      firstMenuInput.focus();
+      firstMenuInput.select();
     }
   });
 };
