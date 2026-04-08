@@ -1202,7 +1202,7 @@ const focusNextBaseInput = (currentKey: string) => {
                               focusNextMenuQtyInput(currentFlatIndex);
                             }
                           }}
-                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-1 focus:ring-indigo-400 outline-none"
+                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-3 py-3 text-right text-base focus:ring-1 focus:ring-indigo-400 outline-none min-h-[48px]"
                           placeholder="0"
                         />
                       </div>
