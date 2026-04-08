@@ -1057,7 +1057,7 @@ const focusNextBaseInput = (currentKey: string) => {
         <div>
 <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3">
   <div>
-    <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
+    <label className="mb-1 block text-xs font-bold text-slate-500">POS 총매출</label>
     <div className="relative">
       <input
         data-base-input="true"
@@ -1075,14 +1075,14 @@ const focusNextBaseInput = (currentKey: string) => {
         className={`${numericInputClasses} min-h-[48px] text-base`}
         placeholder="0"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
         USD
       </span>
     </div>
   </div>
 
   <div>
-    <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
+    <label className="mb-1 block text-xs font-bold text-slate-500">배달 매출</label>
     <div className="relative">
       <input
         data-base-input="true"
@@ -1102,14 +1102,14 @@ const focusNextBaseInput = (currentKey: string) => {
         className={`${numericInputClasses} min-h-[48px] text-base`}
         placeholder="0"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
         USD
       </span>
     </div>
   </div>
 
   <div>
-    <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
+    <label className="mb-1 block text-xs font-bold text-slate-500">방문객 수 (유입)</label>
     <div className="relative">
       <input
         data-base-input="true"
@@ -1127,14 +1127,14 @@ const focusNextBaseInput = (currentKey: string) => {
         className={`${numericInputClasses} min-h-[48px] text-base`}
         placeholder="0"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
         명
       </span>
     </div>
   </div>
 
   <div>
-    <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
+    <label className="mb-1 block text-xs font-bold text-slate-500">주문수 (영수증)</label>
     <div className="relative">
       <input
         data-base-input="true"
@@ -1152,7 +1152,7 @@ const focusNextBaseInput = (currentKey: string) => {
         className={`${numericInputClasses} min-h-[48px] text-base`}
         placeholder="0"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
         건
       </span>
     </div>
