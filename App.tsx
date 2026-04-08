@@ -557,23 +557,29 @@ const App: React.FC = () => {
   );
 
   return (
-    <StoreOwnerShell
-      currentPage={storeOwnerPage}
-      onChangePage={setStoreOwnerPage}
-      onChangeDate={setSelectedDate}
-      selectedDate={data.date}
-      monthlyTarget={monthlyTarget}
-      monthlyRate={monthlyRate}
-      onLogout={handleLogout}
-    >
-      <StoreOwnerPageRouter
-        currentPage={storeOwnerPage}
-        summaryPage={summaryPage}
-        salesPage={salesPage}
-        detailPage={detailPage}
-        menuPage={menuPage}
-      />
-    </StoreOwnerShell>
+  <StoreOwnerShell
+  currentPage={storeOwnerPage}
+  onChangePage={setStoreOwnerPage}
+  onChangeDate={setSelectedDate}
+  onMonthChange={(month) => {
+    const monthDate = formatLocalDate(month);
+    void handleMonthChange(monthDate);
+    void refreshMonthlyStats(monthDate.substring(0, 7));
+  }}
+  datesWithData={datesWithData}
+  selectedDate={data.date}
+  monthlyTarget={monthlyTarget}
+  monthlyRate={monthlyRate}
+  onLogout={handleLogout}
+>
+  <StoreOwnerPageRouter
+    currentPage={storeOwnerPage}
+    summaryPage={summaryPage}
+    salesPage={salesPage}
+    detailPage={detailPage}
+    menuPage={menuPage}
+  />
+</StoreOwnerShell>
   );
 };
 
