@@ -540,7 +540,7 @@ const App: React.FC = () => {
     />
   );
 
-  const detailPage = <DetailPage />;
+  const detailPage = <DetailPage selectedDate={data.date} />;
 
   const menuPage = (
     <MenuPage
