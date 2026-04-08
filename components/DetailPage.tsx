@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReportDisplay from "./ReportDisplay";
 
-const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report";
+const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
 
 type StoredReport = {
   report: string;
@@ -9,7 +9,13 @@ type StoredReport = {
   generatedAt: string;
 };
 
-const DetailPage: React.FC = () => {
+type StoredReportMap = Record<string, StoredReport>;
+
+type Props = {
+  selectedDate: string;
+};
+
+const DetailPage: React.FC<Props> = ({ selectedDate }) => {
   const [storedReport, setStoredReport] = useState<StoredReport | null>(null);
 
   useEffect(() => {
@@ -21,13 +27,15 @@ const DetailPage: React.FC = () => {
           return;
         }
 
-        const parsed = JSON.parse(raw) as StoredReport;
-        if (!parsed?.report) {
+        const parsed = JSON.parse(raw) as StoredReportMap;
+        const reportForDate = parsed?.[selectedDate];
+
+        if (!reportForDate?.report) {
           setStoredReport(null);
           return;
         }
 
-        setStoredReport(parsed);
+        setStoredReport(reportForDate);
       } catch (error) {
         console.error("DetailPage localStorage parse error:", error);
         setStoredReport(null);
@@ -44,7 +52,7 @@ const DetailPage: React.FC = () => {
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  }, [selectedDate]);
 
   return (
     <div className="space-y-5 text-slate-900">
@@ -71,12 +79,10 @@ const DetailPage: React.FC = () => {
             </div>
           </div>
 
-          {storedReport && (
-            <div className="text-right text-xs font-bold text-slate-400">
-              <div>기준일: {storedReport.date}</div>
-              <div>최근 생성 리포트</div>
-            </div>
-          )}
+          <div className="text-right text-xs font-bold text-slate-400">
+            <div>기준일: {selectedDate}</div>
+            {storedReport && <div>저장된 리포트 표시중</div>}
+          </div>
         </div>
 
         <div className="mt-4">
@@ -90,8 +96,7 @@ const DetailPage: React.FC = () => {
             />
           ) : (
             <div className="rounded-2xl bg-slate-50 p-5 text-sm font-medium text-slate-500">
-              아직 생성된 AI 코칭 리포트가 없습니다. Sales 페이지에서 데이터를 저장한 뒤
-              코칭 리포트를 먼저 생성하세요.
+              해당 날짜에 저장된 코칭 리포트가 없습니다.
             </div>
           )}
         </div>
