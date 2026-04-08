@@ -1028,6 +1028,7 @@ const handleGenerate = async () => {
       </div>
     )}
   </>
-);
+  );
+};
 
 export default DailySalesPage;
