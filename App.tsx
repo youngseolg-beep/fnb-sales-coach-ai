@@ -545,6 +545,7 @@ const App: React.FC = () => {
     selectedDate={data.date}
     data={data}
     showToast={showToast}
+    storeId={storeId!}
   />
 );
 
