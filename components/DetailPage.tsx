@@ -768,8 +768,38 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
         </div>
       </section>
 
-      <PeriodMenuAnalysisSection
-        {sortedMenuEngineering && (
+     <PeriodMenuAnalysisSection
+  periodRange={periodRange}
+  setPeriodRange={setPeriodRange}
+  comparisonMode={comparisonMode}
+  setComparisonMode={setComparisonMode}
+  comparisonRange={comparisonRange}
+  setComparisonRange={setComparisonRange}
+  canRunPeriodAnalysis={canRunPeriodAnalysis}
+  currentPeriodStats={currentPeriodStats}
+  comparisonStats={comparisonStats}
+  salesChangeRate={salesChangeRate}
+  ordersChangeRate={ordersChangeRate}
+  visitorsChangeRate={visitorsChangeRate}
+  aovChangeRate={aovChangeRate}
+  periodLoading={periodLoading}
+  selectedPeriodDays={selectedPeriodDays}
+  loadCurrentPeriodData={loadCurrentPeriodData}
+  loadComparisonData={loadComparisonData}
+  fetchPeriodStats={fetchPeriodStats}
+  calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
+  setMenuEngineeringResult={setMenuEngineeringResult}
+  data={data}
+  currentPeriodMenus={currentPeriodMenus}
+  comparisonPeriodMenus={comparisonPeriodMenus}
+  currentPeriodDays={currentPeriodDays}
+  comparisonPeriodDays={comparisonPeriodDays}
+  sortedMenuEngineering={sortedMenuEngineering}
+  boostPlans={boostPlans}
+  periodStats={periodStats}
+  showToast={showToast}
+/>
+{sortedMenuEngineering && (
   <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
     <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
       Menu Engineering
@@ -844,37 +874,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
       ))}
     </div>
   </section>
-)}
-        periodRange={periodRange}
-        setPeriodRange={setPeriodRange}
-        comparisonMode={comparisonMode}
-        setComparisonMode={setComparisonMode}
-        comparisonRange={comparisonRange}
-        setComparisonRange={setComparisonRange}
-        canRunPeriodAnalysis={canRunPeriodAnalysis}
-        currentPeriodStats={currentPeriodStats}
-        comparisonStats={comparisonStats}
-        salesChangeRate={salesChangeRate}
-        ordersChangeRate={ordersChangeRate}
-        visitorsChangeRate={visitorsChangeRate}
-        aovChangeRate={aovChangeRate}
-        periodLoading={periodLoading}
-        selectedPeriodDays={selectedPeriodDays}
-        loadCurrentPeriodData={loadCurrentPeriodData}
-        loadComparisonData={loadComparisonData}
-        fetchPeriodStats={fetchPeriodStats}
-        calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
-        setMenuEngineeringResult={setMenuEngineeringResult}
-        data={data}
-        currentPeriodMenus={currentPeriodMenus}
-        comparisonPeriodMenus={comparisonPeriodMenus}
-        currentPeriodDays={currentPeriodDays}
-        comparisonPeriodDays={comparisonPeriodDays}
-        sortedMenuEngineering={sortedMenuEngineering}
-        boostPlans={boostPlans}
-        periodStats={periodStats}
-        showToast={showToast}
-      />
+)}      
     </div>
   );
 };
