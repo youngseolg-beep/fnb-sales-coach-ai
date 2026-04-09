@@ -799,6 +799,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   periodStats={periodStats}
   showToast={showToast}
 />
+      </div>
   );
 };
 
