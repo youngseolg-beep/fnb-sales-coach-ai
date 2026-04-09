@@ -769,6 +769,82 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
       </section>
 
       <PeriodMenuAnalysisSection
+        {sortedMenuEngineering && (
+  <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+      Menu Engineering
+    </div>
+    <div className="mt-2 text-lg font-black text-slate-900">
+      메뉴 성과 분석
+    </div>
+
+    <div className="mt-4 space-y-3 text-sm font-medium text-slate-700">
+      <div>
+        <div className="font-bold text-slate-900">⭐ Stars</div>
+        {sortedMenuEngineering.starsTop3.map((t, i) => (
+          <div key={i}>• {t}</div>
+        ))}
+      </div>
+
+      <div>
+        <div className="font-bold text-slate-900">💰 Cash Cows</div>
+        {sortedMenuEngineering.cashCowsTop3.map((t, i) => (
+          <div key={i}>• {t}</div>
+        ))}
+      </div>
+
+      <div>
+        <div className="font-bold text-slate-900">🧩 Puzzles</div>
+        {sortedMenuEngineering.puzzlesTop3.map((t, i) => (
+          <div key={i}>• {t}</div>
+        ))}
+      </div>
+
+      <div>
+        <div className="font-bold text-slate-900">🐶 Dogs</div>
+        {sortedMenuEngineering.dogsTop3.map((t, i) => (
+          <div key={i}>• {t}</div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+{boostPlans.length > 0 && (
+  <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+      Boost Plan
+    </div>
+    <div className="mt-2 text-lg font-black text-slate-900">
+      매출 개선 액션
+    </div>
+
+    <div className="mt-4 space-y-4">
+      {boostPlans.map((plan, i) => (
+        <div
+          key={i}
+          className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+        >
+          <div className="text-sm font-black text-slate-900">
+            {plan.setName}
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            {plan.setComposition}
+          </div>
+
+          <div className="mt-2 text-xs font-bold text-indigo-600">
+            🎯 목표: {plan.dailyTargetQty}개
+          </div>
+
+          <div className="mt-1 text-xs text-slate-600">
+            {plan.reason}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
         periodRange={periodRange}
         setPeriodRange={setPeriodRange}
         comparisonMode={comparisonMode}
