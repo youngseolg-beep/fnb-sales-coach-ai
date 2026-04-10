@@ -118,350 +118,314 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const totalOrders = safeNumber(periodStats?.totalOrders);
   const totalVisitors = safeNumber(periodStats?.totalVisitors);
 
-  const rateClass = (rate: number) =>
+  const rateTone = (rate: number) =>
     rate > 0
-      ? "text-emerald-600"
+      ? "bg-emerald-50 text-emerald-600"
       : rate < 0
-      ? "text-rose-600"
-      : "text-slate-500";
+      ? "bg-rose-50 text-rose-500"
+      : "bg-slate-100 text-slate-500";
 
-  const rateBadgeClass = (rate: number) =>
-    rate > 0
-      ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-      : rate < 0
-      ? "bg-rose-50 text-rose-600 border-rose-200"
-      : "bg-slate-100 text-slate-500 border-slate-200";
+  const rateText = (rate: number) =>
+    rate > 0 ? "좋아짐" : rate < 0 ? "체크 필요" : "유지";
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-white px-5 py-5 md:px-7">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <section className="space-y-4">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-4 md:px-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+                Period Analysis
+              </div>
+              <h3 className="mt-3 text-xl font-black tracking-tight text-slate-900 md:text-2xl">
+                기간 분석
+              </h3>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                핵심 변화부터 보고, 필요한 액션으로 바로 이어지게 정리했습니다.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="date"
+                value={periodRange.start}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
+                className="h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-700 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              />
+              <span className="hidden text-sm font-black text-slate-300 sm:block">~</span>
+              <input
+                type="date"
+                value={periodRange.end}
+                onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
+                className="h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-700 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (selectedPeriodDays < 7) {
+                    showToast("메뉴 엔지니어링 분석은 최소 7일 이상의 데이터가 필요합니다.");
+                    return;
+                  }
+
+                  await loadCurrentPeriodData(true);
+                  await loadComparisonData(true);
+                  await fetchPeriodStats(true);
+
+                  const meResult = await calculateMenuEngineeringForRange(
+                    periodRange.start,
+                    periodRange.end,
+                    data.categories,
+                    { maxDays: 60 }
+                  );
+
+                  setMenuEngineeringResult(meResult);
+                }}
+                disabled={periodLoading}
+                className="h-11 rounded-2xl bg-indigo-500 px-5 text-sm font-black text-white transition-all hover:bg-indigo-600 disabled:bg-slate-300"
+              >
+                {periodLoading ? "분석 중..." : "분석 실행"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 bg-slate-50/60 px-4 py-4 md:px-6 md:py-5">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr]">
+            <div className="rounded-[24px] bg-gradient-to-br from-indigo-500 to-violet-500 p-5 text-white">
+              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-100">
+                핵심 포인트
+              </div>
+              <div className="mt-3 text-lg font-black leading-snug">
+                이번 기간에 가장 먼저 봐야 할 변화
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl bg-white/15 px-4 py-3">
+                  <div className="text-[11px] font-black uppercase tracking-[0.14em] text-white/70">
+                    Best
+                  </div>
+                  <div className="mt-1 text-base font-black">
+                    {bestMetric.label} {bestMetric.rate >= 0 ? "+" : ""}
+                    {bestMetric.rate.toFixed(1)}%
+                  </div>
+                  <div className="mt-1 text-sm text-white/85">
+                    {bestMetric.compare} → {bestMetric.current}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-white/15 px-4 py-3">
+                  <div className="text-[11px] font-black uppercase tracking-[0.14em] text-white/70">
+                    Watch
+                  </div>
+                  <div className="mt-1 text-base font-black">
+                    {worstMetric.label} {worstMetric.rate >= 0 ? "+" : ""}
+                    {worstMetric.rate.toFixed(1)}%
+                  </div>
+                  <div className="mt-1 text-sm text-white/85">
+                    {worstMetric.compare} → {worstMetric.current}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-5">
+              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                빠른 요약
+              </div>
+              <div className="mt-2 text-sm font-bold text-slate-500">
+                {periodRange.start} ~ {periodRange.end}
+              </div>
+
+              <div className="mt-5 space-y-3">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                    Total Sales
+                  </div>
+                  <div className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+                    ${totalSales.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                      Orders
+                    </div>
+                    <div className="mt-1 text-lg font-black text-slate-900">
+                      {totalOrders.toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                      Visitors
+                    </div>
+                    <div className="mt-1 text-lg font-black text-slate-900">
+                      {totalVisitors.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 md:p-5">
+              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                비교 설정
+              </div>
+              <div className="mt-3">
+                <PeriodComparisonPanel
+                  comparisonMode={comparisonMode}
+                  setComparisonMode={setComparisonMode}
+                  periodRange={periodRange}
+                  comparisonRange={comparisonRange}
+                  setComparisonRange={setComparisonRange}
+                  canRunPeriodAnalysis={canRunPeriodAnalysis}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div
+                key={card.label}
+                className="rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-sm font-black text-slate-500">{card.label}</div>
+                  <div className={`rounded-full px-2.5 py-1 text-[11px] font-black ${rateTone(card.rate)}`}>
+                    {card.rate >= 0 ? "+" : ""}
+                    {card.rate.toFixed(1)}%
+                  </div>
+                </div>
+
+                <div className="mt-3 text-2xl font-black tracking-tight text-slate-900">
+                  {card.current}
+                </div>
+
+                <div className="mt-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  Compare
+                </div>
+                <div className="mt-1 text-sm font-bold text-slate-500">
+                  {card.compare}
+                </div>
+
+                <div className="mt-3 text-xs font-black text-slate-500">
+                  {rateText(card.rate)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-black uppercase tracking-[0.22em] text-indigo-400">
-              Period Analysis
+            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+              Action Plan
             </div>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-              기간 분석
-            </h3>
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              숫자 나열보다 먼저, 이 기간에 무엇이 좋아졌고 무엇을 바로 실행해야 하는지 보여줍니다.
-            </p>
+            <div className="mt-1 text-lg font-black text-slate-900">
+              Boost Plan
+            </div>
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              type="date"
-              value={periodRange.start}
-              onChange={(e) => setPeriodRange((prev) => ({ ...prev, start: e.target.value }))}
-              className="h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-black text-slate-700 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
-            <span className="hidden text-sm font-black text-slate-400 sm:block">~</span>
-            <input
-              type="date"
-              value={periodRange.end}
-              onChange={(e) => setPeriodRange((prev) => ({ ...prev, end: e.target.value }))}
-              className="h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-black text-slate-700 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                if (selectedPeriodDays < 7) {
-                  showToast("메뉴 엔지니어링 분석은 최소 7일 이상의 데이터가 필요합니다.");
-                  return;
-                }
-
-                await loadCurrentPeriodData(true);
-                await loadComparisonData(true);
-                await fetchPeriodStats(true);
-
-                const meResult = await calculateMenuEngineeringForRange(
-                  periodRange.start,
-                  periodRange.end,
-                  data.categories,
-                  { maxDays: 60 }
-                );
-
-                setMenuEngineeringResult(meResult);
-              }}
-              disabled={periodLoading}
-              className="h-11 rounded-2xl bg-indigo-600 px-5 text-sm font-black text-white transition-all hover:bg-indigo-700 disabled:bg-slate-300"
-            >
-              {periodLoading ? "분석 중..." : "분석 실행"}
-            </button>
+          <div className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-600">
+            {boostPlans.length}개 실행안
           </div>
         </div>
-      </div>
+        <PeriodBoostPlan boostPlans={boostPlans} />
+      </section>
 
-      <div className="space-y-6 bg-slate-50/60 px-5 py-5 md:px-7 md:py-7">
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr_1fr]">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Key Insight
+      <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-4">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Menu Compare
+          </div>
+          <div className="mt-1 text-lg font-black text-slate-900">
+            Top10 메뉴 비교
+          </div>
+        </div>
+        <PeriodTopMenuCompare
+          currentMenus={currentPeriodMenus}
+          comparisonMenus={comparisonPeriodMenus}
+          minDays={1}
+          currentDays={currentPeriodDays}
+          comparisonDays={comparisonPeriodDays}
+        />
+      </section>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+              Menu Structure
             </div>
-            <div className="mt-3 text-xl font-black leading-tight text-slate-900">
-              이번 기간 핵심 변화
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                <div className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                  Best
-                </div>
-                <div className="mt-1 text-base font-black text-slate-900">
-                  {bestMetric.label} {bestMetric.rate >= 0 ? "+" : ""}
-                  {bestMetric.rate.toFixed(1)}%
-                </div>
-                <div className="mt-1 text-sm font-medium text-slate-600">
-                  비교군 {bestMetric.compare} → 현재 {bestMetric.current}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
-                <div className="text-[11px] font-black uppercase tracking-[0.16em] text-rose-600">
-                  Watch Point
-                </div>
-                <div className="mt-1 text-base font-black text-slate-900">
-                  {worstMetric.label} {worstMetric.rate >= 0 ? "+" : ""}
-                  {worstMetric.rate.toFixed(1)}%
-                </div>
-                <div className="mt-1 text-sm font-medium text-slate-600">
-                  비교군 {worstMetric.compare} → 현재 {worstMetric.current}
-                </div>
-              </div>
+            <div className="mt-1 text-lg font-black text-slate-900">
+              메뉴 엔지니어링 분석
             </div>
           </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Current Period
-            </div>
-            <div className="mt-3 text-sm font-bold text-slate-500">
-              {periodRange.start} ~ {periodRange.end}
-            </div>
-            <div className="mt-5 space-y-3">
-              <div>
-                <div className="text-xs font-bold text-slate-400">총 매출</div>
-                <div className="mt-1 text-2xl font-black text-slate-900">
-                  ${totalSales.toLocaleString()}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-slate-50 p-3">
-                  <div className="text-xs font-bold text-slate-400">주문</div>
-                  <div className="mt-1 text-lg font-black text-slate-900">
-                    {totalOrders.toLocaleString()}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-slate-50 p-3">
-                  <div className="text-xs font-bold text-slate-400">방문객</div>
-                  <div className="mt-1 text-lg font-black text-slate-900">
-                    {totalVisitors.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+            최근 분석 기준
           </div>
+        </div>
+        <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
+      </section>
 
-          <div className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-200">
-              Action Focus
-            </div>
-            <div className="mt-3 text-lg font-black leading-tight">
-              지금 바로 볼 포인트
-            </div>
-            <div className="mt-5 space-y-3 text-sm font-medium text-indigo-50">
-              <div className="rounded-2xl bg-white/10 px-4 py-3">
-                {boostPlans.length > 0
-                  ? `실행 액션 ${boostPlans.length}개가 준비되었습니다. 가장 먼저 1번 액션부터 적용하세요.`
-                  : "아직 액션 플랜이 없습니다. 분석 실행 후 추천 액션이 생성됩니다."}
-              </div>
-              <div className="rounded-2xl bg-white/10 px-4 py-3">
-                {sortedMenuEngineering
-                  ? "Menu Engineering 결과가 생성되었습니다. Star / Puzzle / Dog 구조를 바로 확인하세요."
-                  : "메뉴 엔지니어링 결과가 아직 없습니다. 분석 실행 후 메뉴 구조를 확인하세요."}
-              </div>
-            </div>
+      <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 md:px-5">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Daily Trend
           </div>
-        </section>
-
-        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <PeriodComparisonPanel
-            comparisonMode={comparisonMode}
-            setComparisonMode={setComparisonMode}
-            periodRange={periodRange}
-            comparisonRange={comparisonRange}
-            setComparisonRange={setComparisonRange}
-            canRunPeriodAnalysis={canRunPeriodAnalysis}
-          />
+          <div className="mt-1 text-lg font-black text-slate-900">
+            일별 추이
+          </div>
         </div>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <div
-              key={card.label}
-              className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm font-black text-slate-500">{card.label}</div>
-                <div
-                  className={`rounded-full border px-2.5 py-1 text-xs font-black ${rateBadgeClass(
-                    card.rate
-                  )}`}
-                >
-                  {card.rate >= 0 ? "+" : ""}
-                  {card.rate.toFixed(1)}%
-                </div>
-              </div>
-
-              <div className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-                {card.current}
-              </div>
-
-              <div className="mt-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                Compare
-              </div>
-              <div className="mt-1 text-sm font-bold text-slate-500">{card.compare}</div>
-
-              <div className={`mt-4 text-sm font-black ${rateClass(card.rate)}`}>
-                {card.rate > 0
-                  ? "좋아졌습니다"
-                  : card.rate < 0
-                  ? "체크가 필요합니다"
-                  : "변화가 거의 없습니다"}
-              </div>
-            </div>
-          ))}
-        </section>
-
-        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                Action Plan
-              </div>
-              <div className="mt-1 text-xl font-black text-slate-900">Boost Plan</div>
-            </div>
-            <div className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-600">
-              {boostPlans.length}개 실행안
-            </div>
-          </div>
-          <PeriodBoostPlan boostPlans={boostPlans} />
-        </div>
-
-        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="mb-4">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Menu Compare
-            </div>
-            <div className="mt-1 text-xl font-black text-slate-900">Top10 메뉴 비교</div>
-          </div>
-          <PeriodTopMenuCompare
-            currentMenus={currentPeriodMenus}
-            comparisonMenus={comparisonPeriodMenus}
-            minDays={1}
-            currentDays={currentPeriodDays}
-            comparisonDays={comparisonPeriodDays}
-          />
-        </div>
-
-        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                Menu Structure
-              </div>
-              <div className="mt-1 text-xl font-black text-slate-900">메뉴 엔지니어링 분석</div>
-            </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-              최근 분석 기준
-            </div>
-          </div>
-          <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
-        </div>
-
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Total Sales
-            </div>
-            <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-              ${totalSales.toLocaleString()}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Total Orders
-            </div>
-            <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-              {totalOrders.toLocaleString()}건
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Total Visitors
-            </div>
-            <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-              {totalVisitors.toLocaleString()}명
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Daily Trend
-            </div>
-            <div className="mt-1 text-xl font-black text-slate-900">일별 추이</div>
-          </div>
-
-          <div className="max-h-96 overflow-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b border-slate-200">
-                  <th className="px-5 py-3 text-left text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                    날짜
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                    매출
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                    주문
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                    방문객
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(periodStats?.list || []).length > 0 ? (
-                  (periodStats?.list || []).map((row: any) => (
-                    <tr key={row.date} className="border-b border-slate-100 last:border-b-0">
-                      <td className="px-5 py-3 font-bold text-slate-700">{row.date}</td>
-                      <td className="px-5 py-3 text-right font-black text-slate-900">
-                        ${Number(row.total_sales || 0).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3 text-right font-medium text-slate-600">
-                        {Number(row.orders || 0).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3 text-right font-medium text-slate-600">
-                        {Number(row.guests || 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-sm font-bold text-slate-400">
-                      기간 분석 데이터를 불러오면 여기에 표시됩니다.
+        <div className="max-h-96 overflow-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead className="sticky top-0 bg-white">
+              <tr className="border-b border-slate-100">
+                <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  날짜
+                </th>
+                <th className="px-4 py-3 text-right text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  매출
+                </th>
+                <th className="px-4 py-3 text-right text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  주문
+                </th>
+                <th className="px-4 py-3 text-right text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  방문객
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(periodStats?.list || []).length > 0 ? (
+                (periodStats?.list || []).map((row: any) => (
+                  <tr key={row.date} className="border-b border-slate-100 last:border-b-0">
+                    <td className="px-4 py-3 font-bold text-slate-700">{row.date}</td>
+                    <td className="px-4 py-3 text-right font-black text-slate-900">
+                      ${Number(row.total_sales || 0).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-600">
+                      {Number(row.orders || 0).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-600">
+                      {Number(row.guests || 0).toLocaleString()}
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm font-bold text-slate-400">
+                    기간 분석 데이터를 불러오면 여기에 표시됩니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   );
 };
