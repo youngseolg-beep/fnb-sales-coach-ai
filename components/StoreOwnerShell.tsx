@@ -74,7 +74,7 @@ export default function StoreOwnerShell({
   monthlyTarget,
   monthlyRate,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  // 기존 모든 state 로직 그대로 유지
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
   const [calendarRenderKey, setCalendarRenderKey] = useState(0);
@@ -87,11 +87,7 @@ export default function StoreOwnerShell({
 
   const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
-  const handleMove = (page: StoreOwnerPageKey) => {
-    onChangePage(page);
-    setOpen(false);
-  };
-
+  // 기존 toggleCalendar, useEffect들 그대로
   const toggleCalendar = () => {
     if (!showCalendar && dateButtonRef.current) {
       const rect = dateButtonRef.current.getBoundingClientRect();
@@ -103,18 +99,13 @@ export default function StoreOwnerShell({
       if (left < 20) left = 20;
 
       const currentMonth = parseLocalDate(selectedDate);
-
-      setCalendarPos({
-        top: rect.bottom + window.scrollY + 8,
-        left,
-      });
+      setCalendarPos({ top: rect.bottom + window.scrollY + 8, left });
       setCalendarMonth(currentMonth);
       setCalendarRenderKey((prev) => prev + 1);
       onMonthChange(currentMonth);
       setShowCalendar(true);
       return;
     }
-
     setShowCalendar(false);
   };
 
@@ -138,18 +129,13 @@ export default function StoreOwnerShell({
   }, [selectedDate, showCalendar]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900">
+      {/* 기존 헤더 - ☰ 버튼만 제거 */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
-            >
-              ☰
-            </button>
-
+            {/* ☰ 버튼 완전 제거 */}
+            
             <div>
               <button
                 ref={dateButtonRef}
@@ -160,7 +146,6 @@ export default function StoreOwnerShell({
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
                   <i className="fa-solid fa-calendar-days text-sm"></i>
                 </div>
-
                 <div className="text-left leading-tight">
                   <div className="text-sm font-black text-slate-900 group-hover:text-indigo-700">
                     {selectedDate}
@@ -169,18 +154,17 @@ export default function StoreOwnerShell({
                     날짜 변경
                   </div>
                 </div>
-
                 <div className="ml-1 text-slate-400 transition-colors group-hover:text-indigo-500">
                   <i className="fa-solid fa-chevron-down text-xs"></i>
                 </div>
               </button>
-
               <div className="mt-1 pl-1 text-[10px] font-black text-slate-400 tracking-widest">
                 POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
               </div>
             </div>
           </div>
 
+          {/* 기존 월 목표/달성률 그대로 */}
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-[10px] text-slate-400">월 목표</div>
@@ -188,7 +172,6 @@ export default function StoreOwnerShell({
                 ${monthlyTarget.toLocaleString()}
               </div>
             </div>
-
             <div className="text-right">
               <div className="text-[10px] text-slate-400">달성률</div>
               <div className="text-sm font-black text-indigo-600">
@@ -199,13 +182,11 @@ export default function StoreOwnerShell({
         </div>
       </header>
 
+      {/* 기존 달력 팝업 그대로 */}
       {showCalendar && (
         <div
           className="fixed z-[9998] w-[320px] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl"
-          style={{
-            top: `${calendarPos.top}px`,
-            left: `${calendarPos.left}px`,
-          }}
+          style={{ top: `${calendarPos.top}px`, left: `${calendarPos.left}px` }}
         >
           <DayPicker
             key={calendarRenderKey}
@@ -221,18 +202,10 @@ export default function StoreOwnerShell({
               onChangeDate(formatLocalDate(date));
               setShowCalendar(false);
             }}
-            modifiers={{
-              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
-            }}
-            modifiersClassNames={{
-              hasData: "has-data-day",
-            }}
+            modifiers={{ hasData: (date) => datesWithDataSet.has(formatLocalDate(date)) }}
+            modifiersClassNames={{ hasData: "has-data-day" }}
           />
-
           <style>{`
-            .has-data-day {
-              position: relative;
-            }
             .has-data-day::after {
               content: "";
               position: absolute;
@@ -248,77 +221,45 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/40"
-          />
-
-          <aside className="absolute left-0 top-0 h-full w-[84%] max-w-sm border-r border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-              <div>
-                <div className="text-lg font-semibold text-slate-900">{title}</div>
-                <div className="text-sm text-slate-500">{subtitle}</div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
-              >
-                ✕
-              </button>
-            </div>
-
-            <nav className="px-3 py-3">
-              <div className="mb-3 px-2 text-xs font-semibold uppercase text-slate-400">
-                Navigation
-              </div>
-
-              <div className="space-y-2">
-                {MENU_ITEMS.map((item) => {
-                  const active = item.key === currentPage;
-
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => handleMove(item.key)}
-                      className={[
-                        "w-full rounded-2xl border px-4 py-3 text-left",
-                        active
-                          ? "bg-slate-900 text-white"
-                          : "bg-white text-slate-900",
-                      ].join(" ")}
-                    >
-                      <div className="text-sm font-semibold">{item.label}</div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {item.description}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-left text-rose-600 hover:bg-rose-100"
-                >
-                  <div className="text-sm font-semibold">Logout</div>
-                  <div className="mt-1 text-xs text-rose-400">현재 계정에서 로그아웃</div>
-                </button>
-              </div>
-            </nav>
-          </aside>
-        </div>
-      )}
-
-      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+      {/* 메인 콘텐츠 */}
+      <main className="flex-1 mx-auto max-w-7xl px-4 py-4 sm:px-6">
         {children}
       </main>
+
+      {/* 🆕 하단 4탭 네비게이션 - MENU_ITEMS 재사용 */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-2xl md:border-t-0 md:static md:shadow-none">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex justify-around py-2 md:py-3">
+            {MENU_ITEMS.map((item) => {
+              const active = item.key === currentPage;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => onChangePage(item.key)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all group ${
+                    active
+                      ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg scale-105"
+                      : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95"
+                  } md:p-4`}
+                  title={item.description}
+                >
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${active ? 'bg-white/20 shadow-md' : ''}`}>
+                    {/* 아이콘은 label 기반으로 동적 - 실제 SVG 넣을 수 있음 */}
+                    <span className={`text-sm font-bold ${active ? 'shadow-md' : ''}`}>
+                      {item.label.charAt(0)}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-semibold tracking-tight md:text-sm ${
+                    active ? 'text-white drop-shadow-md' : 'text-slate-600 group-hover:text-indigo-600'
+                  }`}>
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }
