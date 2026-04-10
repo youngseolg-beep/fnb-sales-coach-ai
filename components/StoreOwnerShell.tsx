@@ -99,8 +99,8 @@ export default function StoreOwnerShell({
   );
 
   const visibleDates = useMemo(() => {
-    return Array.from({ length: 21 }, (_, index) =>
-      addDaysLocal(selectedDateObj, index - 10)
+    return Array.from({ length: 15 }, (_, index) =>
+      addDaysLocal(selectedDateObj, index - 7)
     );
   }, [selectedDateObj]);
 
@@ -118,7 +118,7 @@ export default function StoreOwnerShell({
     const currentMonth = parseLocalDate(selectedDate);
 
     setCalendarPos({
-      top: rect.bottom + window.scrollY + 8,
+      top: rect.bottom + window.scrollY + 10,
       left,
     });
     setCalendarMonth(currentMonth);
@@ -165,111 +165,113 @@ export default function StoreOwnerShell({
   }, [selectedDate]);
 
   return (
-    <div className="min-h-screen bg-[#f7f8fc] text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-[#f7f8fc]/95 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
-          <div className="rounded-[30px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <button
-                  ref={monthButtonRef}
-                  type="button"
-                  onClick={toggleCalendar}
-                  className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition-all hover:bg-slate-200"
-                >
-                  <span>{formatMonthLabel(selectedDateObj)}</span>
-                  <i className="fa-solid fa-chevron-down text-[10px]"></i>
-                </button>
-
-                <div className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  Selected date
-                </div>
-                <div className="mt-1 text-2xl font-black tracking-tight text-slate-900">
-                  {selectedDate}
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Target
-                  </div>
-                  <div className="mt-1 text-sm font-black text-slate-900">
-                    ${monthlyTarget.toLocaleString()}
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Rate
-                  </div>
-                  <div className="mt-1 text-sm font-black text-indigo-600">
-                    {monthlyRate.toFixed(1)}%
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-all hover:bg-rose-50 hover:text-rose-500"
-                >
-                  <i className="fa-solid fa-arrow-right-from-bracket text-sm"></i>
-                </button>
-              </div>
-            </div>
-
-            <div
-              ref={dateStripRef}
-              className="mt-5 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {visibleDates.map((date) => {
-                const dateStr = formatLocalDate(date);
-                const active = dateStr === selectedDate;
-                const hasData = datesWithDataSet.has(dateStr);
-
-                return (
+    <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
+      <header className="sticky top-0 z-40 bg-[#f5f7fb]/95 backdrop-blur-xl">
+        <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6">
+          <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+            <div className="px-4 pb-4 pt-4 md:px-5 md:pb-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <button
-                    key={dateStr}
-                    ref={active ? selectedDateRef : undefined}
+                    ref={monthButtonRef}
                     type="button"
-                    onClick={() => onChangeDate(dateStr)}
-                    className={[
-                      "relative flex min-w-[72px] shrink-0 flex-col items-center rounded-[26px] px-3 py-3 transition-all",
-                      active
-                        ? "bg-indigo-500 text-white shadow-[0_10px_24px_rgba(99,102,241,0.28)]"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                    ].join(" ")}
+                    onClick={toggleCalendar}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition-all hover:bg-slate-200"
                   >
-                    <div
+                    <span>{formatMonthLabel(selectedDateObj)}</span>
+                    <i className="fa-solid fa-chevron-down text-[10px]"></i>
+                  </button>
+
+                  <div className="mt-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    Selected Day
+                  </div>
+                  <div className="mt-1 text-[34px] leading-none font-black tracking-tight text-slate-900">
+                    {selectedDate}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-start gap-3">
+                  <div className="text-right">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Target
+                    </div>
+                    <div className="mt-1 text-lg font-black text-slate-900">
+                      ${monthlyTarget.toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Rate
+                    </div>
+                    <div className="mt-1 text-lg font-black text-indigo-600">
+                      {monthlyRate.toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-all hover:bg-rose-50 hover:text-rose-500"
+                  >
+                    <i className="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                ref={dateStripRef}
+                className="mt-5 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {visibleDates.map((date) => {
+                  const dateStr = formatLocalDate(date);
+                  const active = dateStr === selectedDate;
+                  const hasData = datesWithDataSet.has(dateStr);
+
+                  return (
+                    <button
+                      key={dateStr}
+                      ref={active ? selectedDateRef : undefined}
+                      type="button"
+                      onClick={() => onChangeDate(dateStr)}
                       className={[
-                        "text-[11px] font-black uppercase tracking-[0.14em]",
-                        active ? "text-white/80" : "text-slate-400",
+                        "relative flex h-[84px] w-[76px] shrink-0 flex-col items-center justify-center rounded-[24px] transition-all",
+                        active
+                          ? "bg-indigo-500 text-white shadow-[0_12px_28px_rgba(99,102,241,0.28)]"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                       ].join(" ")}
                     >
-                      {DAY_LABELS[date.getDay()]}
-                    </div>
+                      <div
+                        className={[
+                          "text-[11px] font-black uppercase tracking-[0.16em]",
+                          active ? "text-white/75" : "text-slate-400",
+                        ].join(" ")}
+                      >
+                        {DAY_LABELS[date.getDay()]}
+                      </div>
 
-                    <div className="mt-1 text-lg font-black leading-none">
-                      {date.getDate()}
-                    </div>
+                      <div className="mt-2 text-[30px] leading-none font-black">
+                        {date.getDate()}
+                      </div>
 
-                    <div className="mt-2 h-1.5">
-                      {hasData && (
-                        <span
-                          className={[
-                            "block h-1.5 w-1.5 rounded-full",
-                            active ? "bg-white" : "bg-indigo-500",
-                          ].join(" ")}
-                        />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      <div className="mt-2 h-1.5">
+                        {hasData && (
+                          <span
+                            className={[
+                              "block h-1.5 w-1.5 rounded-full",
+                              active ? "bg-white" : "bg-indigo-500",
+                            ].join(" ")}
+                          />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
 
-            <div className="mt-2 pl-1 text-[10px] font-black tracking-[0.18em] text-slate-400">
-              POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+              <div className="mt-3 pl-1 text-[10px] font-black tracking-[0.2em] text-slate-400">
+                POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+              </div>
             </div>
           </div>
         </div>
@@ -324,7 +326,7 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl px-4 pb-28 pt-4 sm:px-6">
+      <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:px-6">
         {children}
       </main>
 
@@ -342,9 +344,9 @@ export default function StoreOwnerShell({
               >
                 <div
                   className={[
-                    "flex h-11 w-11 items-center justify-center rounded-full transition-all",
+                    "flex h-12 w-12 items-center justify-center rounded-full transition-all",
                     active
-                      ? "bg-indigo-500 text-white shadow-[0_10px_20px_rgba(99,102,241,0.24)]"
+                      ? "bg-indigo-500 text-white shadow-[0_10px_24px_rgba(99,102,241,0.28)]"
                       : "bg-slate-100 text-slate-500",
                   ].join(" ")}
                 >
