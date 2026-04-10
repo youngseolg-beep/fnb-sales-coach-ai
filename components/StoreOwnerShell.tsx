@@ -7,7 +7,7 @@ export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu";
 type MenuItem = {
   key: StoreOwnerPageKey;
   label: string;
-  icon: string; // 아이콘 추가
+  icon: string;
 };
 
 type Props = {
@@ -25,7 +25,6 @@ type Props = {
   monthlyRate: number;
 };
 
-// 2026 트렌드에 맞는 간결한 아이콘 셋업
 const MENU_ITEMS: MenuItem[] = [
   { key: "summary", label: "요약", icon: "fa-solid fa-chart-pie" },
   { key: "sales", label: "매출", icon: "fa-solid fa-file-invoice-dollar" },
@@ -102,8 +101,8 @@ export default function StoreOwnerShell({
   }, [showCalendar]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 lg:pb-0 lg:pl-20">
-      {/* --- 상단 헤더: 날짜 선택 및 로그아웃 --- */}
+    <div className="relative min-h-screen bg-slate-50 text-slate-900">
+      {/* --- 상단 헤더 --- */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
@@ -114,7 +113,7 @@ export default function StoreOwnerShell({
               className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-2 transition-all hover:bg-indigo-50"
             >
               <div className="text-left leading-tight">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Selected Date</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Selected Date</div>
                 <div className="text-sm font-black text-slate-900 group-hover:text-indigo-600">{selectedDate}</div>
               </div>
               <i className="fa-solid fa-chevron-down text-[10px] text-slate-300 group-hover:text-indigo-400"></i>
@@ -133,7 +132,6 @@ export default function StoreOwnerShell({
             <button 
               onClick={onLogout}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors"
-              title="Logout"
             >
               <i className="fa-solid fa-right-from-bracket text-sm"></i>
             </button>
@@ -144,7 +142,7 @@ export default function StoreOwnerShell({
       {/* --- 달력 팝업 --- */}
       {showCalendar && (
         <div
-          className="fixed z-[9999] w-[320px] rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl animate-in fade-in zoom-in duration-200"
+          className="fixed z-[10000] w-[320px] rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl animate-in fade-in zoom-in duration-200"
           style={{ top: `${calendarPos.top}px`, left: `${calendarPos.left}px` }}
         >
           <DayPicker
@@ -175,28 +173,31 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      {/* --- 메인 콘텐츠 --- */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      {/* --- 메인 콘텐츠 영역: pb-32를 통해 하단 탭 바 공간을 미리 확보 --- */}
+      <main className="mx-auto max-w-7xl px-4 pt-6 pb-40 sm:px-6">
         {children}
       </main>
 
-      {/* --- 하단 네비게이션 탭 (Mobile/Desktop 최적화) --- */}
-      <nav className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/20 bg-slate-900/90 px-2 py-2 text-white shadow-2xl backdrop-blur-xl sm:gap-2">
+      {/* --- 하단 네비게이션 탭 (Floating 디자인) --- */}
+      <nav 
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-1 rounded-full border border-white/10 bg-slate-900/95 px-3 py-2 text-white shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+      >
         {MENU_ITEMS.map((item) => {
           const active = item.key === currentPage;
           return (
             <button
               key={item.key}
+              type="button"
               onClick={() => onChangePage(item.key)}
               className={[
-                "flex flex-col items-center justify-center rounded-full px-5 py-2 transition-all duration-300",
+                "flex flex-col items-center justify-center rounded-full px-5 py-2.5 transition-all duration-200 active:scale-90",
                 active 
-                  ? "bg-white text-slate-900 shadow-lg scale-105" 
+                  ? "bg-white text-slate-900 shadow-md" 
                   : "text-slate-400 hover:text-white hover:bg-white/10"
               ].join(" ")}
             >
-              <i className={`${item.icon} text-lg mb-0.5`}></i>
-              <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
+              <i className={`${item.icon} text-lg mb-1`}></i>
+              <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
             </button>
           );
         })}
