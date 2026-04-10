@@ -20,12 +20,12 @@ import type { MenuCategory } from "./types";
 import MenuPage from "./components/MenuPage";
 import SalesPage from "./components/SalesPage";
 import MasterDashboardPage from "./components/MasterDashboardPage";
-import SummaryPageV2 from "./components/SummaryPageV2";
+import SummaryPage from "./components/SummaryPage";
 import DetailPage from "./components/DetailPage";
 import { supabase } from "./services/supabaseClient";
 
-import type { StoreOwnerPageKey } from "./components/StoreOwnerShell";
-import StoreOwnerShellV2 from "./components/StoreOwnerShellV2";
+import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
+import StoreOwnerPageRouter from "./components/StoreOwnerPageRouter";
 
 const persistMenuPriceHistory = async (
   categories: MenuCategory[],
@@ -64,7 +64,7 @@ const App: React.FC = () => {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("summary");
+  const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
   const [priceSaving, setPriceSaving] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSeq, setToastSeq] = useState(0);
@@ -106,20 +106,6 @@ const App: React.FC = () => {
   const selectedYearMonth = useMemo(() => {
     return selectedDate.substring(0, 7);
   }, [selectedDate]);
-
-  const selectedDateAsDate = useMemo(() => {
-    return new Date(`${selectedDate}T00:00:00`);
-  }, [selectedDate]);
-
-  const totalSales = useMemo(() => {
-    return Number(data.posSales || 0) + Number(data.deliverySales || 0);
-  }, [data.posSales, data.deliverySales]);
-
-  const aov = useMemo(() => {
-    const orders = Number(data.orders || 0);
-    if (orders <= 0) return 0;
-    return totalSales / orders;
-  }, [data.orders, totalSales]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,7 +379,7 @@ const App: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isLoggedIn, storeId, normalizeMenuMasterCategories, cloneCategories, initialCategories]);
+  }, [isLoggedIn, storeId]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -523,13 +509,16 @@ const App: React.FC = () => {
   }
 
   const summaryPage = (
-    <SummaryPageV2
-      totalSales={totalSales}
-      posSales={Number(data.posSales || 0)}
-      deliverySales={Number(data.deliverySales || 0)}
-      orders={Number(data.orders || 0)}
-      aov={aov}
-      target={Number(monthlyTarget || 0)}
+    <SummaryPage
+      date={data.date}
+      monthlyStats={monthlyStats}
+      monthlyRate={monthlyRate}
+      monthlyTarget={monthlyTarget}
+      onChangeTarget={(v) => {
+        setMonthlyTarget(v);
+        setData((prev) => ({ ...prev, monthlyTarget: v }));
+      }}
+      onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
     />
   );
 
@@ -574,38 +563,30 @@ const App: React.FC = () => {
     />
   );
 
-  let pageContent: React.ReactNode = summaryPage;
-
-  if (storeOwnerPage === "sales") {
-    pageContent = salesPage;
-  } else if (storeOwnerPage === "detail") {
-    pageContent = detailPage;
-  } else if (storeOwnerPage === "menu") {
-    pageContent = menuPage;
-  }
-
   return (
-    <>
-      <StoreOwnerShellV2
-        selectedDate={selectedDateAsDate}
-        onDateChange={(date) => {
-          const nextDate = formatLocalDate(date);
-          setSelectedDate(nextDate);
-          void refreshMonthlyStats(nextDate.substring(0, 7));
-        }}
-        activePage={storeOwnerPage}
-        onChangePage={setStoreOwnerPage}
-        datesWithData={datesWithData}
-      >
-        {pageContent}
-      </StoreOwnerShellV2>
-
-      {toastMsg && (
-        <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg">
-          {toastMsg}
-        </div>
-      )}
-    </>
+    <StoreOwnerShell
+      currentPage={storeOwnerPage}
+      onChangePage={setStoreOwnerPage}
+      onChangeDate={setSelectedDate}
+      onMonthChange={(month) => {
+        const monthDate = formatLocalDate(month);
+        void handleMonthChange(monthDate);
+        void refreshMonthlyStats(monthDate.substring(0, 7));
+      }}
+      datesWithData={datesWithData}
+      selectedDate={data.date}
+      monthlyTarget={monthlyTarget}
+      monthlyRate={monthlyRate}
+      onLogout={handleLogout}
+    >
+      <StoreOwnerPageRouter
+        currentPage={storeOwnerPage}
+        summaryPage={summaryPage}
+        salesPage={salesPage}
+        detailPage={detailPage}
+        menuPage={menuPage}
+      />
+    </StoreOwnerShell>
   );
 };
 
