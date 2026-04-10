@@ -328,7 +328,7 @@ export default function StoreOwnerShell({
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-xl">
+      <nav className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-slate-200/80 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-xl">
         <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
