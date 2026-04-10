@@ -20,156 +20,123 @@ const SummaryPage: React.FC<Props> = ({
   onChangeTarget,
   onSaveTarget,
 }) => {
-  const monthLabel = `${date.substring(0, 7)} 월간 요약`;
+  const monthLabel = `${date.substring(0, 7)}`;
 
-  const rateTone =
+  const status =
     monthlyRate >= 100
-      ? "text-emerald-600 bg-emerald-50 border-emerald-100"
+      ? { title: "Good Flow", color: "text-emerald-600", bg: "bg-emerald-50" }
       : monthlyRate >= 80
-      ? "text-indigo-600 bg-indigo-50 border-indigo-100"
+      ? { title: "Almost There", color: "text-indigo-600", bg: "bg-indigo-50" }
       : monthlyRate >= 50
-      ? "text-amber-600 bg-amber-50 border-amber-100"
-      : "text-rose-600 bg-rose-50 border-rose-100";
-
-  const statusTitle =
-    monthlyRate >= 100
-      ? "목표 달성 중"
-      : monthlyRate >= 80
-      ? "목표 근접 구간"
-      : monthlyRate >= 50
-      ? "추가 관리 필요"
-      : "집중 점검 필요";
-
-  const statusDescription =
-    monthlyRate >= 100
-      ? "현재 페이스를 유지하면 이번 달 운영 흐름이 안정적으로 마무리될 가능성이 높습니다."
-      : monthlyRate >= 80
-      ? "월 목표에 근접하고 있습니다. 현재 흐름을 유지하면서 매출 피크 타임 관리에 집중하세요."
-      : monthlyRate >= 50
-      ? "중간 구간입니다. 매출 입력과 일별 흐름을 꾸준히 확인하면서 운영 상태를 점검하세요."
-      : "현재 달성률이 낮습니다. Sales 페이지에서 입력 상태를 먼저 점검하고, Detail 페이지 분석을 이어서 확인하는 것이 좋습니다.";
+      ? { title: "Need Attention", color: "text-amber-600", bg: "bg-amber-50" }
+      : { title: "Critical", color: "text-rose-500", bg: "bg-rose-50" };
 
   return (
-    <div className="space-y-5 text-slate-900">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-5 py-4 md:px-8 md:py-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-1">
-              <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-                Summary
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
-                {monthLabel}
-              </h2>
-              <p className="text-sm font-medium text-slate-500">
-                이번 달 매출 흐름과 목표 달성 상태를 한눈에 확인합니다.
-              </p>
-            </div>
+    <div className="space-y-6">
 
-            <div className="w-full rounded-2xl border border-slate-200 bg-white p-3 md:w-auto md:min-w-[260px]">
-              <div className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Monthly Target
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={monthlyTarget || ""}
-                  onChange={(e) => onChangeTarget(Number(e.target.value))}
-                  onBlur={onSaveTarget}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-base font-black text-slate-900 outline-none transition-all focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 md:w-40"
-                  placeholder="0"
-                />
-                <button
-                  type="button"
-                  onClick={onSaveTarget}
-                  className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition-all hover:bg-indigo-600"
-                >
-                  저장
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* 헤더 느낌 카드 */}
+      <section className="rounded-[30px] bg-gradient-to-br from-indigo-500 to-violet-500 p-6 text-white shadow-[0_12px_30px_rgba(99,102,241,0.25)]">
+        <div className="text-sm font-bold opacity-80">Monthly Summary</div>
+        <div className="mt-2 text-2xl font-black tracking-tight">
+          {monthLabel}
         </div>
 
-        <div className="p-5 md:p-8">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Monthly Sales
-              </div>
-              <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-                ${monthlyStats.total.toLocaleString()}
-              </div>
-              <div className="mt-2 text-sm font-medium text-slate-500">
-                이번 달 누적 매출
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Daily Average
-              </div>
-              <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-                ${Math.round(monthlyStats.avg).toLocaleString()}
-              </div>
-              <div className="mt-2 text-sm font-medium text-slate-500">
-                영업일 기준 일 평균 매출
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Target Rate
-              </div>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="text-3xl font-black tracking-tight text-slate-900">
-                  {monthlyRate.toFixed(1)}%
-                </div>
-                <span className={`rounded-full border px-3 py-1 text-xs font-black ${rateTone}`}>
-                  {statusTitle}
-                </span>
-              </div>
-              <div className="mt-2 text-sm font-medium text-slate-500">
-                월 목표 대비 현재 달성률
-              </div>
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-xs opacity-70">Total Sales</div>
+            <div className="text-xl font-black">
+              ${monthlyStats.total.toLocaleString()}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-            <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-sm">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">
-                Status Overview
-              </div>
-              <div className="mt-3 text-2xl font-black tracking-tight">
-                {statusTitle}
-              </div>
-              <p className="mt-3 text-sm font-medium leading-6 text-slate-200">
-                {statusDescription}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Next Action
-              </div>
-              <ul className="mt-4 space-y-3 text-sm font-medium text-slate-600">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
-                  <span>Sales 페이지에서 날짜별 입력 상태를 먼저 확인하세요.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
-                  <span>월 목표 수치를 점검하고 필요 시 즉시 수정하세요.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
-                  <span>상세 원인 분석은 Detail 페이지에서 이어서 확인하세요.</span>
-                </li>
-              </ul>
+          <div>
+            <div className="text-xs opacity-70">Daily Avg</div>
+            <div className="text-xl font-black">
+              ${Math.round(monthlyStats.avg).toLocaleString()}
             </div>
           </div>
         </div>
       </section>
+
+      {/* KPI 카드 */}
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-[28px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+          <div className="text-xs text-slate-400 font-bold">Monthly Sales</div>
+          <div className="mt-2 text-2xl font-black text-slate-900">
+            ${monthlyStats.total.toLocaleString()}
+          </div>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+          <div className="text-xs text-slate-400 font-bold">Daily Average</div>
+          <div className="mt-2 text-2xl font-black text-slate-900">
+            ${Math.round(monthlyStats.avg).toLocaleString()}
+          </div>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+          <div className="text-xs text-slate-400 font-bold">Target Rate</div>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="text-2xl font-black text-slate-900">
+              {monthlyRate.toFixed(1)}%
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-black ${status.bg} ${status.color}`}>
+              {status.title}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Target 입력 */}
+      <section className="rounded-[28px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+        <div className="text-xs font-bold text-slate-400">Monthly Target</div>
+
+        <div className="mt-4 flex gap-2">
+          <input
+            type="number"
+            value={monthlyTarget || ""}
+            onChange={(e) => onChangeTarget(Number(e.target.value))}
+            onBlur={onSaveTarget}
+            className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-right font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          />
+          <button
+            onClick={onSaveTarget}
+            className="rounded-2xl bg-indigo-500 px-5 text-white font-black shadow-md"
+          >
+            Save
+          </button>
+        </div>
+      </section>
+
+      {/* 상태 카드 */}
+      <section className="rounded-[28px] bg-slate-900 p-6 text-white shadow-[0_10px_30px_rgba(15,23,42,0.2)]">
+        <div className="text-xs opacity-60">Status</div>
+        <div className="mt-2 text-xl font-black">{status.title}</div>
+        <div className="mt-2 text-sm opacity-80">
+          현재 매출 흐름을 기반으로 운영 상태를 간단히 요약합니다.
+        </div>
+      </section>
+
+      {/* 액션 */}
+      <section className="rounded-[28px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+        <div className="text-xs font-bold text-slate-400">Next Action</div>
+
+        <div className="mt-4 space-y-3 text-sm text-slate-600">
+          <div className="flex gap-2">
+            <span>•</span>
+            <span>Sales 페이지에서 데이터 입력 상태 확인</span>
+          </div>
+          <div className="flex gap-2">
+            <span>•</span>
+            <span>목표 수치 점검 및 수정</span>
+          </div>
+          <div className="flex gap-2">
+            <span>•</span>
+            <span>Detail 페이지에서 분석 확인</span>
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 };
