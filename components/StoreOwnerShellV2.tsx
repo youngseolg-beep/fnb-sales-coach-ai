@@ -21,8 +21,7 @@ export default function StoreOwnerShellV2({
   datesWithData = [],
   children,
 }: Props) {
-  const isDesktop =
-    typeof window !== 'undefined' && window.innerWidth >= 768;
+  const [open, setOpen] = React.useState(false);
 
   const pages: { key: StoreOwnerPageKey; label: string }[] = [
     { key: 'summary', label: '홈' },
@@ -33,52 +32,66 @@ export default function StoreOwnerShellV2({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div
-        className={
-          isDesktop
-            ? 'w-full px-8 py-6'
-            : 'mx-auto flex min-h-screen w-full max-w-md flex-col pb-[80px]'
-        }
-      >
-        {/* HEADER */}
-        <div className="mb-4">
-          <div className="rounded-3xl bg-slate-900 p-4 text-white">
-            <div className="text-sm font-bold mb-2">Sales Coach AI</div>
-            <div className="text-sm">
-              {selectedDate.toLocaleDateString()}
-            </div>
-          </div>
+      {/* 가운데 컨테이너 */}
+      <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-6">
 
-          <div className="mt-3 bg-white rounded-3xl p-3 shadow-sm">
-            <DayPicker
-              mode="single"
-              selected={selectedDate}
-              onSelect={(d) => d && onDateChange(d)}
-            />
+        {/* HEADER CARD */}
+        <div className="rounded-3xl bg-slate-900 p-5 text-white shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs opacity-70">Sales Coach AI</div>
+              <div className="text-lg font-bold mt-1">
+                {selectedDate.toLocaleDateString()}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setOpen(!open)}
+              className="bg-white/10 px-3 py-2 rounded-xl text-sm"
+            >
+              날짜 선택
+            </button>
           </div>
         </div>
 
-        {/* CONTENT */}
-        <div className="flex-1">{children}</div>
-
-        {/* MOBILE NAV ONLY */}
-        {!isDesktop && (
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t p-2 grid grid-cols-4 gap-2">
-            {pages.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => onChangePage(p.key)}
-                className={`py-2 rounded-xl text-sm ${
-                  activePage === p.key
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+        {/* CALENDAR */}
+        {open && (
+          <div className="mt-3 bg-white rounded-3xl p-3 shadow">
+            <DayPicker
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => {
+                if (!d) return;
+                onDateChange(d);
+                setOpen(false);
+              }}
+            />
           </div>
         )}
+
+        {/* CONTENT */}
+        <div className="mt-4">
+          {children}
+        </div>
+      </div>
+
+      {/* MOBILE TAB ONLY */}
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t md:hidden">
+        <div className="grid grid-cols-4">
+          {pages.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => onChangePage(p.key)}
+              className={`py-3 text-sm ${
+                activePage === p.key
+                  ? 'text-white bg-slate-900'
+                  : 'text-slate-500'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
