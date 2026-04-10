@@ -225,7 +225,17 @@ export default function StoreOwnerShell({
       <main className="flex-1 mx-auto max-w-7xl px-4 py-4 sm:px-6">
         {children}
       </main>
-
+<nav className="fixed bottom-0 left-0 right-0 z-[1000] bg-white border-t border-slate-200 shadow-2xl">
+  <div className="flex justify-around py-3 px-4">
+    {MENU_ITEMS.map(item => (
+      <button key={item.key} onClick={() => onChangePage(item.key)} 
+        className={`flex flex-col items-center p-2 rounded-xl ${currentPage === item.key ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-100'}`}>
+        <span className="text-sm font-bold">{item.label.charAt(0)}</span>
+        <span className="text-xs">{item.label}</span>
+      </button>
+    ))}
+  </div>
+</nav>
       {/* 🆕 하단 4탭 네비게이션 - MENU_ITEMS 재사용 */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-2xl md:border-t-0 md:static md:shadow-none">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
