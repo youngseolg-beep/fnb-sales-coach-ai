@@ -279,31 +279,25 @@ export default function StoreOwnerShell({
         </div>
       </header>
 
-      {showCalendar && (
-        <div
-          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
-          style={{
-            top: `${calendarPos.top}px`,
-            left: `${calendarPos.left}px`,
-          }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="mt-1 text-base font-black text-slate-900 sm:text-lg">
-                {formatMonthTitle(calendarMonth)}
-              </div>
-            </div>
+     {showCalendar && (
+  <div
+    className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
+    style={{
+      top: `${calendarPos.top}px`,
+      left: `${calendarPos.left}px`,
+    }}
+  >
+    <div className="mb-3 flex items-center justify-end">
+      <button
+        type="button"
+        onClick={() => setShowCalendar(false)}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+      >
+        <i className="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
 
-            <button
-              type="button"
-              onClick={() => setShowCalendar(false)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-
-         <DayPicker
+    <DayPicker
   key={calendarRenderKey}
   mode="single"
   month={calendarMonth}
