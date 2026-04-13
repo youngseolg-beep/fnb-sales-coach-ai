@@ -71,8 +71,6 @@ const addDaysLocal = (date: Date, amount: number) => {
   return next;
 };
 
-const startOfMonthLocal = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
-
 const formatMonthTitle = (date: Date) => {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -82,10 +80,6 @@ const formatMonthTitle = (date: Date) => {
 
 const formatWeekdayShort = (date: Date) => {
   return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
-};
-
-const formatDayNumber = (date: Date) => {
-  return String(date.getDate());
 };
 
 export default function StoreOwnerShell({
@@ -113,14 +107,18 @@ export default function StoreOwnerShell({
   }, [currentPage]);
 
   const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
-
   const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
 
   const visibleDates = useMemo(() => {
-    return Array.from({ length: 7 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 3));
+    return Array.from({ length: 9 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 4));
   }, [selectedDateObj]);
 
-  const openCalendar = () => {
+  const toggleCalendar = () => {
+    if (showCalendar) {
+      setShowCalendar(false);
+      return;
+    }
+
     if (!calendarButtonRef.current) return;
 
     const rect = calendarButtonRef.current.getBoundingClientRect();
@@ -141,14 +139,6 @@ export default function StoreOwnerShell({
     setCalendarRenderKey((prev) => prev + 1);
     onMonthChange(currentMonth);
     setShowCalendar(true);
-  };
-
-  const toggleCalendar = () => {
-    if (showCalendar) {
-      setShowCalendar(false);
-      return;
-    }
-    openCalendar();
   };
 
   useEffect(() => {
@@ -176,36 +166,36 @@ export default function StoreOwnerShell({
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-[#f7f7fb]/95 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6">
-          <div className="rounded-[28px] border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
-            <div className="flex items-start justify-between gap-4">
+        <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4">
+          <div className="rounded-[28px] border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5 sm:py-4">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
               <div className="min-w-0">
-                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
                   {title}
                 </div>
-                <div className="mt-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+                <div className="mt-1 text-[28px] font-black tracking-tight text-slate-900 sm:text-2xl">
                   {activeMenu.label}
                 </div>
-                <div className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+                <div className="mt-1 text-[11px] font-medium leading-tight text-slate-500 sm:text-sm">
                   {activeMenu.description}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="rounded-2xl bg-slate-50 px-3 py-2 text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
                     Goal
                   </div>
-                  <div className="text-sm font-black text-slate-900">
+                  <div className="text-sm font-black text-slate-900 sm:text-base">
                     ${monthlyTarget.toLocaleString()}
                   </div>
                 </div>
 
                 <div className="rounded-2xl bg-indigo-50 px-3 py-2 text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-indigo-400 sm:text-[10px]">
                     Rate
                   </div>
-                  <div className="text-sm font-black text-indigo-600">
+                  <div className="text-sm font-black text-indigo-600 sm:text-base">
                     {monthlyRate.toFixed(1)}%
                   </div>
                 </div>
@@ -220,56 +210,30 @@ export default function StoreOwnerShell({
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">
+            <div className="mt-3 flex items-end justify-between gap-3 sm:mt-4">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
                   {formatMonthTitle(selectedDateObj)}
                 </div>
-                <div className="mt-1 text-xs font-semibold text-slate-500">
+                <div className="mt-1 text-[10px] font-bold leading-tight text-slate-500 sm:text-xs">
                   POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const prev = addDaysLocal(selectedDateObj, -1);
-                    onChangeDate(formatLocalDate(prev));
-                    onMonthChange(startOfMonthLocal(prev));
-                  }}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
-                >
-                  <i className="fa-solid fa-chevron-left text-xs"></i>
-                </button>
-
-                <button
-                  ref={calendarButtonRef}
-                  type="button"
-                  onClick={toggleCalendar}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-100"
-                >
-                  <i className="fa-solid fa-calendar-days text-xs text-slate-500"></i>
-                  {selectedDate}
-                  <i className="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = addDaysLocal(selectedDateObj, 1);
-                    onChangeDate(formatLocalDate(next));
-                    onMonthChange(startOfMonthLocal(next));
-                  }}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
-                >
-                  <i className="fa-solid fa-chevron-right text-xs"></i>
-                </button>
-              </div>
+              <button
+                ref={calendarButtonRef}
+                type="button"
+                onClick={toggleCalendar}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-100 sm:h-10 sm:px-4"
+              >
+                <i className="fa-solid fa-calendar-days text-[11px] text-slate-500"></i>
+                <span className="leading-none">{selectedDate}</span>
+                <i className="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+              </button>
             </div>
 
-            <div className="mt-4 overflow-x-auto pb-1">
-              <div className="flex min-w-max gap-2 sm:gap-3">
+            <div className="mt-3 overflow-x-auto pb-1 sm:mt-4">
+              <div className="flex min-w-max gap-2 sm:gap-2.5">
                 {visibleDates.map((date) => {
                   const dateKey = formatLocalDate(date);
                   const active = dateKey === selectedDate;
@@ -279,12 +243,9 @@ export default function StoreOwnerShell({
                     <button
                       key={dateKey}
                       type="button"
-                      onClick={() => {
-                        onChangeDate(dateKey);
-                        onMonthChange(startOfMonthLocal(date));
-                      }}
+                      onClick={() => onChangeDate(dateKey)}
                       className={[
-                        "relative flex h-[84px] w-[68px] shrink-0 flex-col items-center justify-center rounded-[24px] border transition-all sm:h-[92px] sm:w-[76px]",
+                        "relative flex h-[74px] w-[58px] shrink-0 flex-col items-center justify-center rounded-[22px] border transition-all sm:h-[76px] sm:w-[60px]",
                         active
                           ? "border-slate-900 bg-slate-900 text-white shadow-md"
                           : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white",
@@ -292,20 +253,20 @@ export default function StoreOwnerShell({
                     >
                       <span
                         className={[
-                          "text-[11px] font-bold uppercase tracking-wide",
+                          "text-[9px] font-bold uppercase tracking-wide",
                           active ? "text-slate-300" : "text-slate-400",
                         ].join(" ")}
                       >
                         {formatWeekdayShort(date)}
                       </span>
 
-                      <span className="mt-2 text-xl font-black sm:text-2xl">
-                        {formatDayNumber(date)}
+                      <span className="mt-1.5 text-[28px] font-black leading-none sm:text-[26px]">
+                        {date.getDate()}
                       </span>
 
                       <span
                         className={[
-                          "mt-1 text-[10px] font-bold",
+                          "mt-1 text-[9px] font-bold leading-none",
                           active ? "text-slate-400" : "text-slate-400",
                         ].join(" ")}
                       >
@@ -314,7 +275,7 @@ export default function StoreOwnerShell({
 
                       <span
                         className={[
-                          "absolute bottom-3 h-1.5 w-1.5 rounded-full",
+                          "absolute bottom-2.5 h-1.5 w-1.5 rounded-full",
                           hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
                         ].join(" ")}
                       />
@@ -395,7 +356,7 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
         {children}
       </main>
 
