@@ -352,38 +352,29 @@ export default function StoreOwnerShell({
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto grid max-w-7xl grid-cols-5 gap-2 px-3 py-3">
-          {MENU_ITEMS.map((item) => {
-            const active = item.key === currentPage;
+  <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-3 py-3">
+    {MENU_ITEMS.map((item) => {
+      const active = item.key === currentPage;
 
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => onChangePage(item.key)}
-                className={[
-                  "flex h-14 flex-col items-center justify-center rounded-2xl transition-all",
-                  active
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                ].join(" ")}
-              >
-                <i className={`${item.icon} text-sm`}></i>
-                <span className="mt-1 text-[11px] font-bold">{item.label}</span>
-              </button>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex h-14 flex-col items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-100"
-          >
-            <i className="fa-solid fa-right-from-bracket text-sm"></i>
-            <span className="mt-1 text-[11px] font-bold">Logout</span>
-          </button>
-        </div>
-      </nav>
+      return (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => onChangePage(item.key)}
+          className={[
+            "flex h-14 flex-col items-center justify-center rounded-2xl transition-all",
+            active
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          ].join(" ")}
+        >
+          <i className={`${item.icon} text-sm`}></i>
+          <span className="mt-1 text-[11px] font-bold">{item.label}</span>
+        </button>
+      );
+    })}
+  </div>
+</nav>
     </div>
   );
 }
