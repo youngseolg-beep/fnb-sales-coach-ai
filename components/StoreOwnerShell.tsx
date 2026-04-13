@@ -65,6 +65,29 @@ const formatLocalDate = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
+const addDaysLocal = (date: Date, amount: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
+
+const startOfMonthLocal = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+const formatMonthTitle = (date: Date) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatWeekdayShort = (date: Date) => {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+};
+
+const formatDayNumber = (date: Date) => {
+  return String(date.getDate());
+};
+
 export default function StoreOwnerShell({
   currentPage,
   onChangePage,
@@ -83,7 +106,7 @@ export default function StoreOwnerShell({
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
   const [calendarRenderKey, setCalendarRenderKey] = useState(0);
   const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
-  const dateButtonRef = useRef<HTMLButtonElement>(null);
+  const calendarButtonRef = useRef<HTMLButtonElement>(null);
 
   const activeMenu = useMemo(() => {
     return MENU_ITEMS.find((item) => item.key === currentPage) ?? MENU_ITEMS[0];
@@ -91,30 +114,41 @@ export default function StoreOwnerShell({
 
   const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
+  const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
+
+  const visibleDates = useMemo(() => {
+    return Array.from({ length: 7 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 3));
+  }, [selectedDateObj]);
+
+  const openCalendar = () => {
+    if (!calendarButtonRef.current) return;
+
+    const rect = calendarButtonRef.current.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const popupWidth = Math.min(360, windowWidth - 24);
+
+    let left = rect.right - popupWidth;
+    if (left < 12) left = 12;
+    if (left + popupWidth > windowWidth - 12) left = windowWidth - popupWidth - 12;
+
+    const currentMonth = parseLocalDate(selectedDate);
+
+    setCalendarPos({
+      top: rect.bottom + window.scrollY + 10,
+      left,
+    });
+    setCalendarMonth(currentMonth);
+    setCalendarRenderKey((prev) => prev + 1);
+    onMonthChange(currentMonth);
+    setShowCalendar(true);
+  };
+
   const toggleCalendar = () => {
-    if (!showCalendar && dateButtonRef.current) {
-      const rect = dateButtonRef.current.getBoundingClientRect();
-      const windowWidth = window.innerWidth;
-      const popupWidth = 320;
-
-      let left = rect.left;
-      if (left + popupWidth > windowWidth) left = windowWidth - popupWidth - 20;
-      if (left < 20) left = 20;
-
-      const currentMonth = parseLocalDate(selectedDate);
-
-      setCalendarPos({
-        top: rect.bottom + window.scrollY + 8,
-        left,
-      });
-      setCalendarMonth(currentMonth);
-      setCalendarRenderKey((prev) => prev + 1);
-      onMonthChange(currentMonth);
-      setShowCalendar(true);
+    if (showCalendar) {
+      setShowCalendar(false);
       return;
     }
-
-    setShowCalendar(false);
+    openCalendar();
   };
 
   useEffect(() => {
@@ -140,90 +174,186 @@ export default function StoreOwnerShell({
   }, [selectedDate, showCalendar]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div>
-              <button
-                ref={dateButtonRef}
-                type="button"
-                onClick={toggleCalendar}
-                className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50/60"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
-                  <i className="fa-solid fa-calendar-days text-sm"></i>
+    <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-[#f7f7fb]/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 pb-4 pt-4 sm:px-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+                  {title}
                 </div>
+                <div className="mt-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+                  {activeMenu.label}
+                </div>
+                <div className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+                  {activeMenu.description}
+                </div>
+              </div>
 
-                <div className="text-left leading-tight">
-                  <div className="text-sm font-black text-slate-900 group-hover:text-indigo-700">
-                    {selectedDate}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="rounded-2xl bg-slate-50 px-3 py-2 text-right">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Goal
                   </div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500">
-                    날짜 변경
+                  <div className="text-sm font-black text-slate-900">
+                    ${monthlyTarget.toLocaleString()}
                   </div>
                 </div>
 
-                <div className="ml-1 text-slate-400 transition-colors group-hover:text-indigo-500">
-                  <i className="fa-solid fa-chevron-down text-xs"></i>
+                <div className="rounded-2xl bg-indigo-50 px-3 py-2 text-right">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                    Rate
+                  </div>
+                  <div className="text-sm font-black text-indigo-600">
+                    {monthlyRate.toFixed(1)}%
+                  </div>
                 </div>
-              </button>
 
-              <div className="mt-1 pl-1 text-[10px] font-black tracking-widest text-slate-400">
-                POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-4 flex items-center gap-4">
-            <div className="hidden text-right sm:block">
-              <div className="text-[10px] text-slate-400">{title}</div>
-              <div className="text-sm font-bold text-slate-900">{subtitle}</div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400">월 목표</div>
-              <div className="text-sm font-black text-slate-900">
-                ${monthlyTarget.toLocaleString()}
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="hidden h-11 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
+                >
+                  Logout
+                </button>
               </div>
             </div>
 
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400">달성률</div>
-              <div className="text-sm font-black text-indigo-600">
-                {monthlyRate.toFixed(1)}%
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">
+                  {formatMonthTitle(selectedDateObj)}
+                </div>
+                <div className="mt-1 text-xs font-semibold text-slate-500">
+                  POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prev = addDaysLocal(selectedDateObj, -1);
+                    onChangeDate(formatLocalDate(prev));
+                    onMonthChange(startOfMonthLocal(prev));
+                  }}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+                >
+                  <i className="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+
+                <button
+                  ref={calendarButtonRef}
+                  type="button"
+                  onClick={toggleCalendar}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-100"
+                >
+                  <i className="fa-solid fa-calendar-days text-xs text-slate-500"></i>
+                  {selectedDate}
+                  <i className="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = addDaysLocal(selectedDateObj, 1);
+                    onChangeDate(formatLocalDate(next));
+                    onMonthChange(startOfMonthLocal(next));
+                  }}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+                >
+                  <i className="fa-solid fa-chevron-right text-xs"></i>
+                </button>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onLogout}
-              className="hidden h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+            <div className="mt-4 overflow-x-auto pb-1">
+              <div className="flex min-w-max gap-2 sm:gap-3">
+                {visibleDates.map((date) => {
+                  const dateKey = formatLocalDate(date);
+                  const active = dateKey === selectedDate;
+                  const hasData = datesWithDataSet.has(dateKey);
 
-        <div className="mx-auto max-w-7xl px-4 pb-3 sm:px-6">
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-              Current Page
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => {
+                        onChangeDate(dateKey);
+                        onMonthChange(startOfMonthLocal(date));
+                      }}
+                      className={[
+                        "relative flex h-[84px] w-[68px] shrink-0 flex-col items-center justify-center rounded-[24px] border transition-all sm:h-[92px] sm:w-[76px]",
+                        active
+                          ? "border-slate-900 bg-slate-900 text-white shadow-md"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "text-[11px] font-bold uppercase tracking-wide",
+                          active ? "text-slate-300" : "text-slate-400",
+                        ].join(" ")}
+                      >
+                        {formatWeekdayShort(date)}
+                      </span>
+
+                      <span className="mt-2 text-xl font-black sm:text-2xl">
+                        {formatDayNumber(date)}
+                      </span>
+
+                      <span
+                        className={[
+                          "mt-1 text-[10px] font-bold",
+                          active ? "text-slate-400" : "text-slate-400",
+                        ].join(" ")}
+                      >
+                        {dateKey.slice(5)}
+                      </span>
+
+                      <span
+                        className={[
+                          "absolute bottom-3 h-1.5 w-1.5 rounded-full",
+                          hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
+                        ].join(" ")}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="mt-1 text-lg font-black text-slate-900">{activeMenu.label}</div>
-            <div className="mt-1 text-sm text-slate-500">{activeMenu.description}</div>
           </div>
         </div>
       </header>
 
       {showCalendar && (
         <div
-          className="fixed z-[9998] w-[320px] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl"
+          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[28px] border border-slate-200 bg-white p-4 shadow-2xl"
           style={{
             top: `${calendarPos.top}px`,
             left: `${calendarPos.left}px`,
           }}
         >
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                Quick Calendar
+              </div>
+              <div className="mt-1 text-lg font-black text-slate-900">
+                {formatMonthTitle(calendarMonth)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCalendar(false)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+
           <DayPicker
             key={calendarRenderKey}
             mode="single"
