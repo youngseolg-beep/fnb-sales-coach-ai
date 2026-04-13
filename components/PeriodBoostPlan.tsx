@@ -71,7 +71,7 @@ const PeriodBoostPlan: React.FC<Props> = ({ boostPlans }) => {
                   >
                     {meta.badge}
                   </div>
-                  <div className="mt-3 text-lg font-black leading-snug text-slate-900">
+                  <div className="mt-3 text-sm font-black leading-snug text-slate-900">
                     {plan.setName}
                   </div>
                 </div>
