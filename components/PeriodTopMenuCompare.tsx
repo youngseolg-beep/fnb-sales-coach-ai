@@ -163,7 +163,51 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2 md:mb-4 md:grid md:grid-cols-4 md:gap-3">
+      <div className="mb-3 flex flex-col gap-2 md:mb-4 md:grid md:grid-cols-4 md:gap-3">
+
+  {/* 1줄 - 메뉴 수 */}
+  <div className="flex gap-2">
+    <div className="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        현재 메뉴 수
+      </div>
+      <div className="mt-1 text-lg font-black text-slate-900">
+        {numberFmt.format(currentMenus.length)}
+      </div>
+    </div>
+
+    <div className="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        비교 메뉴 수
+      </div>
+      <div className="mt-1 text-lg font-black text-slate-900">
+        {numberFmt.format(comparisonMenus.length)}
+      </div>
+    </div>
+  </div>
+
+  {/* 2줄 - 기간 */}
+  <div className="flex gap-2">
+    <div className="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        현재 기간
+      </div>
+      <div className="mt-1 text-lg font-black text-slate-900">
+        {numberFmt.format(currentDays)}일
+      </div>
+    </div>
+
+    <div className="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+        비교 기간
+      </div>
+      <div className="mt-1 text-lg font-black text-slate-900">
+        {numberFmt.format(comparisonDays)}일
+      </div>
+    </div>
+  </div>
+
+</div>
         <div className="min-w-[120px] flex-1 rounded-xl bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             현재 메뉴 수
