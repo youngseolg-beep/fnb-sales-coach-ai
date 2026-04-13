@@ -109,20 +109,9 @@ export default function StoreOwnerShell({
   const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
   const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
 
-  const baseDateRef = useRef(parseLocalDate(selectedDate));
-
-useEffect(() => {
-  // 최초 1번만 기준 잡고 이후엔 유지
-  if (!baseDateRef.current) {
-    baseDateRef.current = parseLocalDate(selectedDate);
-  }
-}, []);
-
-const visibleDates = useMemo(() => {
-  return Array.from({ length: 9 }, (_, idx) =>
-    addDaysLocal(baseDateRef.current, idx)
-  );
-}, []);
+  const visibleDates = useMemo(() => {
+  return Array.from({ length: 9 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 4));
+}, [selectedDateObj]);
 
   const toggleCalendar = () => {
     if (showCalendar) {
@@ -319,7 +308,6 @@ const visibleDates = useMemo(() => {
   mode="single"
   month={calendarMonth}
   selected={parseLocalDate(selectedDate)}
-  captionLayout="dropdown"
   onMonthChange={(month) => {
     setCalendarMonth(month);
     onMonthChange(month);
