@@ -163,8 +163,8 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
-        <div className="rounded-2xl bg-slate-50 p-3">
+      <div className="mb-3 flex flex-wrap gap-2 md:mb-4 md:grid md:grid-cols-4 md:gap-3">
+        <div className="min-w-[120px] flex-1 rounded-xl bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             현재 메뉴 수
           </div>
@@ -173,7 +173,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-3">
+        <div className="min-w-[120px] flex-1 rounded-xl bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             비교 메뉴 수
           </div>
@@ -182,7 +182,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-3">
+        <div className="min-w-[120px] flex-1 rounded-xl bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             현재 기간
           </div>
@@ -191,7 +191,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-3">
+        <div className="min-w-[120px] flex-1 rounded-xl bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
             비교 기간
           </div>
