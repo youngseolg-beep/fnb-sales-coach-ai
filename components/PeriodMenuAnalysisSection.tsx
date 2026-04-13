@@ -347,17 +347,17 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <div className="min-w-[720px]">
-            <PeriodTopMenuCompare
-              currentMenus={currentPeriodMenus}
-              comparisonMenus={comparisonPeriodMenus}
-              minDays={1}
-              currentDays={currentPeriodDays}
-              comparisonDays={comparisonPeriodDays}
-            />
-          </div>
-        </div>
+       <div className="overflow-visible md:overflow-x-auto">
+  <div className="min-w-0 md:min-w-[720px]">
+    <PeriodTopMenuCompare
+      currentMenus={currentPeriodMenus}
+      comparisonMenus={comparisonPeriodMenus}
+      minDays={1}
+      currentDays={currentPeriodDays}
+      comparisonDays={comparisonPeriodDays}
+    />
+  </div>
+</div>
       </section>
 
       <section className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm md:rounded-[28px] md:p-5">
