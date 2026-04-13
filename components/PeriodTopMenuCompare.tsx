@@ -247,20 +247,20 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                   </div>
 
                  <div className="mt-1.5 flex gap-1.5">
-  <div className="inline-flex min-w-[72px] flex-col rounded-md bg-white px-2 py-1">
+  <div className="inline-flex min-w-[72px] flex-col items-start rounded-md bg-white px-2 py-1">
     <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
       현재
     </div>
-    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900 tracking-tight">
       {currentValue}
     </div>
   </div>
 
-  <div className="inline-flex min-w-[72px] flex-col rounded-md bg-white px-2 py-1">
+  <div className="inline-flex min-w-[72px] flex-col items-start rounded-md bg-white px-2 py-1">
     <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
       비교
     </div>
-    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900 tracking-tight">
       {compareValue}
     </div>
   </div>
