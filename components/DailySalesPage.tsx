@@ -1,14 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { format, parseISO, subDays } from "date-fns";
+import { subDays } from "date-fns";
 
 import DataInput from "./DataInput";
-import ReportDisplay from "./ReportDisplay";
-import PeriodMenuAnalysisSection from "./PeriodMenuAnalysisSection";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
 import { getComparisonRange, type ComparisonMode } from "../utils2/periodComparison";
 import { generateCoachingReport } from "../services/geminiService";
-import { calculateMenuEngineeringForRange } from "../services/menuEngineeringService";
 import { loadDailyRange, saveDailyData } from "../services/salesStorage";
 
 import type {
@@ -101,6 +98,7 @@ const SOFT_DRINKS = [
 
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
+
 const DailySalesPage: React.FC<Props> = ({
   data,
   setData,
@@ -776,11 +774,11 @@ const DailySalesPage: React.FC<Props> = ({
             setDataSaved(true);
           }
 
-setSelectedDate(nextDate);
-setData((prev) => ({
-  ...prev,
-  date: nextDate,
-}));
+          setSelectedDate(nextDate);
+          setData((prev) => ({
+            ...prev,
+            date: nextDate,
+          }));
         } catch (error: any) {
           console.error("Auto save before date change failed:", error);
           setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
@@ -859,9 +857,9 @@ setData((prev) => ({
       }
 
       try {
-   await refreshMonthlyStats(data.date.substring(0, 7));
-await loadCurrentPeriodData(true);
-await loadComparisonData(true);
+        await refreshMonthlyStats(data.date.substring(0, 7));
+        await loadCurrentPeriodData(true);
+        await loadComparisonData(true);
       } catch (e) {
         console.warn("refreshMonthlyStats failed (ignored):", e);
       }
@@ -875,157 +873,160 @@ await loadComparisonData(true);
     }
   };
 
-const handleGenerate = async () => {
-  setLoading(true);
-  try {
-    const saved = await handleSave(true);
-    if (!saved) return;
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const saved = await handleSave(true);
+      if (!saved) return;
 
-    const coachOnlyMenuEngineering = null;
-    const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
+      const coachOnlyMenuEngineering = null;
+      const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
 
-    setReport(result);
-    setReportGenerated(true);
+      setReport(result);
+      setReportGenerated(true);
 
-    if (typeof window !== "undefined") {
-      const raw = localStorage.getItem(DETAIL_REPORT_STORAGE_KEY);
-      const prevMap = raw ? JSON.parse(raw) : {};
-      const nextMap = {
-        ...prevMap,
-        [data.date]: {
-          report: result,
-          date: data.date,
-          generatedAt: new Date().toISOString(),
-        },
-      };
-      localStorage.setItem(DETAIL_REPORT_STORAGE_KEY, JSON.stringify(nextMap));
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem(DETAIL_REPORT_STORAGE_KEY);
+        const prevMap = raw ? JSON.parse(raw) : {};
+        const nextMap = {
+          ...prevMap,
+          [data.date]: {
+            report: result,
+            date: data.date,
+            generatedAt: new Date().toISOString(),
+          },
+        };
+        localStorage.setItem(DETAIL_REPORT_STORAGE_KEY, JSON.stringify(nextMap));
+      }
+
+      showToast("AI 코칭 리포트 생성 완료");
+    } catch (error: any) {
+      console.error("Process Error:", error);
+    } finally {
+      setLoading(false);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
+  };
 
-    showToast("AI 코칭 리포트 생성 완료");
-  } catch (error: any) {
-    console.error("Process Error:", error);
-  } finally {
-    setLoading(false);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }
-};
+  return (
+    <>
+      <div className="space-y-5 pb-32 md:pb-36">
+        <header className="space-y-2">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">매출 입력</h2>
+            <p className="text-sm font-medium text-slate-500 md:text-base">
+              날짜를 선택하고 매출, 방문객, 주문수, 메뉴 판매 수량을 입력한 뒤 저장하세요.
+            </p>
+          </div>
+        </header>
 
- return (
-  <>
-    <header className="space-y-2">
-      <div>
-        <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">매출 입력</h2>
-        <p className="text-slate-500 text-sm md:text-base font-medium">
-          날짜를 선택하고 매출, 방문객, 주문수, 메뉴 판매 수량을 입력한 뒤 저장하세요.
-        </p>
+        <div className="relative">
+          <DataInput
+            data={data}
+            onChange={handleDataChange}
+            loading={loading}
+            datesWithData={[...datesWithData]}
+            onMonthChange={onMonthChange}
+          />
+
+          {saveStatus && (
+            <div className="mt-4 text-center">
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
+                  saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : saveStatus.startsWith("저장 실패") ||
+                      saveStatus.startsWith("저장 중 오류") ||
+                      saveStatus.startsWith("날짜 변경 전 자동 저장 실패")
+                    ? "bg-rose-50 text-rose-600"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {saveStatus}
+              </span>
+            </div>
+          )}
+
+          {lastSavedAt && (
+            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
+              마지막 저장: {lastSavedAt}
+            </div>
+          )}
+        </div>
       </div>
-    </header>
 
-    <div className="relative">
-      <DataInput
-        data={data}
-        onChange={handleDataChange}
-        loading={loading}
-        datesWithData={[...datesWithData]}
-        onMonthChange={onMonthChange}
-      />
+      <div className="fixed bottom-[82px] left-0 right-0 z-[9997] px-3 md:bottom-[92px] md:px-6">
+        <div className="mx-auto w-full max-w-md md:max-w-7xl">
+          <div className="rounded-2xl border border-slate-200 bg-white/92 p-2 shadow-lg backdrop-blur md:rounded-3xl md:p-3">
+            <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(true)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-600 transition-all hover:bg-rose-100 active:scale-[0.98] md:h-12 md:min-w-[180px] md:px-5"
+              >
+                <i className="fa-solid fa-trash-can text-xs"></i>
+                일 데이터 리셋
+              </button>
 
-      {saveStatus && (
-        <div className="mt-4 text-center">
-          <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${
-              saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
-                ? "bg-emerald-50 text-emerald-600"
-                : saveStatus.startsWith("저장 실패") ||
-                  saveStatus.startsWith("저장 중 오류") ||
-                  saveStatus.startsWith("날짜 변경 전 자동 저장 실패")
-                ? "bg-rose-50 text-rose-600"
-                : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {saveStatus}
-          </span>
-        </div>
-      )}
-
-      {lastSavedAt && (
-        <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
-          마지막 저장: {lastSavedAt}
-        </div>
-      )}
-    </div>
-
-    <div className="fixed bottom-4 md:bottom-6 left-0 right-0 z-[9999] px-4 md:px-6 pointer-events-none">
-  <div className="max-w-6xl mx-auto pointer-events-auto">
-    <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:gap-4">
-      <button
-        type="button"
-        onClick={() => setShowResetModal(true)}
-        className="bg-white text-rose-600 border-2 border-rose-200 px-3 py-3 md:px-6 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 ring-1 md:ring-2 ring-red-400"
-      >
-        <i className="fa-solid fa-trash-can text-sm md:text-base"></i>
-        일 데이터 리셋
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handleSave(false)}
-        className={`px-3 py-3 md:px-8 md:py-4 rounded-2xl font-black text-sm md:text-lg shadow-xl transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-95 border-2 ${
-          ocrApplied && !dataSaved
-            ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 hover:bg-indigo-700"
-            : "bg-white text-slate-900 border-slate-900 hover:bg-slate-50"
-        }`}
-      >
-        <i className="fa-solid fa-floppy-disk text-sm md:text-base"></i>
-        매출 데이터 저장
-      </button>
-    </div>
-  </div>
-</div>
-
-
-    {showResetModal && (
-      <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[10000]"
-        onClick={() => setShowResetModal(false)}
-      >
-        <div
-          className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h3 className="font-black text-slate-900 text-xl">일 데이터 리셋</h3>
-          <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
-
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setShowResetModal(false)}
-              className="px-5 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-colors"
-            >
-              취소
-            </button>
-
-            <button
-              type="button"
-              onClick={async () => {
-                setShowResetModal(false);
-                await onDelete();
-                setReport("");
-                setMenuEngineeringResult(null);
-                setOcrApplied(false);
-                setDataSaved(false);
-                setReportGenerated(false);
-                setSaveStatus("데이터 삭제됨");
-              }}
-              className="px-5 py-2 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 transition-colors"
-            >
-              삭제
-            </button>
+              <button
+                type="button"
+                onClick={() => handleSave(false)}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-3 text-sm font-black transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:px-6 ${
+                  ocrApplied && !dataSaved
+                    ? "border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700"
+                    : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                }`}
+              >
+                <i className="fa-solid fa-floppy-disk text-xs"></i>
+                매출 데이터 저장
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    )}
-  </>
+
+      {showResetModal && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowResetModal(false)}
+        >
+          <div
+            className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-black text-slate-900">일 데이터 리셋</h3>
+            <p className="text-slate-700">해당일의 모든 데이터를 삭제 하겠습니까?</p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="rounded-xl px-5 py-2 font-bold text-slate-600 transition-colors hover:bg-slate-100"
+              >
+                취소
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowResetModal(false);
+                  await onDelete();
+                  setReport("");
+                  setMenuEngineeringResult(null);
+                  setOcrApplied(false);
+                  setDataSaved(false);
+                  setReportGenerated(false);
+                  setSaveStatus("데이터 삭제됨");
+                }}
+                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white transition-colors hover:bg-rose-700"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
