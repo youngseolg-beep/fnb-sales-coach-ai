@@ -246,25 +246,25 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-white px-3 py-2">
-                      <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">
-                        현재
-                      </div>
-                      <div className="mt-1 text-sm font-black text-slate-900">
-                        {currentValue}
-                      </div>
-                    </div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+  <div className="rounded-lg bg-white px-2.5 py-1.5">
+    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+      현재
+    </div>
+    <div className="mt-0.5 text-[13px] font-black leading-none text-slate-900">
+      {currentValue}
+    </div>
+  </div>
 
-                    <div className="rounded-xl bg-white px-3 py-2">
-                      <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">
-                        비교
-                      </div>
-                      <div className="mt-1 text-sm font-black text-slate-900">
-                        {compareValue}
-                      </div>
-                    </div>
-                  </div>
+  <div className="rounded-lg bg-white px-2.5 py-1.5">
+    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+      비교
+    </div>
+    <div className="mt-0.5 text-[13px] font-black leading-none text-slate-900">
+      {compareValue}
+    </div>
+  </div>
+</div>
                 </div>
               );
             })}
