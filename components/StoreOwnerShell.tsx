@@ -264,12 +264,12 @@ export default function StoreOwnerShell({
                         {date.getDate()}
                       </span>
 
-                      <span
-                        className={[
-                          "absolute bottom-2.5 h-1.5 w-1.5 rounded-full",
-                          hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
-                        ].join(" ")}
-                      />
+                     <span
+  className={[
+    "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
+    hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
+  ].join(" ")}
+/>
                     </button>
                   );
                 })}
