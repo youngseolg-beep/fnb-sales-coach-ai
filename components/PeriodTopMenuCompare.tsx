@@ -22,7 +22,6 @@ interface PeriodTopMenuCompareProps {
   minDays?: number;
   currentDays?: number;
   comparisonDays?: number;
-
   metric: "qty" | "sales";
   onMetricChange: (m: "qty" | "sales") => void;
 }
@@ -56,7 +55,6 @@ function mergeMenus(
     }
 
     const row = map.get(key)!;
-
     row.currentQty += Number(item.qty || 0);
     row.currentSales += Number(item.sales || 0);
   }
@@ -77,7 +75,6 @@ function mergeMenus(
     }
 
     const row = map.get(key)!;
-
     row.previousQty += Number(item.qty || 0);
     row.previousSales += Number(item.sales || 0);
   }
@@ -96,9 +93,9 @@ function getDeltaText(value: number) {
 }
 
 function getDeltaClass(value: number) {
-  if (value > 0) return "text-green-600";
-  if (value < 0) return "text-red-600";
-  return "text-gray-500";
+  if (value > 0) return "text-emerald-600";
+  if (value < 0) return "text-rose-500";
+  return "text-slate-500";
 }
 
 const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
@@ -119,161 +116,225 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         return b.currentSales - a.currentSales;
       }
 
-      if (b.currentSales !== a.currentSales)
-        return b.currentSales - a.currentSales;
-
+      if (b.currentSales !== a.currentSales) return b.currentSales - a.currentSales;
       return b.currentQty - a.currentQty;
     });
   }, [currentMenus, comparisonMenus, metric]);
 
   const top10 = comparedRows.slice(0, 10);
-
   const canShow = currentDays >= minDays && comparisonDays >= minDays;
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm md:rounded-[24px] md:p-4">
+      <div className="mb-3 flex flex-col gap-3 md:mb-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-base font-black text-slate-900 md:text-lg">
             Top10 메뉴 기간 비교
           </h3>
-          <p className="text-sm text-gray-500">
-            현재 기간 vs 비교 기간 기준으로 메뉴 판매량/매출 변화를 확인합니다.
+          <p className="mt-1 text-xs font-medium text-slate-500 md:text-sm">
+            현재 기간과 비교 기간의 메뉴 변화를 바로 확인합니다.
           </p>
         </div>
 
-        <div className="inline-flex w-fit rounded-xl border border-gray-200 bg-gray-50 p-1">
+        <div className="inline-flex w-fit rounded-2xl border border-slate-200 bg-slate-50 p-1">
           <button
             type="button"
             onClick={() => onMetricChange("qty")}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            className={`rounded-xl px-3 py-2 text-xs font-black md:text-sm ${
               metric === "qty"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500"
             }`}
           >
-            판매수량 기준
+            판매수량
           </button>
 
           <button
             type="button"
             onClick={() => onMetricChange("sales")}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            className={`rounded-xl px-3 py-2 text-xs font-black md:text-sm ${
               metric === "sales"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500"
             }`}
           >
-            매출 기준
+            매출
           </button>
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-xl bg-gray-50 p-3">
-          <div className="text-xs text-gray-500">현재 기간 메뉴 수</div>
-          <div className="mt-1 text-lg font-bold text-gray-900">
+      <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            현재 메뉴 수
+          </div>
+          <div className="mt-1 text-lg font-black text-slate-900">
             {numberFmt.format(currentMenus.length)}
           </div>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-3">
-          <div className="text-xs text-gray-500">비교 기간 메뉴 수</div>
-          <div className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            비교 메뉴 수
+          </div>
+          <div className="mt-1 text-lg font-black text-slate-900">
             {numberFmt.format(comparisonMenus.length)}
           </div>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-3">
-          <div className="text-xs text-gray-500">현재 기간 일수</div>
-          <div className="mt-1 text-lg font-bold text-gray-900">
-            {numberFmt.format(currentDays)}
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            현재 기간
+          </div>
+          <div className="mt-1 text-lg font-black text-slate-900">
+            {numberFmt.format(currentDays)}일
           </div>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-3">
-          <div className="text-xs text-gray-500">비교 기간 일수</div>
-          <div className="mt-1 text-lg font-bold text-gray-900">
-            {numberFmt.format(comparisonDays)}
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            비교 기간
+          </div>
+          <div className="mt-1 text-lg font-black text-slate-900">
+            {numberFmt.format(comparisonDays)}일
           </div>
         </div>
       </div>
 
       {!canShow ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-          Top10 기간 비교는 현재 기간과 비교 기간이 각각 최소 {minDays}
-          일 이상일 때 표시됩니다.
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
+          Top10 기간 비교는 현재 기간과 비교 기간이 각각 최소 {minDays}일 이상일 때 표시됩니다.
         </div>
       ) : top10.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
           비교할 메뉴 데이터가 없습니다.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr className="text-left text-xs text-gray-500">
-                <th className="px-3 py-2">순위</th>
-                <th className="px-3 py-2">메뉴</th>
-                <th className="px-3 py-2">현재 수량</th>
-                <th className="px-3 py-2">비교 수량</th>
-                <th className="px-3 py-2">수량 증감</th>
-                <th className="px-3 py-2">현재 매출</th>
-                <th className="px-3 py-2">비교 매출</th>
-                <th className="px-3 py-2">매출 증감</th>
-              </tr>
-            </thead>
+        <>
+          <div className="space-y-2 md:hidden">
+            {top10.map((row, idx) => {
+              const currentValue =
+                metric === "qty"
+                  ? numberFmt.format(row.currentQty)
+                  : `$${currencyFmt.format(row.currentSales)}`;
 
-            <tbody>
-              {top10.map((row, idx) => (
-                <tr
+              const compareValue =
+                metric === "qty"
+                  ? numberFmt.format(row.previousQty)
+                  : `$${currencyFmt.format(row.previousSales)}`;
+
+              const deltaValue =
+                metric === "qty" ? row.diffQty : row.diffSales;
+
+              return (
+                <div
                   key={row.name}
-                  className="rounded-xl bg-gray-50 text-sm text-gray-800"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3"
                 >
-                  <td className="rounded-l-xl px-3 py-3 font-semibold text-gray-900">
-                    {idx + 1}
-                  </td>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        #{idx + 1}
+                      </div>
+                      <div className="mt-1 truncate text-sm font-black text-slate-900">
+                        {row.name}
+                      </div>
+                    </div>
 
-                  <td className="px-3 py-3 font-medium text-gray-900">
-                    {row.name}
-                  </td>
+                    <div className={`rounded-full px-2.5 py-1 text-[11px] font-black ${getDeltaClass(deltaValue)} bg-white`}>
+                      {getDeltaText(deltaValue)}
+                    </div>
+                  </div>
 
-                  <td className="px-3 py-3">
-                    {numberFmt.format(row.currentQty)}
-                  </td>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">
+                        현재
+                      </div>
+                      <div className="mt-1 text-sm font-black text-slate-900">
+                        {currentValue}
+                      </div>
+                    </div>
 
-                  <td className="px-3 py-3">
-                    {numberFmt.format(row.previousQty)}
-                  </td>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">
+                        비교
+                      </div>
+                      <div className="mt-1 text-sm font-black text-slate-900">
+                        {compareValue}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-                  <td
-                    className={`px-3 py-3 font-semibold ${getDeltaClass(
-                      row.diffQty
-                    )}`}
-                  >
-                    {getDeltaText(row.diffQty)}
-                  </td>
-
-                  <td className="px-3 py-3">
-                    {currencyFmt.format(row.currentSales)}
-                  </td>
-
-                  <td className="px-3 py-3">
-                    {currencyFmt.format(row.previousSales)}
-                  </td>
-
-                  <td
-                    className={`rounded-r-xl px-3 py-3 font-semibold ${getDeltaClass(
-                      row.diffSales
-                    )}`}
-                  >
-                    {getDeltaText(row.diffSales)}
-                  </td>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[760px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[64px]" />
+                <col className="w-[220px]" />
+                <col className="w-[96px]" />
+                <col className="w-[96px]" />
+                <col className="w-[96px]" />
+                <col className="w-[110px]" />
+                <col className="w-[110px]" />
+                <col className="w-[110px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  <th className="px-3 py-2">순위</th>
+                  <th className="px-3 py-2">메뉴</th>
+                  <th className="px-3 py-2 text-right">현재 수량</th>
+                  <th className="px-3 py-2 text-right">비교 수량</th>
+                  <th className="px-3 py-2 text-right">수량 증감</th>
+                  <th className="px-3 py-2 text-right">현재 매출</th>
+                  <th className="px-3 py-2 text-right">비교 매출</th>
+                  <th className="px-3 py-2 text-right">매출 증감</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {top10.map((row, idx) => (
+                  <tr key={row.name} className="border-b border-slate-100 text-sm text-slate-800 last:border-b-0">
+                    <td className="px-3 py-3 font-black text-slate-900">
+                      {idx + 1}
+                    </td>
+
+                    <td className="truncate px-3 py-3 font-bold text-slate-900">
+                      {row.name}
+                    </td>
+
+                    <td className="px-3 py-3 text-right">
+                      {numberFmt.format(row.currentQty)}
+                    </td>
+
+                    <td className="px-3 py-3 text-right">
+                      {numberFmt.format(row.previousQty)}
+                    </td>
+
+                    <td className={`px-3 py-3 text-right font-black ${getDeltaClass(row.diffQty)}`}>
+                      {getDeltaText(row.diffQty)}
+                    </td>
+
+                    <td className="px-3 py-3 text-right">
+                      ${currencyFmt.format(row.currentSales)}
+                    </td>
+
+                    <td className="px-3 py-3 text-right">
+                      ${currencyFmt.format(row.previousSales)}
+                    </td>
+
+                    <td className={`px-3 py-3 text-right font-black ${getDeltaClass(row.diffSales)}`}>
+                      {getDeltaText(row.diffSales)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );
