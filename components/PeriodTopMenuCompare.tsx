@@ -231,37 +231,42 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                   key={row.name}
                   className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        #{idx + 1}
-                      </div>
-                      <div className="mt-1 truncate text-sm font-black text-slate-900">
-                        {row.name}
-                      </div>
-                    </div>
-
-                    <div className={`rounded-full px-2.5 py-1 text-[11px] font-black ${getDeltaClass(deltaValue)} bg-white`}>
-                      {getDeltaText(deltaValue)}
-                    </div>
-                  </div>
-
-                 <div className="mt-1.5 flex gap-1.5">
-  <div className="inline-flex min-w-[72px] flex-col items-start rounded-md bg-white px-2 py-1">
-    <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
-      현재
+                  <div className="flex items-start gap-2">
+  <div className="min-w-0 flex-1">
+    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+      #{idx + 1}
     </div>
-    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900 tracking-tight">
-      {currentValue}
+    <div className="mt-1 truncate text-sm font-black text-slate-900">
+      {row.name}
     </div>
-  </div>
 
-  <div className="inline-flex min-w-[72px] flex-col items-start rounded-md bg-white px-2 py-1">
-    <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
-      비교
-    </div>
-    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900 tracking-tight">
-      {compareValue}
+    <div className="mt-1.5 flex items-start gap-1.5">
+      <div className="inline-flex min-w-[68px] flex-col items-start rounded-md bg-white px-2 py-1">
+        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+          현재
+        </div>
+        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+          {currentValue}
+        </div>
+      </div>
+
+      <div className="inline-flex min-w-[68px] flex-col items-start rounded-md bg-white px-2 py-1">
+        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+          비교
+        </div>
+        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+          {compareValue}
+        </div>
+      </div>
+
+      <div className={`inline-flex min-w-[58px] flex-col items-start rounded-md bg-white px-2 py-1 ${getDeltaClass(deltaValue)}`}>
+        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+          차이
+        </div>
+        <div className="mt-0.5 text-[12px] font-black leading-none">
+          {getDeltaText(deltaValue)}
+        </div>
+      </div>
     </div>
   </div>
 </div>
