@@ -229,7 +229,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
               return (
                 <div
                   key={row.name}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -246,21 +246,21 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-  <div className="rounded-lg bg-white px-2.5 py-1.5">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+                  <div className="mt-1.5 grid grid-cols-2 gap-1">
+  <div className="rounded-md bg-white px-2 py-1">
+    <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
       현재
     </div>
-    <div className="mt-0.5 text-[13px] font-black leading-none text-slate-900">
+    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
       {currentValue}
     </div>
   </div>
 
-  <div className="rounded-lg bg-white px-2.5 py-1.5">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+  <div className="rounded-md bg-white px-2 py-1">
+    <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
       비교
     </div>
-    <div className="mt-0.5 text-[13px] font-black leading-none text-slate-900">
+    <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
       {compareValue}
     </div>
   </div>
