@@ -100,6 +100,9 @@ export default function StoreOwnerShell({
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
   const [calendarRenderKey, setCalendarRenderKey] = useState(0);
   const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
+  const [visibleStartDate, setVisibleStartDate] = useState<Date>(() =>
+    addDaysLocal(parseLocalDate(selectedDate), -4)
+  );
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
 
   const activeMenu = useMemo(() => {
@@ -110,8 +113,8 @@ export default function StoreOwnerShell({
   const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
 
   const visibleDates = useMemo(() => {
-  return Array.from({ length: 9 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 4));
-}, [selectedDateObj]);
+    return Array.from({ length: 9 }, (_, idx) => addDaysLocal(visibleStartDate, idx));
+  }, [visibleStartDate]);
 
   const toggleCalendar = () => {
     if (showCalendar) {
@@ -162,6 +165,23 @@ export default function StoreOwnerShell({
       setCalendarRenderKey((prev) => prev + 1);
     }
   }, [selectedDate, showCalendar]);
+
+  useEffect(() => {
+    const current = parseLocalDate(selectedDate);
+
+    const rangeStart = new Date(visibleStartDate);
+    rangeStart.setHours(0, 0, 0, 0);
+
+    const rangeEnd = addDaysLocal(visibleStartDate, 8);
+    rangeEnd.setHours(0, 0, 0, 0);
+
+    const currentOnly = new Date(current);
+    currentOnly.setHours(0, 0, 0, 0);
+
+    if (currentOnly < rangeStart || currentOnly > rangeEnd) {
+      setVisibleStartDate(addDaysLocal(currentOnly, -4));
+    }
+  }, [selectedDate, visibleStartDate]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
@@ -279,45 +299,45 @@ export default function StoreOwnerShell({
         </div>
       </header>
 
-     {showCalendar && (
-  <div
-    className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
-    style={{
-      top: `${calendarPos.top}px`,
-      left: `${calendarPos.left}px`,
-    }}
-  >
-    <div className="mb-3 flex items-center justify-end">
-      <button
-        type="button"
-        onClick={() => setShowCalendar(false)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-      >
-        <i className="fa-solid fa-xmark text-sm"></i>
-      </button>
-    </div>
+      {showCalendar && (
+        <div
+          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
+          style={{
+            top: `${calendarPos.top}px`,
+            left: `${calendarPos.left}px`,
+          }}
+        >
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setShowCalendar(false)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
 
-    <DayPicker
-  key={calendarRenderKey}
-  mode="single"
-  month={calendarMonth}
-  selected={parseLocalDate(selectedDate)}
-  onMonthChange={(month) => {
-    setCalendarMonth(month);
-    onMonthChange(month);
-  }}
-  onSelect={(date) => {
-    if (!date) return;
-    onChangeDate(formatLocalDate(date));
-    setShowCalendar(false);
-  }}
-  modifiers={{
-    hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
-  }}
-  modifiersClassNames={{
-    hasData: "has-data-day",
-  }}
-/>
+          <DayPicker
+            key={calendarRenderKey}
+            mode="single"
+            month={calendarMonth}
+            selected={parseLocalDate(selectedDate)}
+            onMonthChange={(month) => {
+              setCalendarMonth(month);
+              onMonthChange(month);
+            }}
+            onSelect={(date) => {
+              if (!date) return;
+              onChangeDate(formatLocalDate(date));
+              setShowCalendar(false);
+            }}
+            modifiers={{
+              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
+            }}
+            modifiersClassNames={{
+              hasData: "has-data-day",
+            }}
+          />
 
           <style>{`
             .has-data-day {
