@@ -103,7 +103,9 @@ export default function StoreOwnerShell({
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() =>
     addDaysLocal(parseLocalDate(selectedDate), -4)
   );
+
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
+  const calendarLayerRef = useRef<HTMLDivElement>(null);
 
   const activeMenu = useMemo(() => {
     return MENU_ITEMS.find((item) => item.key === currentPage) ?? MENU_ITEMS[0];
@@ -116,12 +118,7 @@ export default function StoreOwnerShell({
     return Array.from({ length: 9 }, (_, idx) => addDaysLocal(visibleStartDate, idx));
   }, [visibleStartDate]);
 
-  const toggleCalendar = () => {
-    if (showCalendar) {
-      setShowCalendar(false);
-      return;
-    }
-
+  const openCalendar = () => {
     if (!calendarButtonRef.current) return;
 
     const rect = calendarButtonRef.current.getBoundingClientRect();
@@ -143,6 +140,37 @@ export default function StoreOwnerShell({
     onMonthChange(currentMonth);
     setShowCalendar(true);
   };
+
+  const toggleCalendar = () => {
+    setShowCalendar((prev) => {
+      if (prev) return false;
+      openCalendar();
+      return true;
+    });
+  };
+
+  useEffect(() => {
+    if (!showCalendar) return;
+
+    const handleOutsidePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      const clickedButton = calendarButtonRef.current?.contains(target);
+      const clickedPopup = calendarLayerRef.current?.contains(target);
+
+      if (clickedButton || clickedPopup) return;
+      setShowCalendar(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsidePointerDown);
+    document.addEventListener("touchstart", handleOutsidePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsidePointerDown);
+      document.removeEventListener("touchstart", handleOutsidePointerDown);
+    };
+  }, [showCalendar]);
 
   useEffect(() => {
     if (!showCalendar) return;
@@ -244,7 +272,7 @@ export default function StoreOwnerShell({
                 ref={calendarButtonRef}
                 type="button"
                 onClick={toggleCalendar}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:px-4 sm:text-sm"
+                className="relative z-[10000] inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:px-4 sm:text-sm"
               >
                 <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[11px]"></i>
                 <span className="leading-none">{selectedDate}</span>
@@ -301,6 +329,7 @@ export default function StoreOwnerShell({
 
       {showCalendar && (
         <div
+          ref={calendarLayerRef}
           className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
           style={{
             top: `${calendarPos.top}px`,
