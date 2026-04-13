@@ -163,9 +163,9 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-     <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
+    <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
   <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+    <div className="text-[9px] font-black text-slate-400">
       현재 메뉴 수
     </div>
     <div className="mt-1 text-base font-black text-slate-900">
@@ -174,7 +174,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
   </div>
 
   <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+    <div className="text-[9px] font-black text-slate-400">
       비교 메뉴 수
     </div>
     <div className="mt-1 text-base font-black text-slate-900">
@@ -183,7 +183,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
   </div>
 
   <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+    <div className="text-[9px] font-black text-slate-400">
       현재 기간
     </div>
     <div className="mt-1 text-base font-black text-slate-900">
@@ -192,13 +192,13 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
   </div>
 
   <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">
+    <div className="text-[9px] font-black text-slate-400">
       비교 기간
     </div>
     <div className="mt-1 text-base font-black text-slate-900">
       {numberFmt.format(comparisonDays)}일
     </div>
-</div>
+  </div>
 </div>
       {!canShow ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
