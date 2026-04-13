@@ -161,47 +161,43 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
-        <div className="rounded-lg bg-slate-50 px-2 py-2">
-          <div className="text-[9px] font-black text-slate-400">
-            <span className="md:hidden">현재 메뉴</span>
-            <span className="hidden md:inline">현재 메뉴 수</span>
-          </div>
-          <div className="mt-1 text-base font-black text-slate-900">
-            {numberFmt.format(currentMenus.length)}
-          </div>
-        </div>
+      <div className="mb-3 flex flex-wrap gap-2 md:mb-4 md:grid md:grid-cols-4 md:gap-3">
+  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
+    <div className="text-[9px] font-black text-slate-400">
+      현재 메뉴
+    </div>
+    <div className="mt-1 text-base font-black text-slate-900">
+      {numberFmt.format(currentMenus.length)}
+    </div>
+  </div>
 
-        <div className="rounded-lg bg-slate-50 px-2 py-2">
-          <div className="text-[9px] font-black text-slate-400">
-            <span className="md:hidden">비교 메뉴</span>
-            <span className="hidden md:inline">비교 메뉴 수</span>
-          </div>
-          <div className="mt-1 text-base font-black text-slate-900">
-            {numberFmt.format(comparisonMenus.length)}
-          </div>
-        </div>
+  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
+    <div className="text-[9px] font-black text-slate-400">
+      비교 메뉴
+    </div>
+    <div className="mt-1 text-base font-black text-slate-900">
+      {numberFmt.format(comparisonMenus.length)}
+    </div>
+  </div>
 
-        <div className="rounded-lg bg-slate-50 px-2 py-2">
-          <div className="text-[9px] font-black text-slate-400">
-            <span className="md:hidden">현재 기간</span>
-            <span className="hidden md:inline">현재 기간</span>
-          </div>
-          <div className="mt-1 text-base font-black text-slate-900">
-            {numberFmt.format(currentDays)}일
-          </div>
-        </div>
+  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
+    <div className="text-[9px] font-black text-slate-400">
+      현재 기간
+    </div>
+    <div className="mt-1 text-base font-black text-slate-900">
+      {numberFmt.format(currentDays)}일
+    </div>
+  </div>
 
-        <div className="rounded-lg bg-slate-50 px-2 py-2">
-          <div className="text-[9px] font-black text-slate-400">
-            <span className="md:hidden">비교 기간</span>
-            <span className="hidden md:inline">비교 기간</span>
-          </div>
-          <div className="mt-1 text-base font-black text-slate-900">
-            {numberFmt.format(comparisonDays)}일
-          </div>
-        </div>
-      </div>
+  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
+    <div className="text-[9px] font-black text-slate-400">
+      비교 기간
+    </div>
+    <div className="mt-1 text-base font-black text-slate-900">
+      {numberFmt.format(comparisonDays)}일
+    </div>
+  </div>
+</div>
 
       {!canShow ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
