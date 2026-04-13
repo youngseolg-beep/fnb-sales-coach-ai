@@ -109,9 +109,20 @@ export default function StoreOwnerShell({
   const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
   const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
 
-  const visibleDates = useMemo(() => {
-    return Array.from({ length: 9 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 4));
-  }, [selectedDateObj]);
+  const baseDateRef = useRef(parseLocalDate(selectedDate));
+
+useEffect(() => {
+  // 최초 1번만 기준 잡고 이후엔 유지
+  if (!baseDateRef.current) {
+    baseDateRef.current = parseLocalDate(selectedDate);
+  }
+}, []);
+
+const visibleDates = useMemo(() => {
+  return Array.from({ length: 9 }, (_, idx) =>
+    addDaysLocal(baseDateRef.current, idx)
+  );
+}, []);
 
   const toggleCalendar = () => {
     if (showCalendar) {
@@ -289,9 +300,6 @@ export default function StoreOwnerShell({
         >
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
-                Quick Calendar
-              </div>
               <div className="mt-1 text-base font-black text-slate-900 sm:text-lg">
                 {formatMonthTitle(calendarMonth)}
               </div>
@@ -306,27 +314,28 @@ export default function StoreOwnerShell({
             </button>
           </div>
 
-          <DayPicker
-            key={calendarRenderKey}
-            mode="single"
-            month={calendarMonth}
-            selected={parseLocalDate(selectedDate)}
-            onMonthChange={(month) => {
-              setCalendarMonth(month);
-              onMonthChange(month);
-            }}
-            onSelect={(date) => {
-              if (!date) return;
-              onChangeDate(formatLocalDate(date));
-              setShowCalendar(false);
-            }}
-            modifiers={{
-              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
-            }}
-            modifiersClassNames={{
-              hasData: "has-data-day",
-            }}
-          />
+         <DayPicker
+  key={calendarRenderKey}
+  mode="single"
+  month={calendarMonth}
+  selected={parseLocalDate(selectedDate)}
+  captionLayout="dropdown"
+  onMonthChange={(month) => {
+    setCalendarMonth(month);
+    onMonthChange(month);
+  }}
+  onSelect={(date) => {
+    if (!date) return;
+    onChangeDate(formatLocalDate(date));
+    setShowCalendar(false);
+  }}
+  modifiers={{
+    hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
+  }}
+  modifiersClassNames={{
+    hasData: "has-data-day",
+  }}
+/>
 
           <style>{`
             .has-data-day {
