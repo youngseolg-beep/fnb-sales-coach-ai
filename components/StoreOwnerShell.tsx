@@ -266,15 +266,6 @@ export default function StoreOwnerShell({
 
                       <span
                         className={[
-                          "mt-1 text-[9px] font-bold leading-none",
-                          active ? "text-slate-400" : "text-slate-400",
-                        ].join(" ")}
-                      >
-                        {dateKey.slice(5)}
-                      </span>
-
-                      <span
-                        className={[
                           "absolute bottom-2.5 h-1.5 w-1.5 rounded-full",
                           hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
                         ].join(" ")}
