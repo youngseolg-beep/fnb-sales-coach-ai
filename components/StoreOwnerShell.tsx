@@ -118,28 +118,42 @@ export default function StoreOwnerShell({
     return Array.from({ length: 9 }, (_, idx) => addDaysLocal(visibleStartDate, idx));
   }, [visibleStartDate]);
 
-  const openCalendar = () => {
-    if (!calendarButtonRef.current) return;
+ const openCalendar = () => {
+  if (!calendarButtonRef.current) return;
 
-    const rect = calendarButtonRef.current.getBoundingClientRect();
-    const windowWidth = window.innerWidth;
-    const popupWidth = Math.min(360, windowWidth - 24);
+  const rect = calendarButtonRef.current.getBoundingClientRect();
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  const popupWidth = Math.min(360, windowWidth - 24);
+  const popupHeight = 420;
 
-    let left = rect.right - popupWidth;
-    if (left < 12) left = 12;
-    if (left + popupWidth > windowWidth - 12) left = windowWidth - popupWidth - 12;
+  let left = rect.right - popupWidth;
+  if (left < 12) left = 12;
+  if (left + popupWidth > windowWidth - 12) {
+    left = windowWidth - popupWidth - 12;
+  }
 
-    const currentMonth = parseLocalDate(selectedDate);
+  let top = rect.bottom + 10;
 
-    setCalendarPos({
-      top: rect.bottom + window.scrollY + 10,
-      left,
-    });
-    setCalendarMonth(currentMonth);
-    setCalendarRenderKey((prev) => prev + 1);
-    onMonthChange(currentMonth);
-    setShowCalendar(true);
-  };
+  if (top + popupHeight > windowHeight - 12) {
+    top = rect.top - popupHeight - 10;
+  }
+
+  if (top < 12) {
+    top = 12;
+  }
+
+  const currentMonth = parseLocalDate(selectedDate);
+
+  setCalendarPos({
+    top,
+    left,
+  });
+  setCalendarMonth(currentMonth);
+  setCalendarRenderKey((prev) => prev + 1);
+  onMonthChange(currentMonth);
+  setShowCalendar(true);
+};
 
   const toggleCalendar = () => {
     setShowCalendar((prev) => {
