@@ -19,16 +19,38 @@ type Props = {
   datesWithData: string[];
   onLogout: () => void;
   children: ReactNode;
+  title?: string;
+  subtitle?: string;
   selectedDate: string;
   monthlyTarget: number;
   monthlyRate: number;
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { key: "summary", label: "Summary", description: "", icon: "fa-chart-line" },
-  { key: "sales", label: "Sales", description: "", icon: "fa-pen-to-square" },
-  { key: "detail", label: "Detail", description: "", icon: "fa-chart-pie" },
-  { key: "menu", label: "Menu", description: "", icon: "fa-utensils" },
+  {
+    key: "summary",
+    label: "Summary",
+    description: "오늘 요약 및 핵심 KPI",
+    icon: "fa-solid fa-chart-line",
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    description: "일 매출 입력 및 캘린더",
+    icon: "fa-solid fa-pen-to-square",
+  },
+  {
+    key: "detail",
+    label: "Detail",
+    description: "리포트 및 상세 분석",
+    icon: "fa-solid fa-chart-pie",
+  },
+  {
+    key: "menu",
+    label: "Menu",
+    description: "메뉴 설정 및 가격 관리",
+    icon: "fa-solid fa-utensils",
+  },
 ];
 
 const parseLocalDate = (dateStr: string) => {
@@ -49,8 +71,16 @@ const addDaysLocal = (date: Date, amount: number) => {
   return next;
 };
 
-const formatWeekdayShort = (date: Date) =>
-  new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+const formatMonthTitle = (date: Date) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatWeekdayShort = (date: Date) => {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+};
 
 export default function StoreOwnerShell({
   currentPage,
@@ -60,138 +90,300 @@ export default function StoreOwnerShell({
   datesWithData,
   onLogout,
   children,
+  title = "Sales Coach AI",
+  subtitle = "Store Owner Workspace",
   selectedDate,
   monthlyTarget,
   monthlyRate,
 }: Props) {
   const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
+  const [calendarRenderKey, setCalendarRenderKey] = useState(0);
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
 
+  const activeMenu = useMemo(() => {
+    return MENU_ITEMS.find((item) => item.key === currentPage) ?? MENU_ITEMS[0];
+  }, [currentPage]);
+
+  const datesWithDataSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
   const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
-  const datesSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
   const visibleDates = useMemo(() => {
-    return Array.from({ length: 11 }, (_, i) => addDaysLocal(selectedDateObj, i - 5));
+    return Array.from({ length: 9 }, (_, idx) => addDaysLocal(selectedDateObj, idx - 4));
   }, [selectedDateObj]);
+
+  const toggleCalendar = () => {
+    if (showCalendar) {
+      setShowCalendar(false);
+      return;
+    }
+
+    if (!calendarButtonRef.current) return;
+
+    const rect = calendarButtonRef.current.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const popupWidth = Math.min(360, windowWidth - 24);
+
+    let left = rect.right - popupWidth;
+    if (left < 12) left = 12;
+    if (left + popupWidth > windowWidth - 12) left = windowWidth - popupWidth - 12;
+
+    const currentMonth = parseLocalDate(selectedDate);
+
+    setCalendarPos({
+      top: rect.bottom + window.scrollY + 10,
+      left,
+    });
+    setCalendarMonth(currentMonth);
+    setCalendarRenderKey((prev) => prev + 1);
+    onMonthChange(currentMonth);
+    setShowCalendar(true);
+  };
+
+  useEffect(() => {
+    if (!showCalendar) return;
+
+    const close = () => setShowCalendar(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [showCalendar]);
+
+  useEffect(() => {
+    const nextMonth = parseLocalDate(selectedDate);
+    setCalendarMonth(nextMonth);
+
+    if (showCalendar) {
+      setCalendarRenderKey((prev) => prev + 1);
+    }
+  }, [selectedDate, showCalendar]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
-
-      {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div className="px-3 py-3 sm:px-6 sm:py-4">
-
-          {/* TOP ROW */}
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-[16px] sm:text-[20px] md:text-[24px] font-black">
-              Sales
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="text-[10px] sm:text-xs">
-                ${monthlyTarget}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-[#f7f7fb]/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4">
+          <div className="rounded-[24px] border border-slate-200 bg-white px-3 py-3 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
+                  {title}
+                </div>
+                <div className="mt-1 text-[22px] font-black tracking-tight text-slate-900 sm:text-2xl">
+                  {activeMenu.label}
+                </div>
+                <div className="mt-1 text-[10px] font-medium leading-tight text-slate-500 sm:text-sm">
+                  {activeMenu.description}
+                </div>
               </div>
-              <div className="text-[10px] sm:text-xs text-indigo-600 font-bold">
-                {monthlyRate.toFixed(1)}%
+
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="rounded-2xl bg-slate-50 px-2.5 py-2 text-right sm:px-3">
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
+                    Goal
+                  </div>
+                  <div className="text-[13px] font-black text-slate-900 sm:text-base">
+                    ${monthlyTarget.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-indigo-50 px-2.5 py-2 text-right sm:px-3">
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-indigo-400 sm:text-[10px]">
+                    Rate
+                  </div>
+                  <div className="text-[13px] font-black text-indigo-600 sm:text-base">
+                    {monthlyRate.toFixed(1)}%
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="hidden h-11 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-end justify-between gap-3 sm:mt-4">
+              <div className="min-w-0">
+                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
+                  {formatMonthTitle(selectedDateObj)}
+                </div>
+                <div className="mt-1 text-[9px] font-bold leading-tight text-slate-500 sm:text-xs">
+                  POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+                </div>
+              </div>
+
+              <button
+                ref={calendarButtonRef}
+                type="button"
+                onClick={toggleCalendar}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-100 sm:h-10 sm:px-4 sm:text-sm"
+              >
+                <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[11px]"></i>
+                <span className="leading-none">{selectedDate}</span>
+                <i className="fa-solid fa-chevron-down text-[9px] text-slate-400 sm:text-[10px]"></i>
+              </button>
+            </div>
+
+            <div className="mt-3 overflow-x-auto pb-1 sm:mt-4">
+              <div className="flex min-w-max gap-1.5 sm:gap-2.5">
+                {visibleDates.map((date) => {
+                  const dateKey = formatLocalDate(date);
+                  const active = dateKey === selectedDate;
+                  const hasData = datesWithDataSet.has(dateKey);
+
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => onChangeDate(dateKey)}
+                      className={[
+                        "relative flex h-[66px] w-[50px] shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[22px]",
+                        active
+                          ? "border-slate-900 bg-slate-900 text-white shadow-md"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "text-[8px] font-bold uppercase tracking-wide",
+                          active ? "text-slate-300" : "text-slate-400",
+                        ].join(" ")}
+                      >
+                        {formatWeekdayShort(date)}
+                      </span>
+
+                      <span className="mt-1 text-[23px] font-black leading-none sm:mt-1.5 sm:text-[26px]">
+                        {date.getDate()}
+                      </span>
+
+                      <span
+                        className={[
+                          "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
+                          hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
+                        ].join(" ")}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
-
-          {/* DATE ROW */}
-          <div className="flex justify-between items-center">
-            <button
-              ref={calendarButtonRef}
-              onClick={() => setShowCalendar(!showCalendar)}
-              className="text-xs sm:text-sm font-bold border px-3 py-2 rounded-xl"
-            >
-              {selectedDate}
-            </button>
-          </div>
-
-          {/* DATE SCROLL */}
-          <div className="mt-3 overflow-x-auto">
-            <div className="flex gap-2 min-w-max">
-
-              {visibleDates.map((date) => {
-                const key = formatLocalDate(date);
-                const active = key === selectedDate;
-                const hasData = datesSet.has(key);
-
-                return (
-                  <button
-                    key={key}
-                    onClick={() => onChangeDate(key)}
-                    className={`
-                      relative flex flex-col items-center justify-center
-                      h-[58px] w-[46px]
-                      sm:h-[64px] sm:w-[52px]
-                      md:h-[72px] md:w-[58px]
-                      rounded-2xl border
-                      ${active ? "bg-slate-900 text-white" : "bg-white"}
-                    `}
-                  >
-                    <span className="text-[8px] sm:text-[9px] text-slate-400">
-                      {formatWeekdayShort(date)}
-                    </span>
-
-                    <span className="text-[18px] sm:text-[22px] md:text-[26px] font-black">
-                      {date.getDate()}
-                    </span>
-
-                    {hasData && (
-                      <span className="absolute bottom-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
-
-            </div>
-          </div>
-
         </div>
       </header>
 
-      {/* BODY */}
-      <main className="px-3 py-4 sm:px-6">
+      {showCalendar && (
+        <div
+          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
+          style={{
+            top: `${calendarPos.top}px`,
+            left: `${calendarPos.left}px`,
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
+                Quick Calendar
+              </div>
+              <div className="mt-1 text-base font-black text-slate-900 sm:text-lg">
+                {formatMonthTitle(calendarMonth)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCalendar(false)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+
+          <DayPicker
+            key={calendarRenderKey}
+            mode="single"
+            month={calendarMonth}
+            selected={parseLocalDate(selectedDate)}
+            onMonthChange={(month) => {
+              setCalendarMonth(month);
+              onMonthChange(month);
+            }}
+            onSelect={(date) => {
+              if (!date) return;
+              onChangeDate(formatLocalDate(date));
+              setShowCalendar(false);
+            }}
+            modifiers={{
+              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
+            }}
+            modifiersClassNames={{
+              hasData: "has-data-day",
+            }}
+          />
+
+          <style>{`
+            .has-data-day {
+              position: relative;
+            }
+            .has-data-day::after {
+              content: "";
+              position: absolute;
+              bottom: 6px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 6px;
+              height: 6px;
+              border-radius: 9999px;
+              background: #4f46e5;
+            }
+          `}</style>
+        </div>
+      )}
+
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
         {children}
       </main>
 
-      {/* BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200">
-        <div className="grid grid-cols-5 gap-1 px-2 py-2">
-
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto grid max-w-7xl grid-cols-5 gap-2 px-3 py-3">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
 
             return (
               <button
                 key={item.key}
+                type="button"
                 onClick={() => onChangePage(item.key)}
-                className={`
-                  flex flex-col items-center justify-center
-                  h-12 rounded-xl
-                  ${active ? "bg-slate-900 text-white" : "text-slate-500"}
-                `}
+                className={[
+                  "flex h-14 flex-col items-center justify-center rounded-2xl transition-all",
+                  active
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                ].join(" ")}
               >
-                <i className={`fa-solid ${item.icon} text-xs`} />
-                <span className="text-[10px] font-bold mt-1">
-                  {item.label}
-                </span>
+                <i className={`${item.icon} text-sm`}></i>
+                <span className="mt-1 text-[11px] font-bold">{item.label}</span>
               </button>
             );
           })}
 
           <button
+            type="button"
             onClick={onLogout}
-            className="flex flex-col items-center justify-center h-12 text-rose-500"
+            className="flex h-14 flex-col items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-100"
           >
-            <i className="fa-solid fa-right-from-bracket text-xs" />
-            <span className="text-[10px] font-bold mt-1">Logout</span>
+            <i className="fa-solid fa-right-from-bracket text-sm"></i>
+            <span className="mt-1 text-[11px] font-bold">Logout</span>
           </button>
-
         </div>
       </nav>
-
     </div>
   );
 }
