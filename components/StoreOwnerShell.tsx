@@ -165,9 +165,9 @@ export default function StoreOwnerShell({
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-[#f7f7fb]/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8f9fc]/95 backdrop-blur">
         <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4">
-          <div className="rounded-[24px] border border-slate-200 bg-white px-3 py-3 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
+          <div className="rounded-[24px] border border-slate-200/80 bg-white px-3.5 py-3.5 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-3 sm:gap-4">
               <div className="min-w-0">
                 <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
@@ -182,7 +182,7 @@ export default function StoreOwnerShell({
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="rounded-2xl bg-slate-50 px-2.5 py-2 text-right sm:px-3">
+                <div className="rounded-[18px] bg-slate-50 px-2.5 py-2 text-right sm:px-3">
                   <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
                     Goal
                   </div>
@@ -191,7 +191,7 @@ export default function StoreOwnerShell({
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-indigo-50 px-2.5 py-2 text-right sm:px-3">
+                <div className="rounded-[18px] bg-indigo-50 px-2.5 py-2 text-right sm:px-3">
                   <div className="text-[8px] font-bold uppercase tracking-widest text-indigo-400 sm:text-[10px]">
                     Rate
                   </div>
@@ -203,7 +203,7 @@ export default function StoreOwnerShell({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="hidden h-11 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
+                  className="hidden h-11 items-center justify-center rounded-[18px] border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
                 >
                   Logout
                 </button>
@@ -224,7 +224,7 @@ export default function StoreOwnerShell({
                 ref={calendarButtonRef}
                 type="button"
                 onClick={toggleCalendar}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-100 sm:h-10 sm:px-4 sm:text-sm"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:px-4 sm:text-sm"
               >
                 <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[11px]"></i>
                 <span className="leading-none">{selectedDate}</span>
@@ -248,7 +248,7 @@ export default function StoreOwnerShell({
                         "relative flex h-[66px] w-[50px] shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[22px]",
                         active
                           ? "border-slate-900 bg-slate-900 text-white shadow-md"
-                          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white",
+                          : "border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white",
                       ].join(" ")}
                     >
                       <span
@@ -300,7 +300,7 @@ export default function StoreOwnerShell({
             <button
               type="button"
               onClick={() => setShowCalendar(false)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
             >
               <i className="fa-solid fa-xmark text-sm"></i>
             </button>
@@ -352,29 +352,29 @@ export default function StoreOwnerShell({
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
-  <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-3 py-3">
-    {MENU_ITEMS.map((item) => {
-      const active = item.key === currentPage;
+        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-3 py-3">
+          {MENU_ITEMS.map((item) => {
+            const active = item.key === currentPage;
 
-      return (
-        <button
-          key={item.key}
-          type="button"
-          onClick={() => onChangePage(item.key)}
-          className={[
-            "flex h-14 flex-col items-center justify-center rounded-2xl transition-all",
-            active
-              ? "bg-slate-900 text-white shadow-sm"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-          ].join(" ")}
-        >
-          <i className={`${item.icon} text-sm`}></i>
-          <span className="mt-1 text-[11px] font-bold">{item.label}</span>
-        </button>
-      );
-    })}
-  </div>
-</nav>
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onChangePage(item.key)}
+                className={[
+                  "flex h-14 flex-col items-center justify-center rounded-[18px] transition-all",
+                  active
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                ].join(" ")}
+              >
+                <i className={`${item.icon} text-sm`}></i>
+                <span className="mt-1 text-[11px] font-bold">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
