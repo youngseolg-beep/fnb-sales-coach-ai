@@ -198,7 +198,6 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
     <div className="mt-1 text-base font-black text-slate-900">
       {numberFmt.format(comparisonDays)}일
     </div>
-  </div>
 </div>
 </div>
       {!canShow ? (
