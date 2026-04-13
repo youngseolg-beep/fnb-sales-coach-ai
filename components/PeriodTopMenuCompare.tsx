@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 export type PeriodMenuRow = {
   name: string;
@@ -22,8 +22,6 @@ interface PeriodTopMenuCompareProps {
   minDays?: number;
   currentDays?: number;
   comparisonDays?: number;
-  metric: "qty" | "sales";
-  onMetricChange: (m: "qty" | "sales") => void;
 }
 
 const numberFmt = new Intl.NumberFormat("en-US");
@@ -104,9 +102,9 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
   minDays = 1,
   currentDays = 0,
   comparisonDays = 0,
-  metric,
-  onMetricChange,
 }) => {
+  const [metric, setMetric] = useState<"qty" | "sales">("qty");
+
   const comparedRows = useMemo(() => {
     const rows = mergeMenus(currentMenus, comparisonMenus);
 
@@ -139,8 +137,8 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         <div className="inline-flex w-fit rounded-2xl border border-slate-200 bg-slate-50 p-1">
           <button
             type="button"
-            onClick={() => onMetricChange("qty")}
-            className={`rounded-xl px-3 py-2 text-xs font-black md:text-sm ${
+            onClick={() => setMetric("qty")}
+            className={`rounded-xl px-3 py-2 text-xs font-black transition-all md:text-sm ${
               metric === "qty"
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500"
@@ -151,8 +149,8 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
 
           <button
             type="button"
-            onClick={() => onMetricChange("sales")}
-            className={`rounded-xl px-3 py-2 text-xs font-black md:text-sm ${
+            onClick={() => setMetric("sales")}
+            className={`rounded-xl px-3 py-2 text-xs font-black transition-all md:text-sm ${
               metric === "sales"
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500"
@@ -163,43 +161,48 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-    <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
-  <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black text-slate-400">
-      현재 메뉴 수
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(currentMenus.length)}
-    </div>
-  </div>
+      <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
+        <div className="rounded-lg bg-slate-50 px-2 py-2">
+          <div className="text-[9px] font-black text-slate-400">
+            <span className="md:hidden">현재 메뉴</span>
+            <span className="hidden md:inline">현재 메뉴 수</span>
+          </div>
+          <div className="mt-1 text-base font-black text-slate-900">
+            {numberFmt.format(currentMenus.length)}
+          </div>
+        </div>
 
-  <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black text-slate-400">
-      비교 메뉴 수
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(comparisonMenus.length)}
-    </div>
-  </div>
+        <div className="rounded-lg bg-slate-50 px-2 py-2">
+          <div className="text-[9px] font-black text-slate-400">
+            <span className="md:hidden">비교 메뉴</span>
+            <span className="hidden md:inline">비교 메뉴 수</span>
+          </div>
+          <div className="mt-1 text-base font-black text-slate-900">
+            {numberFmt.format(comparisonMenus.length)}
+          </div>
+        </div>
 
-  <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black text-slate-400">
-      현재 기간
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(currentDays)}일
-    </div>
-  </div>
+        <div className="rounded-lg bg-slate-50 px-2 py-2">
+          <div className="text-[9px] font-black text-slate-400">
+            <span className="md:hidden">현재 기간</span>
+            <span className="hidden md:inline">현재 기간</span>
+          </div>
+          <div className="mt-1 text-base font-black text-slate-900">
+            {numberFmt.format(currentDays)}일
+          </div>
+        </div>
 
-  <div className="rounded-lg bg-slate-50 px-2 py-2">
-    <div className="text-[9px] font-black text-slate-400">
-      비교 기간
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(comparisonDays)}일
-    </div>
-  </div>
-</div>
+        <div className="rounded-lg bg-slate-50 px-2 py-2">
+          <div className="text-[9px] font-black text-slate-400">
+            <span className="md:hidden">비교 기간</span>
+            <span className="hidden md:inline">비교 기간</span>
+          </div>
+          <div className="mt-1 text-base font-black text-slate-900">
+            {numberFmt.format(comparisonDays)}일
+          </div>
+        </div>
+      </div>
+
       {!canShow ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
           Top10 기간 비교는 현재 기간과 비교 기간이 각각 최소 {minDays}일 이상일 때 표시됩니다.
@@ -230,45 +233,43 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                   key={row.name}
                   className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5"
                 >
-                  <div className="flex items-start gap-2">
-  <div className="min-w-0 flex-1">
-    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-      #{idx + 1}
-    </div>
-    <div className="mt-1 truncate text-sm font-black text-slate-900">
-      {row.name}
-    </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                      #{idx + 1}
+                    </div>
+                    <div className="mt-1 truncate text-sm font-black text-slate-900">
+                      {row.name}
+                    </div>
 
-    <div className="mt-1.5 flex items-start gap-1.5">
-      <div className="inline-flex min-w-[68px] flex-col items-start rounded-md bg-white px-2 py-1">
-        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
-          현재
-        </div>
-        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
-          {currentValue}
-        </div>
-      </div>
+                    <div className="mt-1.5 flex items-start gap-1.5">
+                      <div className="inline-flex min-w-[64px] flex-col items-start rounded-md bg-white px-2 py-1">
+                        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+                          현재
+                        </div>
+                        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+                          {currentValue}
+                        </div>
+                      </div>
 
-      <div className="inline-flex min-w-[68px] flex-col items-start rounded-md bg-white px-2 py-1">
-        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
-          비교
-        </div>
-        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
-          {compareValue}
-        </div>
-      </div>
+                      <div className="inline-flex min-w-[64px] flex-col items-start rounded-md bg-white px-2 py-1">
+                        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+                          비교
+                        </div>
+                        <div className="mt-0.5 text-[12px] font-black leading-none text-slate-900">
+                          {compareValue}
+                        </div>
+                      </div>
 
-      <div className={`inline-flex min-w-[58px] flex-col items-start rounded-md bg-white px-2 py-1 ${getDeltaClass(deltaValue)}`}>
-        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
-          차이
-        </div>
-        <div className="mt-0.5 text-[12px] font-black leading-none">
-          {getDeltaText(deltaValue)}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+                      <div className={`inline-flex min-w-[56px] flex-col items-start rounded-md bg-white px-2 py-1 ${getDeltaClass(deltaValue)}`}>
+                        <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
+                          차이
+                        </div>
+                        <div className="mt-0.5 text-[12px] font-black leading-none">
+                          {getDeltaText(deltaValue)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
