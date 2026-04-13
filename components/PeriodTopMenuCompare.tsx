@@ -161,43 +161,43 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2 md:mb-4 md:grid md:grid-cols-4 md:gap-3">
-  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
-    <div className="text-[9px] font-black text-slate-400">
-      현재 메뉴
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(currentMenus.length)}
-    </div>
-  </div>
+      <div className="mb-3 grid grid-cols-2 gap-2 md:mb-4 md:grid-cols-4 md:gap-3">
+        <div className="min-w-0 rounded-lg bg-slate-50 px-2 py-2">
+          <div className="truncate text-[9px] font-black text-slate-400">
+            현재 메뉴
+          </div>
+          <div className="mt-1 text-base font-black leading-none text-slate-900">
+            {numberFmt.format(currentMenus.length)}
+          </div>
+        </div>
 
-  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
-    <div className="text-[9px] font-black text-slate-400">
-      비교 메뉴
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(comparisonMenus.length)}
-    </div>
-  </div>
+        <div className="min-w-0 rounded-lg bg-slate-50 px-2 py-2">
+          <div className="truncate text-[9px] font-black text-slate-400">
+            비교 메뉴
+          </div>
+          <div className="mt-1 text-base font-black leading-none text-slate-900">
+            {numberFmt.format(comparisonMenus.length)}
+          </div>
+        </div>
 
-  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
-    <div className="text-[9px] font-black text-slate-400">
-      현재 기간
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(currentDays)}일
-    </div>
-  </div>
+        <div className="min-w-0 rounded-lg bg-slate-50 px-2 py-2">
+          <div className="truncate text-[9px] font-black text-slate-400">
+            현재 기간
+          </div>
+          <div className="mt-1 text-base font-black leading-none text-slate-900">
+            {numberFmt.format(currentDays)}일
+          </div>
+        </div>
 
-  <div className="w-[calc(50%-4px)] rounded-lg bg-slate-50 px-2 py-2 md:w-auto">
-    <div className="text-[9px] font-black text-slate-400">
-      비교 기간
-    </div>
-    <div className="mt-1 text-base font-black text-slate-900">
-      {numberFmt.format(comparisonDays)}일
-    </div>
-  </div>
-</div>
+        <div className="min-w-0 rounded-lg bg-slate-50 px-2 py-2">
+          <div className="truncate text-[9px] font-black text-slate-400">
+            비교 기간
+          </div>
+          <div className="mt-1 text-base font-black leading-none text-slate-900">
+            {numberFmt.format(comparisonDays)}일
+          </div>
+        </div>
+      </div>
 
       {!canShow ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-medium text-slate-600">
@@ -221,8 +221,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                   ? numberFmt.format(row.previousQty)
                   : `$${currencyFmt.format(row.previousSales)}`;
 
-              const deltaValue =
-                metric === "qty" ? row.diffQty : row.diffSales;
+              const deltaValue = metric === "qty" ? row.diffQty : row.diffSales;
 
               return (
                 <div
@@ -233,6 +232,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                     <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
                       #{idx + 1}
                     </div>
+
                     <div className="mt-1 truncate text-sm font-black text-slate-900">
                       {row.name}
                     </div>
@@ -256,7 +256,11 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
                         </div>
                       </div>
 
-                      <div className={`inline-flex min-w-[56px] flex-col items-start rounded-md bg-white px-2 py-1 ${getDeltaClass(deltaValue)}`}>
+                      <div
+                        className={`inline-flex min-w-[56px] flex-col items-start rounded-md bg-white px-2 py-1 ${getDeltaClass(
+                          deltaValue
+                        )}`}
+                      >
                         <div className="text-[8px] font-black uppercase tracking-[0.06em] leading-none text-slate-400">
                           차이
                         </div>
@@ -298,7 +302,10 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
 
               <tbody>
                 {top10.map((row, idx) => (
-                  <tr key={row.name} className="border-b border-slate-100 text-sm text-slate-800 last:border-b-0">
+                  <tr
+                    key={row.name}
+                    className="border-b border-slate-100 text-sm text-slate-800 last:border-b-0"
+                  >
                     <td className="px-3 py-3 font-black text-slate-900">
                       {idx + 1}
                     </td>
