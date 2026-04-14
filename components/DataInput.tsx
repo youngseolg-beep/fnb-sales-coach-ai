@@ -670,7 +670,23 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const notSuccessCount = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status !== "success").length;
-  const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
+ const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
+
+const menuSalesTotal = useMemo(() => {
+  return data.categories.reduce((sum, category) => {
+    return (
+      sum +
+      category.items.reduce((catSum, item) => {
+        return catSum + Number(item.price || 0) * Number(item.qty || 0);
+      }, 0)
+    );
+  }, 0);
+}, [data.categories]);
+
+const enteredSalesTotal =
+  Number(data.posSales || 0) + Number((data as any).deliverySales || 0);
+
+const salesGap = enteredSalesTotal - menuSalesTotal;;
 
   return (
     <div className="space-y-6">
@@ -1047,67 +1063,170 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
         </div>
       )}
 
-      <div className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-visible">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
-            <i className="fa-solid fa-calendar-day text-indigo-500"></i>
-            기본 정보 및 목표
-          </h2>
+     <div className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-visible">
+  <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+    <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
+      <i className="fa-solid fa-calendar-day text-indigo-500"></i>
+      기본 정보 및 목표
+    </h2>
+  </div>
+
+  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div>
+      <label className="block text-[11px] font-black text-slate-500 mb-1">POS 총매출</label>
+      <div className="relative">
+        <input
+          data-base-input="true"
+          data-base-key="posSales"
+          type="number"
+          value={data.posSales || ""}
+          onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              focusNextBaseInput("posSales");
+            }
+          }}
+          className={numericInputClasses}
+          placeholder="0"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+          USD
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-[11px] font-black text-slate-500 mb-1">배달 매출</label>
+      <div className="relative">
+        <input
+          data-base-input="true"
+          data-base-key="deliverySales"
+          type="number"
+          value={(data as any).deliverySales || ""}
+          onChange={(e) =>
+            updateBaseField("deliverySales" as any, Number(e.target.value))
+          }
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              focusNextBaseInput("deliverySales");
+            }
+          }}
+          className={numericInputClasses}
+          placeholder="0"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+          USD
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-[11px] font-black text-slate-500 mb-1">방문객 수 (유입)</label>
+      <div className="relative">
+        <input
+          data-base-input="true"
+          data-base-key="visitCount"
+          type="number"
+          value={data.visitCount || ""}
+          onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              focusNextBaseInput("visitCount");
+            }
+          }}
+          className={numericInputClasses}
+          placeholder="0"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+          명
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-[11px] font-black text-slate-500 mb-1">주문수 (영수증)</label>
+      <div className="relative">
+        <input
+          data-base-input="true"
+          data-base-key="orders"
+          type="number"
+          value={data.orders || ""}
+          onChange={(e) => updateBaseField("orders", Number(e.target.value))}
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              focusNextBaseInput("orders");
+            }
+          }}
+          className={numericInputClasses}
+          placeholder="0"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+          건
+        </span>
+      </div>
+    </div>
+
+    <div className="lg:col-span-4">
+      <label className="block text-[11px] font-black text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
+      <input
+        type="text"
+        value={data.note}
+        onChange={(e) => updateBaseField("note", e.target.value)}
+        placeholder="예: 비 옴, 짜장면 품절 등"
+        className={inputClasses}
+      />
+    </div>
+  </div>
+
+  <div className="px-4 pb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+        <div className="text-[10px] font-black text-slate-400">입력 매출 합계</div>
+        <div className="mt-1 text-[15px] font-black text-slate-900">
+          ${enteredSalesTotal.toLocaleString()}
         </div>
+        <div className="mt-0.5 text-[10px] text-slate-400">POS + 배달</div>
+      </div>
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-[11px] font-black text-slate-500 mb-1">POS 총매출</label>
-            <div className="relative">
-              <input
-                data-base-input="true"
-                data-base-key="posSales"
-                type="number"
-                value={data.posSales || ""}
-                onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    focusNextBaseInput("posSales");
-                  }
-                }}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                USD
-              </span>
-            </div>
-          </div>
+      <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+        <div className="text-[10px] font-black text-slate-400">메뉴 매출 합계</div>
+        <div className="mt-1 text-[15px] font-black text-slate-900">
+          ${menuSalesTotal.toLocaleString()}
+        </div>
+        <div className="mt-0.5 text-[10px] text-slate-400">수량 × 메뉴가격</div>
+      </div>
 
-          <div>
-            <label className="block text-[11px] font-black text-slate-500 mb-1">배달 매출</label>
-            <div className="relative">
-              <input
-                data-base-input="true"
-                data-base-key="deliverySales"
-                type="number"
-                value={(data as any).deliverySales || ""}
-                onChange={(e) =>
-                  updateBaseField("deliverySales" as any, Number(e.target.value))
-                }
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    focusNextBaseInput("deliverySales");
-                  }
-                }}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                USD
-              </span>
-            </div>
-          </div>
-
+      <div
+        className={`rounded-lg px-3 py-2 border ${
+          salesGap === 0
+            ? "bg-emerald-50 border-emerald-200"
+            : "bg-amber-50 border-amber-200"
+        }`}
+      >
+        <div className="text-[10px] font-black text-slate-400">오차</div>
+        <div
+          className={`mt-1 text-[15px] font-black ${
+            salesGap === 0 ? "text-emerald-600" : "text-amber-600"
+          }`}
+        >
+          {salesGap > 0 ? "+" : ""}
+          ${salesGap.toLocaleString()}
+        </div>
+        <div className="mt-0.5 text-[10px] text-slate-400">
+          입력 매출 - 메뉴 매출
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
           <div>
             <label className="block text-[11px] font-black text-slate-500 mb-1">방문객 수 (유입)</label>
             <div className="relative">
