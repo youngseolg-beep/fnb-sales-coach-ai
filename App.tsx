@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   getMonthlyTotal,
   deleteDaily,
+  loadDailyRange,
 } from "./services/salesStorage";
 
 import {
@@ -26,6 +27,54 @@ import { supabase } from "./services/supabaseClient";
 
 import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
 import StoreOwnerPageRouter from "./components/StoreOwnerPageRouter";
+
+type SummaryCompareStats = {
+  selectedSales: number;
+  prevSales: number;
+  selectedOrders: number;
+  prevOrders: number;
+  selectedAov: number;
+  prevAov: number;
+  avg7Sales: number;
+  hasPrevData: boolean;
+  avg7Count: number;
+};
+
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatYmd = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (value: string, days: number) => {
+  const next = parseLocalDate(value);
+  next.setDate(next.getDate() + days);
+  return formatYmd(next);
+};
+
+const toSafeNumber = (value: unknown) => {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const getSalesMetrics = (source: any) => {
+  const payload = source?.payload ?? source ?? {};
+  const sales = toSafeNumber(payload.posSales) + toSafeNumber(payload.deliverySales);
+  const orders = toSafeNumber(payload.orders);
+  const aov = orders > 0 ? sales / orders : 0;
+
+  return {
+    sales,
+    orders,
+    aov,
+  };
+};
 
 const persistMenuPriceHistory = async (
   categories: MenuCategory[],
@@ -69,6 +118,17 @@ const App: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
+  const [summaryCompare, setSummaryCompare] = useState<SummaryCompareStats>({
+  selectedSales: 0,
+  prevSales: 0,
+  selectedOrders: 0,
+  prevOrders: 0,
+  selectedAov: 0,
+  prevAov: 0,
+  avg7Sales: 0,
+  hasPrevData: false,
+  avg7Count: 0,
+});
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
@@ -418,7 +478,73 @@ const App: React.FC = () => {
     const timer = window.setTimeout(() => setToastMsg(null), 1800);
     return () => window.clearTimeout(timer);
   }, [toastSeq, toastMsg]);
+useEffect(() => {
+  if (storeId == null || !data.date) return;
 
+  let cancelled = false;
+
+  const loadSummaryCompare = async () => {
+    const selectedMetrics = getSalesMetrics(data);
+    const prevDate = addDays(data.date, -1);
+    const sevenStartDate = addDays(data.date, -7);
+
+    try {
+      const rows = await loadDailyRange(sevenStartDate, prevDate, storeId);
+      if (cancelled) return;
+
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const prevRow = safeRows.find((row: any) => row?.date === prevDate);
+      const prevMetrics = getSalesMetrics(prevRow);
+
+      const avg7Rows = safeRows.filter(
+        (row: any) =>
+          typeof row?.date === "string" &&
+          row.date >= sevenStartDate &&
+          row.date <= prevDate
+      );
+
+      const avg7SalesTotal = avg7Rows.reduce((sum: number, row: any) => {
+        return sum + getSalesMetrics(row).sales;
+      }, 0);
+
+      const avg7Count = avg7Rows.length;
+
+      setSummaryCompare({
+        selectedSales: selectedMetrics.sales,
+        prevSales: prevMetrics.sales,
+        selectedOrders: selectedMetrics.orders,
+        prevOrders: prevMetrics.orders,
+        selectedAov: selectedMetrics.aov,
+        prevAov: prevMetrics.aov,
+        avg7Sales: avg7Count > 0 ? avg7SalesTotal / avg7Count : 0,
+        hasPrevData: !!prevRow,
+        avg7Count,
+      });
+    } catch (error) {
+      if (cancelled) return;
+
+      console.error("summary compare load error:", error);
+
+      setSummaryCompare({
+        selectedSales: selectedMetrics.sales,
+        prevSales: 0,
+        selectedOrders: selectedMetrics.orders,
+        prevOrders: 0,
+        selectedAov: selectedMetrics.aov,
+        prevAov: 0,
+        avg7Sales: 0,
+        hasPrevData: false,
+        avg7Count: 0,
+      });
+    }
+  };
+
+  void loadSummaryCompare();
+
+  return () => {
+    cancelled = true;
+  };
+}, [storeId, data.date, data.posSales, data.deliverySales, data.orders]);
   const monthlyRate = useMemo(() => {
     const target = monthlyTarget;
     if (!target || target <= 0) return 0;
@@ -509,18 +635,19 @@ const App: React.FC = () => {
   }
 
   const summaryPage = (
-    <SummaryPage
-      date={data.date}
-      monthlyStats={monthlyStats}
-      monthlyRate={monthlyRate}
-      monthlyTarget={monthlyTarget}
-      onChangeTarget={(v) => {
-        setMonthlyTarget(v);
-        setData((prev) => ({ ...prev, monthlyTarget: v }));
-      }}
-      onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
-    />
-  );
+  <SummaryPage
+    date={data.date}
+    monthlyStats={monthlyStats}
+    monthlyRate={monthlyRate}
+    monthlyTarget={monthlyTarget}
+    compareStats={summaryCompare}
+    onChangeTarget={(v) => {
+      setMonthlyTarget(v);
+      setData((prev) => ({ ...prev, monthlyTarget: v }));
+    }}
+    onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
+  />
+);
 
   const salesPage = (
     <SalesPage
