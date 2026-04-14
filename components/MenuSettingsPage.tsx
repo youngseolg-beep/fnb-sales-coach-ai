@@ -191,7 +191,7 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
             {...attributes}
             {...listeners}
             disabled={actionSaving}
-            className="inline-flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-lg font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 w-10 shrink-0 touch-none select-none items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-base font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-12 md:rounded-2xl md:text-lg"
             style={{
               WebkitTouchCallout: "none",
               WebkitUserSelect: "none",
@@ -205,9 +205,6 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
             <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
               {item.name}
             </div>
-            <div className="mt-0.5 text-[11px] font-semibold text-slate-400 md:hidden">
-              손잡이를 길게 눌러 이동
-            </div>
           </div>
         </div>
       </div>
@@ -216,65 +213,69 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
         <div className="text-xs font-semibold text-slate-400">드래그로 순서 변경</div>
       </div>
 
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-[11px] font-semibold text-slate-500 md:hidden">
-          Price
-        </label>
-        <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.price)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
-          }
-          className="h-10 w-full rounded-xl border px-3 text-[15px] outline-none focus:border-slate-400 md:h-11 md:text-sm"
-        />
+      <div className="grid grid-cols-2 gap-2 md:contents">
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">
+            Price
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={normalizeNumber(item.price)}
+            onChange={(e) =>
+              onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
+            }
+            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400 md:h-11 md:rounded-xl md:px-3 md:text-sm"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">
+            Unit Cost
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={normalizeNumber(item.unitCost)}
+            onChange={(e) =>
+              onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
+            }
+            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400 md:h-11 md:rounded-xl md:px-3 md:text-sm"
+          />
+        </div>
       </div>
 
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-[11px] font-semibold text-slate-500 md:hidden">
-          Unit Cost
-        </label>
-        <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.unitCost)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-          }
-          className="h-10 w-full rounded-xl border px-3 text-[15px] outline-none focus:border-slate-400 md:h-11 md:text-sm"
-        />
-      </div>
+      <div className="grid grid-cols-3 gap-2 md:contents">
+        <div className="md:col-span-1">
+          <span
+            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-semibold md:inline-flex md:h-9 md:w-auto md:rounded-full md:px-3 md:text-xs ${
+              changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {changed ? "Changed" : "Saved"}
+          </span>
+        </div>
 
-      <div className="md:col-span-1">
-        <span
-          className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold md:h-9 md:text-xs ${
-            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {changed ? "Changed" : "Saved"}
-        </span>
-      </div>
+        <div className="md:col-span-1">
+          <button
+            type="button"
+            onClick={() => onOpenHistory(item.id, item.name)}
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 md:h-10 md:rounded-xl md:px-3 md:text-xs"
+          >
+            History
+          </button>
+        </div>
 
-      <div className="md:col-span-1">
-        <button
-          type="button"
-          onClick={() => onOpenHistory(item.id, item.name)}
-          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 md:text-xs"
-        >
-          History
-        </button>
-      </div>
-
-      <div className="md:col-span-2">
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={actionSaving}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-[13px] font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 md:text-xs"
-        >
-          메뉴 삭제
-        </button>
+        <div className="md:col-span-2">
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={actionSaving}
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-2 text-[12px] font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-10 md:rounded-xl md:px-3 md:text-xs"
+          >
+            메뉴 삭제
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -291,15 +292,12 @@ const DragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
     >
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 text-lg font-black text-indigo-500 shadow-sm">
+          <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-base font-black text-indigo-500 shadow-sm md:h-12 md:w-12 md:rounded-2xl md:text-lg">
             ⋮⋮
           </div>
           <div className="min-w-0">
             <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
               {item.name}
-            </div>
-            <div className="mt-0.5 text-[11px] font-semibold text-indigo-500 md:hidden">
-              이동 중
             </div>
           </div>
         </div>
@@ -309,37 +307,41 @@ const DragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
         <div className="text-xs font-semibold text-indigo-400">드래그로 순서 변경</div>
       </div>
 
-      <div className="md:col-span-2">
-        <div className="h-10 rounded-xl border bg-slate-50 px-3 text-[15px] leading-[40px] text-slate-900 md:h-11 md:text-sm md:leading-[44px]">
-          {normalizeNumber(item.price)}
+      <div className="grid grid-cols-2 gap-2 md:contents">
+        <div className="md:col-span-2">
+          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900 md:h-11 md:rounded-xl md:px-3 md:text-sm md:leading-[44px]">
+            {normalizeNumber(item.price)}
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900 md:h-11 md:rounded-xl md:px-3 md:text-sm md:leading-[44px]">
+            {normalizeNumber(item.unitCost)}
+          </div>
         </div>
       </div>
 
-      <div className="md:col-span-2">
-        <div className="h-10 rounded-xl border bg-slate-50 px-3 text-[15px] leading-[40px] text-slate-900 md:h-11 md:text-sm md:leading-[44px]">
-          {normalizeNumber(item.unitCost)}
+      <div className="grid grid-cols-3 gap-2 md:contents">
+        <div className="md:col-span-1">
+          <span
+            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-semibold md:inline-flex md:h-9 md:w-auto md:rounded-full md:px-3 md:text-xs ${
+              item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {item.changed ? "Changed" : "Saved"}
+          </span>
         </div>
-      </div>
 
-      <div className="md:col-span-1">
-        <span
-          className={`inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold md:h-9 md:text-xs ${
-            item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {item.changed ? "Changed" : "Saved"}
-        </span>
-      </div>
-
-      <div className="md:col-span-1">
-        <div className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-[13px] font-semibold text-slate-700 md:text-xs">
-          History
+        <div className="md:col-span-1">
+          <div className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-semibold text-slate-700 md:h-10 md:rounded-xl md:px-3 md:text-xs">
+            History
+          </div>
         </div>
-      </div>
 
-      <div className="md:col-span-2">
-        <div className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-[13px] font-semibold text-rose-600 md:text-xs">
-          메뉴 삭제
+        <div className="md:col-span-2">
+          <div className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-2 text-[12px] font-semibold text-rose-600 md:h-10 md:rounded-xl md:px-3 md:text-xs">
+            메뉴 삭제
+          </div>
         </div>
       </div>
     </div>
@@ -351,7 +353,6 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   categories,
   originalCategories,
   onChangeCategories,
-  onSavePrices,
   onReloadMenuMaster,
   saving,
   storeId,
@@ -696,7 +697,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <p className="mt-1 text-xs font-semibold text-amber-600">
                 선택한 날짜부터 이 가격이 적용됩니다.
               </p>
-              <p className="mt-2 text-xs font-semibold text-indigo-600">
+              <p className="mt-2 hidden text-xs font-semibold text-indigo-600 md:block">
                 모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
               </p>
             </div>
