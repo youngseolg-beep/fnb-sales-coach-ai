@@ -641,6 +641,11 @@ useEffect(() => {
     monthlyRate={monthlyRate}
     monthlyTarget={monthlyTarget}
     compareStats={summaryCompare}
+    inputStatus={{
+      posSales: Number(data.posSales ?? 0),
+      deliverySales: Number(data.deliverySales ?? 0),
+      orders: Number(data.orders ?? 0),
+    }}
     onChangeTarget={(v) => {
       setMonthlyTarget(v);
       setData((prev) => ({ ...prev, monthlyTarget: v }));
