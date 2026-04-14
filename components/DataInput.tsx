@@ -1227,68 +1227,6 @@ const salesGap = enteredSalesTotal - menuSalesTotal;;
     </div>
   </div>
 </div>
-          <div>
-            <label className="block text-[11px] font-black text-slate-500 mb-1">방문객 수 (유입)</label>
-            <div className="relative">
-              <input
-                data-base-input="true"
-                data-base-key="visitCount"
-                type="number"
-                value={data.visitCount || ""}
-                onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    focusNextBaseInput("visitCount");
-                  }
-                }}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                명
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-black text-slate-500 mb-1">주문수 (영수증)</label>
-            <div className="relative">
-              <input
-                data-base-input="true"
-                data-base-key="orders"
-                type="number"
-                value={data.orders || ""}
-                onChange={(e) => updateBaseField("orders", Number(e.target.value))}
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    focusNextBaseInput("orders");
-                  }
-                }}
-                className={numericInputClasses}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                건
-              </span>
-            </div>
-          </div>
-
-          <div className="lg:col-span-4">
-            <label className="block text-[11px] font-black text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
-            <input
-              type="text"
-              value={data.note}
-              onChange={(e) => updateBaseField("note", e.target.value)}
-              placeholder="예: 비 옴, 짜장면 품절 등"
-              className={inputClasses}
-            />
-          </div>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(() => {
