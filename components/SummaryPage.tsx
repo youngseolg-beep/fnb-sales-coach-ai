@@ -222,7 +222,7 @@ const SummaryPage: React.FC<Props> = ({
           />
           <button
             onClick={onSaveTarget}
-            className="rounded-2xl bg-indigo-500 px-5 font-black text-white shadow-md"
+            className="rounded-2xl bg-indigo-500 px-2 font-black text-white shadow-md"
           >
             저장
           </button>
