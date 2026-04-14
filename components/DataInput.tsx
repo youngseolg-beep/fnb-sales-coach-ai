@@ -168,33 +168,35 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       }
     });
   };
-const focusNextBaseInput = (currentKey: string) => {
-  requestAnimationFrame(() => {
-    const baseInputs = Array.from(
-      document.querySelectorAll<HTMLInputElement>('[data-base-input="true"]')
-    );
-    const currentIndex = baseInputs.findIndex((input) => input.dataset.baseKey === currentKey);
-    const nextBaseInput = baseInputs[currentIndex + 1];
 
-    if (nextBaseInput) {
-      nextBaseInput.focus();
-      nextBaseInput.select();
-      return;
-    }
+  const focusNextBaseInput = (currentKey: string) => {
+    requestAnimationFrame(() => {
+      const baseInputs = Array.from(
+        document.querySelectorAll<HTMLInputElement>('[data-base-input="true"]')
+      );
+      const currentIndex = baseInputs.findIndex((input) => input.dataset.baseKey === currentKey);
+      const nextBaseInput = baseInputs[currentIndex + 1];
 
-    const firstMenuInput = document.querySelector<HTMLInputElement>(
-      '[data-menu-qty-input="true"]'
-    );
+      if (nextBaseInput) {
+        nextBaseInput.focus();
+        nextBaseInput.select();
+        return;
+      }
 
-    if (firstMenuInput) {
-      firstMenuInput.focus();
-      firstMenuInput.select();
-    }
-  });
-};
+      const firstMenuInput = document.querySelector<HTMLInputElement>(
+        '[data-menu-qty-input="true"]'
+      );
+
+      if (firstMenuInput) {
+        firstMenuInput.focus();
+        firstMenuInput.select();
+      }
+    });
+  };
+
   const inputClasses =
-    "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
-  const numericInputClasses = `${inputClasses} text-right pr-12`;
+    "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
+  const numericInputClasses = `${inputClasses} text-right pr-10`;
 
   const [ocrFiles, setOcrFiles] = useState<File[]>([]);
   const [ocrFileStatuses, setOcrFileStatuses] = useState<Record<string, FileStatus>>({});
@@ -671,7 +673,7 @@ const focusNextBaseInput = (currentKey: string) => {
   const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex justify-end">
         <button
           onClick={() => setShowOcr(!showOcr)}
@@ -1045,119 +1047,119 @@ const focusNextBaseInput = (currentKey: string) => {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-visible">
-        <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+      <div className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-visible">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
             <i className="fa-solid fa-calendar-day text-indigo-500"></i>
             기본 정보 및 목표
           </h2>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-  <label className="block text-xs font-bold text-slate-500 mb-1">POS 총매출</label>
-  <div className="relative">
-    <input
-      data-base-input="true"
-      data-base-key="posSales"
-      type="number"
-      value={data.posSales || ""}
-      onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
-      onFocus={(e) => e.target.select()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextBaseInput("posSales");
-        }
-      }}
-      className={numericInputClasses}
-      placeholder="0"
-    />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-      USD
-    </span>
-  </div>
-</div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 mb-1">POS 총매출</label>
+            <div className="relative">
+              <input
+                data-base-input="true"
+                data-base-key="posSales"
+                type="number"
+                value={data.posSales || ""}
+                onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    focusNextBaseInput("posSales");
+                  }
+                }}
+                className={numericInputClasses}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                USD
+              </span>
+            </div>
+          </div>
 
-<div>
-  <label className="block text-xs font-bold text-slate-500 mb-1">배달 매출</label>
-  <div className="relative">
-    <input
-      data-base-input="true"
-      data-base-key="deliverySales"
-      type="number"
-      value={(data as any).deliverySales || ""}
-      onChange={(e) =>
-        updateBaseField("deliverySales" as any, Number(e.target.value))
-      }
-      onFocus={(e) => e.target.select()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextBaseInput("deliverySales");
-        }
-      }}
-      className={numericInputClasses}
-      placeholder="0"
-    />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-      USD
-    </span>
-  </div>
-</div>
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 mb-1">배달 매출</label>
+            <div className="relative">
+              <input
+                data-base-input="true"
+                data-base-key="deliverySales"
+                type="number"
+                value={(data as any).deliverySales || ""}
+                onChange={(e) =>
+                  updateBaseField("deliverySales" as any, Number(e.target.value))
+                }
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    focusNextBaseInput("deliverySales");
+                  }
+                }}
+                className={numericInputClasses}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                USD
+              </span>
+            </div>
+          </div>
 
-<div>
-  <label className="block text-xs font-bold text-slate-500 mb-1">방문객 수 (유입)</label>
-  <div className="relative">
-    <input
-      data-base-input="true"
-      data-base-key="visitCount"
-      type="number"
-      value={data.visitCount || ""}
-      onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
-      onFocus={(e) => e.target.select()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextBaseInput("visitCount");
-        }
-      }}
-      className={numericInputClasses}
-      placeholder="0"
-    />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-      명
-    </span>
-  </div>
-</div>
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 mb-1">방문객 수 (유입)</label>
+            <div className="relative">
+              <input
+                data-base-input="true"
+                data-base-key="visitCount"
+                type="number"
+                value={data.visitCount || ""}
+                onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    focusNextBaseInput("visitCount");
+                  }
+                }}
+                className={numericInputClasses}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                명
+              </span>
+            </div>
+          </div>
 
-<div>
-  <label className="block text-xs font-bold text-slate-500 mb-1">주문수 (영수증)</label>
-  <div className="relative">
-    <input
-      data-base-input="true"
-      data-base-key="orders"
-      type="number"
-      value={data.orders || ""}
-      onChange={(e) => updateBaseField("orders", Number(e.target.value))}
-      onFocus={(e) => e.target.select()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextBaseInput("orders");
-        }
-      }}
-      className={numericInputClasses}
-      placeholder="0"
-    />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-      건
-    </span>
-  </div>
-</div>
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 mb-1">주문수 (영수증)</label>
+            <div className="relative">
+              <input
+                data-base-input="true"
+                data-base-key="orders"
+                type="number"
+                value={data.orders || ""}
+                onChange={(e) => updateBaseField("orders", Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    focusNextBaseInput("orders");
+                  }
+                }}
+                className={numericInputClasses}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                건
+              </span>
+            </div>
+          </div>
 
-          <div className="lg:col-span-3">
-            <label className="block text-xs font-bold text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
+          <div className="lg:col-span-4">
+            <label className="block text-[11px] font-black text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
             <input
               type="text"
               value={data.note}
@@ -1169,26 +1171,26 @@ const focusNextBaseInput = (currentKey: string) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(() => {
           let flatInputIndex = 0;
 
           return data.categories.map((cat, catIdx) => (
-            <div key={cat.name} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-indigo-50/50 border-b border-indigo-100 px-6 py-3">
-                <h3 className="font-bold text-indigo-900 text-sm">{cat.name}</h3>
+            <div key={cat.name} className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-indigo-50/50 border-b border-indigo-100 px-4 py-2.5">
+                <h3 className="font-black text-indigo-900 text-[13px]">{cat.name}</h3>
               </div>
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+              <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                 {cat.items.map((item, itemIdx) => {
                   const currentFlatIndex = flatInputIndex;
                   flatInputIndex += 1;
 
                   return (
                     <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
-                      <span className="text-sm font-medium text-slate-700 truncate flex-1">
+                      <span className="text-[13px] font-medium text-slate-700 truncate flex-1">
                         {item.name} <span className="text-[10px] text-slate-400 font-normal">(${item.price})</span>
                       </span>
-                      <div className="relative w-16">
+                      <div className="relative w-14">
                         <input
                           data-menu-qty-input="true"
                           type="number"
@@ -1202,7 +1204,7 @@ const focusNextBaseInput = (currentKey: string) => {
                               focusNextMenuQtyInput(currentFlatIndex);
                             }
                           }}
-                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-3 py-3 text-right text-base focus:ring-1 focus:ring-indigo-400 outline-none min-h-[48px]"
+                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-2 text-right text-[14px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
                           placeholder="0"
                         />
                       </div>
