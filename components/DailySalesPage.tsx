@@ -910,11 +910,11 @@ const DailySalesPage: React.FC<Props> = ({
 
   return (
     <>
-      <div className="space-y-5 pb-32 md:pb-36">
-        <header className="space-y-2">
+      <div className="space-y-4 pb-28 md:pb-36">
+        <header className="space-y-1.5">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">매출 입력</h2>
-            <p className="text-sm font-medium text-slate-500 md:text-base">
+            <h2 className="text-[18px] font-black tracking-tight text-slate-900 md:text-3xl">매출 입력</h2>
+            <p className="text-[12px] font-medium leading-snug text-slate-500 md:text-base">
               날짜를 선택하고 매출, 방문객, 주문수, 메뉴 판매 수량을 입력한 뒤 저장하세요.
             </p>
           </div>
@@ -930,9 +930,9 @@ const DailySalesPage: React.FC<Props> = ({
           />
 
           {saveStatus && (
-            <div className="mt-4 text-center">
+            <div className="mt-3 text-center">
               <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
+                className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold ${
                   saveStatus === "저장 완료" || saveStatus === "자동 저장 완료"
                     ? "bg-emerald-50 text-emerald-600"
                     : saveStatus.startsWith("저장 실패") ||
@@ -948,36 +948,36 @@ const DailySalesPage: React.FC<Props> = ({
           )}
 
           {lastSavedAt && (
-            <div className="mt-2 text-center text-[10px] font-bold text-slate-400">
+            <div className="mt-1.5 text-center text-[10px] font-bold text-slate-400">
               마지막 저장: {lastSavedAt}
             </div>
           )}
         </div>
       </div>
 
-      <div className="fixed bottom-[82px] left-0 right-0 z-[9997] px-3 md:bottom-[92px] md:px-6">
+      <div className="fixed bottom-[56px] left-0 right-0 z-[9997] px-2 sm:px-3 md:bottom-[92px] md:px-6">
         <div className="mx-auto w-full max-w-md md:max-w-7xl">
-          <div className="rounded-2xl border border-slate-200 bg-white/92 p-2 shadow-lg backdrop-blur md:rounded-3xl md:p-3">
+          <div className="rounded-2xl border border-slate-200 bg-white/94 p-2 shadow-lg backdrop-blur md:rounded-3xl md:p-3">
             <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
               <button
                 type="button"
                 onClick={() => setShowResetModal(true)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-600 transition-all hover:bg-rose-100 active:scale-[0.98] md:h-12 md:min-w-[180px] md:px-5"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-[12px] font-black text-rose-600 transition-all hover:bg-rose-100 active:scale-[0.98] md:h-12 md:min-w-[180px] md:gap-2 md:rounded-2xl md:px-5 md:text-sm"
               >
-                <i className="fa-solid fa-trash-can text-xs"></i>
+                <i className="fa-solid fa-trash-can text-[10px] md:text-xs"></i>
                 일 데이터 리셋
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSave(false)}
-                className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-3 text-sm font-black transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:px-6 ${
+                className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[12px] font-black transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:gap-2 md:rounded-2xl md:px-6 md:text-sm ${
                   ocrApplied && !dataSaved
                     ? "border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700"
                     : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
                 }`}
               >
-                <i className="fa-solid fa-floppy-disk text-xs"></i>
+                <i className="fa-solid fa-floppy-disk text-[10px] md:text-xs"></i>
                 매출 데이터 저장
               </button>
             </div>
