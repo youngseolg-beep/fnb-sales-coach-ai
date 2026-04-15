@@ -122,47 +122,67 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   return (
     <section className="space-y-3 md:space-y-4">
       <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm md:rounded-[28px]">
+        
+        {/* 상단 */}
         <div className="border-b border-slate-100 px-3 py-2 md:px-5 md:py-3">
           <div className="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <div className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-indigo-500">
+              <div className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase text-indigo-500">
                 Period Analysis
               </div>
               <h3 className="mt-1 text-[14px] font-bold text-slate-900">
                 기간 분석
               </h3>
             </div>
+
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
+              <input
+                type="date"
+                value={periodRange.start}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, start: e.target.value }))
+                }
+                className="h-8 rounded-lg border px-2 text-[11px]"
+              />
+              <input
+                type="date"
+                value={periodRange.end}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, end: e.target.value }))
+                }
+                className="h-8 rounded-lg border px-2 text-[11px]"
+              />
+              <button
+                onClick={async () => {
+                  await loadCurrentPeriodData(true);
+                  await loadComparisonData(true);
+                  await fetchPeriodStats(true);
+                }}
+                className="h-8 rounded-lg bg-indigo-500 px-2 text-[10px] text-white"
+              >
+                분석
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* KPI 압축 */}
         <div className="space-y-3 bg-slate-50/60 px-3 py-3 md:px-6 md:py-5">
-
-          {/* KPI */}
           <div className="grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4">
             {summaryCards.map((card) => (
               <div
                 key={card.label}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-2 md:px-3 md:py-3"
+                className="rounded-lg border bg-white px-2 py-2"
               >
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] font-bold text-slate-500">
-                    {card.label}
-                  </div>
-                  <div
-                    className={`px-1.5 py-[2px] text-[9px] font-bold rounded ${rateTone(
-                      card.rate
-                    )}`}
-                  >
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>{card.label}</span>
+                  <span className={rateTone(card.rate)}>
                     {card.rate >= 0 ? "+" : ""}
                     {card.rate.toFixed(1)}%
-                  </div>
+                  </span>
                 </div>
-
-                <div className="mt-1 text-sm font-bold text-slate-900">
-                  {card.current}
-                </div>
-
-                <div className="mt-[2px] text-[9px] text-slate-400">
+                <div className="text-sm font-bold">{card.current}</div>
+                <div className="text-[9px] text-slate-400">
                   {card.compare}
                 </div>
               </div>
@@ -171,11 +191,13 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         </div>
       </section>
 
-      <section className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm">
+      {/* Boost */}
+      <section className="rounded-[20px] border bg-white p-3">
         <PeriodBoostPlan boostPlans={boostPlans} />
       </section>
 
-      <section className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm">
+      {/* Top10 */}
+      <section className="rounded-[20px] border bg-white p-3">
         <PeriodTopMenuCompare
           currentMenus={currentPeriodMenus}
           comparisonMenus={comparisonPeriodMenus}
@@ -185,7 +207,8 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         />
       </section>
 
-      <section className="rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm">
+      {/* 엔지니어링 */}
+      <section className="rounded-[20px] border bg-white p-3">
         <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
       </section>
     </section>
