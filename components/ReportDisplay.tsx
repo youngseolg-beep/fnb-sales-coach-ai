@@ -16,20 +16,30 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   sortedMenuEngineering,
   boostPlans,
 }) => {
+  void menuEngineeringResult;
+  void sortedMenuEngineering;
+  void boostPlans;
+
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-slate-800 font-bold">코칭 리포트 작성 중...</p>
+      <div className="rounded-[20px] border border-slate-200 bg-white p-8 shadow-sm md:rounded-[28px] md:p-10">
+        <div className="flex flex-col items-center justify-center space-y-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-500 md:h-12 md:w-12"></div>
+          <p className="text-sm font-bold text-slate-800 md:text-base">
+            코칭 리포트 작성 중...
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!report) {
     return (
-      <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center text-slate-400">
-        <i className="fa-solid fa-bolt-lightning text-2xl mb-2 opacity-20"></i>
-        <p className="text-sm font-medium">데이터를 입력하고 빠른 코칭을 받으세요.</p>
+      <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-slate-400 md:rounded-[28px] md:p-10">
+        <i className="fa-solid fa-bolt-lightning mb-2 text-xl opacity-20 md:text-2xl"></i>
+        <p className="text-[12px] font-medium md:text-sm">
+          데이터를 입력하고 빠른 코칭을 받으세요.
+        </p>
       </div>
     );
   }
@@ -45,19 +55,26 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-indigo-50 overflow-hidden mb-12">
-      <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <i className="fa-solid fa-comment-dots text-indigo-400"></i>
-          <h2 className="text-sm font-black text-white uppercase tracking-widest">Coach Report</h2>
-        </div>
-        <div className="flex items-center gap-1.5 bg-indigo-500/20 px-2 py-1 rounded text-[10px] font-bold text-indigo-300 uppercase">
-          <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span>
-          AI Active
+    <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm md:rounded-[28px]">
+      <div className="border-b border-slate-100 px-3 py-3 md:px-5 md:py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.16em]">
+              Coach Report
+            </div>
+            <h2 className="mt-1 text-base font-black tracking-tight text-slate-900 md:text-lg">
+              AI 코칭 리포트
+            </h2>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-indigo-600 md:px-3 md:text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+            AI Active
+          </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-3 bg-slate-50/60 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
         {sections.map((sectionContent, idx) => {
           const config = iconMap[idx] || {
             icon: "fa-check",
@@ -68,18 +85,24 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
           const content = sectionContent.replace(/^\d\)\s[^\n]*\n?/, "").trim();
 
           return (
-            <div key={idx} className="flex gap-4">
-              <div
-                className={`flex-shrink-0 w-10 h-10 rounded-xl ${config.color} flex items-center justify-center text-lg border border-black/5`}
-              >
-                <i className={`fa-solid ${config.icon}`}></i>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-tighter mb-1">
-                  {config.title}
-                </h3>
-                <div className="text-sm font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
-                  {content}
+            <div
+              key={idx}
+              className="rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm md:rounded-[22px] md:p-4"
+            >
+              <div className="flex gap-3">
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/5 text-sm ${config.color} md:h-10 md:w-10 md:text-base`}
+                >
+                  <i className={`fa-solid ${config.icon}`}></i>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.14em]">
+                    {config.title}
+                  </h3>
+                  <div className="whitespace-pre-wrap text-[12px] font-bold leading-5 text-slate-800 md:text-sm md:leading-6">
+                    {content}
+                  </div>
                 </div>
               </div>
             </div>
@@ -87,8 +110,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
         })}
       </div>
 
-      <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 text-center">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-center md:px-5 md:py-3">
+        <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 md:text-[10px] md:tracking-[0.16em]">
           Action based on real data leads to growth.
         </p>
       </div>
