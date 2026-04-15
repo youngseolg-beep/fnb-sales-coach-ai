@@ -228,23 +228,23 @@ export default function StoreOwnerShell({
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8f9fc]/95 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4">
-          <div className="rounded-[24px] border border-slate-200/80 bg-white px-3.5 py-3.5 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
+        <div className="mx-auto max-w-7xl px-2 pb-2 pt-2 sm:px-6 sm:pb-4 sm:pt-4 sm:px-6 sm:pb-4 sm:pt-4">
+          <div className="rounded-[24px] border border-slate-200/80 bg-white px-2 py-1.5 sm:px-3 sm:py-2.5 sm:px-5 sm:py-4 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-3 sm:gap-4">
               <div className="min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
+                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[10px]">
                   {title}
                 </div>
-                <div className="mt-1 text-[22px] font-black tracking-tight text-slate-900 sm:text-2xl">
+                <div className="mt-1 text-[18px] sm:text-2xl font-black tracking-tight text-slate-900 sm:text-2xl">
                   {activeMenu.label}
                 </div>
-                <div className="mt-1 text-[10px] font-medium leading-tight text-slate-500 sm:text-sm">
+                <div className="mt-1 text-[10px] font-medium leading-tight text-slate-500 sm:text-xs sm:text-sm">
                   {activeMenu.description}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="rounded-[18px] bg-slate-50 px-2.5 py-2 text-right sm:px-3">
+                <div className="rounded-[18px] bg-slate-50 px-2 py-1.5 sm:px-3 sm:py-2 text-right sm:px-3">
                   <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
                     Goal
                   </div>
@@ -253,7 +253,7 @@ export default function StoreOwnerShell({
                   </div>
                 </div>
 
-                <div className="rounded-[18px] bg-indigo-50 px-2.5 py-2 text-right sm:px-3">
+                <div className="rounded-[18px] bg-indigo-50 px-2 py-1.5 sm:px-3 sm:py-2 text-right sm:px-3">
                   <div className="text-[8px] font-bold uppercase tracking-widest text-indigo-400 sm:text-[10px]">
                     Rate
                   </div>
@@ -265,7 +265,7 @@ export default function StoreOwnerShell({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="hidden h-11 items-center justify-center rounded-[18px] border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
+                  className="hidden h-11 items-center justify-center rounded-[18px] border border-rose-200 bg-rose-50 px-4 text-xs sm:text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
                 >
                   Logout
                 </button>
@@ -274,7 +274,7 @@ export default function StoreOwnerShell({
 
             <div className="mt-3 flex items-end justify-between gap-3 sm:mt-4">
               <div className="min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
+                <div className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400 sm:text-[10px]">
                   {formatMonthTitle(selectedDateObj)}
                 </div>
                 <div className="mt-1 text-[9px] font-bold leading-tight text-slate-500 sm:text-xs">
@@ -286,9 +286,9 @@ export default function StoreOwnerShell({
                 ref={calendarButtonRef}
                 type="button"
                 onClick={toggleCalendar}
-                className="relative z-[10000] inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:px-4 sm:text-sm"
+                className="relative z-[10000] inline-flex h-10 items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-3 text-[13px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:px-4 sm:text-xs sm:text-sm"
               >
-                <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[11px]"></i>
+                <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[10px]"></i>
                 <span className="leading-none">{selectedDate}</span>
                 <i className="fa-solid fa-chevron-down text-[9px] text-slate-400 sm:text-[10px]"></i>
               </button>
@@ -307,7 +307,7 @@ export default function StoreOwnerShell({
                       type="button"
                       onClick={() => onChangeDate(dateKey)}
                       className={[
-                        "relative flex h-[66px] w-[50px] shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[22px]",
+                        "relative flex h-[54px] w-[42px] sm:h-[76px] sm:w-[60px] shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[22px]",
                         active
                           ? "border-slate-900 bg-slate-900 text-white shadow-md"
                           : "border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white",
@@ -322,7 +322,7 @@ export default function StoreOwnerShell({
                         {formatWeekdayShort(date)}
                       </span>
 
-                      <span className="mt-1 text-[23px] font-black leading-none sm:mt-1.5 sm:text-[26px]">
+                      <span className="mt-1 text-[19px] sm:text-[26px] font-black leading-none sm:mt-1.5 sm:text-[26px]">
                         {date.getDate()}
                       </span>
 
@@ -356,7 +356,7 @@ export default function StoreOwnerShell({
               onClick={() => setShowCalendar(false)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
             >
-              <i className="fa-solid fa-xmark text-sm"></i>
+              <i className="fa-solid fa-xmark text-xs sm:text-sm"></i>
             </button>
           </div>
 
@@ -401,12 +401,12 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6">
+      <main className="mx-auto max-w-7xl px-2 py-2 sm:py-3 sm:px-6 sm:px-6">
         {children}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-3 py-3">
+        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-3 py-2 sm:py-3">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
 
@@ -416,14 +416,14 @@ export default function StoreOwnerShell({
                 type="button"
                 onClick={() => onChangePage(item.key)}
                 className={[
-                  "flex h-14 flex-col items-center justify-center rounded-[18px] transition-all",
+                  "flex h-11 sm:h-14 flex-col items-center justify-center rounded-[18px] transition-all",
                   active
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                 ].join(" ")}
               >
-                <i className={`${item.icon} text-sm`}></i>
-                <span className="mt-1 text-[11px] font-bold">{item.label}</span>
+                <i className={`${item.icon} text-xs sm:text-sm`}></i>
+                <span className="mt-1 text-[10px] font-bold">{item.label}</span>
               </button>
             );
           })}
