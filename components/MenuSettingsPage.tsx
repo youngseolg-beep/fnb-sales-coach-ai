@@ -634,6 +634,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   const [actionSaving, setActionSaving] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<DragPreviewItem | null>(null);
+const [draftSourceDate, setDraftSourceDate] = useState(selectedDate);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -652,8 +653,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
  const [isHydratingFromProps, setIsHydratingFromProps] = useState(false);
 
 useEffect(() => {
-  setIsHydratingFromProps(true);
   setDraftCategories(cloneCategories(categories));
+  setDraftSourceDate(selectedDate);
+}, [categories, selectedDate]);
 
   const timer = window.setTimeout(() => {
     setIsHydratingFromProps(false);
@@ -730,7 +732,9 @@ useEffect(() => {
 
   const dirtyCount = changedItems.length;
 
-const uiDirtyCount = isHydratingFromProps ? 0 : dirtyCount;
+const isDateSwitching = draftSourceDate !== selectedDate;
+
+const uiDirtyCount = isDateSwitching ? 0 : dirtyCount;
 
 const changedOrderItems = useMemo(() => {
   const rows: Array<{ id: string; displayOrder: number }> = [];
@@ -753,7 +757,7 @@ const changedOrderItems = useMemo(() => {
 }, [draftCategories, originalCategories]);
 
 const orderChanged = changedOrderItems.length > 0;
-const uiOrderChanged = isHydratingFromProps ? false : orderChanged;
+const uiOrderChanged = isDateSwitching ? false : orderChanged;
 
 const updateItemField = (
   categoryIndex: number,
@@ -866,7 +870,8 @@ const handleConfirmSave = async () => {
     setActionSaving(false);
   }
 };
-  const handleOpenHistory = async (menuId: string, menuName: string) => {
+
+const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
       setHistoryLoading(true);
       setHistoryMenuName(menuName);
@@ -1040,7 +1045,7 @@ const handleConfirmSave = async () => {
                     const originalItem = originalItemMap.get(item.id);
 
                     const changed =
-  !isHydratingFromProps && originalItem
+  !isDateSwitching && originalItem
     ? !isSameValue(item.price, originalItem.price) ||
       !isSameValue(item.unitCost, originalItem.unitCost)
     : false;
