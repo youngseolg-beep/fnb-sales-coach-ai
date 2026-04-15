@@ -132,74 +132,74 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   return (
     <section className="space-y-3 md:space-y-4">
       <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm md:rounded-[28px]">
-       <div className="border-b border-slate-100 px-3 py-2 md:px-5 md:py-3">
-  <div className="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
-    <div>
-      <div className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-indigo-500 md:text-[11px] md:tracking-[0.16em]">
-        Period Analysis
-      </div>
+        <div className="border-b border-slate-100 px-3 py-2 md:px-5 md:py-3">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-indigo-500 md:text-[11px] md:tracking-[0.16em]">
+                Period Analysis
+              </div>
 
-      <h3 className="mt-1 text-[14px] font-bold text-slate-900 md:text-xl">
-        기간 분석
-      </h3>
+              <h3 className="mt-1 text-[14px] font-bold text-slate-900 md:text-xl">
+                기간 분석
+              </h3>
 
-      <p className="mt-0.5 text-[11px] font-medium text-slate-500 md:text-sm">
-        핵심 변화 → 액션
-      </p>
-    </div>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-500 md:text-sm">
+                핵심 변화 → 액션
+              </p>
+            </div>
 
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
-      <input
-        type="date"
-        value={periodRange.start}
-        onChange={(e) =>
-          setPeriodRange((prev) => ({ ...prev, start: e.target.value }))
-        }
-        className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-300 focus:bg-white md:h-10 md:rounded-xl md:px-3 md:text-sm"
-      />
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
+              <input
+                type="date"
+                value={periodRange.start}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, start: e.target.value }))
+                }
+                className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-300 focus:bg-white md:h-10 md:rounded-xl md:px-3 md:text-sm"
+              />
 
-      <span className="hidden text-[10px] font-black text-slate-300 sm:block md:text-sm">
-        ~
-      </span>
+              <span className="hidden text-[10px] font-black text-slate-300 sm:block md:text-sm">
+                ~
+              </span>
 
-      <input
-        type="date"
-        value={periodRange.end}
-        onChange={(e) =>
-          setPeriodRange((prev) => ({ ...prev, end: e.target.value }))
-        }
-        className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-300 focus:bg-white md:h-10 md:rounded-xl md:px-3 md:text-sm"
-      />
+              <input
+                type="date"
+                value={periodRange.end}
+                onChange={(e) =>
+                  setPeriodRange((prev) => ({ ...prev, end: e.target.value }))
+                }
+                className="h-8 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-300 focus:bg-white md:h-10 md:rounded-xl md:px-3 md:text-sm"
+              />
 
-      <button
-        type="button"
-        onClick={async () => {
-          if (selectedPeriodDays < 7) {
-            showToast("메뉴 엔지니어링 분석은 최소 7일 이상 필요");
-            return;
-          }
+              <button
+                type="button"
+                onClick={async () => {
+                  if (selectedPeriodDays < 7) {
+                    showToast("메뉴 엔지니어링 분석은 최소 7일 이상 필요");
+                    return;
+                  }
 
-          await loadCurrentPeriodData(true);
-          await loadComparisonData(true);
-          await fetchPeriodStats(true);
+                  await loadCurrentPeriodData(true);
+                  await loadComparisonData(true);
+                  await fetchPeriodStats(true);
 
-          const meResult = await calculateMenuEngineeringForRange(
-            periodRange.start,
-            periodRange.end,
-            data.categories,
-            { maxDays: 60 }
-          );
+                  const meResult = await calculateMenuEngineeringForRange(
+                    periodRange.start,
+                    periodRange.end,
+                    data.categories,
+                    { maxDays: 60 }
+                  );
 
-          setMenuEngineeringResult(meResult);
-        }}
-        disabled={periodLoading}
-        className="inline-flex h-8 items-center justify-center rounded-lg bg-indigo-500 px-2 text-[10px] font-bold text-white hover:bg-indigo-600 disabled:bg-slate-300 md:h-10 md:rounded-xl md:px-4 md:text-sm"
-      >
-        {periodLoading ? "분석 중..." : "분석"}
-      </button>
-    </div>
-  </div>
-</div>
+                  setMenuEngineeringResult(meResult);
+                }}
+                disabled={periodLoading}
+                className="inline-flex h-8 items-center justify-center rounded-lg bg-indigo-500 px-2 text-[10px] font-bold text-white hover:bg-indigo-600 disabled:bg-slate-300 md:h-10 md:rounded-xl md:px-4 md:text-sm"
+              >
+                {periodLoading ? "분석 중..." : "분석"}
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="space-y-3 bg-slate-50/60 px-3 py-3 md:space-y-4 md:px-6 md:py-5">
           <div className="grid grid-cols-1 gap-3 md:gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr]">
@@ -297,18 +297,18 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 md:gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 md:gap-2.5 xl:grid-cols-4">
             {summaryCards.map((card) => (
               <div
                 key={card.label}
-                className="rounded-[16px] border border-slate-200 bg-white px-2.5 py-2.5 shadow-sm md:rounded-[22px] md:px-4 md:py-4"
+                className="rounded-[14px] border border-slate-200 bg-white px-2 py-2 shadow-sm md:rounded-[18px] md:px-3 md:py-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-[11px] font-black text-slate-500 md:text-sm">
+                <div className="flex items-start justify-between gap-1.5">
+                  <div className="text-[10px] font-black text-slate-500 md:text-[12px]">
                     {card.label}
                   </div>
                   <div
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-black md:px-2.5 md:py-1 md:text-[11px] ${rateTone(
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-black md:px-2 md:text-[10px] ${rateTone(
                       card.rate
                     )}`}
                   >
@@ -317,18 +317,18 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="mt-1.5 text-[18px] font-black leading-none tracking-tight text-slate-900 md:mt-3 md:text-2xl">
+                <div className="mt-1 text-[16px] font-black leading-none tracking-tight text-slate-900 md:mt-2 md:text-[22px]">
                   {card.current}
                 </div>
 
-                <div className="mt-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:mt-2 md:text-[11px] md:tracking-[0.12em]">
+                <div className="mt-1 text-[8px] font-black uppercase tracking-[0.06em] text-slate-400 md:text-[10px] md:tracking-[0.1em]">
                   Compare
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold leading-none text-slate-500 md:mt-1 md:text-sm">
+                <div className="mt-0.5 text-[10px] font-bold leading-none text-slate-500 md:text-[12px]">
                   {card.compare}
                 </div>
 
-                <div className="mt-2 text-[10px] font-black leading-none text-slate-500 md:mt-3 md:text-xs">
+                <div className="mt-1.5 text-[9px] font-black leading-none text-slate-500 md:mt-2 md:text-[11px]">
                   {rateText(card.rate)}
                 </div>
               </div>
@@ -462,4 +462,3 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
 };
 
 export default PeriodMenuAnalysisSection;
-
