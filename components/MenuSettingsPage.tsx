@@ -733,14 +733,22 @@ const buildCategorySyncKey = (rows: MenuCategory[]) =>
     }))
   );
 
-const isDateSwitchSyncing = useMemo(() => {
+const isDraftSyncing = useMemo(() => {
+  return buildCategorySyncKey(draftCategories) !== buildCategorySyncKey(categories);
+}, [draftCategories, categories]);
+
+const isReferenceSyncing = useMemo(() => {
   return buildCategorySyncKey(categories) !== buildCategorySyncKey(originalCategories);
 }, [categories, originalCategories]);
+
+const isDateSwitchSyncing = isDraftSyncing || isReferenceSyncing;
 
 const uiDirtyCount = isDateSwitchSyncing ? 0 : dirtyCount;
 
 const changedOrderItems = useMemo(() => {
   const rows: Array<{ id: string; displayOrder: number }> = [];
+
+  if (isDateSwitchSyncing) return rows;
 
   draftCategories.forEach((category, categoryIndex) => {
     const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
@@ -757,7 +765,7 @@ const changedOrderItems = useMemo(() => {
   });
 
   return rows;
-}, [draftCategories, originalCategories]);
+}, [draftCategories, originalCategories, isDateSwitchSyncing]);
 
 const orderChanged = changedOrderItems.length > 0;
 const uiOrderChanged = isDateSwitchSyncing ? false : orderChanged;
