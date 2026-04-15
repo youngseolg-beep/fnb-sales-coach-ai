@@ -711,17 +711,19 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
   return (
     <div className="space-y-5 text-slate-900">
-      <section className="rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-          Detail
-        </div>
-        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-          매출 분석 & 코칭
-        </h2>
-        <p className="mt-2 text-sm font-medium text-slate-500">
-          리포트, 기간 분석, 메뉴 성과를 기반으로 매장 운영 개선 포인트를 확인합니다.
-        </p>
-      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+  <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+    Detail
+  </div>
+
+  <h2 className="mt-1 text-[14px] font-bold text-slate-900">
+    매출 분석 & 코칭
+  </h2>
+
+  <p className="mt-1 text-[12px] font-medium text-slate-500">
+    리포트 · 기간 분석 · 메뉴 성과 기반 인사이트
+  </p>
+</section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
