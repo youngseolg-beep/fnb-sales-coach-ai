@@ -131,8 +131,10 @@ const cloneCategories = (rows: MenuCategory[]) =>
     items: category.items.map((item) => ({ ...item })),
   }));
 
-const cardShellClassName =
-  "grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-12 md:items-center md:gap-3 md:p-3";
+const desktopCardShellClassName =
+  "hidden md:grid md:grid-cols-12 md:items-center md:gap-3 rounded-2xl border border-slate-200 bg-white p-3";
+const mobileCardShellClassName =
+  "grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:hidden";
 
 interface SortableMenuItemProps {
   item: any;
@@ -149,6 +151,247 @@ interface SortableMenuItemProps {
   onOpenHistory: (menuId: string, menuName: string) => void;
   onDelete: () => void;
 }
+
+const MobileMenuCard: React.FC<{
+  item: any;
+  changed: boolean;
+  actionSaving: boolean;
+  categoryIndex: number;
+  itemIndex: number;
+  setActivatorNodeRef?: (element: HTMLElement | null) => void;
+  attributes?: any;
+  listeners?: any;
+  onUpdateItemField: (
+    categoryIndex: number,
+    itemIndex: number,
+    field: "price" | "unitCost",
+    value: string
+  ) => void;
+  onOpenHistory: (menuId: string, menuName: string) => void;
+  onDelete: () => void;
+}> = ({
+  item,
+  changed,
+  actionSaving,
+  categoryIndex,
+  itemIndex,
+  setActivatorNodeRef,
+  attributes,
+  listeners,
+  onUpdateItemField,
+  onOpenHistory,
+  onDelete,
+}) => {
+  return (
+    <div className={mobileCardShellClassName}>
+      <div className="grid grid-cols-[36px_minmax(0,1fr)_88px] items-center gap-2">
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          {...attributes}
+          {...listeners}
+          disabled={actionSaving}
+          className="inline-flex h-9 w-9 shrink-0 touch-none select-none items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            WebkitTouchCallout: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+          }}
+          title="드래그해서 순서 변경"
+        >
+          ⋮⋮
+        </button>
+
+        <div className="min-w-0 truncate text-[15px] font-bold text-slate-900">
+          {item.name}
+        </div>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={actionSaving}
+          className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-2 text-[12px] font-bold text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          메뉴삭제
+        </button>
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr_88px] items-end gap-2">
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+            PRICE
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            value={normalizeNumber(item.price)}
+            onChange={(e) =>
+              onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
+            }
+            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400"
+          />
+        </div>
+
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+            UNIT COST
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            value={normalizeNumber(item.unitCost)}
+            onChange={(e) =>
+              onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
+            }
+            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400"
+          />
+        </div>
+
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-transparent">
+            STATUS
+          </div>
+          <span
+            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-bold ${
+              changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {changed ? "Changed" : "Saved"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr_88px] gap-2">
+        <div className="col-span-2" />
+        <button
+          type="button"
+          onClick={() => onOpenHistory(item.id, item.name)}
+          className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-bold text-slate-700"
+        >
+          History
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const DesktopMenuCard: React.FC<{
+  item: any;
+  changed: boolean;
+  actionSaving: boolean;
+  categoryIndex: number;
+  itemIndex: number;
+  setActivatorNodeRef?: (element: HTMLElement | null) => void;
+  attributes?: any;
+  listeners?: any;
+  onUpdateItemField: (
+    categoryIndex: number,
+    itemIndex: number,
+    field: "price" | "unitCost",
+    value: string
+  ) => void;
+  onOpenHistory: (menuId: string, menuName: string) => void;
+  onDelete: () => void;
+}> = ({
+  item,
+  changed,
+  actionSaving,
+  categoryIndex,
+  itemIndex,
+  setActivatorNodeRef,
+  attributes,
+  listeners,
+  onUpdateItemField,
+  onOpenHistory,
+  onDelete,
+}) => {
+  return (
+    <div className={desktopCardShellClassName}>
+      <div className="md:col-span-2">
+        <div className="flex items-center gap-2">
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            {...attributes}
+            {...listeners}
+            disabled={actionSaving}
+            className="inline-flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-lg font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              WebkitTouchCallout: "none",
+              WebkitUserSelect: "none",
+              userSelect: "none",
+            }}
+            title="드래그해서 순서 변경"
+          >
+            ⋮⋮
+          </button>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-bold text-slate-900">{item.name}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="md:col-span-2">
+        <div className="text-xs font-semibold text-slate-400">드래그로 순서 변경</div>
+      </div>
+
+      <div className="md:col-span-2">
+        <input
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.price)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <input
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.unitCost)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <span
+          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
+            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {changed ? "Changed" : "Saved"}
+        </span>
+      </div>
+
+      <div className="md:col-span-1">
+        <button
+          type="button"
+          onClick={() => onOpenHistory(item.id, item.name)}
+          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          History
+        </button>
+      </div>
+
+      <div className="md:col-span-2">
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={actionSaving}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          메뉴 삭제
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
   item,
@@ -181,100 +424,150 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${cardShellClassName} ${isDragging ? "opacity-30" : ""}`}
+      className={isDragging ? "opacity-30" : ""}
     >
+      <MobileMenuCard
+        item={item}
+        changed={changed}
+        actionSaving={actionSaving}
+        categoryIndex={categoryIndex}
+        itemIndex={itemIndex}
+        setActivatorNodeRef={setActivatorNodeRef}
+        attributes={attributes}
+        listeners={listeners}
+        onUpdateItemField={onUpdateItemField}
+        onOpenHistory={onOpenHistory}
+        onDelete={onDelete}
+      />
+
+      <DesktopMenuCard
+        item={item}
+        changed={changed}
+        actionSaving={actionSaving}
+        categoryIndex={categoryIndex}
+        itemIndex={itemIndex}
+        setActivatorNodeRef={setActivatorNodeRef}
+        attributes={attributes}
+        listeners={listeners}
+        onUpdateItemField={onUpdateItemField}
+        onOpenHistory={onOpenHistory}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+};
+
+const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
+  return (
+    <div className={`${mobileCardShellClassName} scale-[1.01] shadow-2xl ring-2 ring-indigo-200`}>
+      <div className="grid grid-cols-[36px_minmax(0,1fr)_88px] items-center gap-2">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-500">
+          ⋮⋮
+        </div>
+
+        <div className="min-w-0 truncate text-[15px] font-bold text-slate-900">
+          {item.name}
+        </div>
+
+        <div className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-2 text-[12px] font-bold text-rose-600">
+          메뉴삭제
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr_88px] items-end gap-2">
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+            PRICE
+          </div>
+          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900">
+            {normalizeNumber(item.price)}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+            UNIT COST
+          </div>
+          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900">
+            {normalizeNumber(item.unitCost)}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-transparent">
+            STATUS
+          </div>
+          <span
+            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-bold ${
+              item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {item.changed ? "Changed" : "Saved"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr_88px] gap-2">
+        <div className="col-span-2" />
+        <div className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-bold text-slate-700">
+          History
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DesktopDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
+  return (
+    <div className={`${desktopCardShellClassName} scale-[1.01] shadow-2xl ring-2 ring-indigo-200`}>
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
-          <button
-            ref={setActivatorNodeRef}
-            type="button"
-            {...attributes}
-            {...listeners}
-            disabled={actionSaving}
-            className="inline-flex h-10 w-10 shrink-0 touch-none select-none items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-base font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-12 md:rounded-2xl md:text-lg"
-            style={{
-              WebkitTouchCallout: "none",
-              WebkitUserSelect: "none",
-              userSelect: "none",
-            }}
-            title="드래그해서 순서 변경"
-          >
+          <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 text-lg font-black text-indigo-500 shadow-sm">
             ⋮⋮
-          </button>
+          </div>
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
+            <div className="truncate text-sm font-bold text-slate-900">
               {item.name}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="hidden md:col-span-2 md:block">
-        <div className="text-xs font-semibold text-slate-400">드래그로 순서 변경</div>
+      <div className="md:col-span-2">
+        <div className="text-xs font-semibold text-indigo-400">드래그로 순서 변경</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:contents">
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">
-            Price
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={normalizeNumber(item.price)}
-            onChange={(e) =>
-              onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
-            }
-            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400 md:h-11 md:rounded-xl md:px-3 md:text-sm"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">
-            Unit Cost
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={normalizeNumber(item.unitCost)}
-            onChange={(e) =>
-              onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-            }
-            className="h-9 w-full rounded-lg border px-2.5 text-[14px] outline-none focus:border-slate-400 md:h-11 md:rounded-xl md:px-3 md:text-sm"
-          />
+      <div className="md:col-span-2">
+        <div className="h-11 rounded-xl border bg-slate-50 px-3 text-sm leading-[44px] text-slate-900">
+          {normalizeNumber(item.price)}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 md:contents">
-        <div className="md:col-span-1">
-          <span
-            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-semibold md:inline-flex md:h-9 md:w-auto md:rounded-full md:px-3 md:text-xs ${
-              changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {changed ? "Changed" : "Saved"}
-          </span>
+      <div className="md:col-span-2">
+        <div className="h-11 rounded-xl border bg-slate-50 px-3 text-sm leading-[44px] text-slate-900">
+          {normalizeNumber(item.unitCost)}
         </div>
+      </div>
 
-        <div className="md:col-span-1">
-          <button
-            type="button"
-            onClick={() => onOpenHistory(item.id, item.name)}
-            className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 md:h-10 md:rounded-xl md:px-3 md:text-xs"
-          >
-            History
-          </button>
+      <div className="md:col-span-1">
+        <span
+          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
+            item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {item.changed ? "Changed" : "Saved"}
+        </span>
+      </div>
+
+      <div className="md:col-span-1">
+        <div className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700">
+          History
         </div>
+      </div>
 
-        <div className="md:col-span-2">
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={actionSaving}
-            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-2 text-[12px] font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-10 md:rounded-xl md:px-3 md:text-xs"
-          >
-            메뉴 삭제
-          </button>
+      <div className="md:col-span-2">
+        <div className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600">
+          메뉴 삭제
         </div>
       </div>
     </div>
@@ -283,68 +576,10 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
 
 const DragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
   return (
-    <div
-      className={`${cardShellClassName} scale-[1.01] shadow-2xl ring-2 ring-indigo-200`}
-      style={{
-        WebkitUserSelect: "none",
-        userSelect: "none",
-      }}
-    >
-      <div className="md:col-span-2">
-        <div className="flex items-center gap-2">
-          <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-base font-black text-indigo-500 shadow-sm md:h-12 md:w-12 md:rounded-2xl md:text-lg">
-            ⋮⋮
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-[15px] font-bold text-slate-900 md:text-sm">
-              {item.name}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="hidden md:col-span-2 md:block">
-        <div className="text-xs font-semibold text-indigo-400">드래그로 순서 변경</div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 md:contents">
-        <div className="md:col-span-2">
-          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900 md:h-11 md:rounded-xl md:px-3 md:text-sm md:leading-[44px]">
-            {normalizeNumber(item.price)}
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="h-9 rounded-lg border bg-slate-50 px-2.5 text-[14px] leading-[36px] text-slate-900 md:h-11 md:rounded-xl md:px-3 md:text-sm md:leading-[44px]">
-            {normalizeNumber(item.unitCost)}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 md:contents">
-        <div className="md:col-span-1">
-          <span
-            className={`flex h-9 w-full items-center justify-center rounded-lg px-2 text-[11px] font-semibold md:inline-flex md:h-9 md:w-auto md:rounded-full md:px-3 md:text-xs ${
-              item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {item.changed ? "Changed" : "Saved"}
-          </span>
-        </div>
-
-        <div className="md:col-span-1">
-          <div className="inline-flex h-9 w-full items-center justify-center rounded-lg border px-2 text-[12px] font-semibold text-slate-700 md:h-10 md:rounded-xl md:px-3 md:text-xs">
-            History
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-2 text-[12px] font-semibold text-rose-600 md:h-10 md:rounded-xl md:px-3 md:text-xs">
-            메뉴 삭제
-          </div>
-        </div>
-      </div>
-    </div>
+    <>
+      <MobileDragPreviewCard item={item} />
+      <DesktopDragPreviewCard item={item} />
+    </>
   );
 };
 
