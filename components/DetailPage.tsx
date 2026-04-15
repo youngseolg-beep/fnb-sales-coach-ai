@@ -725,50 +725,50 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   </p>
 </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-              AI Report
-            </div>
-            <div className="mt-2 text-lg font-black text-slate-900">
-              코칭 리포트
-            </div>
-          </div>
+     <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+        AI Report
+      </div>
+      <div className="mt-1 text-[14px] font-bold text-slate-900">
+        코칭 리포트
+      </div>
+    </div>
 
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="text-right text-xs font-bold text-slate-400">
-              <div>기준일: {selectedDate}</div>
-              {isShowingCurrentDateReport && <div>현재 날짜 리포트 표시중</div>}
-            </div>
+    <div className="flex flex-col items-start gap-1 sm:items-end">
+      <div className="text-[10px] font-bold leading-tight text-slate-400 sm:text-right">
+        <div>기준일: {selectedDate}</div>
+        {isShowingCurrentDateReport && <div>현재 날짜 리포트 표시중</div>}
+      </div>
 
-            <button
-              type="button"
-              onClick={handleGenerateReport}
-              disabled={loading}
-              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition-all hover:bg-indigo-600 disabled:bg-slate-300"
-            >
-              {loading ? "코칭 리포트 생성 중..." : "코칭 리포트 생성"}
-            </button>
-          </div>
-        </div>
+      <button
+        type="button"
+        onClick={handleGenerateReport}
+        disabled={loading}
+        className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white transition-all hover:bg-indigo-600 disabled:bg-slate-300 sm:h-9 sm:rounded-xl sm:px-4 sm:text-sm"
+      >
+        {loading ? "코칭 리포트 생성 중..." : "코칭 리포트 생성"}
+      </button>
+    </div>
+  </div>
 
-        <div className="mt-4">
-          {isShowingCurrentDateReport ? (
-            <ReportDisplay
-              report={report}
-              loading={false}
-              menuEngineeringResult={null}
-              sortedMenuEngineering={null}
-              boostPlans={[]}
-            />
-          ) : (
-            <div className="rounded-2xl bg-slate-50 p-5 text-sm font-medium text-slate-500">
-              아직 이 날짜의 코칭 리포트가 생성되지 않았습니다. 코칭 리포트 생성 버튼을 눌러 바로 확인하세요.
-            </div>
-          )}
-        </div>
-      </section>
+  <div className="mt-3">
+    {isShowingCurrentDateReport ? (
+      <ReportDisplay
+        report={report}
+        loading={false}
+        menuEngineeringResult={null}
+        sortedMenuEngineering={null}
+        boostPlans={[]}
+      />
+    ) : (
+      <div className="rounded-xl bg-slate-50 p-3 text-[12px] font-medium leading-snug text-slate-500 sm:rounded-2xl sm:p-5 sm:text-sm">
+        아직 이 날짜의 코칭 리포트가 생성되지 않았습니다. 코칭 리포트 생성 버튼을 눌러 바로 확인하세요.
+      </div>
+    )}
+  </div>
+</section>
 
      <PeriodMenuAnalysisSection
   periodRange={periodRange}
