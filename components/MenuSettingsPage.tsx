@@ -720,6 +720,25 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   }, [changedItems]);
 
   const dirtyCount = changedItems.length;
+
+const buildCategorySyncKey = (rows: MenuCategory[]) =>
+  JSON.stringify(
+    rows.map((category) => ({
+      name: category.name,
+      items: category.items.map((item) => ({
+        id: item.id,
+        price: normalizeNumber(item.price),
+        unitCost: normalizeNumber(item.unitCost),
+      })),
+    }))
+  );
+
+const isDateSwitchSyncing = useMemo(() => {
+  return buildCategorySyncKey(categories) !== buildCategorySyncKey(originalCategories);
+}, [categories, originalCategories]);
+
+const uiDirtyCount = isDateSwitchSyncing ? 0 : dirtyCount;
+
 const changedOrderItems = useMemo(() => {
   const rows: Array<{ id: string; displayOrder: number }> = [];
 
@@ -741,6 +760,7 @@ const changedOrderItems = useMemo(() => {
 }, [draftCategories, originalCategories]);
 
 const orderChanged = changedOrderItems.length > 0;
+const uiOrderChanged = isDateSwitchSyncing ? false : orderChanged;
 
 const updateItemField = (
   categoryIndex: number,
@@ -978,12 +998,12 @@ const handleConfirmSave = async () => {
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                disabled={saving || actionSaving || (!uiOrderChanged && uiDirtyCount === 0)}
                 className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
               >
                 {saving || actionSaving
                   ? "Saving..."
-                  : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
+                  : `변경사항 저장${uiDirtyCount > 0 ? ` (${uiDirtyCount})` : uiOrderChanged ? " (순서)" : ""}`}
               </button>
             </div>
           </div>
@@ -1026,10 +1046,11 @@ const handleConfirmSave = async () => {
                   {category.items.map((item, itemIndex) => {
                     const originalItem = originalItemMap.get(item.id);
 
-                    const changed = originalItem
-                      ? !isSameValue(item.price, originalItem.price) ||
-                        !isSameValue(item.unitCost, originalItem.unitCost)
-                      : false;
+                    const changed =
+  !isDateSwitchSyncing && originalItem
+    ? !isSameValue(item.price, originalItem.price) ||
+      !isSameValue(item.unitCost, originalItem.unitCost)
+    : false;
 
                     return (
                       <SortableMenuItem
@@ -1070,14 +1091,14 @@ const handleConfirmSave = async () => {
                   메뉴 가격 설정
                 </div>
                 <div className="text-[10px] leading-tight text-slate-500 md:text-xs">
-                  변경된 메뉴 수: {dirtyCount} / Effective Date: {selectedDate}
+                  변경된 메뉴 수: {uiDirtyCount} / Effective Date: {selectedDate}
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                disabled={saving || actionSaving || (!uiOrderChanged && uiDirtyCount === 0)}
                 className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
               >
                 {saving || actionSaving ? "Saving..." : "변경사항 저장"}
@@ -1250,7 +1271,7 @@ const handleConfirmSave = async () => {
                 <div className="rounded-xl border bg-slate-50 p-3">
                   <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
                   <div className="mt-1 text-sm font-bold text-slate-900">
-                    가격 {dirtyCount}개 / 순서 {orderChanged ? "변경됨" : "변경 없음"}
+                    가격 {uiDirtyCount}개 / 순서 {uiOrderChanged ? "변경됨" : "변경 없음"}
                   </div>
                 </div>
                 <div className="rounded-xl border bg-amber-50 p-3">
