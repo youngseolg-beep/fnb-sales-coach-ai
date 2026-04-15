@@ -131,11 +131,6 @@ const cloneCategories = (rows: MenuCategory[]) =>
     items: category.items.map((item) => ({ ...item })),
   }));
 
-const desktopCardShellClassName =
-  "hidden md:grid md:grid-cols-12 md:items-center md:gap-3 rounded-2xl border border-slate-200 bg-white p-3";
-const mobileCardShellClassName =
-  "grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:hidden";
-
 interface SortableMenuItemProps {
   item: any;
   categoryIndex: number;
@@ -283,7 +278,6 @@ const MobileMenuCard: React.FC<{
   );
 };
 
-
 const DesktopMenuCard: React.FC<{
   item: any;
   changed: boolean;
@@ -352,64 +346,6 @@ const DesktopMenuCard: React.FC<{
 
       <div className="md:col-span-2">
         <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.price)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
-          }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.unitCost)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-          }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-        />
-      </div>
-
-      <div className="md:col-span-1">
-        <span
-          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
-            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {changed ? "Changed" : "Saved"}
-        </span>
-      </div>
-
-      <div className="md:col-span-1">
-        <button
-          type="button"
-          onClick={() => onOpenHistory(item.id, item.name)}
-          className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          History
-        </button>
-      </div>
-
-      <div className="md:col-span-2">
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={actionSaving}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          메뉴 삭제
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-
           type="number"
           step="0.01"
           value={normalizeNumber(item.price)}
@@ -598,7 +534,7 @@ const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) =>
 
 const DesktopDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
   return (
-    <div className={`${desktopCardShellClassName} scale-[1.01] shadow-2xl ring-2 ring-indigo-200`}>
+    <div className="hidden scale-[1.01] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl ring-2 ring-indigo-200 md:grid md:grid-cols-12 md:items-center md:gap-3">
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
           <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 text-lg font-black text-indigo-500 shadow-sm">
@@ -639,7 +575,7 @@ const DesktopDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) =
       </div>
 
       <div className="md:col-span-1">
-        <div className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700">
+        <div className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700">
           History
         </div>
       </div>
@@ -667,6 +603,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   categories,
   originalCategories,
   onChangeCategories,
+  onSavePrices,
   onReloadMenuMaster,
   saving,
   storeId,
@@ -998,47 +935,47 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   return (
     <>
       <section className="space-y-4 pb-28">
-       <div className="rounded-2xl border bg-white p-3 shadow-sm">
-  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-    <div>
-      <h2 className="text-[12px] font-bold text-slate-900 md:text-xl">Menu Settings</h2>
-      <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
-        선택 날짜 기준으로 메뉴 가격 / 원가를 수정합니다.
-      </p>
-      <p className="mt-0.5 text-[12px] font-medium text-slate-700 md:text-sm">
-        Effective Date: {selectedDate}
-      </p>
-      <p className="mt-0.5 text-[12px] font-medium text-amber-600 md:text-xs">
-        선택한 날짜부터 이 가격이 적용됩니다.
-      </p>
-      <p className="mt-1 hidden text-xs font-semibold text-indigo-600 md:block">
-        모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
-      </p>
-    </div>
+        <div className="rounded-2xl border bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-[12px] font-bold text-slate-900 md:text-xl">Menu Settings</h2>
+              <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
+                선택 날짜 기준으로 메뉴 가격 / 원가를 수정합니다.
+              </p>
+              <p className="mt-0.5 text-[12px] font-medium text-slate-700 md:text-sm">
+                Effective Date: {selectedDate}
+              </p>
+              <p className="mt-0.5 text-[12px] font-medium text-amber-600 md:text-xs">
+                선택한 날짜부터 이 가격이 적용됩니다.
+              </p>
+              <p className="mt-1 hidden text-xs font-semibold text-indigo-600 md:block">
+                모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
+              </p>
+            </div>
 
-    <div className="flex flex-wrap gap-1.5">
-      <button
-        type="button"
-        onClick={() => setShowAddMenuModal(true)}
-        disabled={actionSaving}
-        className="inline-flex h-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
-      >
-        + 새 메뉴 만들기
-      </button>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowAddMenuModal(true)}
+                disabled={actionSaving}
+                className="inline-flex h-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+              >
+                + 새 메뉴 만들기
+              </button>
 
-      <button
-        type="button"
-        onClick={() => setShowConfirmModal(true)}
-        disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-        className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
-      >
-        {saving || actionSaving
-          ? "Saving..."
-          : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
-      </button>
-    </div>
-  </div>
-</div>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+              >
+                {saving || actionSaving
+                  ? "Saving..."
+                  : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
 
         {draftCategories.map((category, categoryIndex) => (
           <div
@@ -1113,29 +1050,29 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         ))}
 
-      <div className="fixed bottom-[56px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
-  <div className="rounded-[18px] border bg-white/96 p-2 shadow-lg backdrop-blur">
-    <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <div className="truncate text-[11px] font-bold text-slate-900 md:text-sm">
-          메뉴 가격 설정
-        </div>
-        <div className="text-[10px] leading-tight text-slate-500 md:text-xs">
-          변경된 메뉴 수: {dirtyCount} / Effective Date: {selectedDate}
-        </div>
-      </div>
+        <div className="fixed bottom-[56px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
+          <div className="rounded-[18px] border bg-white/96 p-2 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate text-[11px] font-bold text-slate-900 md:text-sm">
+                  메뉴 가격 설정
+                </div>
+                <div className="text-[10px] leading-tight text-slate-500 md:text-xs">
+                  변경된 메뉴 수: {dirtyCount} / Effective Date: {selectedDate}
+                </div>
+              </div>
 
-      <button
-        type="button"
-        onClick={() => setShowConfirmModal(true)}
-        disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-        className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
-      >
-        {saving || actionSaving ? "Saving..." : "변경사항 저장"}
-      </button>
-    </div>
-  </div>
-</div>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+                className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+              >
+                {saving || actionSaving ? "Saving..." : "변경사항 저장"}
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
       {showAddMenuModal && (
