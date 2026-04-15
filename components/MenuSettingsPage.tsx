@@ -183,15 +183,15 @@ const MobileMenuCard: React.FC<{
   onDelete,
 }) => {
   return (
-    <div className="grid grid-cols-1 gap-1.5 rounded-[18px] border border-slate-200 bg-white px-2.5 py-2 md:hidden">
-      <div className="grid grid-cols-[30px_minmax(0,1fr)_78px] items-center gap-1.5">
+    <div className="grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 bg-white px-2 py-1.5 md:hidden">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)_64px] items-center gap-1">
         <button
           ref={setActivatorNodeRef}
           type="button"
           {...attributes}
           {...listeners}
           disabled={actionSaving}
-          className="inline-flex h-8 w-8 shrink-0 touch-none select-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-7 w-7 shrink-0 touch-none select-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             WebkitTouchCallout: "none",
             WebkitUserSelect: "none",
@@ -202,7 +202,7 @@ const MobileMenuCard: React.FC<{
           ⋮⋮
         </button>
 
-        <div className="min-w-0 truncate text-[14px] font-bold text-slate-900">
+        <div className="min-w-0 truncate text-[12px] font-bold text-slate-900">
           {item.name}
         </div>
 
@@ -210,15 +210,15 @@ const MobileMenuCard: React.FC<{
           type="button"
           onClick={onDelete}
           disabled={actionSaving}
-          className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1.5 text-[11px] font-bold text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-7 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1 text-[10px] font-bold text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           메뉴삭제
         </button>
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr_78px_78px] items-end gap-1.5">
+      <div className="grid grid-cols-[1fr_1fr_64px_64px] items-end gap-1">
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
             PRICE
           </div>
           <input
@@ -228,12 +228,12 @@ const MobileMenuCard: React.FC<{
             onChange={(e) =>
               onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
             }
-            className="h-8 w-full rounded-lg border px-2 text-[13px] outline-none focus:border-slate-400"
+            className="h-7 w-full rounded-lg border px-1.5 text-[12px] outline-none focus:border-slate-400"
           />
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
             UNIT COST
           </div>
           <input
@@ -243,16 +243,16 @@ const MobileMenuCard: React.FC<{
             onChange={(e) =>
               onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
             }
-            className="h-8 w-full rounded-lg border px-2 text-[13px] outline-none focus:border-slate-400"
+            className="h-7 w-full rounded-lg border px-1.5 text-[12px] outline-none focus:border-slate-400"
           />
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-transparent">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
             STATUS
           </div>
           <span
-            className={`flex h-8 w-full items-center justify-center rounded-lg px-1.5 text-[10px] font-bold ${
+            className={`flex h-7 w-full items-center justify-center rounded-lg px-1 text-[9px] font-bold ${
               changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
             }`}
           >
@@ -261,13 +261,13 @@ const MobileMenuCard: React.FC<{
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-transparent">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
             HISTORY
           </div>
           <button
             type="button"
             onClick={() => onOpenHistory(item.id, item.name)}
-            className="inline-flex h-8 w-full items-center justify-center rounded-lg border px-1.5 text-[11px] font-bold text-slate-700"
+            className="inline-flex h-7 w-full items-center justify-center rounded-lg border px-1 text-[10px] font-bold text-slate-700"
           >
             History
           </button>
@@ -461,46 +461,46 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
 
 const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
   return (
-    <div className="grid grid-cols-1 gap-1.5 rounded-[18px] border border-slate-200 bg-white px-2.5 py-2 shadow-2xl ring-2 ring-indigo-200 md:hidden">
-      <div className="grid grid-cols-[30px_minmax(0,1fr)_78px] items-center gap-1.5">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-[12px] font-black text-indigo-500">
+    <div className="grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 bg-white px-2 py-1.5 shadow-2xl ring-2 ring-indigo-200 md:hidden">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)_64px] items-center gap-1">
+        <div className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-[11px] font-black text-indigo-500">
           ⋮⋮
         </div>
 
-        <div className="min-w-0 truncate text-[14px] font-bold text-slate-900">
+        <div className="min-w-0 truncate text-[12px] font-bold text-slate-900">
           {item.name}
         </div>
 
-        <div className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1.5 text-[11px] font-bold text-rose-600">
+        <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1 text-[10px] font-bold text-rose-600">
           메뉴삭제
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr_78px_78px] items-end gap-1.5">
+      <div className="grid grid-cols-[1fr_1fr_64px_64px] items-end gap-1">
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
             PRICE
           </div>
-          <div className="h-8 rounded-lg border bg-slate-50 px-2 text-[13px] leading-[32px] text-slate-900">
+          <div className="h-7 rounded-lg border bg-slate-50 px-1.5 text-[12px] leading-[28px] text-slate-900">
             {normalizeNumber(item.price)}
           </div>
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
             UNIT COST
           </div>
-          <div className="h-8 rounded-lg border bg-slate-50 px-2 text-[13px] leading-[32px] text-slate-900">
+          <div className="h-7 rounded-lg border bg-slate-50 px-1.5 text-[12px] leading-[28px] text-slate-900">
             {normalizeNumber(item.unitCost)}
           </div>
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-transparent">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
             STATUS
           </div>
           <span
-            className={`flex h-8 w-full items-center justify-center rounded-lg px-1.5 text-[10px] font-bold ${
+            className={`flex h-7 w-full items-center justify-center rounded-lg px-1 text-[9px] font-bold ${
               item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
             }`}
           >
@@ -509,10 +509,10 @@ const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) =>
         </div>
 
         <div>
-          <div className="mb-0.5 text-[9px] font-black uppercase tracking-wide text-transparent">
+          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
             HISTORY
           </div>
-          <div className="inline-flex h-8 w-full items-center justify-center rounded-lg border px-1.5 text-[11px] font-bold text-slate-700">
+          <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border px-1 text-[10px] font-bold text-slate-700">
             History
           </div>
         </div>
