@@ -634,7 +634,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   const [actionSaving, setActionSaving] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<DragPreviewItem | null>(null);
-const [draftSourceDate, setDraftSourceDate] = useState(selectedDate);
+  const [draftSourceDate, setDraftSourceDate] = useState(selectedDate);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -650,19 +650,10 @@ const [draftSourceDate, setDraftSourceDate] = useState(selectedDate);
     })
   );
 
- const [isHydratingFromProps, setIsHydratingFromProps] = useState(false);
-
-useEffect(() => {
-  setDraftCategories(cloneCategories(categories));
-  setDraftSourceDate(selectedDate);
-}, [categories, selectedDate]);
-
-  const timer = window.setTimeout(() => {
-    setIsHydratingFromProps(false);
-  }, 0);
-
-  return () => window.clearTimeout(timer);
-}, [categories]);
+  useEffect(() => {
+    setDraftCategories(cloneCategories(categories));
+    setDraftSourceDate(selectedDate);
+  }, [categories, selectedDate]);
 
   const notify = (msg: string) => {
     if (onShowToast) onShowToast(msg);
@@ -731,147 +722,145 @@ useEffect(() => {
   }, [changedItems]);
 
   const dirtyCount = changedItems.length;
+  const isDateSwitching = draftSourceDate !== selectedDate;
+  const uiDirtyCount = isDateSwitching ? 0 : dirtyCount;
 
-const isDateSwitching = draftSourceDate !== selectedDate;
+  const changedOrderItems = useMemo(() => {
+    const rows: Array<{ id: string; displayOrder: number }> = [];
 
-const uiDirtyCount = isDateSwitching ? 0 : dirtyCount;
+    draftCategories.forEach((category, categoryIndex) => {
+      const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
+      const currentIds = category.items.map((item) => item.id);
 
-const changedOrderItems = useMemo(() => {
-  const rows: Array<{ id: string; displayOrder: number }> = [];
-
-  draftCategories.forEach((category, categoryIndex) => {
-    const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
-    const currentIds = category.items.map((item) => item.id);
-
-    category.items.forEach((item, idx) => {
-      if (originalIds[idx] !== currentIds[idx]) {
-        rows.push({
-          id: item.id,
-          displayOrder: idx,
-        });
-      }
+      category.items.forEach((item, idx) => {
+        if (originalIds[idx] !== currentIds[idx]) {
+          rows.push({
+            id: item.id,
+            displayOrder: idx,
+          });
+        }
+      });
     });
-  });
 
-  return rows;
-}, [draftCategories, originalCategories]);
+    return rows;
+  }, [draftCategories, originalCategories]);
 
-const orderChanged = changedOrderItems.length > 0;
-const uiOrderChanged = isDateSwitching ? false : orderChanged;
+  const orderChanged = changedOrderItems.length > 0;
+  const uiOrderChanged = isDateSwitching ? false : orderChanged;
 
-const updateItemField = (
-  categoryIndex: number,
-  itemIndex: number,
-  field: "price" | "unitCost",
-  value: string
-) => {
-  const next = draftCategories.map((category, cIdx) => {
-    if (cIdx !== categoryIndex) return category;
-
-    return {
-      ...category,
-      items: category.items.map((item, iIdx) => {
-        if (iIdx !== itemIndex) return item;
-        return {
-          ...item,
-          [field]: toNumber(value),
-        };
-      }),
-    };
-  });
-
-  setDraftCategories(next);
-};
-
-const handleCategoryDragStart = (categoryIndex: number, event: DragStartEvent) => {
-  const activeId = String(event.active.id);
-  const category = draftCategories[categoryIndex];
-  const item = category.items.find((menu) => menu.id === activeId);
-
-  if (!item) return;
-
-  setActiveDragItem({
-    id: item.id,
-    name: item.name,
-    price: normalizeNumber(item.price),
-    unitCost: item.unitCost,
-    changed: changedItemMap.has(item.id),
-  });
-};
-
-const handleCategoryDragEnd = (categoryIndex: number, event: DragEndEvent) => {
-  const { active, over } = event;
-
-  if (!over || active.id === over.id) {
-    setActiveDragItem(null);
-    return;
-  }
-
-  setDraftCategories((prev) =>
-    prev.map((category, idx) => {
-      if (idx !== categoryIndex) return category;
-
-      const oldIndex = category.items.findIndex((item) => item.id === active.id);
-      const newIndex = category.items.findIndex((item) => item.id === over.id);
-
-      if (oldIndex === -1 || newIndex === -1) return category;
+  const updateItemField = (
+    categoryIndex: number,
+    itemIndex: number,
+    field: "price" | "unitCost",
+    value: string
+  ) => {
+    const next = draftCategories.map((category, cIdx) => {
+      if (cIdx !== categoryIndex) return category;
 
       return {
         ...category,
-        items: arrayMove(category.items, oldIndex, newIndex),
+        items: category.items.map((item, iIdx) => {
+          if (iIdx !== itemIndex) return item;
+          return {
+            ...item,
+            [field]: toNumber(value),
+          };
+        }),
       };
-    })
-  );
+    });
 
-  setActiveDragItem(null);
-};
+    setDraftCategories(next);
+  };
 
-const handleCategoryDragCancel = (_event?: DragCancelEvent) => {
-  setActiveDragItem(null);
-};
+  const handleCategoryDragStart = (categoryIndex: number, event: DragStartEvent) => {
+    const activeId = String(event.active.id);
+    const category = draftCategories[categoryIndex];
+    const item = category.items.find((menu) => menu.id === activeId);
 
-const handleConfirmSave = async () => {
-  try {
-    setActionSaving(true);
+    if (!item) return;
 
-    if (changedOrderItems.length > 0) {
-      await Promise.all(
-        changedOrderItems.map((item) =>
-          updateMenuOrder(item.id, item.displayOrder, storeId)
-        )
-      );
+    setActiveDragItem({
+      id: item.id,
+      name: item.name,
+      price: normalizeNumber(item.price),
+      unitCost: item.unitCost,
+      changed: changedItemMap.has(item.id),
+    });
+  };
+
+  const handleCategoryDragEnd = (categoryIndex: number, event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      setActiveDragItem(null);
+      return;
     }
 
-    if (changedItems.length > 0) {
-      await Promise.all(
-        changedItems.map((item) =>
-          saveMenuPriceHistory(
-            item.id,
-            selectedDate,
-            Number(item.newPrice ?? 0),
-            item.newUnitCost !== null && item.newUnitCost !== undefined
-              ? Number(item.newUnitCost)
-              : undefined,
-            storeId
+    setDraftCategories((prev) =>
+      prev.map((category, idx) => {
+        if (idx !== categoryIndex) return category;
+
+        const oldIndex = category.items.findIndex((item) => item.id === active.id);
+        const newIndex = category.items.findIndex((item) => item.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) return category;
+
+        return {
+          ...category,
+          items: arrayMove(category.items, oldIndex, newIndex),
+        };
+      })
+    );
+
+    setActiveDragItem(null);
+  };
+
+  const handleCategoryDragCancel = (_event?: DragCancelEvent) => {
+    setActiveDragItem(null);
+  };
+
+  const handleConfirmSave = async () => {
+    try {
+      setActionSaving(true);
+
+      if (changedOrderItems.length > 0) {
+        await Promise.all(
+          changedOrderItems.map((item) =>
+            updateMenuOrder(item.id, item.displayOrder, storeId)
           )
-        )
-      );
+        );
+      }
+
+      if (changedItems.length > 0) {
+        await Promise.all(
+          changedItems.map((item) =>
+            saveMenuPriceHistory(
+              item.id,
+              selectedDate,
+              Number(item.newPrice ?? 0),
+              item.newUnitCost !== null && item.newUnitCost !== undefined
+                ? Number(item.newUnitCost)
+                : undefined,
+              storeId
+            )
+          )
+        );
+      }
+
+      onChangeCategories(cloneCategories(draftCategories));
+      await onReloadMenuMaster();
+
+      setShowConfirmModal(false);
+      notify("메뉴 순서 / 가격이 저장되었습니다.");
+    } catch (error) {
+      console.error("handleConfirmSave error:", error);
+      notify("저장 중 오류가 발생했습니다.");
+    } finally {
+      setActionSaving(false);
     }
+  };
 
-    onChangeCategories(cloneCategories(draftCategories));
-    await onReloadMenuMaster();
-
-    setShowConfirmModal(false);
-    notify("메뉴 순서 / 가격이 저장되었습니다.");
-  } catch (error) {
-    console.error("handleConfirmSave error:", error);
-    notify("저장 중 오류가 발생했습니다.");
-  } finally {
-    setActionSaving(false);
-  }
-};
-
-const handleOpenHistory = async (menuId: string, menuName: string) => {
+  const handleOpenHistory = async (menuId: string, menuName: string) => {
     try {
       setHistoryLoading(true);
       setHistoryMenuName(menuName);
@@ -1045,10 +1034,10 @@ const handleOpenHistory = async (menuId: string, menuName: string) => {
                     const originalItem = originalItemMap.get(item.id);
 
                     const changed =
-  !isDateSwitching && originalItem
-    ? !isSameValue(item.price, originalItem.price) ||
-      !isSameValue(item.unitCost, originalItem.unitCost)
-    : false;
+                      !isDateSwitching && originalItem
+                        ? !isSameValue(item.price, originalItem.price) ||
+                          !isSameValue(item.unitCost, originalItem.unitCost)
+                        : false;
 
                     return (
                       <SortableMenuItem
