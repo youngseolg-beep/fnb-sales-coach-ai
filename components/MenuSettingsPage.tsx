@@ -923,47 +923,47 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   return (
     <>
       <section className="space-y-4 pb-28">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Menu Settings</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                선택 날짜 기준으로 메뉴 가격 / 원가를 수정합니다.
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                Effective Date: {selectedDate}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-amber-600">
-                선택한 날짜부터 이 가격이 적용됩니다.
-              </p>
-              <p className="mt-2 hidden text-xs font-semibold text-indigo-600 md:block">
-                모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
-              </p>
-            </div>
+       <div className="rounded-2xl border bg-white p-3 shadow-sm">
+  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h2 className="text-[12px] font-bold text-slate-900 md:text-xl">Menu Settings</h2>
+      <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
+        선택 날짜 기준으로 메뉴 가격 / 원가를 수정합니다.
+      </p>
+      <p className="mt-0.5 text-[12px] font-medium text-slate-700 md:text-sm">
+        Effective Date: {selectedDate}
+      </p>
+      <p className="mt-0.5 text-[12px] font-medium text-amber-600 md:text-xs">
+        선택한 날짜부터 이 가격이 적용됩니다.
+      </p>
+      <p className="mt-1 hidden text-xs font-semibold text-indigo-600 md:block">
+        모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
+      </p>
+    </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddMenuModal(true)}
-                disabled={actionSaving}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                + 새 메뉴 만들기
-              </button>
+    <div className="flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        onClick={() => setShowAddMenuModal(true)}
+        disabled={actionSaving}
+        className="inline-flex h-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+      >
+        + 새 메뉴 만들기
+      </button>
 
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving || actionSaving
-                  ? "Saving..."
-                  : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
-              </button>
-            </div>
-          </div>
-        </div>
+      <button
+        type="button"
+        onClick={() => setShowConfirmModal(true)}
+        disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+        className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+      >
+        {saving || actionSaving
+          ? "Saving..."
+          : `변경사항 저장${dirtyCount > 0 ? ` (${dirtyCount})` : orderChanged ? " (순서)" : ""}`}
+      </button>
+    </div>
+  </div>
+</div>
 
         {draftCategories.map((category, categoryIndex) => (
           <div
@@ -1038,27 +1038,29 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         ))}
 
-        <div className="fixed bottom-20 left-0 right-0 z-20 mx-auto w-full max-w-6xl px-4">
-          <div className="rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-bold text-slate-900">메뉴 가격 설정</div>
-                <div className="text-xs text-slate-500">
-                  변경된 메뉴 수: {dirtyCount} / Effective Date: {selectedDate}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving || actionSaving ? "Saving..." : "변경사항 저장"}
-              </button>
-            </div>
-          </div>
+        <div className="fixed bottom-[48px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
+  <div className="rounded-[18px] border bg-white/96 p-2 shadow-lg backdrop-blur">
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <div className="truncate text-[11px] font-bold text-slate-900 md:text-sm">
+          메뉴 가격 설정
         </div>
+        <div className="text-[10px] leading-tight text-slate-500 md:text-xs">
+          변경된 메뉴 수: {dirtyCount} / Effective Date: {selectedDate}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowConfirmModal(true)}
+        disabled={saving || actionSaving || (!orderChanged && dirtyCount === 0)}
+        className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+      >
+        {saving || actionSaving ? "Saving..." : "변경사항 저장"}
+      </button>
+    </div>
+  </div>
+</div>
       </section>
 
       {showAddMenuModal && (
