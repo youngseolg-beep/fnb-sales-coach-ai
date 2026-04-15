@@ -462,3 +462,4 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
 };
 
 export default PeriodMenuAnalysisSection;
+
