@@ -158,6 +158,7 @@ const MobileMenuCard: React.FC<{
   actionSaving: boolean;
   categoryIndex: number;
   itemIndex: number;
+  alternate: boolean;
   setActivatorNodeRef?: (element: HTMLElement | null) => void;
   attributes?: any;
   listeners?: any;
@@ -175,6 +176,7 @@ const MobileMenuCard: React.FC<{
   actionSaving,
   categoryIndex,
   itemIndex,
+  alternate,
   setActivatorNodeRef,
   attributes,
   listeners,
@@ -183,7 +185,11 @@ const MobileMenuCard: React.FC<{
   onDelete,
 }) => {
   return (
-    <div className="grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 bg-white px-2 py-1.5 md:hidden">
+    <div
+      className={`grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 px-2 py-1.5 md:hidden ${
+        alternate ? "bg-slate-50" : "bg-white"
+      }`}
+    >
       <div className="grid grid-cols-[26px_minmax(0,1fr)_64px] items-center gap-1">
         <button
           ref={setActivatorNodeRef}
@@ -267,7 +273,7 @@ const MobileMenuCard: React.FC<{
           <button
             type="button"
             onClick={() => onOpenHistory(item.id, item.name)}
-            className="inline-flex h-7 w-full items-center justify-center rounded-lg border px-1 text-[10px] font-bold text-slate-700"
+            className="inline-flex h-7 w-full items-center justify-center rounded-lg border bg-white px-1 text-[10px] font-bold text-slate-700"
           >
             History
           </button>
@@ -277,12 +283,14 @@ const MobileMenuCard: React.FC<{
   );
 };
 
+
 const DesktopMenuCard: React.FC<{
   item: any;
   changed: boolean;
   actionSaving: boolean;
   categoryIndex: number;
   itemIndex: number;
+  alternate: boolean;
   setActivatorNodeRef?: (element: HTMLElement | null) => void;
   attributes?: any;
   listeners?: any;
@@ -300,6 +308,7 @@ const DesktopMenuCard: React.FC<{
   actionSaving,
   categoryIndex,
   itemIndex,
+  alternate,
   setActivatorNodeRef,
   attributes,
   listeners,
@@ -308,7 +317,11 @@ const DesktopMenuCard: React.FC<{
   onDelete,
 }) => {
   return (
-    <div className={desktopCardShellClassName}>
+    <div
+      className={`hidden rounded-2xl border border-slate-200 p-3 md:grid md:grid-cols-12 md:items-center md:gap-3 ${
+        alternate ? "bg-slate-50" : "bg-white"
+      }`}
+    >
       <div className="md:col-span-2">
         <div className="flex items-center gap-2">
           <button
@@ -375,7 +388,65 @@ const DesktopMenuCard: React.FC<{
         <button
           type="button"
           onClick={() => onOpenHistory(item.id, item.name)}
-          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          History
+        </button>
+      </div>
+
+      <div className="md:col-span-2">
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={actionSaving}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          메뉴 삭제
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.price)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <input
+          type="number"
+          step="0.01"
+          value={normalizeNumber(item.unitCost)}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
+          }
+          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <span
+          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
+            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {changed ? "Changed" : "Saved"}
+        </span>
+      </div>
+
+      <div className="md:col-span-1">
+        <button
+          type="button"
+          onClick={() => onOpenHistory(item.id, item.name)}
+          className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
           History
         </button>
@@ -422,6 +493,8 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
     userSelect: "none",
   };
 
+  const alternate = itemIndex % 2 === 1;
+
   return (
     <div
       ref={setNodeRef}
@@ -434,6 +507,7 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
         actionSaving={actionSaving}
         categoryIndex={categoryIndex}
         itemIndex={itemIndex}
+        alternate={alternate}
         setActivatorNodeRef={setActivatorNodeRef}
         attributes={attributes}
         listeners={listeners}
@@ -448,6 +522,7 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
         actionSaving={actionSaving}
         categoryIndex={categoryIndex}
         itemIndex={itemIndex}
+        alternate={alternate}
         setActivatorNodeRef={setActivatorNodeRef}
         attributes={attributes}
         listeners={listeners}
@@ -512,7 +587,7 @@ const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) =>
           <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
             HISTORY
           </div>
-          <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border px-1 text-[10px] font-bold text-slate-700">
+          <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border bg-white px-1 text-[10px] font-bold text-slate-700">
             History
           </div>
         </div>
@@ -1038,7 +1113,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         ))}
 
-        <div className="fixed bottom-[48px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
+      <div className="fixed bottom-[56px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
   <div className="rounded-[18px] border bg-white/96 p-2 shadow-lg backdrop-blur">
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
