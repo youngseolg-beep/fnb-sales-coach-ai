@@ -649,9 +649,18 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     })
   );
 
-  useEffect(() => {
-    setDraftCategories(cloneCategories(categories));
-  }, [categories]);
+ const [isHydratingFromProps, setIsHydratingFromProps] = useState(false);
+
+useEffect(() => {
+  setIsHydratingFromProps(true);
+  setDraftCategories(cloneCategories(categories));
+
+  const timer = window.setTimeout(() => {
+    setIsHydratingFromProps(false);
+  }, 0);
+
+  return () => window.clearTimeout(timer);
+}, [categories]);
 
   const notify = (msg: string) => {
     if (onShowToast) onShowToast(msg);
@@ -721,34 +730,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   const dirtyCount = changedItems.length;
 
-const buildCategorySyncKey = (rows: MenuCategory[]) =>
-  JSON.stringify(
-    rows.map((category) => ({
-      name: category.name,
-      items: category.items.map((item) => ({
-        id: item.id,
-        price: normalizeNumber(item.price),
-        unitCost: normalizeNumber(item.unitCost),
-      })),
-    }))
-  );
-
-const isDraftSyncing = useMemo(() => {
-  return buildCategorySyncKey(draftCategories) !== buildCategorySyncKey(categories);
-}, [draftCategories, categories]);
-
-const isReferenceSyncing = useMemo(() => {
-  return buildCategorySyncKey(categories) !== buildCategorySyncKey(originalCategories);
-}, [categories, originalCategories]);
-
-const isDateSwitchSyncing = isDraftSyncing || isReferenceSyncing;
-
-const uiDirtyCount = isDateSwitchSyncing ? 0 : dirtyCount;
+const uiDirtyCount = isHydratingFromProps ? 0 : dirtyCount;
 
 const changedOrderItems = useMemo(() => {
   const rows: Array<{ id: string; displayOrder: number }> = [];
-
-  if (isDateSwitchSyncing) return rows;
 
   draftCategories.forEach((category, categoryIndex) => {
     const originalIds = (originalCategories[categoryIndex]?.items ?? []).map((item) => item.id);
@@ -765,10 +750,10 @@ const changedOrderItems = useMemo(() => {
   });
 
   return rows;
-}, [draftCategories, originalCategories, isDateSwitchSyncing]);
+}, [draftCategories, originalCategories]);
 
 const orderChanged = changedOrderItems.length > 0;
-const uiOrderChanged = isDateSwitchSyncing ? false : orderChanged;
+const uiOrderChanged = isHydratingFromProps ? false : orderChanged;
 
 const updateItemField = (
   categoryIndex: number,
@@ -1055,7 +1040,7 @@ const handleConfirmSave = async () => {
                     const originalItem = originalItemMap.get(item.id);
 
                     const changed =
-  !isDateSwitchSyncing && originalItem
+  !isHydratingFromProps && originalItem
     ? !isSameValue(item.price, originalItem.price) ||
       !isSameValue(item.unitCost, originalItem.unitCost)
     : false;
