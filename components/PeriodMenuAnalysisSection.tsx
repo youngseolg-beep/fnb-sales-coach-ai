@@ -297,36 +297,36 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 md:gap-3 xl:grid-cols-4">
-            {summaryCards.map((card) => (
-              <div
-                key={card.label}
-                className="rounded-[16px] border border-slate-200 bg-white px-2.5 py-2.5 shadow-sm md:rounded-[22px] md:px-4 md:py-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-[11px] font-black text-slate-500 md:text-sm">
-                    {card.label}
-                  </div>
-                  <div
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-black md:px-2.5 md:py-1 md:text-[11px] ${rateTone(
-                      card.rate
-                    )}`}
-                  >
-                    {card.rate >= 0 ? "+" : ""}
-                    {card.rate.toFixed(1)}%
-                  </div>
-                </div>
+         <div className="grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4">
+  {summaryCards.map((card) => (
+    <div
+      key={card.label}
+      className="rounded-lg border border-slate-200 bg-white px-2 py-2 md:px-3 md:py-3"
+    >
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-bold text-slate-500 md:text-xs">
+          {card.label}
+        </div>
+        <div
+          className={`px-1.5 py-[2px] text-[9px] font-bold rounded ${rateTone(
+            card.rate
+          )}`}
+        >
+          {card.rate >= 0 ? "+" : ""}
+          {card.rate.toFixed(1)}%
+        </div>
+      </div>
 
-                <div className="mt-1.5 text-[18px] font-black leading-none tracking-tight text-slate-900 md:mt-3 md:text-2xl">
-                  {card.current}
-                </div>
+      <div className="mt-1 text-sm md:text-base font-bold text-slate-900">
+        {card.current}
+      </div>
 
-                <div className="mt-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:mt-2 md:text-[11px] md:tracking-[0.12em]">
-                  Compare
-                </div>
-                <div className="mt-0.5 text-[11px] font-bold leading-none text-slate-500 md:mt-1 md:text-sm">
-                  {card.compare}
-                </div>
+      <div className="mt-[2px] text-[9px] text-slate-400">
+        {card.compare}
+      </div>
+    </div>
+  ))}
+</div>
 
                 <div className="mt-2 text-[10px] font-black leading-none text-slate-500 md:mt-3 md:text-xs">
                   {rateText(card.rate)}
