@@ -14,7 +14,7 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 function json(res: VercelResponse, status: number, body: Record<string, any>) {
-  res.status(status).json(body);
+  return res.status(status).json(body);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -39,10 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return json(res, 400, { ok: false, error: "Email is required" });
     }
 
-    if (!/^\d{4}$/.test(safePassword)) {
+    if (!/^\d{6}$/.test(safePassword)) {
       return json(res, 400, {
         ok: false,
-        error: "Password must be exactly 4 numeric digits",
+        error: "Password must be exactly 6 numeric digits",
       });
     }
 
