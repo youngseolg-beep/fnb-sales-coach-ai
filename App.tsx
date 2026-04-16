@@ -377,7 +377,7 @@ const App: React.FC = () => {
         note: "",
         categories: resetCats,
       }));
-      setOriginalCategories(cloneCategories(resetCats)));
+      setOriginalCategories(cloneCategories(resetCats));
 
       const yearMonth = targetDate.substring(0, 7);
       await refreshDatesInMonth(targetDate);
