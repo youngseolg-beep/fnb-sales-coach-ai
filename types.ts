@@ -21,6 +21,8 @@ export interface SalesReportData {
   monthlyTarget: number;
   mtdSales: number;
   categories: MenuCategory[];
+  country?: string;
+  brand?: string;
 }
 
 export interface CalculationResult {
