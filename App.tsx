@@ -748,12 +748,7 @@ return (
       />
     </StoreOwnerShell>
 
-    <button
-      onClick={() => setStoreOwnerPage("admin_create")}
-      className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded z-50"
-    >
-      관리자 생성
-    </button>
+   
   </>
 );
 };
