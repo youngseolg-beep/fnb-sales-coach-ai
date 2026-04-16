@@ -45,7 +45,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
   };
 
   const handleRequestedPasswordChange = (value: string) => {
-    const numbersOnly = value.replace(/\D/g, "").slice(0, 4);
+    const numbersOnly = value.replace(/\D/g, "").slice(0, 6);
     setForm((prev) => ({ ...prev, requestedPassword: numbersOnly }));
   };
 
@@ -75,8 +75,8 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
       return;
     }
 
-    if (form.requestedPassword.length !== 4) {
-      alert("희망 비밀번호는 숫자 4자리로 입력해주세요.");
+    if (!/^\d{6}$/.test(form.requestedPassword)) {
+      alert("희망 비밀번호는 숫자 6자리로 입력해주세요.");
       return;
     }
 
@@ -170,14 +170,14 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
-            placeholder="숫자 4자리"
+            maxLength={6}
+            placeholder="숫자 6자리"
             value={form.requestedPassword}
             onChange={(e) => handleRequestedPasswordChange(e.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
           />
           <p className="mt-2 text-[11px] font-medium text-slate-400">
-            숫자 4자리만 입력 가능합니다.
+            숫자 6자리만 입력 가능합니다.
           </p>
         </div>
 
