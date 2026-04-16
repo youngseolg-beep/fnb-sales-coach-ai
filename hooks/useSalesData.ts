@@ -265,7 +265,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
       try {
         const { data: storeData, error } = await supabase
           .from("stores")
-          .select("country")
+          .select("country, brand")
           .eq("id", storeId)
           .single();
 
@@ -279,7 +279,11 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
         const nextCountry = String(storeData?.country || "KH");
         setStoreCountry(nextCountry);
-        setData((prev: any) => ({ ...prev, country: nextCountry }));
+        setData((prev: any) => ({
+  ...prev,
+  country: nextCountry,
+  brand: storeData?.brand || ""
+}));
       } catch (error) {
         if (cancelled) return;
         console.error("loadStoreCountry error:", error);
@@ -433,9 +437,10 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         if (requestId !== fetchRequestIdRef.current) return;
 
         setData((prev: any) => ({
-          ...prev,
-          date: dateStr,
-          country: storeCountry,
+  ...prev,
+  date: dateStr,
+  country: storeCountry,
+  brand: prev.brand || "",
           posSales: nextPosSales,
           deliverySales: nextDeliverySales,
           orders: nextOrders,
