@@ -395,35 +395,35 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
       </section>
 
       <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm md:rounded-[28px]">
-        <div className="border-b border-slate-100 bg-slate-50/70 px-3 py-3 md:px-5 md:py-4">
+        <div className="border-b border-slate-100 bg-slate-50/70 px-3 py-2.5 md:px-5 md:py-3">
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.16em]">
             Daily Trend
           </div>
-          <div className="mt-1 text-base font-black text-slate-900 md:text-lg">
+          <div className="mt-0.5 text-[15px] font-black text-slate-900 md:mt-1 md:text-lg">
             일별 추이
           </div>
         </div>
 
-        <div className="max-h-96 overflow-auto">
-          <table className="w-full min-w-[340px] table-fixed text-xs md:min-w-[560px] md:text-sm">
+        <div className="max-h-[360px] overflow-auto">
+          <table className="w-full min-w-[340px] table-fixed text-[11px] md:min-w-[560px] md:text-sm">
             <colgroup>
-              <col className="w-[74px] md:w-[120px]" />
-              <col className="w-[88px] md:w-[140px]" />
-              <col className="w-[46px] md:w-[90px]" />
-              <col className="w-[52px] md:w-[100px]" />
+              <col className="w-[72px] md:w-[120px]" />
+              <col className="w-[86px] md:w-[140px]" />
+              <col className="w-[44px] md:w-[90px]" />
+              <col className="w-[50px] md:w-[100px]" />
             </colgroup>
             <thead className="sticky top-0 bg-white">
               <tr className="border-b border-slate-100">
-                <th className="px-1.5 py-2 text-left text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-3 md:text-[11px] md:tracking-[0.12em]">
+                <th className="px-1.5 py-1.5 text-left text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-2.5 md:text-[11px] md:tracking-[0.12em]">
                   날짜
                 </th>
-                <th className="px-1.5 py-2 text-right text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-3 md:text-[11px] md:tracking-[0.12em]">
+                <th className="px-1.5 py-1.5 text-right text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-2.5 md:text-[11px] md:tracking-[0.12em]">
                   매출
                 </th>
-                <th className="px-1.5 py-2 text-right text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-3 md:text-[11px] md:tracking-[0.12em]">
+                <th className="px-1.5 py-1.5 text-right text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-2.5 md:text-[11px] md:tracking-[0.12em]">
                   주문
                 </th>
-                <th className="px-1.5 py-2 text-right text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-3 md:text-[11px] md:tracking-[0.12em]">
+                <th className="px-1.5 py-1.5 text-right text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 md:px-4 md:py-2.5 md:text-[11px] md:tracking-[0.12em]">
                   방문객
                 </th>
               </tr>
@@ -432,23 +432,26 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
               {(periodStats?.list || []).length > 0 ? (
                 (periodStats?.list || []).map((row: any) => (
                   <tr key={row.date} className="border-b border-slate-100 last:border-b-0">
-                    <td className="truncate px-1.5 py-2 font-bold text-slate-700 md:px-4 md:py-3">
+                    <td className="truncate px-1.5 py-1.5 font-bold text-slate-700 md:px-4 md:py-2.5">
                       {row.date}
                     </td>
-                    <td className="px-1.5 py-2 text-right font-black text-slate-900 md:px-4 md:py-3">
+                    <td className="px-1.5 py-1.5 text-right font-black text-slate-900 md:px-4 md:py-2.5">
                       ${Number(row.total_sales || 0).toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-2 text-right font-medium text-slate-600 md:px-4 md:py-3">
+                    <td className="px-1.5 py-1.5 text-right font-medium text-slate-600 md:px-4 md:py-2.5">
                       {Number(row.orders || 0).toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-2 text-right font-medium text-slate-600 md:px-4 md:py-3">
+                    <td className="px-1.5 py-1.5 text-right font-medium text-slate-600 md:px-4 md:py-2.5">
                       {Number(row.guests || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-xs font-bold text-slate-400 md:py-8 md:text-sm">
+                  <td
+                    colSpan={4}
+                    className="px-4 py-5 text-center text-[11px] font-bold text-slate-400 md:py-7 md:text-sm"
+                  >
                     기간 분석 데이터를 불러오면 여기에 표시됩니다.
                   </td>
                 </tr>
