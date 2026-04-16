@@ -24,6 +24,12 @@ const BRAND_OPTIONS = [
   { code: "PAIK_BIBIM", label: "백스비빔 (Paik's Bibim)" },
 ];
 
+const getCountryLabel = (code: string) =>
+  COUNTRY_OPTIONS.find((item) => item.code === code)?.label || code || "-";
+
+const getBrandLabel = (code: string) =>
+  BRAND_OPTIONS.find((item) => item.code === code)?.label || code || "-";
+
 const AdminApprovalPage = () => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -270,10 +276,20 @@ const AdminApprovalPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
-      <h2 className="mb-4 text-xl font-black">가입 승인 관리</h2>
+    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-5 md:px-6">
+      <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 sm:px-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+          Sales Coach AI
+        </div>
+        <h2 className="mt-2 text-lg font-black text-white sm:text-xl">
+          가입 승인 관리
+        </h2>
+        <p className="mt-1 text-xs text-slate-400 sm:text-sm">
+          계정 생성 신청 내역을 검토하고 승인합니다.
+        </p>
+      </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {list.map((item) => {
           const isEditing = editingId === item.id;
           const isPasswordUpdating = passwordUpdatingId === item.id;
@@ -281,22 +297,22 @@ const AdminApprovalPage = () => {
           return (
             <div
               key={item.id}
-              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4 sm:py-4"
             >
               {isEditing ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
                     <input
                       value={editForm.owner_name}
                       onChange={(e) => handleEditChange("owner_name", e.target.value)}
                       placeholder="점주 성함"
-                      className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     />
                     <input
                       value={editForm.phone}
                       onChange={(e) => handleEditChange("phone", e.target.value)}
                       placeholder="연락처"
-                      className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     />
                   </div>
 
@@ -304,7 +320,7 @@ const AdminApprovalPage = () => {
                     value={editForm.email}
                     onChange={(e) => handleEditChange("email", e.target.value)}
                     placeholder="이메일"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                   />
 
                   <input
@@ -313,14 +329,14 @@ const AdminApprovalPage = () => {
                       handleEditChange("requested_password", e.target.value)
                     }
                     placeholder="희망 비밀번호 6자리"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                   />
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
                     <select
                       value={editForm.country}
                       onChange={(e) => handleEditChange("country", e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     >
                       <option value="">국가 선택</option>
                       {COUNTRY_OPTIONS.map((c) => (
@@ -333,7 +349,7 @@ const AdminApprovalPage = () => {
                     <select
                       value={editForm.brand}
                       onChange={(e) => handleEditChange("brand", e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     >
                       <option value="">브랜드 선택</option>
                       {BRAND_OPTIONS.map((b) => (
@@ -348,10 +364,10 @@ const AdminApprovalPage = () => {
                     value={editForm.store_name}
                     onChange={(e) => handleEditChange("store_name", e.target.value)}
                     placeholder="매장명"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                   />
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     <button
                       onClick={() => handleSaveEdit(item.id)}
                       disabled={loading}
@@ -369,35 +385,54 @@ const AdminApprovalPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="font-bold text-white">
-                      {item.store_name} ({item.brand})
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-base font-bold text-white sm:text-[17px]">
+                      {item.store_name}
                     </div>
 
-                    <div className="mt-1 text-sm text-slate-300">
-                      {item.owner_name} / {item.phone}
+                    <div className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">
+                      {getBrandLabel(item.brand)}
                     </div>
 
-                    <div className="mt-1 text-xs text-slate-400">
-                      {item.country} / {item.email}
-                    </div>
-
-                    <div className="mt-1 text-xs text-slate-400">
-                      희망 비밀번호: {item.requested_password || "-"}
-                    </div>
-
-                    <div className="mt-1 text-xs text-slate-300">
-                      상태: {item.status}
+                    <div className="mt-3 grid grid-cols-1 gap-1.5 text-xs text-slate-300 sm:text-sm">
+                      <div>
+                        <span className="text-slate-500">점주</span>
+                        <span className="ml-2 text-slate-200">{item.owner_name || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">연락처</span>
+                        <span className="ml-2 text-slate-200">{item.phone || "-"}</span>
+                      </div>
+                      <div className="break-all">
+                        <span className="text-slate-500">이메일</span>
+                        <span className="ml-2 text-slate-200">{item.email || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">국가</span>
+                        <span className="ml-2 text-slate-200">
+                          {getCountryLabel(item.country)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">희망 비밀번호</span>
+                        <span className="ml-2 text-slate-200">
+                          {item.requested_password || "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">상태</span>
+                        <span className="ml-2 text-slate-200">{item.status || "-"}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
                     {item.status === "pending" && (
                       <button
                         onClick={() => handleApprove(item)}
                         disabled={loading}
-                        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white"
+                        className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
                       >
                         승인
                       </button>
@@ -407,7 +442,7 @@ const AdminApprovalPage = () => {
                       <button
                         onClick={() => handleReject(item)}
                         disabled={loading}
-                        className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white"
+                        className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
                       >
                         거절
                       </button>
@@ -417,7 +452,7 @@ const AdminApprovalPage = () => {
                       <button
                         onClick={() => handleApplyApprovedPassword(item)}
                         disabled={loading || isPasswordUpdating}
-                        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                        className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 sm:px-4 sm:text-sm"
                       >
                         {isPasswordUpdating ? "반영 중..." : "실제 비밀번호 반영"}
                       </button>
@@ -426,7 +461,7 @@ const AdminApprovalPage = () => {
                     <button
                       onClick={() => startEdit(item)}
                       disabled={loading || isPasswordUpdating}
-                      className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white"
+                      className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
                     >
                       수정
                     </button>
@@ -434,7 +469,7 @@ const AdminApprovalPage = () => {
                     <button
                       onClick={() => handleDelete(item)}
                       disabled={loading || isPasswordUpdating}
-                      className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white"
+                      className="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
                     >
                       삭제
                     </button>
