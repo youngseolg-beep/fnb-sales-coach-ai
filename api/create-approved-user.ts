@@ -90,13 +90,13 @@ export default async function handler(req: any, res: any) {
     const userId = authData.user.id;
 
     const { error: storeError } = await admin.from("stores").insert([
-      {
-        id: storeId,
-        name: requestRow.store_name,
-        brand: requestRow.brand,
-        country: requestRow.country,
-      },
-    ]);
+  {
+    id: storeId,
+    store_name: requestRow.store_name,
+    brand: requestRow.brand,
+    country: requestRow.country,
+  },
+]);
 
     if (storeError) {
       await admin.auth.admin.deleteUser(userId);
