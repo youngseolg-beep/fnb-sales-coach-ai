@@ -24,11 +24,15 @@ const AdminApprovalPage = () => {
     try {
       setLoading(true);
 
+      if (!item.requested_password || String(item.requested_password).length !== 4) {
+        throw new Error("희망 비밀번호가 없거나 4자리가 아닙니다.");
+      }
+
       // 1. auth user 생성
       const { data: authData, error: authError } =
         await supabase.auth.admin.createUser({
           email: item.email,
-          password: item.password,
+          password: String(item.requested_password),
           email_confirm: true,
         });
 
@@ -65,14 +69,15 @@ const AdminApprovalPage = () => {
       if (userError) throw userError;
 
       // 4. 상태 업데이트
-      await supabase
+      const { error: updateError } = await supabase
         .from("signup_requests")
         .update({ status: "approved" })
         .eq("id", item.id);
 
-      alert("승인 완료");
+      if (updateError) throw updateError;
 
-      loadRequests();
+      alert("승인 완료");
+      await loadRequests();
     } catch (err: any) {
       console.error(err);
       alert(err?.message || "승인 실패");
@@ -89,18 +94,25 @@ const AdminApprovalPage = () => {
         {list.map((item) => (
           <div
             key={item.id}
-            className="border rounded-xl p-4 flex justify-between items-center"
+            className="border rounded-xl p-4 flex justify-between items-center gap-4"
           >
-            <div>
+            <div className="min-w-0">
               <div className="font-bold">
                 {item.store_name} ({item.brand})
               </div>
+
               <div className="text-sm text-gray-500">
                 {item.owner_name} / {item.phone}
               </div>
+
               <div className="text-xs text-gray-400">
                 {item.country} / {item.email}
               </div>
+
+              <div className="text-xs mt-1 text-gray-500">
+                희망 비밀번호: {item.requested_password || "-"}
+              </div>
+
               <div className="text-xs mt-1">
                 상태: {item.status}
               </div>
@@ -110,7 +122,7 @@ const AdminApprovalPage = () => {
               <button
                 onClick={() => handleApprove(item)}
                 disabled={loading}
-                className="bg-indigo-600 text-white px-4 py-2 rounded font-bold"
+                className="bg-indigo-600 text-white px-4 py-2 rounded font-bold shrink-0"
               >
                 승인
               </button>
