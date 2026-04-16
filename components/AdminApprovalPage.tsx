@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 
 const COUNTRY_OPTIONS = [
@@ -30,11 +30,14 @@ const getCountryLabel = (code: string) =>
 const getBrandLabel = (code: string) =>
   BRAND_OPTIONS.find((item) => item.code === code)?.label || code || "-";
 
+type StatusTab = "pending" | "approved" | "rejected";
+
 const AdminApprovalPage = () => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [passwordUpdatingId, setPasswordUpdatingId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<StatusTab>("pending");
   const [editForm, setEditForm] = useState({
     owner_name: "",
     phone: "",
@@ -59,6 +62,25 @@ const AdminApprovalPage = () => {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  const filteredList = useMemo(() => {
+    return list.filter((item) => (item.status || "pending") === activeTab);
+  }, [list, activeTab]);
+
+  const pendingCount = useMemo(
+    () => list.filter((item) => (item.status || "pending") === "pending").length,
+    [list]
+  );
+
+  const approvedCount = useMemo(
+    () => list.filter((item) => item.status === "approved").length,
+    [list]
+  );
+
+  const rejectedCount = useMemo(
+    () => list.filter((item) => item.status === "rejected").length,
+    [list]
+  );
 
   const startEdit = (item: any) => {
     setEditingId(item.id);
@@ -190,6 +212,7 @@ const AdminApprovalPage = () => {
 
       alert("승인 완료");
       await loadRequests();
+      setActiveTab("approved");
     } catch (err: any) {
       console.error(err);
       alert(err?.message || "승인 실패");
@@ -285,200 +308,246 @@ const AdminApprovalPage = () => {
           가입 승인 관리
         </h2>
         <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-          계정 생성 신청 내역을 검토하고 승인합니다.
+          계정 생성 신청 내역을 검토하고 상태별로 관리합니다.
         </p>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("pending")}
+          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "pending"
+              ? "bg-indigo-600 text-white"
+              : "bg-white/5 text-slate-300 hover:bg-white/10"
+          }`}
+        >
+          대기 계정 ({pendingCount})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("approved")}
+          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "approved"
+              ? "bg-emerald-600 text-white"
+              : "bg-white/5 text-slate-300 hover:bg-white/10"
+          }`}
+        >
+          생성 완료 계정 ({approvedCount})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("rejected")}
+          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "rejected"
+              ? "bg-rose-600 text-white"
+              : "bg-white/5 text-slate-300 hover:bg-white/10"
+          }`}
+        >
+          거절 계정 ({rejectedCount})
+        </button>
+      </div>
+
       <div className="space-y-3 sm:space-y-4">
-        {list.map((item) => {
-          const isEditing = editingId === item.id;
-          const isPasswordUpdating = passwordUpdatingId === item.id;
+        {filteredList.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-10 text-center text-sm text-slate-500">
+            {activeTab === "pending" && "대기 계정이 없습니다."}
+            {activeTab === "approved" && "생성 완료 계정이 없습니다."}
+            {activeTab === "rejected" && "거절 계정이 없습니다."}
+          </div>
+        ) : (
+          filteredList.map((item) => {
+            const isEditing = editingId === item.id;
+            const isPasswordUpdating = passwordUpdatingId === item.id;
 
-          return (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4 sm:py-4"
-            >
-              {isEditing ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
+            return (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4 sm:py-4"
+              >
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
+                      <input
+                        value={editForm.owner_name}
+                        onChange={(e) => handleEditChange("owner_name", e.target.value)}
+                        placeholder="점주 성함"
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
+                      />
+                      <input
+                        value={editForm.phone}
+                        onChange={(e) => handleEditChange("phone", e.target.value)}
+                        placeholder="연락처"
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
+                      />
+                    </div>
+
                     <input
-                      value={editForm.owner_name}
-                      onChange={(e) => handleEditChange("owner_name", e.target.value)}
-                      placeholder="점주 성함"
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
+                      value={editForm.email}
+                      onChange={(e) => handleEditChange("email", e.target.value)}
+                      placeholder="이메일"
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     />
+
                     <input
-                      value={editForm.phone}
-                      onChange={(e) => handleEditChange("phone", e.target.value)}
-                      placeholder="연락처"
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
+                      value={editForm.requested_password}
+                      onChange={(e) =>
+                        handleEditChange("requested_password", e.target.value)
+                      }
+                      placeholder="희망 비밀번호 6자리"
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     />
-                  </div>
 
-                  <input
-                    value={editForm.email}
-                    onChange={(e) => handleEditChange("email", e.target.value)}
-                    placeholder="이메일"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                  />
-
-                  <input
-                    value={editForm.requested_password}
-                    onChange={(e) =>
-                      handleEditChange("requested_password", e.target.value)
-                    }
-                    placeholder="희망 비밀번호 6자리"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                  />
-
-                  <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
-                    <select
-                      value={editForm.country}
-                      onChange={(e) => handleEditChange("country", e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                    >
-                      <option value="">국가 선택</option>
-                      {COUNTRY_OPTIONS.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={editForm.brand}
-                      onChange={(e) => handleEditChange("brand", e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                    >
-                      <option value="">브랜드 선택</option>
-                      {BRAND_OPTIONS.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <input
-                    value={editForm.store_name}
-                    onChange={(e) => handleEditChange("store_name", e.target.value)}
-                    placeholder="매장명"
-                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                  />
-
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button
-                      onClick={() => handleSaveEdit(item.id)}
-                      disabled={loading}
-                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
-                    >
-                      저장
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      disabled={loading}
-                      className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white"
-                    >
-                      취소
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-base font-bold text-white sm:text-[17px]">
-                      {item.store_name}
-                    </div>
-
-                    <div className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">
-                      {getBrandLabel(item.brand)}
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 gap-1.5 text-xs text-slate-300 sm:text-sm">
-                      <div>
-                        <span className="text-slate-500">점주</span>
-                        <span className="ml-2 text-slate-200">{item.owner_name || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">연락처</span>
-                        <span className="ml-2 text-slate-200">{item.phone || "-"}</span>
-                      </div>
-                      <div className="break-all">
-                        <span className="text-slate-500">이메일</span>
-                        <span className="ml-2 text-slate-200">{item.email || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">국가</span>
-                        <span className="ml-2 text-slate-200">
-                          {getCountryLabel(item.country)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">희망 비밀번호</span>
-                        <span className="ml-2 text-slate-200">
-                          {item.requested_password || "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">상태</span>
-                        <span className="ml-2 text-slate-200">{item.status || "-"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
-                    {item.status === "pending" && (
-                      <button
-                        onClick={() => handleApprove(item)}
-                        disabled={loading}
-                        className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
+                      <select
+                        value={editForm.country}
+                        onChange={(e) => handleEditChange("country", e.target.value)}
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                       >
-                        승인
-                      </button>
-                    )}
+                        <option value="">국가 선택</option>
+                        {COUNTRY_OPTIONS.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
 
-                    {item.status === "pending" && (
-                      <button
-                        onClick={() => handleReject(item)}
-                        disabled={loading}
-                        className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
+                      <select
+                        value={editForm.brand}
+                        onChange={(e) => handleEditChange("brand", e.target.value)}
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                       >
-                        거절
-                      </button>
-                    )}
+                        <option value="">브랜드 선택</option>
+                        {BRAND_OPTIONS.map((b) => (
+                          <option key={b.code} value={b.code}>
+                            {b.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    {item.status === "approved" && (
+                    <input
+                      value={editForm.store_name}
+                      onChange={(e) => handleEditChange("store_name", e.target.value)}
+                      placeholder="매장명"
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
+                    />
+
+                    <div className="flex flex-wrap gap-2 pt-1">
                       <button
-                        onClick={() => handleApplyApprovedPassword(item)}
+                        onClick={() => handleSaveEdit(item.id)}
+                        disabled={loading}
+                        className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
+                      >
+                        저장
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        disabled={loading}
+                        className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base font-bold text-white sm:text-[17px]">
+                        {item.store_name}
+                      </div>
+
+                      <div className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">
+                        {getBrandLabel(item.brand)}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-1.5 text-xs text-slate-300 sm:text-sm">
+                        <div>
+                          <span className="text-slate-500">점주</span>
+                          <span className="ml-2 text-slate-200">{item.owner_name || "-"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">연락처</span>
+                          <span className="ml-2 text-slate-200">{item.phone || "-"}</span>
+                        </div>
+                        <div className="break-all">
+                          <span className="text-slate-500">이메일</span>
+                          <span className="ml-2 text-slate-200">{item.email || "-"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">국가</span>
+                          <span className="ml-2 text-slate-200">
+                            {getCountryLabel(item.country)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">희망 비밀번호</span>
+                          <span className="ml-2 text-slate-200">
+                            {item.requested_password || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">상태</span>
+                          <span className="ml-2 text-slate-200">{item.status || "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
+                      {item.status === "pending" && (
+                        <button
+                          onClick={() => handleApprove(item)}
+                          disabled={loading}
+                          className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
+                        >
+                          승인
+                        </button>
+                      )}
+
+                      {item.status === "pending" && (
+                        <button
+                          onClick={() => handleReject(item)}
+                          disabled={loading}
+                          className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
+                        >
+                          거절
+                        </button>
+                      )}
+
+                      {item.status === "approved" && (
+                        <button
+                          onClick={() => handleApplyApprovedPassword(item)}
+                          disabled={loading || isPasswordUpdating}
+                          className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 sm:px-4 sm:text-sm"
+                        >
+                          {isPasswordUpdating ? "반영 중..." : "실제 비밀번호 반영"}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => startEdit(item)}
                         disabled={loading || isPasswordUpdating}
-                        className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 sm:px-4 sm:text-sm"
+                        className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
                       >
-                        {isPasswordUpdating ? "반영 중..." : "실제 비밀번호 반영"}
+                        수정
                       </button>
-                    )}
 
-                    <button
-                      onClick={() => startEdit(item)}
-                      disabled={loading || isPasswordUpdating}
-                      className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
-                    >
-                      수정
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(item)}
-                      disabled={loading || isPasswordUpdating}
-                      className="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
-                    >
-                      삭제
-                    </button>
+                      <button
+                        onClick={() => handleDelete(item)}
+                        disabled={loading || isPasswordUpdating}
+                        className="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
