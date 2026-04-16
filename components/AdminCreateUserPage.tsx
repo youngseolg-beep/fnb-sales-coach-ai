@@ -129,7 +129,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
         </h2>
 
         <p className="mt-2 text-sm font-semibold text-indigo-100/95">
-          국가, 브랜드, 매장 정보를 입력해 새 계정을 생성하세요.
+          관리자의 승인 후 계정이 생성됩니다. 
         </p>
       </div>
 
