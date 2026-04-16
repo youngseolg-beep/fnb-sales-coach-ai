@@ -98,7 +98,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
 
       if (userError) throw userError;
 
-      alert("계정 생성 완료");
+      alert("계정 생성 대기 중 입니다.");
 
       setForm({
         name: "",
