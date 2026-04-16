@@ -48,11 +48,11 @@ export default async function handler(req: any, res: any) {
 
     const requestedPassword = String(requestRow.requested_password || "").trim();
 
-    if (!/^\d{4}$/.test(requestedPassword)) {
-      return res.status(400).json({
-        error: "Requested password must be exactly 4 digits",
-      });
-    }
+    if (!/^\d{6}$/.test(requested_password)) {
+  return res.status(400).json({
+    error: "Requested password must be exactly 6 digits",
+  });
+}
 
     const normalizedEmail = String(requestRow.email || "")
       .trim()
