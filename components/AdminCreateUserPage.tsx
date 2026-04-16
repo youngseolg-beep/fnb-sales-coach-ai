@@ -24,7 +24,11 @@ const BRAND_OPTIONS = [
   { code: "PAIK_BIBIM", label: "백스비빔 (Paik's Bibim)" },
 ];
 
-const AdminCreateUserPage = () => {
+interface Props {
+  onBack?: () => void;
+}
+
+const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -34,14 +38,29 @@ const AdminCreateUserPage = () => {
     brand: "",
     storeName: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleCreate = async () => {
+    if (
+      !form.name ||
+      !form.phone ||
+      !form.email ||
+      !form.password ||
+      !form.country ||
+      !form.brand ||
+      !form.storeName
+    ) {
+      alert("모든 항목을 입력해주세요.");
+      return;
+    }
+
     try {
-      // 1. auth user 생성
+      setSubmitting(true);
+
       const { data: authData, error: authError } =
         await supabase.auth.admin.createUser({
           email: form.email,
@@ -54,7 +73,6 @@ const AdminCreateUserPage = () => {
       const userId = authData.user.id;
       const storeId = `STORE_${Date.now()}`;
 
-      // 2. store 생성
       const { error: storeError } = await supabase.from("stores").insert([
         {
           id: storeId,
@@ -66,7 +84,6 @@ const AdminCreateUserPage = () => {
 
       if (storeError) throw storeError;
 
-      // 3. users 테이블 연결
       const { error: userError } = await supabase.from("users").insert([
         {
           id: userId,
@@ -94,82 +111,146 @@ const AdminCreateUserPage = () => {
       });
     } catch (err: any) {
       console.error(err);
-      alert("에러 발생");
+      alert(err?.message || "에러 발생");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-4">
-      <h2 className="text-xl font-black">관리자 계정 생성</h2>
+    <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur">
+      <div className="bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] px-8 pb-8 pt-8 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
+          <i className="fa-solid fa-user-plus text-2xl text-white"></i>
+        </div>
 
-      <input
-        placeholder="점주명"
-        value={form.name}
-        onChange={(e) => handleChange("name", e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+        <h2 className="text-[28px] font-black tracking-tight text-white">
+          계정 생성
+        </h2>
 
-      <input
-        placeholder="연락처"
-        value={form.phone}
-        onChange={(e) => handleChange("phone", e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+        <p className="mt-2 text-sm font-semibold text-indigo-100/95">
+          국가, 브랜드, 매장 정보를 입력해 새 계정을 생성하세요.
+        </p>
+      </div>
 
-      <input
-        placeholder="이메일"
-        value={form.email}
-        onChange={(e) => handleChange("email", e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+      <div className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-1">
+            <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              점주 성함
+            </label>
+            <input
+              placeholder="점주 성함"
+              value={form.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+            />
+          </div>
 
-      <input
-        placeholder="비밀번호"
-        type="password"
-        value={form.password}
-        onChange={(e) => handleChange("password", e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+          <div className="sm:col-span-1">
+            <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              연락처
+            </label>
+            <input
+              placeholder="연락처"
+              value={form.phone}
+              onChange={(e) => handleChange("phone", e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+            />
+          </div>
+        </div>
 
-      <select
-        value={form.country}
-        onChange={(e) => handleChange("country", e.target.value)}
-        className="w-full border p-2 rounded"
-      >
-        <option value="">국가 선택</option>
-        {COUNTRY_OPTIONS.map((c) => (
-          <option key={c.code} value={c.code}>
-            {c.label}
-          </option>
-        ))}
-      </select>
+        <div>
+          <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+            이메일
+          </label>
+          <input
+            placeholder="이메일"
+            value={form.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+          />
+        </div>
 
-      <select
-        value={form.brand}
-        onChange={(e) => handleChange("brand", e.target.value)}
-        className="w-full border p-2 rounded"
-      >
-        <option value="">브랜드 선택</option>
-        {BRAND_OPTIONS.map((b) => (
-          <option key={b.code} value={b.code}>
-            {b.label}
-          </option>
-        ))}
-      </select>
+        <div>
+          <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+            비밀번호
+          </label>
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={form.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+          />
+        </div>
 
-      <input
-        placeholder="매장명"
-        value={form.storeName}
-        onChange={(e) => handleChange("storeName", e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              국가
+            </label>
+            <select
+              value={form.country}
+              onChange={(e) => handleChange("country", e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+            >
+              <option value="">국가 선택</option>
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <button
-        onClick={handleCreate}
-        className="w-full bg-indigo-600 text-white py-2 rounded font-bold"
-      >
-        계정 생성
-      </button>
+          <div>
+            <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+              브랜드
+            </label>
+            <select
+              value={form.brand}
+              onChange={(e) => handleChange("brand", e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+            >
+              <option value="">브랜드 선택</option>
+              {BRAND_OPTIONS.map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+            매장명
+          </label>
+          <input
+            placeholder="매장명"
+            value={form.storeName}
+            onChange={(e) => handleChange("storeName", e.target.value)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+          />
+        </div>
+
+        <button
+          onClick={handleCreate}
+          disabled={submitting}
+          className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-base font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {submitting ? "생성 중..." : "계정 생성"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full rounded-2xl border border-slate-200 bg-white py-4 text-base font-black text-slate-700 transition-all hover:bg-slate-50"
+        >
+          로그인으로 돌아가기
+        </button>
+      </div>
     </div>
   );
 };
