@@ -33,7 +33,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     name: "",
     phone: "",
     email: "",
-    password: "",
+    requestedPassword: "",
     country: "",
     brand: "",
     storeName: "",
@@ -44,12 +44,17 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleRequestedPasswordChange = (value: string) => {
+    const numbersOnly = value.replace(/\D/g, "").slice(0, 4);
+    setForm((prev) => ({ ...prev, requestedPassword: numbersOnly }));
+  };
+
   const resetForm = () => {
     setForm({
       name: "",
       phone: "",
       email: "",
-      password: "",
+      requestedPassword: "",
       country: "",
       brand: "",
       storeName: "",
@@ -61,12 +66,17 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
       !form.name.trim() ||
       !form.phone.trim() ||
       !form.email.trim() ||
-      !form.password.trim() ||
+      !form.requestedPassword.trim() ||
       !form.country ||
       !form.brand ||
       !form.storeName.trim()
     ) {
       alert("모든 항목을 입력해주세요.");
+      return;
+    }
+
+    if (form.requestedPassword.length !== 4) {
+      alert("희망 비밀번호는 숫자 4자리로 입력해주세요.");
       return;
     }
 
@@ -78,7 +88,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
           owner_name: form.name.trim(),
           phone: form.phone.trim(),
           email: form.email.trim().toLowerCase(),
-          password: form.password,
+          requested_password: form.requestedPassword,
           country: form.country,
           brand: form.brand,
           store_name: form.storeName.trim(),
@@ -155,15 +165,20 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
 
         <div>
           <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-            비밀번호
+            희망 비밀번호
           </label>
           <input
             type="password"
-            placeholder="비밀번호"
-            value={form.password}
-            onChange={(e) => handleChange("password", e.target.value)}
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="숫자 4자리"
+            value={form.requestedPassword}
+            onChange={(e) => handleRequestedPasswordChange(e.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
           />
+          <p className="mt-2 text-[11px] font-medium text-slate-400">
+            숫자 4자리만 입력 가능합니다.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
