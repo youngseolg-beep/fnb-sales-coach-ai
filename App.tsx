@@ -108,6 +108,7 @@ const persistMenuPriceHistory = async (
 const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeCountry, setStoreCountry] = useState("KH");
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
@@ -121,16 +122,16 @@ const App: React.FC = () => {
   const [toastSeq, setToastSeq] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState({ total: 0, avg: 0, rate: 0 });
   const [summaryCompare, setSummaryCompare] = useState<SummaryCompareStats>({
-  selectedSales: 0,
-  prevSales: 0,
-  selectedOrders: 0,
-  prevOrders: 0,
-  selectedAov: 0,
-  prevAov: 0,
-  avg7Sales: 0,
-  hasPrevData: false,
-  avg7Count: 0,
-});
+    selectedSales: 0,
+    prevSales: 0,
+    selectedOrders: 0,
+    prevOrders: 0,
+    selectedAov: 0,
+    prevAov: 0,
+    avg7Sales: 0,
+    hasPrevData: false,
+    avg7Count: 0,
+  });
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
 
@@ -208,6 +209,18 @@ const App: React.FC = () => {
     if (!userError && userData) {
       setUserRole(userData.role);
       setStoreId(userData.store_id);
+
+      if (userData.store_id != null) {
+        const { data: storeData } = await supabase
+          .from("stores")
+          .select("country")
+          .eq("id", userData.store_id)
+          .single();
+
+        setStoreCountry(storeData?.country || "KH");
+      } else {
+        setStoreCountry("KH");
+      }
     }
   };
 
@@ -219,6 +232,7 @@ const App: React.FC = () => {
     setIsLoggedIn(false);
     setUserRole(null);
     setStoreId(null);
+    setStoreCountry("KH");
     setEmail("");
     setPassword("");
     setAuthError("");
@@ -363,7 +377,7 @@ const App: React.FC = () => {
         note: "",
         categories: resetCats,
       }));
-      setOriginalCategories(cloneCategories(resetCats));
+      setOriginalCategories(cloneCategories(resetCats)));
 
       const yearMonth = targetDate.substring(0, 7);
       await refreshDatesInMonth(targetDate);
@@ -399,6 +413,18 @@ const App: React.FC = () => {
         if (!error && userData) {
           setUserRole(userData.role);
           setStoreId(userData.store_id);
+
+          if (userData.store_id != null) {
+            const { data: storeData } = await supabase
+              .from("stores")
+              .select("country")
+              .eq("id", userData.store_id)
+              .single();
+
+            setStoreCountry(storeData?.country || "KH");
+          } else {
+            setStoreCountry("KH");
+          }
         }
       }
 
@@ -481,73 +507,75 @@ const App: React.FC = () => {
     const timer = window.setTimeout(() => setToastMsg(null), 1800);
     return () => window.clearTimeout(timer);
   }, [toastSeq, toastMsg]);
-useEffect(() => {
-  if (storeId == null || !data.date) return;
 
-  let cancelled = false;
+  useEffect(() => {
+    if (storeId == null || !data.date) return;
 
-  const loadSummaryCompare = async () => {
-    const selectedMetrics = getSalesMetrics(data);
-    const prevDate = addDays(data.date, -1);
-    const sevenStartDate = addDays(data.date, -7);
+    let cancelled = false;
 
-    try {
-      const rows = await loadDailyRange(sevenStartDate, prevDate, storeId);
-      if (cancelled) return;
+    const loadSummaryCompare = async () => {
+      const selectedMetrics = getSalesMetrics(data);
+      const prevDate = addDays(data.date, -1);
+      const sevenStartDate = addDays(data.date, -7);
 
-      const safeRows = Array.isArray(rows) ? rows : [];
-      const prevRow = safeRows.find((row: any) => row?.date === prevDate);
-      const prevMetrics = getSalesMetrics(prevRow);
+      try {
+        const rows = await loadDailyRange(sevenStartDate, prevDate, storeId);
+        if (cancelled) return;
 
-      const avg7Rows = safeRows.filter(
-        (row: any) =>
-          typeof row?.date === "string" &&
-          row.date >= sevenStartDate &&
-          row.date <= prevDate
-      );
+        const safeRows = Array.isArray(rows) ? rows : [];
+        const prevRow = safeRows.find((row: any) => row?.date === prevDate);
+        const prevMetrics = getSalesMetrics(prevRow);
 
-      const avg7SalesTotal = avg7Rows.reduce((sum: number, row: any) => {
-        return sum + getSalesMetrics(row).sales;
-      }, 0);
+        const avg7Rows = safeRows.filter(
+          (row: any) =>
+            typeof row?.date === "string" &&
+            row.date >= sevenStartDate &&
+            row.date <= prevDate
+        );
 
-      const avg7Count = avg7Rows.length;
+        const avg7SalesTotal = avg7Rows.reduce((sum: number, row: any) => {
+          return sum + getSalesMetrics(row).sales;
+        }, 0);
 
-      setSummaryCompare({
-        selectedSales: selectedMetrics.sales,
-        prevSales: prevMetrics.sales,
-        selectedOrders: selectedMetrics.orders,
-        prevOrders: prevMetrics.orders,
-        selectedAov: selectedMetrics.aov,
-        prevAov: prevMetrics.aov,
-        avg7Sales: avg7Count > 0 ? avg7SalesTotal / avg7Count : 0,
-        hasPrevData: !!prevRow,
-        avg7Count,
-      });
-    } catch (error) {
-      if (cancelled) return;
+        const avg7Count = avg7Rows.length;
 
-      console.error("summary compare load error:", error);
+        setSummaryCompare({
+          selectedSales: selectedMetrics.sales,
+          prevSales: prevMetrics.sales,
+          selectedOrders: selectedMetrics.orders,
+          prevOrders: prevMetrics.orders,
+          selectedAov: selectedMetrics.aov,
+          prevAov: prevMetrics.aov,
+          avg7Sales: avg7Count > 0 ? avg7SalesTotal / avg7Count : 0,
+          hasPrevData: !!prevRow,
+          avg7Count,
+        });
+      } catch (error) {
+        if (cancelled) return;
 
-      setSummaryCompare({
-        selectedSales: selectedMetrics.sales,
-        prevSales: 0,
-        selectedOrders: selectedMetrics.orders,
-        prevOrders: 0,
-        selectedAov: selectedMetrics.aov,
-        prevAov: 0,
-        avg7Sales: 0,
-        hasPrevData: false,
-        avg7Count: 0,
-      });
-    }
-  };
+        console.error("summary compare load error:", error);
 
-  void loadSummaryCompare();
+        setSummaryCompare({
+          selectedSales: selectedMetrics.sales,
+          prevSales: 0,
+          selectedOrders: selectedMetrics.orders,
+          prevOrders: 0,
+          selectedAov: selectedMetrics.aov,
+          prevAov: 0,
+          avg7Sales: 0,
+          hasPrevData: false,
+          avg7Count: 0,
+        });
+      }
+    };
 
-  return () => {
-    cancelled = true;
-  };
-}, [storeId, data.date, data.posSales, data.deliverySales, data.orders]);
+    void loadSummaryCompare();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, data.date, data.posSales, data.deliverySales, data.orders]);
+
   const monthlyRate = useMemo(() => {
     const target = monthlyTarget;
     if (!target || target <= 0) return 0;
@@ -558,87 +586,87 @@ useEffect(() => {
     return null;
   }
 
- if (!isLoggedIn) {
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e3a8a_0%,_#0f172a_40%,_#020617_100%)] flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md">
-        {authScreen === "login" ? (
-          <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur">
-            <div className="bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] px-8 pb-10 pt-9 text-center">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
-                <i className="fa-solid fa-user text-2xl text-white"></i>
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e3a8a_0%,_#0f172a_40%,_#020617_100%)] flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md">
+          {authScreen === "login" ? (
+            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur">
+              <div className="bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] px-8 pb-10 pt-9 text-center">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
+                  <i className="fa-solid fa-user text-2xl text-white"></i>
+                </div>
+
+                <h1 className="text-[30px] font-black tracking-tight text-white">
+                  SALES COACH AI
+                </h1>
+
+                <p className="mt-3 text-sm font-semibold text-indigo-100/95">
+                  운영 데이터를 빠르게 입력하고, 바로 코칭까지 확인하세요.
+                </p>
+
+                <div className="mt-5 inline-flex flex-col rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-white/95 backdrop-blur-sm">
+                  <div>ID : test</div>
+                  <div className="mt-1">PW : 0000</div>
+                </div>
               </div>
 
-              <h1 className="text-[30px] font-black tracking-tight text-white">
-                SALES COACH AI
-              </h1>
+              <form onSubmit={handleLogin} className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+                <div>
+                  <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    ID
+                  </label>
+                  <input
+                    type="text"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="아이디 입력"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                    autoFocus
+                  />
+                </div>
 
-              <p className="mt-3 text-sm font-semibold text-indigo-100/95">
-                운영 데이터를 빠르게 입력하고, 바로 코칭까지 확인하세요.
-              </p>
+                <div>
+                  <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="비밀번호 입력"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                  />
+                  {authError && (
+                    <p className="mt-3 text-center text-xs font-bold text-rose-500">
+                      {authError}
+                    </p>
+                  )}
+                </div>
 
-              <div className="mt-5 inline-flex flex-col rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-white/95 backdrop-blur-sm">
-                <div>ID : test</div>
-                <div className="mt-1">PW : 0000</div>
-              </div>
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-lg font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  로그인
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthScreen("signup")}
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-4 text-base font-black text-slate-700 transition-all hover:bg-slate-50"
+                >
+                  계정 생성
+                </button>
+              </form>
             </div>
-
-            <form onSubmit={handleLogin} className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
-              <div>
-                <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  ID
-                </label>
-                <input
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="아이디 입력"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호 입력"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
-                />
-                {authError && (
-                  <p className="mt-3 text-center text-xs font-bold text-rose-500">
-                    {authError}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-lg font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99]"
-              >
-                로그인
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAuthScreen("signup")}
-                className="w-full rounded-2xl border border-slate-200 bg-white py-4 text-base font-black text-slate-700 transition-all hover:bg-slate-50"
-              >
-                계정 생성
-              </button>
-            </form>
-          </div>
-        ) : (
-          <AdminCreateUserPage onBack={() => setAuthScreen("login")} />
-        )}
+          ) : (
+            <AdminCreateUserPage onBack={() => setAuthScreen("login")} />
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (userRole !== "master" && menuMasterLoading) {
     return (
@@ -658,24 +686,24 @@ useEffect(() => {
   }
 
   const summaryPage = (
-  <SummaryPage
-    date={data.date}
-    monthlyStats={monthlyStats}
-    monthlyRate={monthlyRate}
-    monthlyTarget={monthlyTarget}
-    compareStats={summaryCompare}
-    inputStatus={{
-      posSales: Number(data.posSales ?? 0),
-      deliverySales: Number(data.deliverySales ?? 0),
-      orders: Number(data.orders ?? 0),
-    }}
-    onChangeTarget={(v) => {
-      setMonthlyTarget(v);
-      setData((prev) => ({ ...prev, monthlyTarget: v }));
-    }}
-    onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
-  />
-);
+    <SummaryPage
+      date={data.date}
+      monthlyStats={monthlyStats}
+      monthlyRate={monthlyRate}
+      monthlyTarget={monthlyTarget}
+      compareStats={summaryCompare}
+      inputStatus={{
+        posSales: Number(data.posSales ?? 0),
+        deliverySales: Number(data.deliverySales ?? 0),
+        orders: Number(data.orders ?? 0),
+      }}
+      onChangeTarget={(v) => {
+        setMonthlyTarget(v);
+        setData((prev) => ({ ...prev, monthlyTarget: v }));
+      }}
+      onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
+    />
+  );
 
   const salesPage = (
     <SalesPage
@@ -718,39 +746,37 @@ useEffect(() => {
     />
   );
 
- if (storeOwnerPage === "admin_create") {
-  return <AdminCreateUserPage />;
-}
+  if (storeOwnerPage === "admin_create") {
+    return <AdminCreateUserPage />;
+  }
 
-return (
-  <>
-    <StoreOwnerShell
-      currentPage={storeOwnerPage}
-      onChangePage={setStoreOwnerPage}
-      onChangeDate={setSelectedDate}
-      onMonthChange={(month) => {
-        const monthDate = formatLocalDate(month);
-        void handleMonthChange(monthDate);
-        void refreshMonthlyStats(monthDate.substring(0, 7));
-      }}
-      datesWithData={datesWithData}
-      selectedDate={data.date}
-      monthlyTarget={monthlyTarget}
-      monthlyRate={monthlyRate}
-      onLogout={handleLogout}
-    >
-      <StoreOwnerPageRouter
+  return (
+    <>
+      <StoreOwnerShell
         currentPage={storeOwnerPage}
-        summaryPage={summaryPage}
-        salesPage={salesPage}
-        detailPage={detailPage}
-        menuPage={menuPage}
-      />
-    </StoreOwnerShell>
-
-   
-  </>
-);
+        onChangePage={setStoreOwnerPage}
+        onChangeDate={setSelectedDate}
+        onMonthChange={(month) => {
+          const monthDate = formatLocalDate(month);
+          void handleMonthChange(monthDate);
+          void refreshMonthlyStats(monthDate.substring(0, 7));
+        }}
+        datesWithData={datesWithData}
+        selectedDate={data.date}
+        monthlyTarget={monthlyTarget}
+        monthlyRate={monthlyRate}
+        onLogout={handleLogout}
+      >
+        <StoreOwnerPageRouter
+          currentPage={storeOwnerPage}
+          summaryPage={summaryPage}
+          salesPage={salesPage}
+          detailPage={detailPage}
+          menuPage={menuPage}
+        />
+      </StoreOwnerShell>
+    </>
+  );
 };
 
 export default App;
