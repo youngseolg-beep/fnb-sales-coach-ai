@@ -44,15 +44,27 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const resetForm = () => {
+    setForm({
+      name: "",
+      phone: "",
+      email: "",
+      password: "",
+      country: "",
+      brand: "",
+      storeName: "",
+    });
+  };
+
   const handleCreate = async () => {
     if (
-      !form.name ||
-      !form.phone ||
-      !form.email ||
-      !form.password ||
+      !form.name.trim() ||
+      !form.phone.trim() ||
+      !form.email.trim() ||
+      !form.password.trim() ||
       !form.country ||
       !form.brand ||
-      !form.storeName
+      !form.storeName.trim()
     ) {
       alert("모든 항목을 입력해주세요.");
       return;
@@ -61,57 +73,26 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     try {
       setSubmitting(true);
 
-      const { data: authData, error: authError } =
-        await supabase.auth.admin.createUser({
-          email: form.email,
+      const { error } = await supabase.from("signup_requests").insert([
+        {
+          owner_name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim().toLowerCase(),
           password: form.password,
-          email_confirm: true,
-        });
-
-      if (authError) throw authError;
-
-      const userId = authData.user.id;
-      const storeId = `STORE_${Date.now()}`;
-
-      const { error: storeError } = await supabase.from("stores").insert([
-        {
-          id: storeId,
-          name: form.storeName,
-          brand: form.brand,
           country: form.country,
+          brand: form.brand,
+          store_name: form.storeName.trim(),
+          status: "pending",
         },
       ]);
 
-      if (storeError) throw storeError;
+      if (error) throw error;
 
-      const { error: userError } = await supabase.from("users").insert([
-        {
-          id: userId,
-          name: form.name,
-          phone: form.phone,
-          email: form.email,
-          role: "store_user",
-          status: "active",
-          store_id: storeId,
-        },
-      ]);
-
-      if (userError) throw userError;
-
-      alert("계정 생성 대기 중 입니다.");
-
-      setForm({
-        name: "",
-        phone: "",
-        email: "",
-        password: "",
-        country: "",
-        brand: "",
-        storeName: "",
-      });
+      alert("계정 생성 신청이 완료되었습니다. 관리자 승인 후 계정이 생성됩니다.");
+      resetForm();
     } catch (err: any) {
       console.error(err);
-      alert(err?.message || "에러 발생");
+      alert(err?.message || "신청 중 에러 발생");
     } finally {
       setSubmitting(false);
     }
@@ -129,13 +110,13 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
         </h2>
 
         <p className="mt-2 text-sm font-semibold text-indigo-100/95">
-          관리자의 승인 후 계정이 생성됩니다. 
+          관리자 승인 후 계정이 생성됩니다.
         </p>
       </div>
 
       <div className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-1">
+          <div>
             <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
               점주 성함
             </label>
@@ -147,7 +128,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
             />
           </div>
 
-          <div className="sm:col-span-1">
+          <div>
             <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
               연락처
             </label>
@@ -240,7 +221,7 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
           disabled={submitting}
           className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-base font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? "생성 중..." : "계정 생성"}
+          {submitting ? "신청 중..." : "계정 생성 신청"}
         </button>
 
         <button
