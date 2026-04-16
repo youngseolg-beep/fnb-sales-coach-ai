@@ -86,6 +86,10 @@ const SOFT_DRINKS = [
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 
 const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId }) => {
+  useEffect(() => {
+  console.log("BRAND:", data.brand);
+  console.log("COUNTRY:", data.country);
+}, [data.brand, data.country]);
   const [report, setReport] = useState("");
   const [reportDate, setReportDate] = useState("");
   const [loading, setLoading] = useState(false);
