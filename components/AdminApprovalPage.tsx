@@ -32,12 +32,16 @@ const getBrandLabel = (code: string) =>
 
 type StatusTab = "pending" | "approved" | "rejected";
 
-const AdminApprovalPage = () => {
+type AdminApprovalPageProps = {
+  initialTab?: StatusTab;
+};
+
+const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [passwordUpdatingId, setPasswordUpdatingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<StatusTab>("pending");
+  const [activeTab, setActiveTab] = useState<StatusTab>(initialTab);
   const [editForm, setEditForm] = useState({
     owner_name: "",
     phone: "",
@@ -47,6 +51,10 @@ const AdminApprovalPage = () => {
     brand: "",
     store_name: "",
   });
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const loadRequests = async () => {
     const { data, error } = await supabase
@@ -182,6 +190,7 @@ const AdminApprovalPage = () => {
 
       alert("거절 완료");
       await loadRequests();
+      setActiveTab("rejected");
     } catch (err: any) {
       console.error(err);
       alert(err?.message || "거절 실패");
