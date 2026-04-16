@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
 import { loadDaily, listDatesInMonth } from "../services/salesStorage";
 import { getMenuPricesForDate } from "../services/menuPriceService";
+import { supabase } from "../services/supabaseClient";
 import type { MenuCategory, SalesReportData } from "../types";
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
@@ -219,6 +220,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   const menuMasterCategories = params?.menuMasterCategories ?? cloneCategories(INITIAL_CATEGORIES);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => formatLocalDate(new Date()));
+  const [storeCountry, setStoreCountry] = useState<string>("KH");
 
   const [data, setData] = useState<SalesReportData>(() => {
     const today = formatLocalDate(new Date());
@@ -249,6 +251,49 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   useEffect(() => {
     menuMasterCategoriesRef.current = menuMasterCategories;
   }, [menuMasterCategories]);
+
+  useEffect(() => {
+    if (storeId == null || !supabase) {
+      setStoreCountry("KH");
+      setData((prev: any) => ({ ...prev, country: "KH" }));
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadStoreCountry = async () => {
+      try {
+        const { data: storeData, error } = await supabase
+          .from("stores")
+          .select("country")
+          .eq("id", storeId)
+          .single();
+
+        if (cancelled) return;
+
+        if (error) {
+          setStoreCountry("KH");
+          setData((prev: any) => ({ ...prev, country: "KH" }));
+          return;
+        }
+
+        const nextCountry = String(storeData?.country || "KH");
+        setStoreCountry(nextCountry);
+        setData((prev: any) => ({ ...prev, country: nextCountry }));
+      } catch (error) {
+        if (cancelled) return;
+        console.error("loadStoreCountry error:", error);
+        setStoreCountry("KH");
+        setData((prev: any) => ({ ...prev, country: "KH" }));
+      }
+    };
+
+    void loadStoreCountry();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId]);
 
   const loadDatesInMonthWithCache = useCallback(
     async (dateStr: string, forceRefresh = false) => {
@@ -390,6 +435,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         setData((prev: any) => ({
           ...prev,
           date: dateStr,
+          country: storeCountry,
           posSales: nextPosSales,
           deliverySales: nextDeliverySales,
           orders: nextOrders,
@@ -404,7 +450,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         console.error("fetchData error:", error);
       }
     },
-    [storeId]
+    [storeId, storeCountry]
   );
 
   return {
