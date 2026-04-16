@@ -82,7 +82,7 @@ const AdminApprovalPage = () => {
 
   const handleEditChange = (key: string, value: string) => {
     if (key === "requested_password") {
-      const onlyNumbers = value.replace(/\D/g, "").slice(0, 4);
+      const onlyNumbers = value.replace(/\D/g, "").slice(0, 6);
       setEditForm((prev) => ({ ...prev, requested_password: onlyNumbers }));
       return;
     }
@@ -104,8 +104,8 @@ const AdminApprovalPage = () => {
       return;
     }
 
-    if (!/^\d{4}$/.test(editForm.requested_password)) {
-      alert("희망 비밀번호는 숫자 4자리여야 합니다.");
+    if (!/^\d{6}$/.test(editForm.requested_password)) {
+      alert("희망 비밀번호는 숫자 6자리여야 합니다.");
       return;
     }
 
@@ -201,8 +201,8 @@ const AdminApprovalPage = () => {
       return;
     }
 
-    if (!/^\d{4}$/.test(newPassword)) {
-      alert("실제 비밀번호 반영은 숫자 4자리만 가능합니다.");
+    if (!/^\d{6}$/.test(newPassword)) {
+      alert("실제 비밀번호 반영은 숫자 6자리만 가능합니다.");
       return;
     }
 
@@ -312,7 +312,7 @@ const AdminApprovalPage = () => {
                     onChange={(e) =>
                       handleEditChange("requested_password", e.target.value)
                     }
-                    placeholder="희망 비밀번호 4자리"
+                    placeholder="희망 비밀번호 6자리"
                     className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none"
                   />
 
