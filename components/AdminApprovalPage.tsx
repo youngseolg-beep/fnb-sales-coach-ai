@@ -191,6 +191,34 @@ const AdminApprovalPage = () => {
     }
   };
 
+  const handleDelete = async (item: any) => {
+    const ok = window.confirm("이 신청 내역을 삭제하시겠습니까?");
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+
+      const { error } = await supabase
+        .from("signup_requests")
+        .delete()
+        .eq("id", item.id);
+
+      if (error) throw error;
+
+      if (editingId === item.id) {
+        cancelEdit();
+      }
+
+      alert("삭제 완료");
+      await loadRequests();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "삭제 실패");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl p-6">
       <h2 className="mb-4 text-xl font-black">가입 승인 관리</h2>
@@ -315,32 +343,40 @@ const AdminApprovalPage = () => {
 
                   <div className="flex shrink-0 flex-wrap gap-2">
                     {item.status === "pending" && (
-                      <>
-                        <button
-                          onClick={() => handleApprove(item)}
-                          disabled={loading}
-                          className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white"
-                        >
-                          승인
-                        </button>
-
-                        <button
-                          onClick={() => startEdit(item)}
-                          disabled={loading}
-                          className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white"
-                        >
-                          수정
-                        </button>
-
-                        <button
-                          onClick={() => handleReject(item)}
-                          disabled={loading}
-                          className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white"
-                        >
-                          거절
-                        </button>
-                      </>
+                      <button
+                        onClick={() => handleApprove(item)}
+                        disabled={loading}
+                        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white"
+                      >
+                        승인
+                      </button>
                     )}
+
+                    {item.status === "pending" && (
+                      <button
+                        onClick={() => handleReject(item)}
+                        disabled={loading}
+                        className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white"
+                      >
+                        거절
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => startEdit(item)}
+                      disabled={loading}
+                      className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white"
+                    >
+                      수정
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(item)}
+                      disabled={loading}
+                      className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white"
+                    >
+                      삭제
+                    </button>
                   </div>
                 </div>
               )}
