@@ -8,7 +8,7 @@ import {
   type StoreKpiRow,
   type TopMenuRow,
 } from "../services/masterDashboardService";
-
+import AdminApprovalPage from "./AdminApprovalPage";
 type GrowthValue = {
   current: number;
   previous: number;
@@ -294,7 +294,8 @@ const [selectedBrand, setSelectedBrand] = useState<string>(() => {
 
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
-
+const [showApprovalPage, setShowApprovalPage] = useState(false);
+  
   useEffect(() => {
     if (preset !== "custom") {
       setRange(getMasterDateRange(preset));
@@ -479,7 +480,37 @@ const topMenusByStore = result?.topMenusByStore || {};
       [key]: value,
     }));
   };
+if (showApprovalPage) {
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 md:px-6 lg:px-8">
+        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur">
+          <div>
+            <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
+              가입 승인 관리
+            </h1>
+            <div className="mt-2 text-sm text-slate-400">
+              계정 생성 신청 내역을 검토하고 승인합니다.
+            </div>
+          </div>
 
+          <button
+            type="button"
+            onClick={() => setShowApprovalPage(false)}
+            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+          >
+            대시보드로 돌아가기
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-2 shadow-2xl backdrop-blur">
+          <AdminApprovalPage />
+        </div>
+      </div>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 md:px-6 lg:px-8">
@@ -514,6 +545,15 @@ const topMenusByStore = result?.topMenusByStore || {};
             </div>
 
             <div className="flex flex-col gap-3">
+              <div className="flex justify-end">
+  <button
+    type="button"
+    onClick={() => setShowApprovalPage(true)}
+    className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
+  >
+    가입 승인 관리
+  </button>
+</div>
               <div className="flex flex-wrap gap-2">
                 {(["today", "thisWeek", "thisMonth", "last30Days", "custom"] as MasterDatePreset[]).map((item) => (
                   <button
