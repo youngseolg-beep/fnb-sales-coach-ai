@@ -62,11 +62,17 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Email is required" });
     }
 
-    const { data: existingUserRow } = await admin
+    const { data: existingUserRow, error: existingUserError } = await admin
       .from("users")
       .select("id")
       .eq("email", normalizedEmail)
       .maybeSingle();
+
+    if (existingUserError) {
+      return res.status(400).json({
+        error: existingUserError.message || "Failed to check existing user",
+      });
+    }
 
     if (existingUserRow) {
       return res.status(400).json({ error: "This email is already in use" });
@@ -90,13 +96,13 @@ export default async function handler(req: any, res: any) {
     const userId = authData.user.id;
 
     const { error: storeError } = await admin.from("stores").insert([
-  {
-    id: storeId,
-    store_name: requestRow.store_name,
-    brand: requestRow.brand,
-    country: requestRow.country,
-  },
-]);
+      {
+        id: storeId,
+        store_name: requestRow.store_name,
+        brand: requestRow.brand,
+        country: requestRow.country,
+      },
+    ]);
 
     if (storeError) {
       await admin.auth.admin.deleteUser(userId);
@@ -108,11 +114,8 @@ export default async function handler(req: any, res: any) {
     const { error: userError } = await admin.from("users").insert([
       {
         id: userId,
-        name: requestRow.owner_name,
-        phone: requestRow.phone,
         email: normalizedEmail,
         role: "store_user",
-        status: "active",
         store_id: storeId,
       },
     ]);
