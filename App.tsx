@@ -113,6 +113,7 @@ const App: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [authScreen, setAuthScreen] = useState<"login" | "signup">("login");
 
   const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
   const [priceSaving, setPriceSaving] = useState(false);
@@ -221,6 +222,7 @@ const App: React.FC = () => {
     setEmail("");
     setPassword("");
     setAuthError("");
+    setAuthScreen("login");
     setMenuMasterCategories([]);
     setMenuMasterLoading(true);
     monthlyStatsRequestRef.current = "";
@@ -556,67 +558,87 @@ useEffect(() => {
     return null;
   }
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-          <div className="bg-indigo-600 p-8 text-center">
-            <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-              <i className="fa-solid fa-user text-white text-2xl"></i>
+ if (!isLoggedIn) {
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e3a8a_0%,_#0f172a_40%,_#020617_100%)] flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md">
+        {authScreen === "login" ? (
+          <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur">
+            <div className="bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] px-8 pb-10 pt-9 text-center">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
+                <i className="fa-solid fa-user text-2xl text-white"></i>
+              </div>
+
+              <h1 className="text-[30px] font-black tracking-tight text-white">
+                SALES COACH AI
+              </h1>
+
+              <p className="mt-3 text-sm font-semibold text-indigo-100/95">
+                운영 데이터를 빠르게 입력하고, 바로 코칭까지 확인하세요.
+              </p>
+
+              <div className="mt-5 inline-flex flex-col rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-white/95 backdrop-blur-sm">
+                <div>ID : test</div>
+                <div className="mt-1">PW : 0000</div>
+              </div>
             </div>
 
-            <h1 className="text-white font-black text-2xl uppercase tracking-tight">
-              SALES COACH AI
-            </h1>
+            <form onSubmit={handleLogin} className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+              <div>
+                <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  ID
+                </label>
+                <input
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="아이디 입력"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                  autoFocus
+                />
+              </div>
 
-            <p className="text-indigo-100 text-sm font-bold opacity-0 mt-1">
-              Supabase Login
-            </p>
+              <div>
+                <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호 입력"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                />
+                {authError && (
+                  <p className="mt-3 text-center text-xs font-bold text-rose-500">
+                    {authError}
+                  </p>
+                )}
+              </div>
 
-            <div className="mt-3 text-indigo-100 text-s font-semibold opacity-200 space-y-1">
-              <div>ID : test</div>
-              <div>PW : 0000</div>
-            </div>
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-lg font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+              >
+                로그인
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAuthScreen("signup")}
+                className="w-full rounded-2xl border border-slate-200 bg-white py-4 text-base font-black text-slate-700 transition-all hover:bg-slate-50"
+              >
+                계정 생성
+              </button>
+            </form>
           </div>
-
-          <form onSubmit={handleLogin} className="p-8 space-y-6">
-            <div>
-              <input
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ID"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-center text-lg font-bold"
-              />
-              {authError && (
-                <p className="text-rose-500 text-xs font-bold mt-3 text-center">
-                  {authError}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-            >
-              로그인
-            </button>
-          </form>
-        </div>
+        ) : (
+          <AdminCreateUserPage onBack={() => setAuthScreen("login")} />
+        )}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (userRole !== "master" && menuMasterLoading) {
     return (
