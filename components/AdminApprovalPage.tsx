@@ -28,6 +28,7 @@ const AdminApprovalPage = () => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [passwordUpdatingId, setPasswordUpdatingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     owner_name: "",
     phone: "",
@@ -191,6 +192,55 @@ const AdminApprovalPage = () => {
     }
   };
 
+  const handleApplyApprovedPassword = async (item: any) => {
+    const email = String(item?.email || "").trim().toLowerCase();
+    const newPassword = String(item?.requested_password || "").trim();
+
+    if (!email) {
+      alert("이메일이 없습니다.");
+      return;
+    }
+
+    if (!/^\d{4}$/.test(newPassword)) {
+      alert("실제 비밀번호 반영은 숫자 4자리만 가능합니다.");
+      return;
+    }
+
+    const ok = window.confirm(
+      `${email} 계정의 실제 로그인 비밀번호를 ${newPassword}(으)로 변경하시겠습니까?`
+    );
+    if (!ok) return;
+
+    try {
+      setPasswordUpdatingId(item.id);
+
+      const response = await fetch("/api/update-approved-user-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "실제 비밀번호 반영 실패");
+      }
+
+      alert("실제 로그인 비밀번호 반영 완료");
+      await loadRequests();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "실제 비밀번호 반영 실패");
+    } finally {
+      setPasswordUpdatingId(null);
+    }
+  };
+
   const handleDelete = async (item: any) => {
     const ok = window.confirm("이 신청 내역을 삭제하시겠습니까?");
     if (!ok) return;
@@ -226,6 +276,7 @@ const AdminApprovalPage = () => {
       <div className="space-y-4">
         {list.map((item) => {
           const isEditing = editingId === item.id;
+          const isPasswordUpdating = passwordUpdatingId === item.id;
 
           return (
             <div
@@ -362,9 +413,19 @@ const AdminApprovalPage = () => {
                       </button>
                     )}
 
+                    {item.status === "approved" && (
+                      <button
+                        onClick={() => handleApplyApprovedPassword(item)}
+                        disabled={loading || isPasswordUpdating}
+                        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                      >
+                        {isPasswordUpdating ? "반영 중..." : "실제 비밀번호 반영"}
+                      </button>
+                    )}
+
                     <button
                       onClick={() => startEdit(item)}
-                      disabled={loading}
+                      disabled={loading || isPasswordUpdating}
                       className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white"
                     >
                       수정
@@ -372,7 +433,7 @@ const AdminApprovalPage = () => {
 
                     <button
                       onClick={() => handleDelete(item)}
-                      disabled={loading}
+                      disabled={loading || isPasswordUpdating}
                       className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold text-white"
                     >
                       삭제
