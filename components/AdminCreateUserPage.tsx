@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../services/supabaseClient";
 
 const COUNTRY_OPTIONS = [
   { code: "US", label: "미국 (United States)" },
