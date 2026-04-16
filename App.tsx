@@ -27,6 +27,7 @@ import { supabase } from "./services/supabaseClient";
 
 import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
 import StoreOwnerPageRouter from "./components/StoreOwnerPageRouter";
+import AdminCreateUserPage from "./components/AdminCreateUserPage";
 
 type SummaryCompareStats = {
   selectedSales: number;
@@ -695,7 +696,12 @@ useEffect(() => {
     />
   );
 
-  return (
+ if (storeOwnerPage === "admin_create") {
+  return <AdminCreateUserPage />;
+}
+
+return (
+  <>
     <StoreOwnerShell
       currentPage={storeOwnerPage}
       onChangePage={setStoreOwnerPage}
@@ -719,7 +725,15 @@ useEffect(() => {
         menuPage={menuPage}
       />
     </StoreOwnerShell>
-  );
+
+    <button
+      onClick={() => setStoreOwnerPage("admin_create")}
+      className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded z-50"
+    >
+      관리자 생성
+    </button>
+  </>
+);
 };
 
 export default App;
