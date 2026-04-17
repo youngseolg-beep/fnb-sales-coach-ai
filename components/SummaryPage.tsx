@@ -1,4 +1,5 @@
 import React from "react";
+import { formatCurrencyValue } from "../utils2/currency";
 
 type CompareStats = {
   selectedSales: number;
@@ -30,16 +31,14 @@ type Props = {
   inputStatus: InputStatus;
   onChangeTarget: (value: number) => void;
   onSaveTarget: () => void;
+  country?: string;
 };
 
-const formatCurrency = (value: number, digits = 0) =>
-  `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })}`;
-
-const formatSignedCurrency = (value: number) =>
-  `${value > 0 ? "+" : value < 0 ? "-" : ""}${formatCurrency(Math.abs(value), 0)}`;
+const formatSignedCurrency = (value: number, country?: string) =>
+  `${value > 0 ? "+" : value < 0 ? "-" : ""}${formatCurrencyValue(
+    Math.abs(value),
+    country
+  )}`;
 
 const formatSignedNumber = (value: number) =>
   `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.abs(value).toLocaleString()}`;
@@ -59,6 +58,7 @@ const SummaryPage: React.FC<Props> = ({
   inputStatus,
   onChangeTarget,
   onSaveTarget,
+  country,
 }) => {
   const monthLabel = date.substring(0, 7);
   const salesDiff = compareStats.selectedSales - compareStats.prevSales;
@@ -86,7 +86,7 @@ const SummaryPage: React.FC<Props> = ({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] bg-white p-4 shadow">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-[11px] font-bold text-slate-400">오늘 입력 상태</div>
@@ -96,50 +96,27 @@ const SummaryPage: React.FC<Props> = ({
             {inputStatusText}
           </span>
         </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-slate-50 px-3 py-3">
-            <div className="text-[11px] font-bold text-slate-400">POS</div>
-            <div className="mt-1 text-sm font-black text-slate-900">
-              {hasPos ? "입력됨" : "미입력"}
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 px-3 py-3">
-            <div className="text-[11px] font-bold text-slate-400">배달</div>
-            <div className="mt-1 text-sm font-black text-slate-900">
-              {hasDelivery ? "입력됨" : "미입력"}
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 px-3 py-3">
-            <div className="text-[11px] font-bold text-slate-400">주문</div>
-            <div className="mt-1 text-sm font-black text-slate-900">
-              {hasOrders ? "입력됨" : "미입력"}
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-          <div className="text-[11px] font-bold text-slate-400">전일 대비 매출</div>
-          <div className="mt-2 text-2xl font-black text-slate-900">
-            {formatCurrency(compareStats.selectedSales)}
+        <div className="rounded-[24px] bg-white p-4 shadow">
+          <div className="text-[11px] text-slate-400">전일 대비 매출</div>
+          <div className="mt-2 text-2xl font-black">
+            {formatCurrencyValue(compareStats.selectedSales, country)}
           </div>
           <div className="mt-2 text-xs text-slate-500">
             {compareStats.hasPrevData
-              ? `전일 ${formatCurrency(compareStats.prevSales)}`
+              ? `전일 ${formatCurrencyValue(compareStats.prevSales, country)}`
               : "전일 데이터 없음"}
           </div>
           <div className={`mt-1 text-sm font-bold ${getDiffColor(salesDiff)}`}>
-            {compareStats.hasPrevData ? formatSignedCurrency(salesDiff) : "-"}
+            {compareStats.hasPrevData ? formatSignedCurrency(salesDiff, country) : "-"}
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-          <div className="text-[11px] font-bold text-slate-400">전일 대비 주문</div>
-          <div className="mt-2 text-2xl font-black text-slate-900">
+        <div className="rounded-[24px] bg-white p-4 shadow">
+          <div className="text-[11px] text-slate-400">전일 대비 주문</div>
+          <div className="mt-2 text-2xl font-black">
             {compareStats.selectedOrders.toLocaleString()}
           </div>
           <div className="mt-2 text-xs text-slate-500">
@@ -152,53 +129,53 @@ const SummaryPage: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-          <div className="text-[11px] font-bold text-slate-400">전일 대비 객단가</div>
-          <div className="mt-2 text-2xl font-black text-slate-900">
-            {formatCurrency(compareStats.selectedAov)}
+        <div className="rounded-[24px] bg-white p-4 shadow">
+          <div className="text-[11px] text-slate-400">전일 대비 객단가</div>
+          <div className="mt-2 text-2xl font-black">
+            {formatCurrencyValue(compareStats.selectedAov, country)}
           </div>
           <div className="mt-2 text-xs text-slate-500">
             {compareStats.hasPrevData
-              ? `전일 ${formatCurrency(compareStats.prevAov)}`
+              ? `전일 ${formatCurrencyValue(compareStats.prevAov, country)}`
               : "전일 데이터 없음"}
           </div>
           <div className={`mt-1 text-sm font-bold ${getDiffColor(aovDiff)}`}>
-            {compareStats.hasPrevData ? formatSignedCurrency(aovDiff) : "-"}
+            {compareStats.hasPrevData ? formatSignedCurrency(aovDiff, country) : "-"}
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-          <div className="text-[11px] font-bold text-slate-400">7일 평균 대비 매출</div>
-          <div className="mt-2 text-2xl font-black text-slate-900">
-            {formatCurrency(compareStats.selectedSales)}
+        <div className="rounded-[24px] bg-white p-4 shadow">
+          <div className="text-[11px] text-slate-400">7일 평균 대비 매출</div>
+          <div className="mt-2 text-2xl font-black">
+            {formatCurrencyValue(compareStats.selectedSales, country)}
           </div>
           <div className="mt-2 text-xs text-slate-500">
             {compareStats.avg7Count > 0
-              ? `7일 평균 ${formatCurrency(compareStats.avg7Sales)}`
+              ? `7일 평균 ${formatCurrencyValue(compareStats.avg7Sales, country)}`
               : "최근 7일 데이터 없음"}
           </div>
           <div className={`mt-1 text-sm font-bold ${getDiffColor(avg7Diff)}`}>
-            {compareStats.avg7Count > 0 ? formatSignedCurrency(avg7Diff) : "-"}
+            {compareStats.avg7Count > 0 ? formatSignedCurrency(avg7Diff, country) : "-"}
           </div>
         </div>
       </section>
 
-      <section className="rounded-[28px] bg-gradient-to-r from-indigo-500 to-violet-500 p-5 text-white shadow-[0_12px_30px_rgba(99,102,241,0.18)]">
-        <div className="text-xs font-bold opacity-80">월 요약</div>
+      <section className="rounded-[28px] bg-indigo-500 p-5 text-white">
+        <div className="text-xs opacity-80">월 요약</div>
         <div className="mt-1 text-2xl font-black">{monthLabel}</div>
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div>
             <div className="text-[11px] opacity-70">월 매출</div>
             <div className="mt-1 text-lg font-black">
-              {formatCurrency(monthlyStats.total)}
+              {formatCurrencyValue(monthlyStats.total, country)}
             </div>
           </div>
 
           <div>
             <div className="text-[11px] opacity-70">일평균</div>
             <div className="mt-1 text-lg font-black">
-              {formatCurrency(monthlyStats.avg)}
+              {formatCurrencyValue(monthlyStats.avg, country)}
             </div>
           </div>
 
@@ -209,8 +186,8 @@ const SummaryPage: React.FC<Props> = ({
         </div>
       </section>
 
-      <section className="rounded-[24px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-        <div className="text-xs font-bold text-slate-400">월 목표</div>
+      <section className="rounded-[24px] bg-white p-5 shadow">
+        <div className="text-xs text-slate-400">월 목표</div>
 
         <div className="mt-3 flex gap-2">
           <input
@@ -218,12 +195,9 @@ const SummaryPage: React.FC<Props> = ({
             value={monthlyTarget || ""}
             onChange={(e) => onChangeTarget(Number(e.target.value))}
             onBlur={onSaveTarget}
-            className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-right font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="flex-1 rounded-2xl border px-4 py-3 text-right font-black"
           />
-          <button
-            onClick={onSaveTarget}
-            className="rounded-2xl bg-indigo-500 px-2 font-black text-white shadow-md"
-          >
+          <button onClick={onSaveTarget} className="rounded-2xl bg-indigo-500 px-2 text-white">
             저장
           </button>
         </div>
