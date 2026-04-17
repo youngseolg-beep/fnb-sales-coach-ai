@@ -687,22 +687,22 @@ const App: React.FC = () => {
 
   const summaryPage = (
     <SummaryPage
-     date={data.date}
-monthlyStats={monthlyStats}
-monthlyRate={monthlyRate}
-monthlyTarget={monthlyTarget}
-compareStats={summaryCompare}
-inputStatus={{
-  posSales: Number(data.posSales ?? 0),
-  deliverySales: Number(data.deliverySales ?? 0),
-  orders: Number(data.orders ?? 0),
-}}
-onChangeTarget={(v) => {
-  setMonthlyTarget(v);
-  setData((prev) => ({ ...prev, monthlyTarget: v }));
-}}
-onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
-country={data.country || storeCountry}
+  date={data.date}
+  monthlyStats={monthlyStats}
+  monthlyRate={monthlyRate}
+  monthlyTarget={monthlyTarget}
+  compareStats={summaryCompare}
+  inputStatus={{
+    posSales: Number(data.posSales ?? 0),
+    deliverySales: Number(data.deliverySales ?? 0),
+    orders: Number(data.orders ?? 0),
+  }}
+  onChangeTarget={(v) => {
+    setMonthlyTarget(v);
+    setData((prev) => ({ ...prev, monthlyTarget: v }));
+  }}
+  onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
+  country={data.country || storeCountry}
 />
 
   const salesPage = (
