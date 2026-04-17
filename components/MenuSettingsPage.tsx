@@ -29,6 +29,7 @@ import {
   getMenuPriceHistory,
   saveMenuPriceHistory,
 } from "../services/menuPriceService";
+import { supabase } from "../services/supabaseClient";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -44,7 +45,9 @@ interface MenuSettingsPageProps {
 
 type ChangedItemRow = {
   id: string;
-  name: string;
+  oldName: string;
+  newName: string;
+  nameChanged: boolean;
   oldPrice: number;
   newPrice: number;
   oldUnitCost: number;
@@ -73,6 +76,12 @@ const normalizeNumber = (value: any) => {
 
 const isSameValue = (a: any, b: any) => {
   return normalizeNumber(a) === normalizeNumber(b);
+};
+
+const normalizeNameValue = (value: any) => String(value || "").trim();
+
+const isSameName = (a: any, b: any) => {
+  return normalizeNameValue(a) === normalizeNameValue(b);
 };
 
 const compressHistoryRows = (rows: any[]) => {
@@ -140,7 +149,7 @@ interface SortableMenuItemProps {
   onUpdateItemField: (
     categoryIndex: number,
     itemIndex: number,
-    field: "price" | "unitCost",
+    field: "name" | "price" | "unitCost",
     value: string
   ) => void;
   onOpenHistory: (menuId: string, menuName: string) => void;
@@ -160,7 +169,7 @@ const MobileMenuCard: React.FC<{
   onUpdateItemField: (
     categoryIndex: number,
     itemIndex: number,
-    field: "price" | "unitCost",
+    field: "name" | "price" | "unitCost",
     value: string
   ) => void;
   onOpenHistory: (menuId: string, menuName: string) => void;
@@ -203,9 +212,14 @@ const MobileMenuCard: React.FC<{
           ⋮⋮
         </button>
 
-        <div className="min-w-0 truncate text-[12px] font-bold text-slate-900">
-          {item.name}
-        </div>
+        <input
+          type="text"
+          value={item.name}
+          onChange={(e) =>
+            onUpdateItemField(categoryIndex, itemIndex, "name", e.target.value)
+          }
+          className="min-w-0 rounded-lg border px-2 py-1 text-[12px] font-bold text-slate-900 outline-none focus:border-slate-400"
+        />
 
         <button
           type="button"
@@ -291,7 +305,7 @@ const DesktopMenuCard: React.FC<{
   onUpdateItemField: (
     categoryIndex: number,
     itemIndex: number,
-    field: "price" | "unitCost",
+    field: "name" | "price" | "unitCost",
     value: string
   ) => void;
   onOpenHistory: (menuId: string, menuName: string) => void;
@@ -334,8 +348,15 @@ const DesktopMenuCard: React.FC<{
           >
             ⋮⋮
           </button>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-slate-900">{item.name}</div>
+          <div className="min-w-0 flex-1">
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) =>
+                onUpdateItemField(categoryIndex, itemIndex, "name", e.target.value)
+              }
+              className="w-full rounded-xl border px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-slate-400"
+            />
           </div>
         </div>
       </div>
@@ -664,6 +685,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     const map = new Map<
       string,
       {
+        name: string;
         price: number;
         unitCost: number;
       }
@@ -672,6 +694,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     originalCategories.forEach((category) => {
       category.items.forEach((item) => {
         map.set(item.id, {
+          name: normalizeNameValue(item.name),
           price: normalizeNumber(item.price),
           unitCost: normalizeNumber(item.unitCost),
         });
@@ -689,18 +712,23 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
         const originalItem = originalItemMap.get(item.id);
         if (!originalItem) return;
 
+        const oldName = normalizeNameValue(originalItem.name);
+        const newName = normalizeNameValue(item.name);
         const oldPrice = normalizeNumber(originalItem.price);
         const newPrice = normalizeNumber(item.price);
         const oldUnitCost = normalizeNumber(originalItem.unitCost);
         const newUnitCost = normalizeNumber(item.unitCost);
 
+        const nameChanged = !isSameName(newName, oldName);
         const priceChanged = !isSameValue(newPrice, oldPrice);
         const unitCostChanged = !isSameValue(newUnitCost, oldUnitCost);
 
-        if (priceChanged || unitCostChanged) {
+        if (nameChanged || priceChanged || unitCostChanged) {
           rows.push({
             id: item.id,
-            name: item.name,
+            oldName,
+            newName,
+            nameChanged,
             oldPrice,
             newPrice,
             oldUnitCost,
@@ -748,10 +776,25 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const orderChanged = changedOrderItems.length > 0;
   const uiOrderChanged = isDateSwitching ? false : orderChanged;
 
+  const hasDuplicateNames = useMemo(() => {
+    const seen = new Set<string>();
+
+    for (const category of draftCategories) {
+      for (const item of category.items) {
+        const name = normalizeNameValue(item.name).toLowerCase();
+        if (!name) return true;
+        if (seen.has(name)) return true;
+        seen.add(name);
+      }
+    }
+
+    return false;
+  }, [draftCategories]);
+
   const updateItemField = (
     categoryIndex: number,
     itemIndex: number,
-    field: "price" | "unitCost",
+    field: "name" | "price" | "unitCost",
     value: string
   ) => {
     const next = draftCategories.map((category, cIdx) => {
@@ -761,6 +804,14 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
         ...category,
         items: category.items.map((item, iIdx) => {
           if (iIdx !== itemIndex) return item;
+
+          if (field === "name") {
+            return {
+              ...item,
+              name: value,
+            };
+          }
+
           return {
             ...item,
             [field]: toNumber(value),
@@ -821,7 +872,34 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   const handleConfirmSave = async () => {
     try {
+      const blankNameExists = draftCategories.some((category) =>
+        category.items.some((item) => !normalizeNameValue(item.name))
+      );
+
+      if (blankNameExists) {
+        notify("메뉴명을 비워둘 수 없습니다.");
+        return;
+      }
+
+      if (hasDuplicateNames) {
+        notify("같은 이름의 메뉴가 있습니다. 메뉴명을 확인해 주세요.");
+        return;
+      }
+
       setActionSaving(true);
+
+      const nameChangedItems = changedItems.filter((item) => item.nameChanged);
+      if (nameChangedItems.length > 0) {
+        for (const item of nameChangedItems) {
+          const { error } = await supabase
+            .from("menu_master")
+            .update({ name: normalizeNameValue(item.newName) })
+            .eq("id", item.id)
+            .eq("store_id", storeId);
+
+          if (error) throw error;
+        }
+      }
 
       if (changedOrderItems.length > 0) {
         await Promise.all(
@@ -831,9 +909,13 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
         );
       }
 
-      if (changedItems.length > 0) {
+      const priceOrCostChangedItems = changedItems.filter(
+        (item) => item.priceChanged || item.unitCostChanged
+      );
+
+      if (priceOrCostChangedItems.length > 0) {
         await Promise.all(
-          changedItems.map((item) =>
+          priceOrCostChangedItems.map((item) =>
             saveMenuPriceHistory(
               item.id,
               selectedDate,
@@ -851,7 +933,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
       await onReloadMenuMaster();
 
       setShowConfirmModal(false);
-      notify("메뉴 순서 / 가격이 저장되었습니다.");
+      notify("메뉴명 / 순서 / 가격이 저장되었습니다.");
     } catch (error) {
       console.error("handleConfirmSave error:", error);
       notify("저장 중 오류가 발생했습니다.");
@@ -959,7 +1041,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div>
               <h2 className="text-[12px] font-bold text-slate-900 md:text-xl">Menu Settings</h2>
               <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
-                선택 날짜 기준으로 메뉴 가격 / 원가를 수정합니다.
+                선택 날짜 기준으로 메뉴명 / 가격 / 원가를 수정합니다.
               </p>
               <p className="mt-0.5 text-[12px] font-medium text-slate-700 md:text-sm">
                 Effective Date: {selectedDate}
@@ -970,6 +1052,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <p className="mt-1 hidden text-xs font-semibold text-indigo-600 md:block">
                 모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
               </p>
+              {hasDuplicateNames && (
+                <p className="mt-1 text-[12px] font-bold text-rose-600 md:text-xs">
+                  중복 메뉴명이 있습니다. 저장 전에 수정해 주세요.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-1.5">
@@ -985,7 +1072,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!uiOrderChanged && uiDirtyCount === 0)}
+                disabled={
+                  saving ||
+                  actionSaving ||
+                  hasDuplicateNames ||
+                  (!uiOrderChanged && uiDirtyCount === 0)
+                }
                 className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
               >
                 {saving || actionSaving
@@ -1035,7 +1127,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
                     const changed =
                       !isDateSwitching && originalItem
-                        ? !isSameValue(item.price, originalItem.price) ||
+                        ? !isSameName(item.name, originalItem.name) ||
+                          !isSameValue(item.price, originalItem.price) ||
                           !isSameValue(item.unitCost, originalItem.unitCost)
                         : false;
 
@@ -1085,7 +1178,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
-                disabled={saving || actionSaving || (!uiOrderChanged && uiDirtyCount === 0)}
+                disabled={
+                  saving ||
+                  actionSaving ||
+                  hasDuplicateNames ||
+                  (!uiOrderChanged && uiDirtyCount === 0)
+                }
                 className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
               >
                 {saving || actionSaving ? "Saving..." : "변경사항 저장"}
@@ -1245,7 +1343,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             <div className="border-b px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">변경사항 저장 확인</h3>
               <p className="mt-1 text-sm text-slate-500">
-                선택한 날짜 기준 가격 변경과 현재 메뉴 순서가 함께 저장됩니다.
+                선택한 날짜 기준 메뉴명 변경 / 가격 변경 / 현재 메뉴 순서가 함께 저장됩니다.
               </p>
             </div>
 
@@ -1258,7 +1356,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 <div className="rounded-xl border bg-slate-50 p-3">
                   <div className="text-xs font-bold text-slate-400">변경 메뉴 수</div>
                   <div className="mt-1 text-sm font-bold text-slate-900">
-                    가격 {uiDirtyCount}개 / 순서 {uiOrderChanged ? "변경됨" : "변경 없음"}
+                    메뉴 {uiDirtyCount}개 / 순서 {uiOrderChanged ? "변경됨" : "변경 없음"}
                   </div>
                 </div>
                 <div className="rounded-xl border bg-amber-50 p-3">
@@ -1281,7 +1379,17 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <tbody>
                     {changedItems.map((item) => (
                       <tr key={item.id} className="border-b border-slate-100">
-                        <td className="px-4 py-3 font-semibold text-slate-800">{item.name}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800">
+                          {item.nameChanged ? (
+                            <>
+                              <span className="text-slate-400">{item.oldName}</span>
+                              <span className="mx-2 text-slate-400">→</span>
+                              <span className="text-slate-900">{item.newName}</span>
+                            </>
+                          ) : (
+                            item.newName
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-700">
                           {item.priceChanged ? (
                             <>
@@ -1329,7 +1437,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmSave}
-                disabled={saving || actionSaving}
+                disabled={saving || actionSaving || hasDuplicateNames}
                 className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
               >
                 {saving || actionSaving ? "Saving..." : "저장 확정"}
