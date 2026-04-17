@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
+import { formatCurrencyValue } from "../utils2/currency";
 
 export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu";
 
@@ -24,6 +25,7 @@ type Props = {
   selectedDate: string;
   monthlyTarget: number;
   monthlyRate: number;
+  country?: string;
 };
 
 const MENU_ITEMS: MenuItem[] = [
@@ -95,6 +97,7 @@ export default function StoreOwnerShell({
   selectedDate,
   monthlyTarget,
   monthlyRate,
+  country,
 }: Props) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => parseLocalDate(selectedDate));
@@ -249,7 +252,7 @@ export default function StoreOwnerShell({
                     Goal
                   </div>
                   <div className="text-[13px] font-black text-slate-900 sm:text-base">
-                    ${monthlyTarget.toLocaleString()}
+                    {formatCurrencyValue(monthlyTarget, country)}
                   </div>
                 </div>
 
