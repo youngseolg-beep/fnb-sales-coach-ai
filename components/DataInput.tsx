@@ -4,6 +4,7 @@ import { DayPicker } from "react-day-picker";
 import { callOcr } from "../services/ocrService";
 import { formatLocalDate, parseLocalDate } from "../utils2/date";
 import { getCurrencyByCountry, formatCurrencyValue } from "../utils2/currency";
+import { supabase } from "../services/supabaseClient";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -410,32 +411,56 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     };
   };
 
-  const callOcrWithRetry = async (imageBase64: string, mimeType: string, fileName: string) => {
-    const delays = [2000, 5000, 10000];
-    let lastErr: any;
+ const callOcrWithRetry = async (
+  imageBase64: string,
+  mimeType: string,
+  fileName: string,
+  options?: {
+    userEmail?: string;
+    country?: string;
+    brand?: string;
+    menuCandidates?: string[];
+  }
+) => {
+  const delays = [2000, 5000, 10000];
+  let lastErr: any;
 
-    for (let attempt = 0; attempt <= 3; attempt++) {
-      try {
-        return await callOcr(imageBase64, mimeType);
-      } catch (err: any) {
-        lastErr = err;
-        const msg = String(err?.message || "");
-        const is429 = msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("Rate");
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    try {
+      return await callOcr(imageBase64, mimeType, {
+        userEmail: options?.userEmail || "",
+        country: options?.country || "",
+        brand: options?.brand || "",
+        menuCandidates: options?.menuCandidates || [],
+      });
+    } catch (err: any) {
+      lastErr = err;
+      const msg = String(err?.message || "");
+      const is429 =
+        msg.includes("429") ||
+        msg.includes("RESOURCE_EXHAUSTED") ||
+        msg.includes("Rate");
 
-        if (is429 && attempt < 3) {
-          const delay = delays[attempt] + Math.random() * 800;
-          setOcrFileStatuses((prev) => ({
-            ...prev,
-            [fileName]: { ...(prev[fileName] || { status: "pending" }), status: "retrying", retryCount: attempt + 1 },
-          }));
-          await sleep(delay);
-          continue;
-        }
-        throw err;
+      if (is429 && attempt < 3) {
+        const delay = delays[attempt] + Math.random() * 800;
+        setOcrFileStatuses((prev) => ({
+          ...prev,
+          [fileName]: {
+            ...(prev[fileName] || { status: "pending" }),
+            status: "retrying",
+            retryCount: attempt + 1,
+          },
+        }));
+        await sleep(delay);
+        continue;
       }
+
+      throw err;
     }
-    throw lastErr;
-  };
+  }
+
+  throw lastErr;
+};
 
   const appendFiles = (files: File[]) => {
     if (!files || files.length === 0) return;
@@ -476,80 +501,159 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const handleOcr = async (filesToProcessOverride?: File[]) => {
-    const statuses = ocrFileStatuses || {};
-    const defaultTargets = ocrFiles.filter((f) => {
-      const s = statuses[f.name]?.status;
-      return s !== "success";
-    });
+  const statuses = ocrFileStatuses || {};
+  const defaultTargets = ocrFiles.filter((f) => {
+    const s = statuses[f.name]?.status;
+    return s !== "success";
+  });
 
-    const filesToProcess = filesToProcessOverride || defaultTargets;
-    if (filesToProcess.length === 0) return;
+  const filesToProcess = filesToProcessOverride || defaultTargets;
+  if (filesToProcess.length === 0) return;
 
-    setOcrLoading(true);
-    setOcrError("");
-    setOcrErrorDetail("");
-    setOcrProgress({ current: 0, total: filesToProcess.length });
+  setOcrLoading(true);
+  setOcrError("");
+  setOcrErrorDetail("");
+  setOcrProgress({ current: 0, total: filesToProcess.length });
 
-    setOcrFileStatuses((prev) => {
-      const next = { ...prev };
-      filesToProcess.forEach((f) => (next[f.name] = { status: "pending" }));
-      return next;
-    });
+  setOcrFileStatuses((prev) => {
+    const next = { ...prev };
+    filesToProcess.forEach((f) => (next[f.name] = { status: "pending" }));
+    return next;
+  });
 
-    for (let i = 0; i < filesToProcess.length; i++) {
-      const currentFile = filesToProcess[i];
-      setOcrProgress({ current: i + 1, total: filesToProcess.length });
+  let currentUserEmail = "";
+  if (supabase) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      currentUserEmail = sessionData?.session?.user?.email || "";
+    } catch (err) {
+      console.error("Failed to read session for OCR:", err);
+    }
+  }
+
+  const menuCandidates = allMenus.map((m) => m.name);
+  const ocrCountry = String((data as any)?.country || "").trim();
+  const ocrBrand = String((data as any)?.brand || "").trim();
+
+  for (let i = 0; i < filesToProcess.length; i++) {
+    const currentFile = filesToProcess[i];
+    setOcrProgress({ current: i + 1, total: filesToProcess.length });
+
+    setOcrFileStatuses((prev) => ({
+      ...prev,
+      [currentFile.name]: { status: "processing" },
+    }));
+
+    if (i > 0) await sleep(1800 + Math.random() * 1000);
+
+    try {
+      setOcrOptimizing(true);
+
+      const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
+      const { base64, mimeType } = await fileToBase64(optimizedFile);
+
+      setOcrOptimizing(false);
+
+      const ocrResult = await callOcrWithRetry(base64, mimeType, currentFile.name, {
+        userEmail: currentUserEmail,
+        country: ocrCountry,
+        brand: ocrBrand,
+        menuCandidates,
+      });
+
+      const extractedText = String(ocrResult?.rawText || "").trim();
+      const structuredItems = Array.isArray(ocrResult?.items) ? ocrResult.items : [];
+
+      if (!extractedText && structuredItems.length === 0) {
+        throw new Error("텍스트 또는 메뉴를 추출하지 못했습니다.");
+      }
+
+      if (extractedText) {
+        setOcrRawText((prev) => {
+          return (
+            prev +
+            (prev ? "\n\n" : "") +
+            `--- File: ${currentFile.name} ---\n` +
+            extractedText
+          );
+        });
+      }
+
+      let correctedNewItems: CorrectedItem[] = [];
+
+      if (structuredItems.length > 0) {
+        correctedNewItems = structuredItems
+          .map((item: any) => {
+            const receiptName = String(
+              item?.receipt_name || item?.matched_name || ""
+            ).trim();
+
+            const matchedName = String(item?.matched_name || "").trim();
+            const matchedMenu = allMenus.find((m) => m.name === matchedName);
+
+            const qty = Number(item?.qty || 0);
+            const unitPrice = Number(item?.price || 0);
+            const confidenceRaw = Number(item?.confidence || 0);
+            const confidence =
+              Number.isFinite(confidenceRaw) && confidenceRaw >= 0
+                ? Math.min(1, confidenceRaw)
+                : 0;
+
+            const needsReview = Boolean(item?.needs_review ?? !matchedMenu);
+
+            return {
+              matched_id: matchedMenu?.id,
+              item_original: receiptName,
+              item_corrected: matchedMenu?.name || matchedName || receiptName,
+              unit_price: unitPrice || matchedMenu?.price || 0,
+              qty: Number.isFinite(qty) ? qty : 0,
+              confidence,
+              needs_review: needsReview,
+              candidates: needsReview
+                ? allMenus.slice(0, 5).map((m) => ({
+                    name: m.name,
+                    id: m.id,
+                    score: m.name === matchedName ? 1 : 0,
+                  }))
+                : undefined,
+            } as CorrectedItem;
+          })
+          .filter((item) => item.item_original && Number(item.qty || 0) > 0);
+      } else {
+        const parsedItems = extractMenuItemsFromRawText(extractedText);
+        correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
+      }
+
+      setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
 
       setOcrFileStatuses((prev) => ({
         ...prev,
-        [currentFile.name]: { status: "processing" },
+        [currentFile.name]: { status: "success" },
+      }));
+    } catch (err: any) {
+      console.error(`Error processing file ${currentFile.name}:`, err);
+      const errorDetail = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+
+      setOcrFileStatuses((prev) => ({
+        ...prev,
+        [currentFile.name]: {
+          status: "failed",
+          error: err?.message || "알 수 없는 오류",
+        },
       }));
 
-      if (i > 0) await sleep(1800 + Math.random() * 1000);
-
-      try {
-        setOcrOptimizing(true);
-
-        const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
-        const { base64, mimeType } = await fileToBase64(optimizedFile);
-
-        setOcrOptimizing(false);
-
-        const ocrResult = await callOcrWithRetry(base64, mimeType, currentFile.name);
-
-        const extractedText = String(ocrResult?.rawText || "").trim();
-        if (!extractedText) throw new Error("텍스트를 추출하지 못했습니다.");
-
-        setOcrRawText((prev) => prev + (prev ? "\n\n" : "") + `--- File: ${currentFile.name} ---\n` + extractedText);
-
-        const parsedItems = extractMenuItemsFromRawText(extractedText);
-        const correctedNewItems = parsedItems.map((it) => autoCorrectItem(it));
-
-        setOcrItemsAccumulated((prev) => [...prev, ...correctedNewItems]);
-
-        setOcrFileStatuses((prev) => ({
-          ...prev,
-          [currentFile.name]: { status: "success" },
-        }));
-      } catch (err: any) {
-        console.error(`Error processing file ${currentFile.name}:`, err);
-        const errorDetail = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
-
-        setOcrFileStatuses((prev) => ({
-          ...prev,
-          [currentFile.name]: { status: "failed", error: err?.message || "알 수 없는 오류" },
-        }));
-
-        setOcrError((prev) => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패`);
-        setOcrErrorDetail(errorDetail);
-      } finally {
-        setOcrOptimizing(false);
-      }
+      setOcrError(
+        (prev) => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패`
+      );
+      setOcrErrorDetail(errorDetail);
+    } finally {
+      setOcrOptimizing(false);
     }
+  }
 
-    setOcrLoading(false);
-    setOcrProgress(null);
-  };
+  setOcrLoading(false);
+  setOcrProgress(null);
+};
 
   const handleRetryFailed = () => {
     const failedFiles = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status === "failed");
