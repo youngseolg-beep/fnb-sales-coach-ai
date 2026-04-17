@@ -9,13 +9,13 @@ export type MenuPriceHistoryRow = {
 };
 
 export const getMenuPricesForDate = async (date: string, storeId: number) => {
- const { data, error } = await supabase
-  .from("menu_price_history")
-  .select("menu_id, effective_date, price, unit_cost, created_at")
-  .eq("store_id", 1)
-  .lte("effective_date", date)
-  .order("effective_date", { ascending: false })
-  .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("menu_price_history")
+    .select("menu_id, effective_date, price, unit_cost, created_at")
+    .eq("store_id", storeId)
+    .lte("effective_date", date)
+    .order("effective_date", { ascending: false })
+    .order("created_at", { ascending: false });
 
   if (error) {
     throw error;
@@ -47,19 +47,18 @@ export const saveMenuPriceHistory = async (
   unitCost: number | undefined,
   storeId: number
 ) => {
-  
- const payload = {
-  menu_id: menuId,
-  store_id: 1,
-  effective_date: effectiveDate,
-  price,
-  unit_cost: unitCost ?? null,
-};
+  const payload = {
+    menu_id: menuId,
+    store_id: storeId,
+    effective_date: effectiveDate,
+    price,
+    unit_cost: unitCost ?? null,
+  };
 
- const { data, error } = await supabase
-  .from("menu_price_history")
-  .insert(payload)
-  .select();
+  const { data, error } = await supabase
+    .from("menu_price_history")
+    .insert(payload)
+    .select();
 
   if (error) {
     throw error;
@@ -76,7 +75,7 @@ export const getMenuPriceHistory = async (
     .from("menu_price_history")
     .select("menu_id, effective_date, price, unit_cost, created_at")
     .eq("menu_id", menuId)
-    .eq("store_id", 1)
+    .eq("store_id", storeId)
     .order("created_at", { ascending: false });
 
   if (error) {
