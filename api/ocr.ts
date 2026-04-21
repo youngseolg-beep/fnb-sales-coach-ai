@@ -149,7 +149,7 @@ export default async function handler(req: any, res: any) {
     const menuListText = finalMenuCandidates.map((name) => `- ${name}`).join("\n");
 
     const prompt = `
-You are analyzing a restaurant receipt image.
+You are analyzing a restaurant receipt or admin sales screen image.
 
 Context:
 - Pilot account email: JP_PN@THEBORN.CO.KR
@@ -157,7 +157,7 @@ Context:
 - Brand: ${brand || "Hong Kong Banjeom"}
 
 Goal:
-Extract sold menu items from this Japanese receipt and map each item to the closest canonical Korean menu name from the allowed menu list.
+Extract sold menu items from this Japanese data and map each item to the closest canonical Korean menu name from the allowed menu list.
 
 Allowed canonical Korean menu list:
 ${menuListText}
@@ -173,6 +173,11 @@ Important mapping guidance:
 - Distinguish similar noodle/rice items carefully.
   - 짬뽕 / 짬뽕 곱빼기 / 짬뽕밥 / 모야시짬뽕 are different menus.
   - 짜장 / 짜장 곱빼기 / 짜장밥 / 고기짜장 are different menus.
+- In this dataset, if a menu name starts with "※" or "★", it indicates DELIVERY.
+- If a menu name does not start with "※" or "★", classify it as POS.
+- Remove leading "※" and "★" symbols when determining the matched_name.
+- Keep the original text including symbols in receipt_name.
+- Add "order_type" with value "DELIVERY" or "POS".
 - Do not invent new Korean menu names.
 - If uncertain, still choose the closest allowed menu, but set needs_review=true and lower confidence.
 - Ignore totals, subtotal, tax, address, phone number, time, table info, and staff info.
@@ -185,6 +190,7 @@ Return ONLY valid JSON in this exact shape:
       "matched_name": "one of allowed canonical Korean menu list",
       "qty": 1,
       "price": 0,
+      "order_type": "POS",
       "confidence": 0.0,
       "needs_review": true
     }
@@ -195,6 +201,7 @@ Rules:
 - matched_name must be exactly one of the allowed canonical Korean menu list.
 - qty must be a number.
 - price must be a number. If unknown, use 0.
+- order_type must be either "POS" or "DELIVERY".
 - confidence must be a number between 0 and 1.
 - needs_review must be boolean.
 - Return JSON only. No markdown. No explanation.
@@ -238,11 +245,15 @@ Rules:
               ? Math.min(1, confidenceRaw)
               : 0;
 
+          const rawOrderType = String(item?.order_type || "POS").trim().toUpperCase();
+          const orderType = rawOrderType === "DELIVERY" ? "DELIVERY" : "POS";
+
           return {
             receipt_name: String(item?.receipt_name || "").trim(),
             matched_name: safeMatchedName,
             qty: Number.isFinite(qty) ? qty : 0,
             price: Number.isFinite(price) ? price : 0,
+            order_type: orderType,
             confidence,
             needs_review: Boolean(item?.needs_review ?? true),
           };
