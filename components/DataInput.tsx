@@ -544,7 +544,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       [currentFile.name]: { status: "processing" },
     }));
 
-    if (i > 0) await sleep(1800 + Math.random() * 1000);
+    if (i > 0) await sleep(300);
 
     try {
       setOcrOptimizing(true);
