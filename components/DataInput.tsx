@@ -70,14 +70,10 @@ async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<F
 function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
   const lines = rawText
     .split("\n")
-    .map((l) => l.trim())
+    .map((l) => l.replace(/\t/g, " ").trim())
     .filter(Boolean);
 
   const items: { name: string; price: number; qty: number }[] = [];
-
-  const r1 = /^(.+?)\s*\(\s*\$?\s*([0-9]+(?:\.[0-9]+)?)\s*\)\s*.*?\bx\s*([0-9]+)\b/i;
-  const r2 = /^(.+?)\s+.*?\bx\s*([0-9]+)\b/i;
-  const r3 = /^(.+?)\s+([0-9]+)\s+\$?\s*([0-9]+(?:\.[0-9]+)?)$/i;
 
   const skipKeywords = [
     "DATE",
@@ -93,45 +89,91 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
     "CHANGE",
     "TEL",
     "ADDRESS",
+    "주문합계",
+    "합계",
+    "총액",
+    "현금",
+    "카드",
+    "할인",
+    "봉사료",
+    "부가세",
+    "테이블",
+    "포장",
   ];
+
+  const cleanMenuName = (name: string) =>
+    name
+      .replace(/[\/|]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
 
   for (const line of lines) {
     const up = line.toUpperCase();
+
     if (skipKeywords.some((k) => up.includes(k))) continue;
+    if (/^[\d\s.,/:-]+$/.test(line)) continue;
     if (line.length < 2) continue;
 
-    let m = line.match(r1);
+    let m: RegExpMatchArray | null = null;
+
+    // 한글/일문 메뉴명 + "/" + 가격 + 수량 + 합계
+    // 예: 짜장면 / 7 1 7
+    m = line.match(/^(.+?)\s*\/\s*([0-9]+(?:\.[0-9]+)?)\s+([0-9]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
     if (m) {
-      const name = m[1].replace(/\.+/g, " ").trim();
+      const name = cleanMenuName(m[1]);
       const price = parseFloat(m[2] || "0") || 0;
       const qty = parseInt(m[3] || "0", 10) || 0;
-      if (name && qty > 0) items.push({ name, price, qty });
-      continue;
+      if (name && qty > 0) {
+        items.push({ name, price, qty });
+        continue;
+      }
     }
 
-    m = line.match(r3);
+    // 한글/일문 메뉴명 + 가격 + 수량 + 합계
+    // 예: 고추짜장 9 2 18 / 굴짜장 18 1 18
+    m = line.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)\s+([0-9]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
     if (m) {
-      const name = m[1].replace(/\.+/g, " ").trim();
+      const name = cleanMenuName(m[1]);
+      const price = parseFloat(m[2] || "0") || 0;
+      const qty = parseInt(m[3] || "0", 10) || 0;
+      if (name && qty > 0) {
+        items.push({ name, price, qty });
+        continue;
+      }
+    }
+
+    // 메뉴명 + x 수량
+    m = line.match(/^(.+?)\s+.*?\bx\s*([0-9]+)\b/i);
+    if (m) {
+      const name = cleanMenuName(m[1]);
+      const qty = parseInt(m[2] || "0", 10) || 0;
+      if (name && qty > 0) {
+        items.push({ name, price: 0, qty });
+        continue;
+      }
+    }
+
+    // 메뉴명 + 수량 + 가격
+    m = line.match(/^(.+?)\s+([0-9]+)\s+\$?\s*([0-9]+(?:\.[0-9]+)?)$/i);
+    if (m) {
+      const name = cleanMenuName(m[1]);
       const qty = parseInt(m[2] || "0", 10) || 0;
       const price = parseFloat(m[3] || "0") || 0;
-      if (name && qty > 0) items.push({ name, price, qty });
-      continue;
-    }
-
-    m = line.match(r2);
-    if (m) {
-      const name = m[1].replace(/\.+/g, " ").trim();
-      const qty = parseInt(m[2] || "0", 10) || 0;
-      if (name && qty > 0) items.push({ name, price: 0, qty });
-      continue;
+      if (name && qty > 0) {
+        items.push({ name, price, qty });
+        continue;
+      }
     }
   }
 
   const merged: Record<string, { name: string; price: number; qty: number }> = {};
   for (const it of items) {
     const key = `${it.name}||${it.price}`;
-    if (!merged[key]) merged[key] = { ...it };
-    else merged[key].qty += it.qty;
+    if (!merged[key]) {
+      merged[key] = { ...it };
+    } else {
+      merged[key].qty += it.qty;
+    }
   }
 
   return Object.values(merged);
