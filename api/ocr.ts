@@ -88,11 +88,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const allowedMenus = Array.isArray(menuCandidates)
-      ? menuCandidates
-          .map((v) => String(v || "").trim())
-          .filter(Boolean)
-      : [];
+   const allowedMenus = Array.isArray(menuCandidates)
+  ? menuCandidates
+      .map((v: any) => {
+        if (typeof v === "string") {
+          return v.trim();
+        }
+
+        if (v && typeof v === "object") {
+          return String(v.name || "").trim();
+        }
+
+        return "";
+      })
+      .filter(Boolean)
+  : [];
 
     const defaultJapanHongkongBanjeomMenus = [
       "짬뽕",
