@@ -535,16 +535,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const ocrCountry = String((data as any)?.country || "").trim();
   const ocrBrand = String((data as any)?.brand || "").trim();
 
-  for (let i = 0; i < filesToProcess.length; i++) {
-    const currentFile = filesToProcess[i];
-    setOcrProgress({ current: i + 1, total: filesToProcess.length });
+  let completedCount = 0;
 
+  const processSingleFile = async (currentFile: File) => {
     setOcrFileStatuses((prev) => ({
       ...prev,
       [currentFile.name]: { status: "processing" },
     }));
-
-    if (i > 0) await sleep(300);
 
     try {
       setOcrOptimizing(true);
@@ -645,10 +642,19 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       setOcrError(
         (prev) => prev + (prev ? "\n" : "") + `${currentFile.name}: 인식 실패`
       );
-      setOcrErrorDetail(errorDetail);
+      setOcrErrorDetail((prev) => (prev ? `${prev}\n\n${errorDetail}` : errorDetail));
     } finally {
+      completedCount += 1;
+      setOcrProgress({ current: completedCount, total: filesToProcess.length });
       setOcrOptimizing(false);
     }
+  };
+
+  const batchSize = 2;
+
+  for (let start = 0; start < filesToProcess.length; start += batchSize) {
+    const batch = filesToProcess.slice(start, start + batchSize);
+    await Promise.all(batch.map((file) => processSingleFile(file)));
   }
 
   setOcrLoading(false);
