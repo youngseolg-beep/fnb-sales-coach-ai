@@ -22,6 +22,45 @@ function extractJsonBlock(text: string) {
   return null;
 }
 
+type MenuCandidateInput =
+  | string
+  | {
+      name?: string;
+      jp_name?: string | null;
+    };
+
+type NormalizedMenuCandidate = {
+  name: string;
+  jp_name: string | null;
+};
+
+function normalizeMenuCandidates(menuCandidates: any): NormalizedMenuCandidate[] {
+  if (!Array.isArray(menuCandidates)) return [];
+
+  return (menuCandidates as MenuCandidateInput[])
+    .map((v) => {
+      if (typeof v === "string") {
+        const name = v.trim();
+        return name ? { name, jp_name: null } : null;
+      }
+
+      if (v && typeof v === "object") {
+        const name = String(v.name || "").trim();
+        const jp_name = String(v.jp_name || "").trim();
+
+        if (!name) return null;
+
+        return {
+          name,
+          jp_name: jp_name || null,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as NormalizedMenuCandidate[];
+}
+
 export default async function handler(req: any, res: any) {
   try {
     if (req.method !== "POST") {
@@ -88,75 +127,69 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-   const allowedMenus = Array.isArray(menuCandidates)
-  ? menuCandidates
-      .map((v: any) => {
-        if (typeof v === "string") {
-          return v.trim();
-        }
+    const allowedMenus = normalizeMenuCandidates(menuCandidates);
 
-        if (v && typeof v === "object") {
-          return String(v.name || "").trim();
-        }
-
-        return "";
-      })
-      .filter(Boolean)
-  : [];
-
-    const defaultJapanHongkongBanjeomMenus = [
-      "짬뽕",
-      "짬뽕 곱빼기",
-      "짬뽕밥",
-      "고추짬뽕",
-      "고추짬뽕 곱빼기",
-      "고추짬뽕밥",
-      "짜장",
-      "짜장 곱빼기",
-      "짜장밥",
-      "볶음짬뽕",
-      "쟁반짜장",
-      "탕수육 소",
-      "탕수육 대",
-      "탕수육 하프",
-      "깐풍기",
-      "고기짜장",
-      "고기짜장 곱빼기",
-      "고기짬뽕",
-      "고기짬뽕 곱빼기",
-      "고기짬뽕밥",
-      "콩국수",
-      "모야시짬뽕",
-      "중화냉면",
-      "생맥주",
-      "병맥주",
-      "논알콜",
-      "참이슬",
-      "참이슬 머스캣",
-      "참이슬 자두",
-      "처음처럼",
-      "좋은데이",
-      "하이볼",
-      "레몬사와",
-      "우롱하이",
-      "콜라",
-      "제로콜라",
-      "사이다",
-      "오렌지주스",
-      "칼피스",
-      "우롱차",
-      "옥수수차",
-      "배주스",
-      "포도봉봉",
-      "복숭아주스",
-      "IGIN하이볼",
-      "콘차하이",
+    const defaultJapanHongkongBanjeomMenus: NormalizedMenuCandidate[] = [
+      { name: "짬뽕", jp_name: "ちゃんぽん" },
+      { name: "짬뽕 곱빼기", jp_name: "ちゃんぽん大盛" },
+      { name: "짬뽕밥", jp_name: "ちゃんぽんバプ" },
+      { name: "고추짬뽕", jp_name: "コチュチャンポン" },
+      { name: "고추짬뽕 곱빼기", jp_name: "コチュチャンポン大盛" },
+      { name: "고추짬뽕밥", jp_name: "コチュチャンポンバプ" },
+      { name: "짜장", jp_name: "チャジャン麺" },
+      { name: "짜장 곱빼기", jp_name: "チャジャン麺大盛" },
+      { name: "짜장밥", jp_name: "チャジャンバプ" },
+      { name: "볶음짬뽕", jp_name: null },
+      { name: "쟁반짜장", jp_name: null },
+      { name: "탕수육 소", jp_name: "タンスユク(小)" },
+      { name: "탕수육 대", jp_name: "タンスユク(大)" },
+      { name: "탕수육 하프", jp_name: "タンスユクハーフ" },
+      { name: "깐풍기", jp_name: null },
+      { name: "고기짜장", jp_name: null },
+      { name: "고기짜장 곱빼기", jp_name: null },
+      { name: "고기짬뽕", jp_name: null },
+      { name: "고기짬뽕 곱빼기", jp_name: null },
+      { name: "고기짬뽕밥", jp_name: null },
+      { name: "콩국수", jp_name: null },
+      { name: "모야시짬뽕", jp_name: null },
+      { name: "중화냉면", jp_name: null },
+      { name: "생맥주", jp_name: "生ビール" },
+      { name: "병맥주", jp_name: "瓶ビール" },
+      { name: "논알콜", jp_name: "ノンアルコール" },
+      { name: "참이슬", jp_name: "チャミスル" },
+      { name: "참이슬 머스캣", jp_name: "チャミスルマスカット" },
+      { name: "참이슬 자두", jp_name: "チャミスルすもも" },
+      { name: "처음처럼", jp_name: "チョウムチョロム" },
+      { name: "좋은데이", jp_name: "ジョウンデー" },
+      { name: "하이볼", jp_name: "ハイボール" },
+      { name: "레몬사와", jp_name: "レモンサワー" },
+      { name: "우롱하이", jp_name: "ウーロンハイ" },
+      { name: "콜라", jp_name: "コカ・コーラ" },
+      { name: "제로콜라", jp_name: "コカ・コーラゼロ" },
+      { name: "사이다", jp_name: "サイダー" },
+      { name: "오렌지주스", jp_name: "オレンジジュース" },
+      { name: "칼피스", jp_name: "カルピス" },
+      { name: "우롱차", jp_name: "ウーロン茶" },
+      { name: "옥수수차", jp_name: "とうもろこし茶" },
+      { name: "배주스", jp_name: "梨ジュース" },
+      { name: "포도봉봉", jp_name: "ぶどうボンボン" },
+      { name: "복숭아주스", jp_name: "桃ジュース" },
+      { name: "IGIN하이볼", jp_name: "IGINハイボール" },
+      { name: "콘차하이", jp_name: "コーン茶ハイ" },
     ];
 
     const finalMenuCandidates =
       allowedMenus.length > 0 ? allowedMenus : defaultJapanHongkongBanjeomMenus;
 
-    const menuListText = finalMenuCandidates.map((name) => `- ${name}`).join("\n");
+    const finalMenuNames = finalMenuCandidates.map((menu) => menu.name);
+
+    const menuListText = finalMenuCandidates
+      .map((menu) =>
+        menu.jp_name
+          ? `- ${menu.name} (Japanese reference: ${menu.jp_name})`
+          : `- ${menu.name}`
+      )
+      .join("\n");
 
     const prompt = `
 You are analyzing a restaurant receipt or admin sales screen image.
@@ -175,6 +208,7 @@ ${menuListText}
 Important mapping guidance:
 - Japanese item names may appear in katakana, hiragana, kanji, abbreviations, or POS-style shortened text.
 - Infer the closest canonical Korean menu from the allowed list.
+- Use Japanese reference names as strong hints when matching.
 - Use menu size information carefully.
   - Examples:
     - タンスユク小 -> 탕수육 소
@@ -197,7 +231,7 @@ Return ONLY valid JSON in this exact shape:
   "items": [
     {
       "receipt_name": "original receipt item text",
-      "matched_name": "one of allowed canonical Korean menu list",
+      "matched_name": "one of allowed canonical Korean menu list names",
       "qty": 1,
       "price": 0,
       "order_type": "POS",
@@ -208,7 +242,7 @@ Return ONLY valid JSON in this exact shape:
 }
 
 Rules:
-- matched_name must be exactly one of the allowed canonical Korean menu list.
+- matched_name must be exactly one of the allowed canonical Korean menu list names.
 - qty must be a number.
 - price must be a number. If unknown, use 0.
 - order_type must be either "POS" or "DELIVERY".
@@ -243,9 +277,9 @@ Rules:
     const items = Array.isArray(parsed?.items)
       ? parsed.items.map((item: any) => {
           const matchedName = String(item?.matched_name || "").trim();
-          const safeMatchedName = finalMenuCandidates.includes(matchedName)
+          const safeMatchedName = finalMenuNames.includes(matchedName)
             ? matchedName
-            : finalMenuCandidates[0] || "";
+            : finalMenuNames[0] || "";
 
           const qty = Number(item?.qty || 0);
           const price = Number(item?.price || 0);
