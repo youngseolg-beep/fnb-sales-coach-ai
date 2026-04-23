@@ -95,10 +95,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = process.env.GEMINI_MODEL_OCR || "gemini-2.5-flash";
 
     const normalizedEmail = String(userEmail || "").trim().toUpperCase();
     const isJapanPilot = normalizedEmail === "JP_PN@THEBORN.CO.KR";
+
+    const defaultModel = process.env.GEMINI_MODEL_OCR || "gemini-2.5-flash";
+    const japanPilotModel =
+      process.env.GEMINI_MODEL_OCR_JAPAN ||
+      process.env.GEMINI_MODEL_OCR_FAST ||
+      defaultModel;
+
+    const model = isJapanPilot ? japanPilotModel : defaultModel;
 
     if (!isJapanPilot) {
       const response = await ai.models.generateContent({
@@ -133,6 +140,7 @@ export default async function handler(req: any, res: any) {
         rawText: text,
         items: [],
         totals: {},
+        model_used: model,
       });
     }
 
@@ -227,7 +235,23 @@ Rules:
 - confidence must be 0 to 1
 - needs_review must be boolean
 
-Return JSON only in this shape:
+Return JSON only in one of these shapes:
+{
+  "items": [
+    {
+      "receipt_name": "original text",
+      "matched_name": "allowed Korean menu name",
+      "qty": 1,
+      "price": 0,
+      "order_type": "POS",
+      "confidence": 0.0,
+      "needs_review": false
+    }
+  ]
+}
+
+or
+
 [
   {
     "receipt_name": "original text",
@@ -303,6 +327,7 @@ Return JSON only in this shape:
       rawText: text,
       items,
       totals: {},
+      model_used: model,
     });
   } catch (error: any) {
     return res.status(500).json({
