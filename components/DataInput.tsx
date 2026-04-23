@@ -419,7 +419,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     userEmail?: string;
     country?: string;
     brand?: string;
-    menuCandidates?: string[];
+    menuCandidates?: { name: string; jp_name?: string | null }[];
   }
 ) => {
   const delays = [2000, 5000, 10000];
@@ -531,7 +531,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     }
   }
 
-  const menuCandidates = allMenus.map((m) => m.name);
+ const menuCandidates = allMenus.map((m) => ({
+  name: m.name,
+  jp_name: (m as any).jp_name || null,
+}));
   const ocrCountry = String((data as any)?.country || "").trim();
   const ocrBrand = String((data as any)?.brand || "").trim();
 
