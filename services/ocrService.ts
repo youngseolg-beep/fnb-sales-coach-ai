@@ -1,3 +1,10 @@
+export type OcrMenuCandidate =
+  | string
+  | {
+      name: string;
+      jp_name?: string | null;
+    };
+
 export async function callOcr(
   imageBase64: string,
   mimeType = "image/jpeg",
@@ -5,7 +12,7 @@ export async function callOcr(
     userEmail?: string;
     country?: string;
     brand?: string;
-    menuCandidates?: string[];
+    menuCandidates?: OcrMenuCandidate[];
   }
 ) {
   const res = await fetch("/api/ocr", {
