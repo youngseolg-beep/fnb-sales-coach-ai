@@ -10,10 +10,19 @@ function extractJsonBlock(text: string) {
     } catch {}
   }
 
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    const raw = text.slice(start, end + 1);
+  const firstArrayStart = text.indexOf("[");
+  const lastArrayEnd = text.lastIndexOf("]");
+  if (firstArrayStart !== -1 && lastArrayEnd !== -1 && lastArrayEnd > firstArrayStart) {
+    const raw = text.slice(firstArrayStart, lastArrayEnd + 1);
+    try {
+      return JSON.parse(raw);
+    } catch {}
+  }
+
+  const firstObjectStart = text.indexOf("{");
+  const lastObjectEnd = text.lastIndexOf("}");
+  if (firstObjectStart !== -1 && lastObjectEnd !== -1 && lastObjectEnd > firstObjectStart) {
+    const raw = text.slice(firstObjectStart, lastObjectEnd + 1);
     try {
       return JSON.parse(raw);
     } catch {}
@@ -226,7 +235,7 @@ Important mapping guidance:
 - If uncertain, still choose the closest allowed menu, but set needs_review=true and lower confidence.
 - Ignore totals, subtotal, tax, address, phone number, time, table info, and staff info.
 
-Return ONLY valid JSON in this exact shape:
+Return ONLY valid JSON in one of these shapes:
 {
   "items": [
     {
@@ -240,6 +249,20 @@ Return ONLY valid JSON in this exact shape:
     }
   ]
 }
+
+or
+
+[
+  {
+    "receipt_name": "original receipt item text",
+    "matched_name": "one of allowed canonical Korean menu list names",
+    "qty": 1,
+    "price": 0,
+    "order_type": "POS",
+    "confidence": 0.0,
+    "needs_review": true
+  }
+]
 
 Rules:
 - matched_name must be exactly one of the allowed canonical Korean menu list names.
@@ -273,36 +296,39 @@ Rules:
 
     const text = response?.text || "";
     const parsed = extractJsonBlock(text);
-
-    const items = Array.isArray(parsed?.items)
-      ? parsed.items.map((item: any) => {
-          const matchedName = String(item?.matched_name || "").trim();
-          const safeMatchedName = finalMenuNames.includes(matchedName)
-            ? matchedName
-            : finalMenuNames[0] || "";
-
-          const qty = Number(item?.qty || 0);
-          const price = Number(item?.price || 0);
-          const confidenceRaw = Number(item?.confidence || 0);
-          const confidence =
-            Number.isFinite(confidenceRaw) && confidenceRaw >= 0
-              ? Math.min(1, confidenceRaw)
-              : 0;
-
-          const rawOrderType = String(item?.order_type || "POS").trim().toUpperCase();
-          const orderType = rawOrderType === "DELIVERY" ? "DELIVERY" : "POS";
-
-          return {
-            receipt_name: String(item?.receipt_name || "").trim(),
-            matched_name: safeMatchedName,
-            qty: Number.isFinite(qty) ? qty : 0,
-            price: Number.isFinite(price) ? price : 0,
-            order_type: orderType,
-            confidence,
-            needs_review: Boolean(item?.needs_review ?? true),
-          };
-        })
+    const parsedItems = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.items)
+      ? parsed.items
       : [];
+
+    const items = parsedItems.map((item: any) => {
+      const matchedName = String(item?.matched_name || "").trim();
+      const safeMatchedName = finalMenuNames.includes(matchedName)
+        ? matchedName
+        : finalMenuNames[0] || "";
+
+      const qty = Number(item?.qty || 0);
+      const price = Number(item?.price || 0);
+      const confidenceRaw = Number(item?.confidence || 0);
+      const confidence =
+        Number.isFinite(confidenceRaw) && confidenceRaw >= 0
+          ? Math.min(1, confidenceRaw)
+          : 0;
+
+      const rawOrderType = String(item?.order_type || "POS").trim().toUpperCase();
+      const orderType = rawOrderType === "DELIVERY" ? "DELIVERY" : "POS";
+
+      return {
+        receipt_name: String(item?.receipt_name || "").trim(),
+        matched_name: safeMatchedName,
+        qty: Number.isFinite(qty) ? qty : 0,
+        price: Number.isFinite(price) ? price : 0,
+        order_type: orderType,
+        confidence,
+        needs_review: Boolean(item?.needs_review ?? true),
+      };
+    });
 
     return res.status(200).json({
       ok: true,
