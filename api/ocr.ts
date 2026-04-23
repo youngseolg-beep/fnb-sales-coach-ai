@@ -201,77 +201,44 @@ export default async function handler(req: any, res: any) {
       .join("\n");
 
     const prompt = `
-You are analyzing a restaurant receipt or admin sales screen image.
+Analyze this Japanese restaurant receipt or admin sales image.
 
 Context:
-- Pilot account email: JP_PN@THEBORN.CO.KR
+- Pilot account: JP_PN@THEBORN.CO.KR
 - Country: ${country || "Japan"}
 - Brand: ${brand || "Hong Kong Banjeom"}
 
-Goal:
-Extract sold menu items from this Japanese data and map each item to the closest canonical Korean menu name from the allowed menu list.
+Task:
+Extract sold menu items and map each one to the closest Korean canonical menu name from the allowed list below.
 
-Allowed canonical Korean menu list:
+Allowed menu list:
 ${menuListText}
 
-Important mapping guidance:
-- Japanese item names may appear in katakana, hiragana, kanji, abbreviations, or POS-style shortened text.
-- Infer the closest canonical Korean menu from the allowed list.
-- Use Japanese reference names as strong hints when matching.
-- Use menu size information carefully.
-  - Examples:
-    - タンスユク小 -> 탕수육 소
-    - タンスユク大 -> 탕수육 대
-    - ハーフ -> 하프
-- Distinguish similar noodle/rice items carefully.
-  - 짬뽕 / 짬뽕 곱빼기 / 짬뽕밥 / 모야시짬뽕 are different menus.
-  - 짜장 / 짜장 곱빼기 / 짜장밥 / 고기짜장 are different menus.
-- In this dataset, if a menu name starts with "※" or "★", it indicates DELIVERY.
-- If a menu name does not start with "※" or "★", classify it as POS.
-- Remove leading "※" and "★" symbols when determining the matched_name.
-- Keep the original text including symbols in receipt_name.
-- Add "order_type" with value "DELIVERY" or "POS".
-- Do not invent new Korean menu names.
-- If uncertain, still choose the closest allowed menu, but set needs_review=true and lower confidence.
-- Ignore totals, subtotal, tax, address, phone number, time, table info, and staff info.
+Rules:
+- Use Japanese reference names as strong hints.
+- If item starts with "※" or "★", order_type = "DELIVERY"
+- Otherwise, order_type = "POS"
+- Keep original text in receipt_name
+- matched_name must be exactly one name from the allowed menu list
+- Do not invent new menu names
+- Ignore subtotal, total, tax, address, phone, time, table, and staff info
+- qty must be a number
+- price must be a number, use 0 if unknown
+- confidence must be 0 to 1
+- needs_review must be boolean
 
-Return ONLY valid JSON in one of these shapes:
-{
-  "items": [
-    {
-      "receipt_name": "original receipt item text",
-      "matched_name": "one of allowed canonical Korean menu list names",
-      "qty": 1,
-      "price": 0,
-      "order_type": "POS",
-      "confidence": 0.0,
-      "needs_review": true
-    }
-  ]
-}
-
-or
-
+Return JSON only in this shape:
 [
   {
-    "receipt_name": "original receipt item text",
-    "matched_name": "one of allowed canonical Korean menu list names",
+    "receipt_name": "original text",
+    "matched_name": "allowed Korean menu name",
     "qty": 1,
     "price": 0,
     "order_type": "POS",
     "confidence": 0.0,
-    "needs_review": true
+    "needs_review": false
   }
 ]
-
-Rules:
-- matched_name must be exactly one of the allowed canonical Korean menu list names.
-- qty must be a number.
-- price must be a number. If unknown, use 0.
-- order_type must be either "POS" or "DELIVERY".
-- confidence must be a number between 0 and 1.
-- needs_review must be boolean.
-- Return JSON only. No markdown. No explanation.
 `.trim();
 
     const response = await ai.models.generateContent({
