@@ -549,7 +549,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     try {
       setOcrOptimizing(true);
 
-      const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
+      const optimizedFile = await compressForOcr(currentFile, 768, 0.4);
       const { base64, mimeType } = await fileToBase64(optimizedFile);
 
       setOcrOptimizing(false);
