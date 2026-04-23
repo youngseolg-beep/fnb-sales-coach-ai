@@ -1,5 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import crypto from "crypto";
 
 function extractJsonBlock(text: string) {
   if (!text) return null;
@@ -44,18 +43,6 @@ type NormalizedMenuCandidate = {
   jp_name: string | null;
 };
 
-type CachedOcrResponse = {
-  ok: true;
-  mode: "raw_text" | "japan_pilot_structured";
-  rawText: string;
-  items: any[];
-  totals: Record<string, any>;
-  model_used: string;
-  cache_hit: boolean;
-};
-
-const OCR_CACHE = new Map<string, CachedOcrResponse>();
-
 function normalizeMenuCandidates(menuCandidates: any): NormalizedMenuCandidate[] {
   if (!Array.isArray(menuCandidates)) return [];
 
@@ -81,30 +68,6 @@ function normalizeMenuCandidates(menuCandidates: any): NormalizedMenuCandidate[]
       return null;
     })
     .filter(Boolean) as NormalizedMenuCandidate[];
-}
-
-function makeCacheKey(input: {
-  imageBase64: string;
-  mimeType: string;
-  userEmail: string;
-  country: string;
-  brand: string;
-  model: string;
-  mode: "raw_text" | "japan_pilot_structured";
-  menuCandidates: NormalizedMenuCandidate[];
-}) {
-  const payload = JSON.stringify({
-    imageHash: crypto.createHash("sha256").update(input.imageBase64).digest("hex"),
-    mimeType: input.mimeType,
-    userEmail: input.userEmail,
-    country: input.country,
-    brand: input.brand,
-    model: input.model,
-    mode: input.mode,
-    menuCandidates: input.menuCandidates,
-  });
-
-  return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
 export default async function handler(req: any, res: any) {
@@ -143,28 +106,8 @@ export default async function handler(req: any, res: any) {
       defaultModel;
 
     const model = isJapanPilot ? japanPilotModel : defaultModel;
-    const mode = isJapanPilot ? "japan_pilot_structured" : "raw_text";
 
     if (!isJapanPilot) {
-      const cacheKey = makeCacheKey({
-        imageBase64: String(imageBase64),
-        mimeType: String(mimeType || "image/jpeg"),
-        userEmail: normalizedEmail,
-        country: String(country || ""),
-        brand: String(brand || ""),
-        model,
-        mode,
-        menuCandidates: [],
-      });
-
-      const cached = OCR_CACHE.get(cacheKey);
-      if (cached) {
-        return res.status(200).json({
-          ...cached,
-          cache_hit: true,
-        });
-      }
-
       const response = await ai.models.generateContent({
         model,
         contents: [
@@ -191,19 +134,14 @@ export default async function handler(req: any, res: any) {
 
       const text = response?.text || "";
 
-      const result: CachedOcrResponse = {
+      return res.status(200).json({
         ok: true,
         mode: "raw_text",
         rawText: text,
         items: [],
         totals: {},
         model_used: model,
-        cache_hit: false,
-      };
-
-      OCR_CACHE.set(cacheKey, result);
-
-      return res.status(200).json(result);
+      });
     }
 
     const allowedMenus = normalizeMenuCandidates(menuCandidates);
@@ -259,25 +197,6 @@ export default async function handler(req: any, res: any) {
 
     const finalMenuCandidates =
       allowedMenus.length > 0 ? allowedMenus : defaultJapanHongkongBanjeomMenus;
-
-    const cacheKey = makeCacheKey({
-      imageBase64: String(imageBase64),
-      mimeType: String(mimeType || "image/jpeg"),
-      userEmail: normalizedEmail,
-      country: String(country || ""),
-      brand: String(brand || ""),
-      model,
-      mode,
-      menuCandidates: finalMenuCandidates,
-    });
-
-    const cached = OCR_CACHE.get(cacheKey);
-    if (cached) {
-      return res.status(200).json({
-        ...cached,
-        cache_hit: true,
-      });
-    }
 
     const finalMenuNames = finalMenuCandidates.map((menu) => menu.name);
 
@@ -402,19 +321,14 @@ or
       };
     });
 
-    const result: CachedOcrResponse = {
+    return res.status(200).json({
       ok: true,
       mode: "japan_pilot_structured",
       rawText: text,
       items,
       totals: {},
       model_used: model,
-      cache_hit: false,
-    };
-
-    OCR_CACHE.set(cacheKey, result);
-
-    return res.status(200).json(result);
+    });
   } catch (error: any) {
     return res.status(500).json({
       ok: false,
