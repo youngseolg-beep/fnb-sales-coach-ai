@@ -105,7 +105,7 @@ const PeriodComparisonPanel: React.FC<Props> = ({
           <div className="font-bold text-slate-500 mb-2">비교 기간</div>
 
           {comparisonMode === "MANUAL" ? (
-            <div className="flex flex-col md:flex-row gap-2 md:items-center">
+            <div className="flex flex-col gap-2">
               <input
                 type="date"
                 value={comparisonRange?.start ?? ""}
