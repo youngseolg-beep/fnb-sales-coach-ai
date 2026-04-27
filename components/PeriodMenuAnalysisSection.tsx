@@ -204,7 +204,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         </div>
 
         <div className="space-y-3 bg-slate-50/60 px-3 py-3 md:space-y-4 md:px-6 md:py-5">
-          <div className="grid grid-cols-1 gap-3 md:gap-4 xl:grid-cols-[1.1fr_1.1fr_1fr]">
+          <div className="grid grid-cols-1 gap-3 md:gap-4 xl:grid-cols-[1fr_1fr_1.35fr]">
             <div className="rounded-[18px] bg-gradient-to-br from-indigo-500 to-violet-500 p-4 text-white md:rounded-[24px] md:p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.12em] text-indigo-100 md:text-[11px] md:tracking-[0.16em]">
                 핵심 포인트
