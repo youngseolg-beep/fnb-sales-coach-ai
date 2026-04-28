@@ -729,21 +729,30 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrProgress(null);
   };
 
-const qtyMaxById = new Map<string, number>();
+  const applyOcr = () => {
+    if (ocrItemsAccumulated.length === 0) return;
 
-for (const item of ocrItemsAccumulated) {
-  if (item.needs_review || !item.matched_id) continue;
+    const newCategories = data.categories.map((cat) => ({
+      ...cat,
+      items: cat.items.map((it) => ({ ...it })),
+    }));
 
-  const totalQty =
-    Number((item as any).dine_in_qty || 0) +
-    Number((item as any).takeout_qty || 0);
+    const qtyMaxById = new Map<string, number>();
 
-  const prev = qtyMaxById.get(item.matched_id) || 0;
+    for (const item of ocrItemsAccumulated) {
+      if (item.needs_review || !item.matched_id) continue;
 
-  qtyMaxById.set(item.matched_id, Math.max(prev, totalQty));
-}
+      const totalQty =
+        Number((item as any).dine_in_qty || 0) +
+        Number((item as any).takeout_qty || 0);
+
+      const prev = qtyMaxById.get(item.matched_id) || 0;
+
+      qtyMaxById.set(item.matched_id, Math.max(prev, totalQty));
+    }
 
     let appliedCount = 0;
+
     newCategories.forEach((cat) => {
       cat.items.forEach((menuItem) => {
         const v = qtyMaxById.get(menuItem.id);
@@ -755,7 +764,7 @@ for (const item of ocrItemsAccumulated) {
     });
 
     onChange({ ...data, categories: newCategories });
-    alert(`${appliedCount}개의 메뉴가 중복 제거(최대값 기준)로 적용되었습니다.`);
+    alert(`${appliedCount}개의 메뉴가 적용되었습니다.`);
   };
 
   const handleConfirmCorrection = (idx: number, matchedId: string) => {
