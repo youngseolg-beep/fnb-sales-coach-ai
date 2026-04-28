@@ -734,7 +734,6 @@ const qtyMaxById = new Map<string, number>();
 for (const item of ocrItemsAccumulated) {
   if (item.needs_review || !item.matched_id) continue;
 
-  // 👇 핵심: 홀 + 포장 합산
   const totalQty =
     Number((item as any).dine_in_qty || 0) +
     Number((item as any).takeout_qty || 0);
