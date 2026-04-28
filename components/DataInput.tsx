@@ -192,13 +192,33 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     onChange({ ...data, [field]: value });
   };
 
-  const updateQty = (catIdx: number, itemIdx: number, qty: number) => {
+  const getDineInQty = (item: any) => Number(item?.dine_in_qty ?? item?.dineInQty ?? item?.hall_qty ?? item?.qty ?? 0);
+  const getTakeoutQty = (item: any) => Number(item?.takeout_qty ?? item?.takeoutQty ?? 0);
+
+  const updateMenuChannelQty = (catIdx: number, itemIdx: number, channel: "DINE_IN" | "TAKEOUT", value: number) => {
+    const safeValue = Number.isFinite(value) ? value : 0;
+
     const newCategories = data.categories.map((cat, cIdx) => ({
       ...cat,
-      items: cat.items.map((item, iIdx) =>
-        cIdx === catIdx && iIdx === itemIdx ? { ...item, qty } : { ...item }
-      ),
+      items: cat.items.map((item, iIdx) => {
+        if (cIdx !== catIdx || iIdx !== itemIdx) return { ...item };
+
+        const currentDineIn = getDineInQty(item);
+        const currentTakeout = getTakeoutQty(item);
+
+        const nextDineIn = channel === "DINE_IN" ? safeValue : currentDineIn;
+        const nextTakeout = channel === "TAKEOUT" ? safeValue : currentTakeout;
+        const nextQty = nextDineIn + nextTakeout;
+
+        return {
+          ...item,
+          dine_in_qty: nextDineIn,
+          takeout_qty: nextTakeout,
+          qty: nextQty,
+        } as any;
+      }),
     }));
+
     onChange({ ...data, categories: newCategories });
   };
 
@@ -737,34 +757,47 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       items: cat.items.map((it) => ({ ...it })),
     }));
 
-    const qtyMaxById = new Map<string, number>();
+    const qtyById = new Map<string, { dineIn: number; takeout: number }>();
 
     for (const item of ocrItemsAccumulated) {
       if (item.needs_review || !item.matched_id) continue;
 
-      const totalQty =
-        Number((item as any).dine_in_qty || 0) +
-        Number((item as any).takeout_qty || 0);
+      const dineInQty = Number((item as any).dine_in_qty || 0);
+      const takeoutQty = Number((item as any).takeout_qty || 0);
+      const fallbackQty = Number(item.qty || 0);
 
-      const prev = qtyMaxById.get(item.matched_id) || 0;
+      const nextDineIn = dineInQty > 0 || takeoutQty > 0 ? dineInQty : fallbackQty;
+      const nextTakeout = takeoutQty;
 
-      qtyMaxById.set(item.matched_id, Math.max(prev, totalQty));
+      const prev = qtyById.get(item.matched_id) || { dineIn: 0, takeout: 0 };
+      qtyById.set(item.matched_id, {
+        dineIn: Math.max(prev.dineIn, nextDineIn),
+        takeout: Math.max(prev.takeout, nextTakeout),
+      });
     }
 
     let appliedCount = 0;
 
     newCategories.forEach((cat) => {
       cat.items.forEach((menuItem) => {
-        const v = qtyMaxById.get(menuItem.id);
-        if (v !== undefined && v > 0) {
-          menuItem.qty = v;
+        const v = qtyById.get(menuItem.id);
+        if (!v) return;
+
+        const dineInQty = Number(v.dineIn || 0);
+        const takeoutQty = Number(v.takeout || 0);
+        const totalQty = dineInQty + takeoutQty;
+
+        if (totalQty > 0) {
+          (menuItem as any).dine_in_qty = dineInQty;
+          (menuItem as any).takeout_qty = takeoutQty;
+          menuItem.qty = totalQty;
           appliedCount++;
         }
       });
     });
 
     onChange({ ...data, categories: newCategories });
-    alert(`${appliedCount}개의 메뉴가 적용되었습니다.`);
+    alert(`${appliedCount}개의 메뉴가 홀/포장 수량으로 적용되었습니다.`);
   };
 
   const handleConfirmCorrection = (idx: number, matchedId: string) => {
@@ -850,7 +883,9 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       return (
         sum +
         category.items.reduce((catSum, item) => {
-          return catSum + Number(item.price || 0) * Number(item.qty || 0);
+          const dineInQty = getDineInQty(item);
+          const takeoutQty = getTakeoutQty(item);
+          return catSum + Number(item.price || 0) * Number(dineInQty + takeoutQty);
         }, 0)
       );
     }, 0);
@@ -1384,7 +1419,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               <div className="mt-1 text-[15px] font-black text-slate-900">
                 {formatCurrencyValue(menuSalesTotal, (data as any).country)}
               </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">수량 × 메뉴가격</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">(홀 + 포장) × 메뉴가격</div>
             </div>
 
             <div
@@ -1422,32 +1457,58 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               </div>
               <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                 {cat.items.map((item, itemIdx) => {
-                  const currentFlatIndex = flatInputIndex;
-                  flatInputIndex += 1;
+                  const dineInInputIndex = flatInputIndex;
+                  const takeoutInputIndex = flatInputIndex + 1;
+                  flatInputIndex += 2;
+
+                  const dineInQty = getDineInQty(item);
+                  const takeoutQty = getTakeoutQty(item);
 
                   return (
-                    <div key={item.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 last:border-0">
-                      <span className="text-[13px] font-medium text-slate-700 truncate flex-1">
+                    <div key={item.id} className="grid grid-cols-[1fr_54px_54px] items-center gap-2 py-1 border-b border-slate-50 last:border-0">
+                      <span className="min-w-0 text-[13px] font-medium text-slate-700 truncate">
                         {item.name}{" "}
                         <span className="text-[10px] text-slate-400 font-normal">
                           ({formatCurrencyValue(item.price, (data as any).country)})
                         </span>
                       </span>
-                      <div className="relative w-14">
+
+                      <div className="space-y-0.5">
+                        <div className="text-[8px] font-black text-center text-sky-500">홀</div>
                         <input
                           data-menu-qty-input="true"
                           type="number"
                           min="0"
-                          value={item.qty || ""}
-                          onChange={(e) => updateQty(catIdx, itemIdx, Number(e.target.value))}
+                          value={dineInQty || ""}
+                          onChange={(e) => updateMenuChannelQty(catIdx, itemIdx, "DINE_IN", Number(e.target.value))}
                           onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              focusNextMenuQtyInput(currentFlatIndex);
+                              focusNextMenuQtyInput(dineInInputIndex);
                             }
                           }}
-                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-2 text-right text-[14px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
+                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1.5 text-right text-[13px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="text-[8px] font-black text-center text-amber-500">포장</div>
+                        <input
+                          data-menu-qty-input="true"
+                          type="number"
+                          min="0"
+                          value={takeoutQty || ""}
+                          onChange={(e) => updateMenuChannelQty(catIdx, itemIdx, "TAKEOUT", Number(e.target.value))}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              focusNextMenuQtyInput(takeoutInputIndex);
+                            }
+                          }}
+                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-1.5 text-right text-[13px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
                           placeholder="0"
                         />
                       </div>
