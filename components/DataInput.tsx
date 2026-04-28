@@ -641,6 +641,11 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 ? Math.min(1, confidenceRaw)
                 : 0;
 
+            const isTakeout = /[※★]/.test(receiptName);
+            const orderChannel = isTakeout ? "TAKEOUT" : "DINE_IN";
+            const dineInQty = isTakeout ? 0 : qty;
+            const takeoutQty = isTakeout ? qty : 0;
+
             const needsReview = Boolean(item?.needs_review ?? !matchedMenu);
 
             return {
@@ -649,6 +654,9 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               item_corrected: matchedMenu?.name || matchedName || receiptName,
               unit_price: unitPrice || matchedMenu?.price || 0,
               qty: Number.isFinite(qty) ? qty : 0,
+              order_channel: orderChannel,
+              dine_in_qty: Number.isFinite(dineInQty) ? dineInQty : 0,
+              takeout_qty: Number.isFinite(takeoutQty) ? takeoutQty : 0,
               confidence,
               needs_review: needsReview,
               candidates: needsReview
@@ -1156,7 +1164,18 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                                     <span className="text-[9px] text-slate-400 italic">원문: {item.item_original}</span>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <span className="text-indigo-600 font-black">{item.qty}</span>
+                                    <div className="flex flex-col items-end leading-tight">
+                                      <span className="text-indigo-600 font-black">{item.qty}</span>
+                                      <span
+                                        className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-black ${
+                                          (item as any).order_channel === "TAKEOUT"
+                                            ? "bg-amber-50 text-amber-600"
+                                            : "bg-sky-50 text-sky-600"
+                                        }`}
+                                      >
+                                        {(item as any).order_channel === "TAKEOUT" ? "포장" : "홀"}
+                                      </span>
+                                    </div>
                                     <button
                                       onClick={() => {
                                         setOcrItemsAccumulated((prev) => {
