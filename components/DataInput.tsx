@@ -278,6 +278,36 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const [showOcr, setShowOcr] = useState<boolean>(false);
   const [ocrUserEmail, setOcrUserEmail] = useState<string>("");
   const isJapanPilot = ocrUserEmail.trim().toUpperCase() === "JP_PN@THEBORN.CO.KR";
+  const DINE_IN_VAT_RATE = 0.1;
+  const TAKEOUT_VAT_RATE = 0.08;
+
+  const getMenuGrossSales = (item: any) => {
+    const price = Number(item?.price || 0);
+
+    if (!isJapanPilot) {
+      return price * Number(item?.qty || 0);
+    }
+
+    const dineInQty = getDineInQty(item);
+    const takeoutQty = getTakeoutQty(item);
+    return price * (dineInQty + takeoutQty);
+  };
+
+  const getMenuNetSales = (item: any) => {
+    const price = Number(item?.price || 0);
+
+    if (!isJapanPilot) {
+      return price * Number(item?.qty || 0);
+    }
+
+    const dineInQty = getDineInQty(item);
+    const takeoutQty = getTakeoutQty(item);
+
+    const dineInNet = (price * dineInQty) / (1 + DINE_IN_VAT_RATE);
+    const takeoutNet = (price * takeoutQty) / (1 + TAKEOUT_VAT_RATE);
+
+    return dineInNet + takeoutNet;
+  };
 
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -916,11 +946,24 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       return (
         sum +
         category.items.reduce((catSum, item) => {
-          return catSum + Number(item.price || 0) * Number(item.qty || 0);
+          return catSum + getMenuNetSales(item);
         }, 0)
       );
     }, 0);
-  }, [data.categories]);
+  }, [data.categories, isJapanPilot]);
+
+  const menuSalesTotalWithVat = useMemo(() => {
+    return data.categories.reduce((sum, category) => {
+      return (
+        sum +
+        category.items.reduce((catSum, item) => {
+          return catSum + getMenuGrossSales(item);
+        }, 0)
+      );
+    }, 0);
+  }, [data.categories, isJapanPilot]);
+
+  const menuVatTotal = menuSalesTotalWithVat - menuSalesTotal;
 
   const enteredSalesTotal =
     Number(data.posSales || 0) + Number((data as any).deliverySales || 0);
@@ -1121,7 +1164,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">스캔 합계 (메뉴 합계)</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isJapanPilot ? "스캔 합계 (VAT 포함)" : "스캔 합계 (메뉴 합계)"}</p>
                         <p className="text-lg font-black text-indigo-600">
                           {formatCurrencyValue(scanTotal, (data as any).country)}
                         </p>
@@ -1442,15 +1485,21 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               <div className="mt-1 text-[15px] font-black text-slate-900">
                 {formatCurrencyValue(enteredSalesTotal, (data as any).country)}
               </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">POS + 배달</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">{isJapanPilot ? "VAT 제외 입력 기준" : "POS + 배달"}</div>
             </div>
 
             <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
-              <div className="text-[10px] font-black text-slate-400">메뉴 매출 합계</div>
+              <div className="text-[10px] font-black text-slate-400">
+                {isJapanPilot ? "메뉴 매출 합계 (VAT 제외)" : "메뉴 매출 합계"}
+              </div>
               <div className="mt-1 text-[15px] font-black text-slate-900">
                 {formatCurrencyValue(menuSalesTotal, (data as any).country)}
               </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">수량 × 메뉴가격</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">
+                {isJapanPilot
+                  ? `VAT 포함 ${formatCurrencyValue(menuSalesTotalWithVat, (data as any).country)} / VAT ${formatCurrencyValue(menuVatTotal, (data as any).country)}`
+                  : "수량 × 메뉴가격"}
+              </div>
             </div>
 
             <div
@@ -1470,7 +1519,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                 {formatCurrencyValue(salesGap, (data as any).country)}
               </div>
               <div className="mt-0.5 text-[10px] text-slate-400">
-                입력 매출 - 메뉴 매출
+                {isJapanPilot ? "입력 매출 - 메뉴 매출(VAT 제외)" : "입력 매출 - 메뉴 매출"}
               </div>
             </div>
           </div>
