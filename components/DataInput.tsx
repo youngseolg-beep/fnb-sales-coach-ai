@@ -729,21 +729,20 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrProgress(null);
   };
 
-  const applyOcr = () => {
-    if (ocrItemsAccumulated.length === 0) return;
+const qtyMaxById = new Map<string, number>();
 
-    const newCategories = data.categories.map((cat) => ({
-      ...cat,
-      items: cat.items.map((it) => ({ ...it })),
-    }));
+for (const item of ocrItemsAccumulated) {
+  if (item.needs_review || !item.matched_id) continue;
 
-    const qtyMaxById = new Map<string, number>();
+  // 👇 핵심: 홀 + 포장 합산
+  const totalQty =
+    Number((item as any).dine_in_qty || 0) +
+    Number((item as any).takeout_qty || 0);
 
-    for (const item of ocrItemsAccumulated) {
-      if (item.needs_review || !item.matched_id) continue;
-      const prev = qtyMaxById.get(item.matched_id) || 0;
-      qtyMaxById.set(item.matched_id, Math.max(prev, Number(item.qty || 0)));
-    }
+  const prev = qtyMaxById.get(item.matched_id) || 0;
+
+  qtyMaxById.set(item.matched_id, Math.max(prev, totalQty));
+}
 
     let appliedCount = 0;
     newCategories.forEach((cat) => {
