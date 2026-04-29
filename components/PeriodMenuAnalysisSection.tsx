@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { ComparisonMode } from "../utils2/periodComparison";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
@@ -87,6 +87,9 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const safeNumber = (value: any) => Number(value || 0);
   const country = (data as any)?.country;
 
+  // 모바일 툴팁 터치를 위한 상태 관리 추가
+  const [activeTooltipIdx, setActiveTooltipIdx] = useState<number | null>(null);
+
   const summaryCards = [
     {
       label: "매출",
@@ -127,7 +130,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
 
   return (
     <section className="space-y-6">
-      {/* 1. 상단 분석 컨트롤 패널 */}
       <section className="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:rounded-[32px]">
         <div className="border-b border-slate-100/60 px-5 py-5 md:px-8 md:py-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -191,7 +193,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* 2. 대시보드 요약 위젯 영역 */}
         <div className="bg-slate-50/50 p-5 md:p-8">
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr_1.2fr]">
             {/* 핵심 포인트 */}
@@ -346,19 +347,19 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           <PeriodBoostPlan boostPlans={boostPlans} />
         </section>
 
-        {/* Top 10 메뉴 비교 */}
+        {/* Top 5 메뉴 비교 */}
         <section className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:p-8">
           <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
             </span>
             <div>
-              <h3 className="text-[18px] font-bold text-slate-900">Top 10 메뉴 비교</h3>
+              <h3 className="text-[18px] font-bold text-slate-900">Top 5 메뉴 비교</h3>
               <p className="text-[12px] font-medium text-slate-500">이전 기간 대비 상위 메뉴 성과 추이</p>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <div className="min-w-[720px]">
+            <div className="min-w-full md:min-w-[720px]">
               <PeriodTopMenuCompare currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} minDays={1} currentDays={currentPeriodDays} comparisonDays={comparisonPeriodDays} />
             </div>
           </div>
@@ -378,7 +379,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
         </section>
 
-        {/* 5. 일별 추이 (다중 바 차트 + 표 완전 삭제) */}
+        {/* 5. 일별 추이 (터치 툴팁 기능 추가) */}
         <section className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:p-8">
           <div className="mb-8 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
@@ -391,7 +392,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
               </div>
             </div>
             
-            {/* 차트 범례 (Legend) */}
             <div className="flex items-center gap-4 rounded-full bg-slate-50 px-4 py-2">
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
                 <span className="h-2 w-2 rounded-full bg-indigo-500"></span> 매출
@@ -405,11 +405,9 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 그룹화된 다중 바 차트 렌더링 영역 */}
           {(periodStats?.list || []).length > 0 ? (
             <div className="flex h-[220px] items-end justify-between gap-1 md:h-[280px] md:gap-3">
               {periodStats.list.map((row: any, idx: number) => {
-                // 각각 독립적인 Max 값을 구해서 각 막대의 높이(%)를 상대적으로 계산합니다.
                 const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
                 const maxOrders = Math.max(0, ...periodStats.list.map((r: any) => Number(r.orders || 0)));
                 const maxVisitors = Math.max(0, ...periodStats.list.map((r: any) => Number(r.guests || 0)));
@@ -425,9 +423,15 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                 const dateStr = row.date.slice(-2);
 
                 return (
-                  <div key={idx} className="group relative flex h-full w-full flex-col items-center justify-end hover:bg-slate-50/50 rounded-t-xl transition-colors">
-                    {/* 통합 Tooltip (모든 정보 포함) */}
-                    <div className="absolute bottom-full mb-2 z-20 hidden w-max opacity-0 transition-opacity duration-200 group-hover:block group-hover:opacity-100">
+                  <div 
+                    key={idx} 
+                    className="group relative flex h-full w-full flex-col items-center justify-end hover:bg-slate-50/50 rounded-t-xl transition-colors cursor-pointer"
+                    onClick={() => setActiveTooltipIdx(activeTooltipIdx === idx ? null : idx)}
+                    onMouseEnter={() => setActiveTooltipIdx(idx)}
+                    onMouseLeave={() => setActiveTooltipIdx(null)}
+                  >
+                    {/* 모바일 터치 대응 툴팁 (상태 관리 기반) */}
+                    <div className={`absolute bottom-full mb-2 z-30 w-max transition-opacity duration-200 ${activeTooltipIdx === idx ? 'opacity-100 block' : 'opacity-0 hidden'}`}>
                       <div className="relative rounded-xl bg-slate-900 p-3 text-left text-[11px] font-medium text-white shadow-xl md:text-xs">
                         <div className="mb-2 border-b border-slate-700 pb-2 font-bold text-slate-300">{row.date}</div>
                         <div className="flex justify-between gap-4 py-0.5">
@@ -442,22 +446,17 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                           <span className="text-violet-400 font-bold">방문</span> 
                           <span className="font-extrabold">{currentVisitors.toLocaleString()}명</span>
                         </div>
-                        {/* 툴팁 꼬리 */}
                         <div className="absolute -bottom-1 left-1/2 -ml-1 h-2.5 w-2.5 rotate-45 bg-slate-900"></div>
                       </div>
                     </div>
                     
-                    {/* Grouped Bar Track (3개의 막대 나란히) */}
                     <div className="flex h-full w-full items-end justify-center gap-[2px] md:gap-1 px-0.5">
-                      {/* 매출 Bar */}
                       <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
                         <div className="w-full rounded-t-sm bg-indigo-500 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${salesPercent}%`, minHeight: currentSales > 0 ? "4px" : "0" }}></div>
                       </div>
-                      {/* 주문 Bar */}
                       <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
                         <div className="w-full rounded-t-sm bg-sky-400 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${ordersPercent}%`, minHeight: currentOrders > 0 ? "4px" : "0" }}></div>
                       </div>
-                      {/* 방문객 Bar */}
                       <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
                         <div className="w-full rounded-t-sm bg-violet-400 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${visitorsPercent}%`, minHeight: currentVisitors > 0 ? "4px" : "0" }}></div>
                       </div>
