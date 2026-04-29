@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { ComparisonMode } from "../utils2/periodComparison";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
@@ -74,18 +74,26 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const safeNumber = (value: any) => Number(value || 0);
   const country = (data as any)?.country;
   const [activeTooltipIdx, setActiveTooltipIdx] = useState<number | null>(null);
+  
+  // 무한 루프 방지를 위한 Ref
+  const lastAnalyzedRange = useRef("");
 
-  // 분석 실행 통합 함수
+  // 분석 실행 함수
   const runAnalysis = useCallback(async (isManual = false) => {
+    const rangeKey = `${periodRange.start}_${periodRange.end}`;
+    
+    // 수동 클릭이 아니고, 이미 분석한 범위라면 중단 (무한 루프 방지 핵심)
+    if (!isManual && lastAnalyzedRange.current === rangeKey) return;
+    
     try {
-      // 1. 기본 매출/통계 데이터 로드
+      lastAnalyzedRange.current = rangeKey;
+
       await Promise.all([
         loadCurrentPeriodData(isManual),
         loadComparisonData(isManual),
         fetchPeriodStats(isManual)
       ]);
 
-      // 2. 메뉴 엔지니어링 분석 (7일 이상 데이터가 있을 때만)
       if (selectedPeriodDays >= 7) {
         const meResult = await calculateMenuEngineeringForRange(
           periodRange.start,
@@ -97,27 +105,28 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
       }
     } catch (error) {
       console.error("Analysis Error:", error);
-      if (isManual) showToast("데이터를 불러오는 중 오류가 발생했습니다.");
     }
   }, [
-    periodRange.start, 
-    periodRange.end, 
-    selectedPeriodDays, 
-    data.categories, 
-    loadCurrentPeriodData, 
-    loadComparisonData, 
-    fetchPeriodStats, 
-    calculateMenuEngineeringForRange, 
-    setMenuEngineeringResult, 
-    showToast
+    periodRange.start,
+    periodRange.end,
+    selectedPeriodDays,
+    data.categories,
+    loadCurrentPeriodData,
+    loadComparisonData,
+    fetchPeriodStats,
+    calculateMenuEngineeringForRange,
+    setMenuEngineeringResult
   ]);
 
-  // [핵심] 페이지 진입 및 기간 변경 시 자동 실행
+  // 페이지 진입 시 최초 1회만 자동 실행 (의존성 최소화)
   useEffect(() => {
     if (periodRange.start && periodRange.end) {
-      void runAnalysis(false);
+      const timer = setTimeout(() => {
+        void runAnalysis(false);
+      }, 300); // 렌더링 안정화를 위한 미세 지연
+      return () => clearTimeout(timer);
     }
-  }, [periodRange.start, periodRange.end, runAnalysis]);
+  }, [periodRange.start, periodRange.end]); // runAnalysis를 의존성에서 제거하여 루프 차단
 
   const summaryCards = [
     { label: "매출", current: formatCurrencyValue(safeNumber(currentPeriodStats?.sales), country), compare: formatCurrencyValue(safeNumber(comparisonStats?.sales), country), rawCurrent: safeNumber(currentPeriodStats?.sales), rawCompare: safeNumber(comparisonStats?.sales), rate: salesChangeRate },
@@ -127,9 +136,9 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   ];
 
   return (
-    <div className="space-y-5">
-      {/* 4대 KPI 비교 카드 */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div className="space-y-4">
+      {/* KPI 카드 - 디자인 압축 */}
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         {summaryCards.map((card) => {
           const maxVal = Math.max(card.rawCurrent, card.rawCompare);
           const currentPercent = maxVal === 0 ? 0 : (card.rawCurrent / maxVal) * 100;
@@ -137,58 +146,50 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           const isPositive = card.rate >= 0;
 
           return (
-            <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between">
-                <span className="text-[12px] font-bold text-slate-500">{card.label}</span>
-                <span className={`text-[11px] font-black ${isPositive ? "text-blue-600" : "text-rose-500"}`}>
+            <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-slate-500">{card.label}</span>
+                <span className={`text-[10px] font-black ${isPositive ? "text-blue-600" : "text-rose-500"}`}>
                   {isPositive ? "↑" : "↓"} {Math.abs(card.rate).toFixed(1)}%
                 </span>
               </div>
-              <div className="mt-1 text-[18px] font-black text-slate-900 md:text-[22px]">{card.current}</div>
-              <div className="mt-3 space-y-1.5">
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-slate-300 transition-all duration-700" style={{ width: `${comparePercent}%` }}></div>
+              <div className="text-[18px] font-black text-slate-900">{card.current}</div>
+              <div className="mt-3 space-y-1">
+                <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-slate-300 transition-all duration-700" style={{ width: `${comparePercent}%` }}></div>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
-                  <div className={`h-full rounded-full transition-all duration-700 ${isPositive ? "bg-blue-600" : "bg-rose-500"}`} style={{ width: `${currentPercent}%` }}></div>
+                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className={`h-full transition-all duration-700 ${isPositive ? "bg-blue-600" : "bg-rose-500"}`} style={{ width: `${currentPercent}%` }}></div>
                 </div>
               </div>
-              <div className="mt-2 text-[10px] font-medium text-slate-400 text-right">vs {card.compare}</div>
             </div>
           );
         })}
       </div>
 
-      {/* 일별 종합 트렌드 차트 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-[16px] font-bold text-slate-900">일별 트렌드</h3>
-            <p className="text-[12px] text-slate-500">매출, 주문, 방문객 종합 추이</p>
-          </div>
+      {/* 일별 트렌드 차트 */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[14px] font-bold text-slate-900 flex items-center gap-1.5">
+             일별 트렌드
+          </h3>
           <div className="flex gap-3">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-blue-600"></span> 매출
+            <div className="flex items-center gap-1 text-[9px] font-bold text-slate-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span> 매출
             </div>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-sky-400"></span> 주문
-            </div>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-slate-300"></span> 방문
+            <div className="flex items-center gap-1 text-[9px] font-bold text-slate-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400"></span> 주문
             </div>
           </div>
         </div>
 
         {(periodStats?.list || []).length > 0 ? (
-          <div className="flex h-[180px] items-end justify-between gap-1 md:h-[220px] md:gap-4">
+          <div className="flex h-[140px] items-end justify-between gap-1 md:h-[180px] md:gap-3">
             {periodStats.list.map((row: any, idx: number) => {
               const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
               const maxOrders = Math.max(0, ...periodStats.list.map((r: any) => Number(r.orders || 0)));
-              const maxVisitors = Math.max(0, ...periodStats.list.map((r: any) => Number(r.guests || 0)));
-
               const salesPercent = maxSales === 0 ? 0 : (Number(row.total_sales) / maxSales) * 100;
               const ordersPercent = maxOrders === 0 ? 0 : (Number(row.orders) / maxOrders) * 100;
-              const visitorsPercent = maxVisitors === 0 ? 0 : (Number(row.guests) / maxVisitors) * 100;
 
               return (
                 <div key={idx} className="group relative flex h-full w-full flex-col items-center justify-end" 
@@ -198,63 +199,59 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                       <div className="font-bold border-b border-slate-600 pb-1 mb-1">{row.date}</div>
                       <div className="flex justify-between gap-3"><span>매출</span><b>{formatCurrencyValue(row.total_sales, country)}</b></div>
                       <div className="flex justify-between gap-3"><span>주문</span><b>{row.orders}건</b></div>
-                      <div className="flex justify-between gap-3"><span>방문</span><b>{row.guests}명</b></div>
-                      <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-800"></div>
                     </div>
                   )}
-                  <div className="flex h-full w-full items-end justify-center gap-[2px]">
-                    <div className="w-1 md:w-2 bg-blue-600 rounded-t-sm" style={{ height: `${salesPercent}%` }}></div>
-                    <div className="w-1 md:w-2 bg-sky-400 rounded-t-sm" style={{ height: `${ordersPercent}%` }}></div>
-                    <div className="w-1 md:w-2 bg-slate-300 rounded-t-sm" style={{ height: `${visitorsPercent}%` }}></div>
+                  <div className="flex h-full w-full items-end justify-center gap-[1px]">
+                    <div className="w-1.5 md:w-2.5 bg-blue-600 rounded-t-sm" style={{ height: `${salesPercent}%` }}></div>
+                    <div className="w-1.5 md:w-2.5 bg-sky-400 rounded-t-sm" style={{ height: `${ordersPercent}%` }}></div>
                   </div>
-                  <div className="mt-2 text-[9px] font-bold text-slate-400">{row.date.slice(-2)}</div>
+                  <div className="mt-1.5 text-[8px] font-bold text-slate-400">{row.date.slice(-2)}</div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="py-10 text-center text-slate-400 text-[12px] border border-dashed rounded-xl">데이터가 없습니다.</div>
+          <div className="py-8 text-center text-slate-400 text-[11px] border border-dashed rounded-lg">데이터가 없습니다.</div>
         )}
       </section>
 
       {/* Top 5 메뉴 비교 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="mb-4 text-[16px] font-bold text-slate-900">Top 5 메뉴 비교</h3>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-[14px] font-bold text-slate-900">Top 5 메뉴 비교</h3>
         <PeriodTopMenuCompare currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} minDays={1} currentDays={currentPeriodDays} comparisonDays={comparisonPeriodDays} />
       </section>
 
-      {/* 하단 분석 설정 패널 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      {/* 분석 설정 패널 */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-[15px] font-bold text-slate-900">상세 분석 기간 설정</h3>
-            <p className="text-[12px] text-slate-500">조회할 기간을 변경하면 데이터가 자동으로 갱신됩니다.</p>
+            <h3 className="text-[13px] font-bold text-slate-900">분석 기간 설정</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <input type="date" value={periodRange.start} onChange={(e) => setPeriodRange(p => ({ ...p, start: e.target.value }))}
-                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-bold outline-none focus:border-blue-500" />
-            <span className="text-slate-300">~</span>
+                   className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] font-bold outline-none" />
+            <span className="text-slate-300 text-xs">~</span>
             <input type="date" value={periodRange.end} onChange={(e) => setPeriodRange(p => ({ ...p, end: e.target.value }))}
-                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-bold outline-none focus:border-blue-500" />
+                   className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] font-bold outline-none" />
             <button onClick={() => void runAnalysis(true)} disabled={periodLoading}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-blue-700 disabled:bg-slate-300 transition-colors">
-              {periodLoading ? "분석 중..." : "새로고침"}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-slate-800 disabled:bg-slate-300 transition-colors">
+              새로고침
             </button>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-slate-100">
+        <div className="mt-3 pt-3 border-t border-slate-100">
           <PeriodComparisonPanel comparisonMode={comparisonMode} setComparisonMode={setComparisonMode} periodRange={periodRange} comparisonRange={comparisonRange} setComparisonRange={setComparisonRange} canRunPeriodAnalysis={canRunPeriodAnalysis} />
         </div>
       </section>
 
-      {/* 심층 분석 */}
-      <div className="grid grid-cols-1 gap-5">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-[16px] font-bold text-slate-900">메뉴 엔지니어링</h3>
+      {/* 메뉴 엔지니어링 & 부스트 플랜 */}
+      <div className="grid grid-cols-1 gap-4">
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-[14px] font-bold text-slate-900">메뉴 엔지니어링</h3>
           <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
         </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-[16px] font-bold text-slate-900">Boost Plan</h3>
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-[14px] font-bold text-slate-900">Boost Plan</h3>
           <PeriodBoostPlan boostPlans={boostPlans} />
         </section>
       </div>
