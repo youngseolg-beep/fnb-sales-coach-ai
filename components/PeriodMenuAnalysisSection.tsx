@@ -127,7 +127,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
 
   return (
     <section className="space-y-6">
-      {/* 1. 상단 분석 컨트롤 패널 (프리미엄 헤더 스타일) */}
+      {/* 1. 상단 분석 컨트롤 패널 */}
       <section className="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:rounded-[32px]">
         <div className="border-b border-slate-100/60 px-5 py-5 md:px-8 md:py-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -194,7 +194,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         {/* 2. 대시보드 요약 위젯 영역 */}
         <div className="bg-slate-50/50 p-5 md:p-8">
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr_1.2fr]">
-            {/* 핵심 포인트 (그라데이션 강조) */}
+            {/* 핵심 포인트 */}
             <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 p-6 text-white shadow-lg md:p-7">
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
               <div className="relative z-10">
@@ -255,7 +255,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 비교 설정 (기존 컴포넌트 감싸기) */}
+            {/* 비교 설정 */}
             <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm md:p-7">
               <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Comparison</div>
               <div className="mt-4">
@@ -271,7 +271,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 3. 4대 KPI 비교 카드 (더욱 유려해진 Vendify 스타일) */}
+          {/* 3. 4대 KPI 비교 카드 */}
           <div className="mt-5 grid grid-cols-2 gap-4 xl:grid-cols-4 md:mt-6">
             {summaryCards.map((card) => {
               const maxVal = Math.max(card.rawCurrent, card.rawCompare);
@@ -299,7 +299,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                     {card.current}
                   </div>
                   
-                  {/* 시각적 비교 바 (Bar) - 디자인 고도화 */}
                   <div className="mt-5 space-y-2.5">
                     <div className="flex flex-col gap-1">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -326,7 +325,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         </div>
       </section>
 
-      {/* 4. 하위 분석 섹션들 (공통 카드 스타일 적용) */}
+      {/* 4. 하위 분석 섹션들 */}
       <div className="grid grid-cols-1 gap-6">
         {/* Boost Plan */}
         <section className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:p-8">
@@ -379,81 +378,101 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
         </section>
 
-        {/* 5. 일별 추이 (고급화된 바 차트 UX/UI) */}
+        {/* 5. 일별 추이 (다중 바 차트 + 표 완전 삭제) */}
         <section className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:p-8">
-          <div className="mb-8 flex items-center gap-3 border-b border-slate-100 pb-4">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-            </span>
-            <div>
-              <h3 className="text-[18px] font-bold text-slate-900">일별 매출 트렌드</h3>
-              <p className="text-[12px] font-medium text-slate-500">선택 기간 내 일자별 상세 성과 데이터</p>
+          <div className="mb-8 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+              </span>
+              <div>
+                <h3 className="text-[18px] font-bold text-slate-900">일별 종합 트렌드</h3>
+                <p className="text-[12px] font-medium text-slate-500">매출, 주문, 방문객 지표의 일자별 비교</p>
+              </div>
+            </div>
+            
+            {/* 차트 범례 (Legend) */}
+            <div className="flex items-center gap-4 rounded-full bg-slate-50 px-4 py-2">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                <span className="h-2 w-2 rounded-full bg-indigo-500"></span> 매출
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                <span className="h-2 w-2 rounded-full bg-sky-400"></span> 주문
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                <span className="h-2 w-2 rounded-full bg-violet-400"></span> 방문
+              </div>
             </div>
           </div>
 
-          {/* 바 차트 렌더링 영역 */}
-          {(periodStats?.list || []).length > 0 && (
-            <div className="mb-10 flex h-[200px] items-end justify-between gap-1.5 md:h-[240px] md:gap-3">
+          {/* 그룹화된 다중 바 차트 렌더링 영역 */}
+          {(periodStats?.list || []).length > 0 ? (
+            <div className="flex h-[220px] items-end justify-between gap-1 md:h-[280px] md:gap-3">
               {periodStats.list.map((row: any, idx: number) => {
-                const maxSales = Math.max(...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
+                // 각각 독립적인 Max 값을 구해서 각 막대의 높이(%)를 상대적으로 계산합니다.
+                const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
+                const maxOrders = Math.max(0, ...periodStats.list.map((r: any) => Number(r.orders || 0)));
+                const maxVisitors = Math.max(0, ...periodStats.list.map((r: any) => Number(r.guests || 0)));
+
                 const currentSales = Number(row.total_sales || 0);
-                const heightPercent = maxSales === 0 ? 0 : (currentSales / maxSales) * 100;
+                const currentOrders = Number(row.orders || 0);
+                const currentVisitors = Number(row.guests || 0);
+
+                const salesPercent = maxSales === 0 ? 0 : (currentSales / maxSales) * 100;
+                const ordersPercent = maxOrders === 0 ? 0 : (currentOrders / maxOrders) * 100;
+                const visitorsPercent = maxVisitors === 0 ? 0 : (currentVisitors / maxVisitors) * 100;
+                
                 const dateStr = row.date.slice(-2);
 
                 return (
-                  <div key={idx} className="group relative flex h-full w-full flex-col items-center justify-end">
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 z-20 hidden opacity-0 transition-opacity duration-200 group-hover:block group-hover:opacity-100">
-                      <div className="relative rounded-lg bg-slate-900 px-3 py-1.5 text-center text-[11px] font-bold text-white shadow-xl md:text-xs">
-                        {formatCurrencyValue(currentSales, country)}
+                  <div key={idx} className="group relative flex h-full w-full flex-col items-center justify-end hover:bg-slate-50/50 rounded-t-xl transition-colors">
+                    {/* 통합 Tooltip (모든 정보 포함) */}
+                    <div className="absolute bottom-full mb-2 z-20 hidden w-max opacity-0 transition-opacity duration-200 group-hover:block group-hover:opacity-100">
+                      <div className="relative rounded-xl bg-slate-900 p-3 text-left text-[11px] font-medium text-white shadow-xl md:text-xs">
+                        <div className="mb-2 border-b border-slate-700 pb-2 font-bold text-slate-300">{row.date}</div>
+                        <div className="flex justify-between gap-4 py-0.5">
+                          <span className="text-indigo-400 font-bold">매출</span> 
+                          <span className="font-extrabold">{formatCurrencyValue(currentSales, country)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 py-0.5">
+                          <span className="text-sky-400 font-bold">주문</span> 
+                          <span className="font-extrabold">{currentOrders.toLocaleString()}건</span>
+                        </div>
+                        <div className="flex justify-between gap-4 py-0.5">
+                          <span className="text-violet-400 font-bold">방문</span> 
+                          <span className="font-extrabold">{currentVisitors.toLocaleString()}명</span>
+                        </div>
                         {/* 툴팁 꼬리 */}
-                        <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-900"></div>
+                        <div className="absolute -bottom-1 left-1/2 -ml-1 h-2.5 w-2.5 rotate-45 bg-slate-900"></div>
                       </div>
                     </div>
                     
-                    {/* Bar Track & Fill */}
-                    <div className="relative flex h-full w-full max-w-[28px] items-end overflow-hidden rounded-t-xl bg-slate-50 md:max-w-[44px]">
-                      <div
-                        className="w-full rounded-t-xl bg-gradient-to-t from-indigo-600 to-indigo-400 opacity-90 transition-all duration-500 group-hover:opacity-100"
-                        style={{ height: `${heightPercent}%`, minHeight: currentSales > 0 ? "4px" : "0" }}
-                      ></div>
+                    {/* Grouped Bar Track (3개의 막대 나란히) */}
+                    <div className="flex h-full w-full items-end justify-center gap-[2px] md:gap-1 px-0.5">
+                      {/* 매출 Bar */}
+                      <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
+                        <div className="w-full rounded-t-sm bg-indigo-500 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${salesPercent}%`, minHeight: currentSales > 0 ? "4px" : "0" }}></div>
+                      </div>
+                      {/* 주문 Bar */}
+                      <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
+                        <div className="w-full rounded-t-sm bg-sky-400 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${ordersPercent}%`, minHeight: currentOrders > 0 ? "4px" : "0" }}></div>
+                      </div>
+                      {/* 방문객 Bar */}
+                      <div className="flex h-full w-1.5 md:w-2.5 flex-col justify-end">
+                        <div className="w-full rounded-t-sm bg-violet-400 transition-all duration-500 opacity-90 group-hover:opacity-100" style={{ height: `${visitorsPercent}%`, minHeight: currentVisitors > 0 ? "4px" : "0" }}></div>
+                      </div>
                     </div>
-                    <div className="mt-3 text-[10px] font-bold text-slate-400 md:text-[12px]">{dateStr}일</div>
+                    
+                    <div className="mt-3 pb-1 text-[10px] font-bold text-slate-400 md:text-[12px]">{dateStr}일</div>
                   </div>
                 );
               })}
             </div>
+          ) : (
+            <div className="py-12 text-center text-[13px] font-medium text-slate-400 border border-dashed border-slate-200 rounded-xl">
+              데이터가 없습니다. 상단에서 분석 기간을 설정해 주세요.
+            </div>
           )}
-
-          {/* 고급화된 데이터 그리드 (테이블) */}
-          <div className="overflow-x-auto rounded-xl border border-slate-100">
-            <table className="w-full min-w-[500px] text-left text-[12px] md:text-[13px]">
-              <thead className="bg-slate-50/80">
-                <tr className="text-slate-500">
-                  <th className="px-5 py-4 font-black uppercase tracking-widest text-[10px] md:text-[11px]">Date</th>
-                  <th className="px-5 py-4 text-right font-black uppercase tracking-widest text-[10px] md:text-[11px]">Revenue</th>
-                  <th className="px-5 py-4 text-right font-black uppercase tracking-widest text-[10px] md:text-[11px]">Orders</th>
-                  <th className="px-5 py-4 text-right font-black uppercase tracking-widest text-[10px] md:text-[11px]">Visitors</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {(periodStats?.list || []).length > 0 ? (
-                  (periodStats?.list || []).map((row: any) => (
-                    <tr key={row.date} className="transition-colors hover:bg-slate-50/50">
-                      <td className="px-5 py-3.5 font-bold text-slate-700">{row.date}</td>
-                      <td className="px-5 py-3.5 text-right font-black text-indigo-600">{formatCurrencyValue(Number(row.total_sales || 0), country)}</td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-slate-600">{Number(row.orders || 0).toLocaleString()}</td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-slate-600">{Number(row.guests || 0).toLocaleString()}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-slate-400 font-medium">데이터가 없습니다. 상단에서 분석 기간을 설정해 주세요.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
         </section>
       </div>
     </section>
