@@ -87,9 +87,10 @@ const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 
 const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId }) => {
   useEffect(() => {
-  console.log("BRAND:", data.brand);
-  console.log("COUNTRY:", data.country);
-}, [data.brand, data.country]);
+    console.log("BRAND:", data.brand);
+    console.log("COUNTRY:", data.country);
+  }, [data.brand, data.country]);
+  
   const [report, setReport] = useState("");
   const [reportDate, setReportDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -218,50 +219,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
   const calculatePeriodKPI = (rows: any[]) => {
     if (!rows || rows.length === 0) {
-      return {
-        sales: 0,
-        orders: 0,
-        visitors: 0,
-        aov: 0,
-      };
+      return { sales: 0, orders: 0, visitors: 0, aov: 0 };
     }
 
-    const sales = rows.reduce(
-      (sum, row) =>
-        sum +
-        Number(
-          row?.posSales ??
-            row?.sales ??
-            row?.total_sales ??
-            row?.totalSales ??
-            0
-        ),
-      0
-    );
-
-    const orders = rows.reduce(
-      (sum, row) =>
-        sum +
-        Number(
-          row?.orders ??
-            row?.orderCount ??
-            0
-        ),
-      0
-    );
-
-    const visitors = rows.reduce(
-      (sum, row) =>
-        sum +
-        Number(
-          row?.visitCount ??
-            row?.visitors ??
-            row?.guests ??
-            row?.guestCount ??
-            0
-        ),
-      0
-    );
+    const sales = rows.reduce((sum, row) => sum + Number(row?.posSales ?? row?.sales ?? row?.total_sales ?? row?.totalSales ?? 0), 0);
+    const orders = rows.reduce((sum, row) => sum + Number(row?.orders ?? row?.orderCount ?? 0), 0);
+    const visitors = rows.reduce((sum, row) => sum + Number(row?.visitCount ?? row?.visitors ?? row?.guests ?? row?.guestCount ?? 0), 0);
 
     return {
       sales,
@@ -275,37 +238,18 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     if (!comparisonRange?.start || !comparisonRange?.end) return;
 
     const requestKey = makeRangeKey(comparisonRange.start, comparisonRange.end);
-
-    if (!force && comparisonRangeRequestRef.current === requestKey) {
-      return;
-    }
-
+    if (!force && comparisonRangeRequestRef.current === requestKey) return;
     comparisonRangeRequestRef.current = requestKey;
 
     try {
       const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end, storeId);
-
       if (comparisonRangeRequestRef.current !== requestKey) return;
-
       const kpi = calculatePeriodKPI(rows);
-
-      setComparisonStats({
-        ...kpi,
-        rows: rows.length,
-        rawRows: rows,
-      });
+      setComparisonStats({ ...kpi, rows: rows.length, rawRows: rows });
     } catch (error) {
       if (comparisonRangeRequestRef.current !== requestKey) return;
-
       console.error("loadComparisonData error:", error);
-      setComparisonStats({
-        sales: 0,
-        orders: 0,
-        visitors: 0,
-        aov: 0,
-        rows: 0,
-        rawRows: [],
-      });
+      setComparisonStats({ sales: 0, orders: 0, visitors: 0, aov: 0, rows: 0, rawRows: [] });
     }
   };
 
@@ -313,37 +257,18 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     if (!periodRange.start || !periodRange.end) return;
 
     const requestKey = makeRangeKey(periodRange.start, periodRange.end);
-
-    if (!force && currentRangeRequestRef.current === requestKey) {
-      return;
-    }
-
+    if (!force && currentRangeRequestRef.current === requestKey) return;
     currentRangeRequestRef.current = requestKey;
 
     try {
       const rows = await loadDailyRange(periodRange.start, periodRange.end, storeId);
-
       if (currentRangeRequestRef.current !== requestKey) return;
-
       const kpi = calculatePeriodKPI(rows);
-
-      setCurrentPeriodStats({
-        ...kpi,
-        rows: rows.length,
-        rawRows: rows,
-      });
+      setCurrentPeriodStats({ ...kpi, rows: rows.length, rawRows: rows });
     } catch (error) {
       if (currentRangeRequestRef.current !== requestKey) return;
-
       console.error("loadCurrentPeriodData error:", error);
-      setCurrentPeriodStats({
-        sales: 0,
-        orders: 0,
-        visitors: 0,
-        aov: 0,
-        rows: 0,
-        rawRows: [],
-      });
+      setCurrentPeriodStats({ sales: 0, orders: 0, visitors: 0, aov: 0, rows: 0, rawRows: [] });
     }
   };
 
@@ -358,17 +283,13 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   const fetchPeriodStats = async (force = false) => {
     if (!periodRange.start || !periodRange.end) return;
 
-    const comparisonKey =
-      comparisonRange?.start && comparisonRange?.end
+    const comparisonKey = comparisonRange?.start && comparisonRange?.end
         ? makeRangeKey(comparisonRange.start, comparisonRange.end)
         : "no_comparison";
 
     const requestKey = `${makeRangeKey(periodRange.start, periodRange.end)}__${comparisonKey}`;
 
-    if (!force && periodStatsRequestRef.current === requestKey) {
-      return;
-    }
-
+    if (!force && periodStatsRequestRef.current === requestKey) return;
     periodStatsRequestRef.current = requestKey;
 
     setPeriodLoading(true);
@@ -413,25 +334,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
           comparisonList: comparisonList.sort((a, b) => a.date.localeCompare(b.date)),
         });
       } else {
-        setPeriodStats({
-          totalSales: 0,
-          totalOrders: 0,
-          totalVisitors: 0,
-          list: [],
-          comparisonList: [],
-        });
+        setPeriodStats({ totalSales: 0, totalOrders: 0, totalVisitors: 0, list: [], comparisonList: [] });
       }
     } catch (e) {
       if (periodStatsRequestRef.current !== requestKey) return;
-
       console.error("fetchPeriodStats error:", e);
-      setPeriodStats({
-        totalSales: 0,
-        totalOrders: 0,
-        totalVisitors: 0,
-        list: [],
-        comparisonList: [],
-      });
+      setPeriodStats({ totalSales: 0, totalOrders: 0, totalVisitors: 0, list: [], comparisonList: [] });
     } finally {
       if (periodStatsRequestRef.current === requestKey) {
         setPeriodLoading(false);
@@ -446,25 +354,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
 
-  const salesChangeRate = useMemo(
-    () => calcChangeRate(Number(currentPeriodStats?.sales || 0), Number(comparisonStats?.sales || 0)),
-    [currentPeriodStats?.sales, comparisonStats?.sales]
-  );
-
-  const ordersChangeRate = useMemo(
-    () => calcChangeRate(Number(currentPeriodStats?.orders || 0), Number(comparisonStats?.orders || 0)),
-    [currentPeriodStats?.orders, comparisonStats?.orders]
-  );
-
-  const visitorsChangeRate = useMemo(
-    () => calcChangeRate(Number(currentPeriodStats?.visitors || 0), Number(comparisonStats?.visitors || 0)),
-    [currentPeriodStats?.visitors, comparisonStats?.visitors]
-  );
-
-  const aovChangeRate = useMemo(
-    () => calcChangeRate(Number(currentPeriodStats?.aov || 0), Number(comparisonStats?.aov || 0)),
-    [currentPeriodStats?.aov, comparisonStats?.aov]
-  );
+  const salesChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.sales || 0), Number(comparisonStats?.sales || 0)), [currentPeriodStats?.sales, comparisonStats?.sales]);
+  const ordersChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.orders || 0), Number(comparisonStats?.orders || 0)), [currentPeriodStats?.orders, comparisonStats?.orders]);
+  const visitorsChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.visitors || 0), Number(comparisonStats?.visitors || 0)), [currentPeriodStats?.visitors, comparisonStats?.visitors]);
+  const aovChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.aov || 0), Number(comparisonStats?.aov || 0)), [currentPeriodStats?.aov, comparisonStats?.aov]);
 
   const currentPeriodMenus = useMemo(() => {
     const list = periodStats?.list || [];
@@ -567,19 +460,13 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
       return {
         dailyTargetQty: target,
-        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(
-          growth * 100
-        )}% 목표 ${target}개 (상한 ${cap}개)`,
+        dailyTargetReason: `최근 ${days}일 평균 ${avgDaily.toFixed(1)}개/일 → +${Math.round(growth * 100)}% 목표 ${target}개 (상한 ${cap}개)`,
       };
     };
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
-      const availableSoftDrinks = allMenuItemsFlat.filter(
-        (item) => SOFT_DRINKS.includes(item.name) && item.id !== mainItem.id && item.unitCost != null
-      );
-      if (availableSoftDrinks.length > 0) {
-        return availableSoftDrinks[Math.floor(Math.random() * availableSoftDrinks.length)];
-      }
+      const availableSoftDrinks = allMenuItemsFlat.filter((item) => SOFT_DRINKS.includes(item.name) && item.id !== mainItem.id && item.unitCost != null);
+      if (availableSoftDrinks.length > 0) return availableSoftDrinks[Math.floor(Math.random() * availableSoftDrinks.length)];
 
       const compatibleItems = allMenuItemsFlat
         .filter((item) => {
@@ -595,10 +482,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
     const targetablePuzzles = menuEngineeringResult.puzzles
       .filter((item) => item.unitCost != null)
-      .sort(
-        (a, b) =>
-          (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number)
-      );
+      .sort((a, b) => (b.cm as number) - (a.cm as number) || (b.revenue_month as number) - (a.revenue_month as number));
 
     const targetableStars = menuEngineeringResult.stars
       .filter((item) => item.unitCost != null)
@@ -608,8 +492,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
       .filter((item) => item.unitCost != null)
       .sort((a, b) => (b.qty_month as number) - (a.qty_month as number));
 
-    const analyzedDatesCount =
-      menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
+    const analyzedDatesCount = menuEngineeringResult.analyzedDatesCount > 0 ? menuEngineeringResult.analyzedDatesCount : 1;
 
     const plans: any[] = [];
     const usedItemIds = new Set<string>();
@@ -618,11 +501,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     let menuBoardTarget = getUnusedTargetItem(targetableStars) || getUnusedTargetItem(targetableCashCows);
     if (menuBoardTarget) {
       usedItemIds.add(menuBoardTarget.id);
-      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-        menuBoardTarget.qty_month || 0,
-        analyzedDatesCount,
-        "MENU_BOARD"
-      );
+      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(menuBoardTarget.qty_month || 0, analyzedDatesCount, "MENU_BOARD");
       plans.push({
         puzzleItemName: menuBoardTarget.name,
         setName: `${menuBoardTarget.name} 대표 추천 메뉴`,
@@ -639,11 +518,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     if (staffUpsellTarget) {
       usedItemIds.add(staffUpsellTarget.id);
       const randomSoftDrink = SOFT_DRINKS[Math.floor(Math.random() * SOFT_DRINKS.length)];
-      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-        staffUpsellTarget.qty_month || 0,
-        analyzedDatesCount,
-        "STAFF_UPSELL"
-      );
+      const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(staffUpsellTarget.qty_month || 0, analyzedDatesCount, "STAFF_UPSELL");
       plans.push({
         puzzleItemName: staffUpsellTarget.name,
         setName: `${staffUpsellTarget.name} 주문 시`,
@@ -667,8 +542,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
           const gp = (setPrice - setUnitCost) / setPrice;
           const minGPAfter = 0.35;
           const maxDiscountByMargin = Math.max(0, Math.floor(((gp - minGPAfter) * 100) / 5) * 5);
-
           const popularity = Number(setDiscountTarget.qty_month || 0);
+          
           let base = 15;
           if (popularity <= 3) base = 25;
           else if (popularity <= 7) base = 20;
@@ -679,29 +554,19 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
           discountPercentage = Math.max(0, Math.min(25, discountPercentage));
           if (discountPercentage < 10) discountPercentage = 0;
 
-          const finalDiscountAmount =
-            discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
+          const finalDiscountAmount = discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
 
           if (finalDiscountAmount > 0) {
-            const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-              setDiscountTarget.qty_month || 0,
-              analyzedDatesCount,
-              "SET_DISCOUNT"
-            );
-
+            const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(setDiscountTarget.qty_month || 0, analyzedDatesCount, "SET_DISCOUNT");
             plans.push({
               puzzleItemName: setDiscountTarget.name,
               setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
               setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
               discount: `${discountPercentage}% OFF`,
               dailyTargetQty,
-              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${Math.round(
-                minGPAfter * 100
-              )}%+ 유지).`,
+              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용.`,
               type: "SET_DISCOUNT",
-              reason: `마진(GP) + 판매량(인기도) 기반으로 ${discountPercentage}% 산정. 현재 GP ${(gp * 100).toFixed(
-                1
-              )}% → 할인 후 GP ${Math.round(minGPAfter * 100)}% 이상 유지. ${dailyTargetReason}`,
+              reason: `마진(GP) + 판매량(인기도) 기반으로 ${discountPercentage}% 산정. 현재 GP ${(gp * 100).toFixed(1)}% → 할인 후 GP ${Math.round(minGPAfter * 100)}% 이상 유지. ${dailyTargetReason}`,
             });
           }
         }
@@ -714,98 +579,156 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   const isShowingCurrentDateReport = reportDate === selectedDate && !!report;
 
   return (
-    <div className="space-y-5 text-slate-900">
-      <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-  <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-    Detail
-  </div>
+    <div className="space-y-6 text-slate-900 pb-10">
+      {/* 1. 프리미엄 페이지 타이틀 섹션 */}
+      <section className="flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-white px-6 py-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:flex-row md:items-center md:justify-between md:px-8 md:py-8">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 border border-white shadow-sm">
+            <span className="text-2xl">✨</span>
+          </div>
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+              Insight Detail
+            </div>
+            <h2 className="mt-1 text-[20px] font-extrabold text-slate-900 md:text-[24px]">
+              매출 분석 & AI 코칭
+            </h2>
+            <p className="mt-1 text-[13px] font-medium text-slate-500">
+              오늘의 리포트와 기간별 성과를 심층 분석합니다.
+            </p>
+          </div>
+        </div>
+      </section>
 
-  <h2 className="mt-1 text-[14px] font-bold text-slate-900">
-    매출 분석 & 코칭
-  </h2>
+      {/* 2. AI 코칭 리포트 패널 (비서 느낌의 UI) */}
+      <section className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.05)]">
+        {/* 패널 헤더 */}
+        <div className="border-b border-slate-100/60 bg-gradient-to-r from-slate-50/50 to-indigo-50/30 px-5 py-5 md:px-8 md:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                {/* 반짝이는 점 */}
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500 border border-white"></span>
+                </span>
+              </span>
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-500">
+                  AI Report
+                </div>
+                <div className="text-[16px] font-extrabold text-slate-900 md:text-[18px]">
+                  AI 운영 코칭 리포트
+                </div>
+              </div>
+            </div>
 
-  <p className="mt-1 text-[12px] font-medium text-slate-500">
-    리포트 · 기간 분석 · 메뉴 성과 기반 인사이트
-  </p>
-</section>
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm border border-slate-100 text-[11px] font-bold text-slate-500">
+                <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                기준일: <span className="text-slate-900">{selectedDate}</span>
+              </div>
 
-     <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-        AI Report
-      </div>
-      <div className="mt-1 text-[14px] font-bold text-slate-900">
-        코칭 리포트
-      </div>
-    </div>
+              <button
+                type="button"
+                onClick={handleGenerateReport}
+                disabled={loading}
+                className="group relative inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-6 text-[13px] font-bold text-white shadow-md transition-all hover:bg-indigo-600 disabled:bg-slate-300 sm:w-auto sm:rounded-full"
+              >
+                {loading ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>데이터 분석 및 리포트 작성 중...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>코칭 리포트 생성하기</span>
+                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
 
-    <div className="flex flex-col items-start gap-1 sm:items-end">
-      <div className="text-[10px] font-bold leading-tight text-slate-400 sm:text-right">
-        <div>기준일: {selectedDate}</div>
-        {isShowingCurrentDateReport && <div>현재 날짜 리포트 표시중</div>}
-      </div>
+        {/* 패널 본문 (리포트 또는 Empty State) */}
+        <div className="p-5 md:p-8">
+          {loading ? (
+            /* 스켈레톤 로딩 애니메이션 */
+            <div className="animate-pulse space-y-6 py-4">
+              <div className="h-4 w-1/4 rounded-full bg-slate-200"></div>
+              <div className="space-y-3">
+                <div className="h-3 w-3/4 rounded-full bg-slate-100"></div>
+                <div className="h-3 w-5/6 rounded-full bg-slate-100"></div>
+                <div className="h-3 w-2/3 rounded-full bg-slate-100"></div>
+              </div>
+              <div className="space-y-3 pt-4">
+                <div className="h-4 w-1/3 rounded-full bg-slate-200"></div>
+                <div className="h-24 w-full rounded-xl bg-slate-50"></div>
+              </div>
+            </div>
+          ) : isShowingCurrentDateReport ? (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <ReportDisplay
+                report={report}
+                loading={false}
+                menuEngineeringResult={null}
+                sortedMenuEngineering={null}
+                boostPlans={[]}
+              />
+            </div>
+          ) : (
+            /* 매력적인 Empty State */
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30 py-16 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-500 mb-4">
+                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              </div>
+              <h3 className="text-[16px] font-bold text-slate-800 md:text-[18px]">AI 코치가 데이터를 분석할 준비가 되었습니다</h3>
+              <p className="mt-2 max-w-sm text-[13px] font-medium text-slate-500 leading-relaxed">
+                해당 날짜의 판매 데이터를 바탕으로 원가 절감과 매출 증대를 위한 핵심 인사이트를 즉시 생성합니다.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
 
-      <button
-        type="button"
-        onClick={handleGenerateReport}
-        disabled={loading}
-        className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white transition-all hover:bg-indigo-600 disabled:bg-slate-300 sm:h-9 sm:rounded-xl sm:px-4 sm:text-sm"
-      >
-        {loading ? "코칭 리포트 생성 중..." : "코칭 리포트 생성"}
-      </button>
-    </div>
-  </div>
-
-  <div className="mt-3">
-    {isShowingCurrentDateReport ? (
-      <ReportDisplay
-        report={report}
-        loading={false}
-        menuEngineeringResult={null}
-        sortedMenuEngineering={null}
-        boostPlans={[]}
+      {/* 3. 하단 기간 분석 섹션 (기존 유지) */}
+      <PeriodMenuAnalysisSection
+        periodRange={periodRange}
+        setPeriodRange={setPeriodRange}
+        comparisonMode={comparisonMode}
+        setComparisonMode={setComparisonMode}
+        comparisonRange={comparisonRange}
+        setComparisonRange={setComparisonRange}
+        canRunPeriodAnalysis={canRunPeriodAnalysis}
+        currentPeriodStats={currentPeriodStats}
+        comparisonStats={comparisonStats}
+        salesChangeRate={salesChangeRate}
+        ordersChangeRate={ordersChangeRate}
+        visitorsChangeRate={visitorsChangeRate}
+        aovChangeRate={aovChangeRate}
+        periodLoading={periodLoading}
+        selectedPeriodDays={selectedPeriodDays}
+        loadCurrentPeriodData={loadCurrentPeriodData}
+        loadComparisonData={loadComparisonData}
+        fetchPeriodStats={fetchPeriodStats}
+        calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
+        setMenuEngineeringResult={setMenuEngineeringResult}
+        data={data}
+        currentPeriodMenus={currentPeriodMenus}
+        comparisonPeriodMenus={comparisonPeriodMenus}
+        currentPeriodDays={currentPeriodDays}
+        comparisonPeriodDays={comparisonPeriodDays}
+        sortedMenuEngineering={sortedMenuEngineering}
+        boostPlans={boostPlans}
+        periodStats={periodStats}
+        showToast={showToast}
       />
-    ) : (
-      <div className="rounded-xl bg-slate-50 p-3 text-[12px] font-medium leading-snug text-slate-500 sm:rounded-2xl sm:p-5 sm:text-sm">
-        아직 이 날짜의 코칭 리포트가 생성되지 않았습니다. 코칭 리포트 생성 버튼을 눌러 바로 확인하세요.
-      </div>
-    )}
-  </div>
-</section>
-
-     <PeriodMenuAnalysisSection
-  periodRange={periodRange}
-  setPeriodRange={setPeriodRange}
-  comparisonMode={comparisonMode}
-  setComparisonMode={setComparisonMode}
-  comparisonRange={comparisonRange}
-  setComparisonRange={setComparisonRange}
-  canRunPeriodAnalysis={canRunPeriodAnalysis}
-  currentPeriodStats={currentPeriodStats}
-  comparisonStats={comparisonStats}
-  salesChangeRate={salesChangeRate}
-  ordersChangeRate={ordersChangeRate}
-  visitorsChangeRate={visitorsChangeRate}
-  aovChangeRate={aovChangeRate}
-  periodLoading={periodLoading}
-  selectedPeriodDays={selectedPeriodDays}
-  loadCurrentPeriodData={loadCurrentPeriodData}
-  loadComparisonData={loadComparisonData}
-  fetchPeriodStats={fetchPeriodStats}
-  calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
-  setMenuEngineeringResult={setMenuEngineeringResult}
-  data={data}
-  currentPeriodMenus={currentPeriodMenus}
-  comparisonPeriodMenus={comparisonPeriodMenus}
-  currentPeriodDays={currentPeriodDays}
-  comparisonPeriodDays={comparisonPeriodDays}
-  sortedMenuEngineering={sortedMenuEngineering}
-  boostPlans={boostPlans}
-  periodStats={periodStats}
-  showToast={showToast}
-/>
-      </div>
+    </div>
   );
 };
 
