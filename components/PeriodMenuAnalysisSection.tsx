@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type { ComparisonMode } from "../utils2/periodComparison";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
@@ -75,6 +75,50 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const country = (data as any)?.country;
   const [activeTooltipIdx, setActiveTooltipIdx] = useState<number | null>(null);
 
+  // 분석 실행 통합 함수
+  const runAnalysis = useCallback(async (isManual = false) => {
+    try {
+      // 1. 기본 매출/통계 데이터 로드
+      await Promise.all([
+        loadCurrentPeriodData(isManual),
+        loadComparisonData(isManual),
+        fetchPeriodStats(isManual)
+      ]);
+
+      // 2. 메뉴 엔지니어링 분석 (7일 이상 데이터가 있을 때만)
+      if (selectedPeriodDays >= 7) {
+        const meResult = await calculateMenuEngineeringForRange(
+          periodRange.start,
+          periodRange.end,
+          data.categories,
+          { maxDays: 60 }
+        );
+        setMenuEngineeringResult(meResult);
+      }
+    } catch (error) {
+      console.error("Analysis Error:", error);
+      if (isManual) showToast("데이터를 불러오는 중 오류가 발생했습니다.");
+    }
+  }, [
+    periodRange.start, 
+    periodRange.end, 
+    selectedPeriodDays, 
+    data.categories, 
+    loadCurrentPeriodData, 
+    loadComparisonData, 
+    fetchPeriodStats, 
+    calculateMenuEngineeringForRange, 
+    setMenuEngineeringResult, 
+    showToast
+  ]);
+
+  // [핵심] 페이지 진입 및 기간 변경 시 자동 실행
+  useEffect(() => {
+    if (periodRange.start && periodRange.end) {
+      void runAnalysis(false);
+    }
+  }, [periodRange.start, periodRange.end, runAnalysis]);
+
   const summaryCards = [
     { label: "매출", current: formatCurrencyValue(safeNumber(currentPeriodStats?.sales), country), compare: formatCurrencyValue(safeNumber(comparisonStats?.sales), country), rawCurrent: safeNumber(currentPeriodStats?.sales), rawCompare: safeNumber(comparisonStats?.sales), rate: salesChangeRate },
     { label: "주문", current: safeNumber(currentPeriodStats?.orders).toLocaleString(), compare: safeNumber(comparisonStats?.orders).toLocaleString(), rawCurrent: safeNumber(currentPeriodStats?.orders), rawCompare: safeNumber(comparisonStats?.orders), rate: ordersChangeRate },
@@ -84,7 +128,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
 
   return (
     <div className="space-y-5">
-      {/* [상단 1] 4대 KPI 비교 카드 - 화이트&블루 테마 */}
+      {/* 4대 KPI 비교 카드 */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {summaryCards.map((card) => {
           const maxVal = Math.max(card.rawCurrent, card.rawCompare);
@@ -115,7 +159,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         })}
       </div>
 
-      {/* [상단 2] 일별 종합 트렌드 차트 */}
+      {/* 일별 종합 트렌드 차트 */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -155,6 +199,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                       <div className="flex justify-between gap-3"><span>매출</span><b>{formatCurrencyValue(row.total_sales, country)}</b></div>
                       <div className="flex justify-between gap-3"><span>주문</span><b>{row.orders}건</b></div>
                       <div className="flex justify-between gap-3"><span>방문</span><b>{row.guests}명</b></div>
+                      <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-800"></div>
                     </div>
                   )}
                   <div className="flex h-full w-full items-end justify-center gap-[2px]">
@@ -172,18 +217,18 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         )}
       </section>
 
-      {/* [중단] Top 5 메뉴 비교 */}
+      {/* Top 5 메뉴 비교 */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="mb-4 text-[16px] font-bold text-slate-900">Top 5 메뉴 비교</h3>
         <PeriodTopMenuCompare currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} minDays={1} currentDays={currentPeriodDays} comparisonDays={comparisonPeriodDays} />
       </section>
 
-      {/* [하단 1] 분석 설정 패널 - 뒤로 밀기 */}
+      {/* 하단 분석 설정 패널 */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-[15px] font-bold text-slate-900">분석 기간 설정</h3>
-            <p className="text-[12px] text-slate-500">상세 분석을 위한 기간을 선택하세요.</p>
+            <h3 className="text-[15px] font-bold text-slate-900">상세 분석 기간 설정</h3>
+            <p className="text-[12px] text-slate-500">조회할 기간을 변경하면 데이터가 자동으로 갱신됩니다.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input type="date" value={periodRange.start} onChange={(e) => setPeriodRange(p => ({ ...p, start: e.target.value }))}
@@ -191,14 +236,9 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             <span className="text-slate-300">~</span>
             <input type="date" value={periodRange.end} onChange={(e) => setPeriodRange(p => ({ ...p, end: e.target.value }))}
                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-bold outline-none focus:border-blue-500" />
-            <button onClick={async () => {
-              if (selectedPeriodDays < 7) { showToast("7일 이상 데이터 필요"); return; }
-              await Promise.all([loadCurrentPeriodData(true), loadComparisonData(true), fetchPeriodStats(true)]);
-              const meResult = await calculateMenuEngineeringForRange(periodRange.start, periodRange.end, data.categories, { maxDays: 60 });
-              setMenuEngineeringResult(meResult);
-            }} disabled={periodLoading}
+            <button onClick={() => void runAnalysis(true)} disabled={periodLoading}
             className="rounded-lg bg-blue-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-blue-700 disabled:bg-slate-300 transition-colors">
-              {periodLoading ? "분석 중..." : "데이터 분석 실행"}
+              {periodLoading ? "분석 중..." : "새로고침"}
             </button>
           </div>
         </div>
@@ -207,7 +247,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         </div>
       </section>
 
-      {/* [하단 2] 심층 분석 (메뉴 엔지니어링 & 부스트 플랜) */}
+      {/* 심층 분석 */}
       <div className="grid grid-cols-1 gap-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-[16px] font-bold text-slate-900">메뉴 엔지니어링</h3>
