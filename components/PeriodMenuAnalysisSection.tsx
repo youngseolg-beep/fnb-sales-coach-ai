@@ -299,7 +299,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                       <div className="flex justify-between text-[9px] font-black text-slate-300 uppercase tracking-tighter"><span>Compare</span></div>
                       <div className="h-1.5 w-full rounded-full bg-slate-100">
                         <div
-                          className="h-1.5 rounded-full bg-slate-200 transition-all duration-1000 ease-out"
+                          className="h-1.5 rounded-full bg-slate-400 transition-all duration-1000 ease-out"
                           style={{ width: `${comparePercent}%` }}
                         ></div>
                       </div>
