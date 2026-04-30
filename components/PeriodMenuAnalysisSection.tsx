@@ -75,10 +75,8 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const country = (data as any)?.country;
   const [activeTooltipIdx, setActiveTooltipIdx] = useState<number | null>(null);
   
-  // 최초 마운트 여부 체크
   const isFirstMount = useRef(true);
 
-  // 분석 실행 함수
   const runAnalysis = useCallback(async (isManual = false) => {
     try {
       await Promise.all([
@@ -111,7 +109,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
     setMenuEngineeringResult
   ]);
 
-  // 페이지 처음 들어왔을 때 딱 1번만 실행하고, 날짜 변경 시에는 자동 실행 안 함
   useEffect(() => {
     if (isFirstMount.current && periodRange.start && periodRange.end) {
       isFirstMount.current = false;
@@ -159,9 +156,10 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         })}
       </div>
 
-      {/* 일별 트렌드 차트 (수정 완료) */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm w-full overflow-hidden">
-        <div className="mb-4 flex items-center justify-between">
+      {/* 일별 트렌드 차트 */}
+      {/* [수정] overflow-hidden을 삭제하여 위쪽 공간 제약을 풀었습니다. */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm w-full">
+        <div className="mb-2 flex items-center justify-between">
           <h3 className="text-[14px] font-bold text-slate-900 flex items-center gap-1.5">
              일별 트렌드
           </h3>
@@ -175,10 +173,10 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           </div>
         </div>
 
-        {periodStats?.list?.length > 0 ? (
-          <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-            {/* [수정점] 차트 마지막 막대의 툴팁이 잘리지 않도록 오른쪽 여백(pr-12)을 충분히 추가했습니다. */}
-            <div className="flex h-[140px] min-w-[500px] items-end justify-between gap-2 md:h-[180px] md:gap-3 pl-1 pr-12">
+        {(periodStats?.list || []).length > 0 ? (
+          // [수정] pt-16을 추가하여 상단에 말풍선이 뜰 수 있는 64px의 공간을 확보했습니다.
+          <div className="w-full overflow-x-auto pt-16 pb-2 scrollbar-hide">
+            <div className="flex h-[140px] min-w-[500px] items-end justify-between gap-2 md:h-[180px] md:gap-3 px-4">
               {periodStats.list.map((row: any, idx: number) => {
                 const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
                 const maxOrders = Math.max(0, ...periodStats.list.map((r: any) => Number(r.orders || 0)));
@@ -188,6 +186,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                 return (
                   <div key={idx} className="group relative flex h-full min-w-[20px] flex-1 flex-col items-center justify-end" 
                        onClick={() => setActiveTooltipIdx(activeTooltipIdx === idx ? null : idx)}>
+                    {/* Tooltip */}
                     {activeTooltipIdx === idx && (
                       <div className="absolute bottom-full mb-2 z-30 w-max rounded-lg bg-slate-800 p-2 text-white text-[10px] shadow-xl">
                         <div className="font-bold border-b border-slate-600 pb-1 mb-1">{row.date}</div>
@@ -196,6 +195,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                         <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-800"></div>
                       </div>
                     )}
+                    {/* Bars */}
                     <div className="flex h-full w-full items-end justify-center gap-[1px]">
                       <div className="w-2 md:w-3 bg-blue-600 rounded-t-sm" style={{ height: `${salesPercent}%` }}></div>
                       <div className="w-2 md:w-3 bg-sky-400 rounded-t-sm" style={{ height: `${ordersPercent}%` }}></div>
@@ -229,6 +229,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             <span className="text-slate-300 text-xs">~</span>
             <input type="date" value={periodRange.end} onChange={(e) => setPeriodRange(p => ({ ...p, end: e.target.value }))}
                    className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] font-bold outline-none" />
+            
             <button onClick={() => void runAnalysis(true)} disabled={periodLoading}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-blue-700 disabled:bg-slate-300 transition-colors">
               {periodLoading ? "분석 중..." : "데이터 분석 실행"}
