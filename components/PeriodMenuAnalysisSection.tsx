@@ -156,10 +156,10 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         })}
       </div>
 
-      {/* 일별 트렌드 차트 */}
-      {/* [수정] overflow-hidden을 삭제하여 위쪽 공간 제약을 풀었습니다. */}
+      {/* 일별 트렌드 차트 (Clipping 완벽 해결) */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm w-full">
-        <div className="mb-2 flex items-center justify-between">
+        {/* z-index와 pointer-events-none으로 차트 위젯 라벨을 툴팁 렌더링에 간섭하지 않게 분리 */}
+        <div className="relative z-10 mb-0 flex items-center justify-between pointer-events-none">
           <h3 className="text-[14px] font-bold text-slate-900 flex items-center gap-1.5">
              일별 트렌드
           </h3>
@@ -174,8 +174,8 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         </div>
 
         {(periodStats?.list || []).length > 0 ? (
-          // [수정] pt-16을 추가하여 상단에 말풍선이 뜰 수 있는 64px의 공간을 확보했습니다.
-          <div className="w-full overflow-x-auto pt-16 pb-2 scrollbar-hide">
+          // [핵심] pt-28(112px)로 상단 툴팁 공간을 엄청 넉넉하게 확보하고, -mt-20(-80px)으로 시각적 틈을 위로 당겨 메꿈.
+          <div className="relative z-0 w-full overflow-x-auto pt-28 -mt-20 pb-2 scrollbar-hide">
             <div className="flex h-[140px] min-w-[500px] items-end justify-between gap-2 md:h-[180px] md:gap-3 px-4">
               {periodStats.list.map((row: any, idx: number) => {
                 const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
@@ -186,15 +186,17 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                 return (
                   <div key={idx} className="group relative flex h-full min-w-[20px] flex-1 flex-col items-center justify-end" 
                        onClick={() => setActiveTooltipIdx(activeTooltipIdx === idx ? null : idx)}>
-                    {/* Tooltip */}
+                    
+                    {/* Tooltip (pointer-events-none 추가하여 터치 간섭 방지) */}
                     {activeTooltipIdx === idx && (
-                      <div className="absolute bottom-full mb-2 z-30 w-max rounded-lg bg-slate-800 p-2 text-white text-[10px] shadow-xl">
+                      <div className="absolute bottom-[calc(100%+8px)] z-30 w-max rounded-lg bg-slate-800 p-2 text-white text-[10px] shadow-xl pointer-events-none">
                         <div className="font-bold border-b border-slate-600 pb-1 mb-1">{row.date}</div>
                         <div className="flex justify-between gap-3"><span>매출</span><b>{formatCurrencyValue(row.total_sales, country)}</b></div>
                         <div className="flex justify-between gap-3"><span>주문</span><b>{row.orders}건</b></div>
                         <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-800"></div>
                       </div>
                     )}
+                    
                     {/* Bars */}
                     <div className="flex h-full w-full items-end justify-center gap-[1px]">
                       <div className="w-2 md:w-3 bg-blue-600 rounded-t-sm" style={{ height: `${salesPercent}%` }}></div>
