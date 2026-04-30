@@ -111,7 +111,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
     setMenuEngineeringResult
   ]);
 
-  // [수정점] 페이지 처음 들어왔을 때 딱 1번만 실행하고, 날짜 변경 시에는 자동 실행 안 함
+  // 페이지 처음 들어왔을 때 딱 1번만 실행하고, 날짜 변경 시에는 자동 실행 안 함
   useEffect(() => {
     if (isFirstMount.current && periodRange.start && periodRange.end) {
       isFirstMount.current = false;
@@ -159,7 +159,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         })}
       </div>
 
-      {/* 일별 트렌드 차트 */}
+      {/* 일별 트렌드 차트 (수정 완료) */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm w-full overflow-hidden">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[14px] font-bold text-slate-900 flex items-center gap-1.5">
@@ -175,10 +175,10 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* [수정점] 차트가 옆으로 삐져나가지 않도록 가로 스크롤(overflow-x-auto) 및 최소 너비 추가 */}
-        {(periodStats?.list || []).length > 0 ? (
+        {periodStats?.list?.length > 0 ? (
           <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-            <div className="flex h-[140px] min-w-[500px] items-end justify-between gap-2 md:h-[180px] md:gap-3 px-1">
+            {/* [수정점] 차트 마지막 막대의 툴팁이 잘리지 않도록 오른쪽 여백(pr-12)을 충분히 추가했습니다. */}
+            <div className="flex h-[140px] min-w-[500px] items-end justify-between gap-2 md:h-[180px] md:gap-3 pl-1 pr-12">
               {periodStats.list.map((row: any, idx: number) => {
                 const maxSales = Math.max(0, ...periodStats.list.map((r: any) => Number(r.total_sales || 0)));
                 const maxOrders = Math.max(0, ...periodStats.list.map((r: any) => Number(r.orders || 0)));
@@ -193,6 +193,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
                         <div className="font-bold border-b border-slate-600 pb-1 mb-1">{row.date}</div>
                         <div className="flex justify-between gap-3"><span>매출</span><b>{formatCurrencyValue(row.total_sales, country)}</b></div>
                         <div className="flex justify-between gap-3"><span>주문</span><b>{row.orders}건</b></div>
+                        <div className="absolute -bottom-1 left-1/2 -ml-1 h-2 w-2 rotate-45 bg-slate-800"></div>
                       </div>
                     )}
                     <div className="flex h-full w-full items-end justify-center gap-[1px]">
@@ -228,8 +229,6 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
             <span className="text-slate-300 text-xs">~</span>
             <input type="date" value={periodRange.end} onChange={(e) => setPeriodRange(p => ({ ...p, end: e.target.value }))}
                    className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] font-bold outline-none" />
-            
-            {/* [수정점] 버튼 텍스트 변경 및 클릭 시에만 데이터 로드되도록 */}
             <button onClick={() => void runAnalysis(true)} disabled={periodLoading}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-blue-700 disabled:bg-slate-300 transition-colors">
               {periodLoading ? "분석 중..." : "데이터 분석 실행"}
