@@ -281,19 +281,32 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const DINE_IN_VAT_RATE = 0.1;
   const TAKEOUT_VAT_RATE = 0.08;
 
-  const getMenuGrossSales = (item: any) => {
-    const price = Number(item?.price || 0);
+  const isJapanDrinkItem = (item: any, categoryName?: string) => {
+    const category = String(categoryName || "").toLowerCase();
+    const name = String(item?.name || "").toLowerCase();
 
-    if (!isJapanPilot) {
-      return price * Number(item?.qty || 0);
-    }
-
-    const dineInQty = getDineInQty(item);
-    const takeoutQty = getTakeoutQty(item);
-    return price * (dineInQty + takeoutQty);
+    return (
+      category.includes("음료") ||
+      category.includes("drink") ||
+      category.includes("beverage") ||
+      name.includes("콜라") ||
+      name.includes("제로콜라") ||
+      name.includes("사이다") ||
+      name.includes("환타") ||
+      name.includes("생맥주") ||
+      name.includes("병맥주") ||
+      name.includes("하이볼") ||
+      name.includes("논알콜") ||
+      name.includes("참이슬") ||
+      name.includes("맥주") ||
+      name.includes("소주") ||
+      name.includes("beer") ||
+      name.includes("cola") ||
+      name.includes("highball")
+    );
   };
 
-  const getMenuNetSales = (item: any) => {
+  const getMenuGrossSales = (item: any, categoryName?: string) => {
     const price = Number(item?.price || 0);
 
     if (!isJapanPilot) {
@@ -302,11 +315,22 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
     const dineInQty = getDineInQty(item);
     const takeoutQty = getTakeoutQty(item);
+    const fallbackQty = Number(item?.qty || 0);
+    const isDrink = isJapanDrinkItem(item, categoryName);
 
-    const dineInNet = (price * dineInQty) / (1 + DINE_IN_VAT_RATE);
-    const takeoutNet = (price * takeoutQty) / (1 + TAKEOUT_VAT_RATE);
+    if (isDrink) {
+      const totalQty = dineInQty + takeoutQty || fallbackQty;
+      return price * totalQty * (1 + TAKEOUT_VAT_RATE);
+    }
 
-    return dineInNet + takeoutNet;
+    if (dineInQty + takeoutQty > 0) {
+      return (
+        price * dineInQty * (1 + DINE_IN_VAT_RATE) +
+        price * takeoutQty * (1 + TAKEOUT_VAT_RATE)
+      );
+    }
+
+    return price * fallbackQty * (1 + DINE_IN_VAT_RATE);
   };
 
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -942,19 +966,18 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
   const menuSalesTotal = useMemo(() => {
-  return data.categories.reduce((sum, category) => {
-    return (
-      sum +
-      category.items.reduce((catSum, item) => {
-        return catSum + getMenuGrossSales(item);
-      }, 0)
-    );
-  }, 0);
-}, [data.categories]);
+    return data.categories.reduce((sum, category) => {
+      return (
+        sum +
+        category.items.reduce((catSum, item) => {
+          return catSum + getMenuGrossSales(item, category.name);
+        }, 0)
+      );
+    }, 0);
+  }, [data.categories, isJapanPilot]);
 
-const menuSalesTotalWithVat = menuSalesTotal;
-
-  const menuVatTotal = menuSalesTotalWithVat - menuSalesTotal;
+  const menuSalesTotalWithVat = menuSalesTotal;
+  const menuVatTotal = 0;
 
   const enteredSalesTotal =
     Number(data.posSales || 0) + Number((data as any).deliverySales || 0);
@@ -1494,7 +1517,7 @@ const menuSalesTotalWithVat = menuSalesTotal;
       </div>
 
       <div className="mt-0.5 text-[10px] text-slate-400">
-        수량 × 메뉴가격
+        {isJapanPilot ? "음식 홀 10% / 포장·음료 8% 포함" : "수량 × 메뉴가격"}
       </div>
     </div>
 
