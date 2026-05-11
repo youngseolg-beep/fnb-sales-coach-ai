@@ -1622,9 +1622,10 @@ const menuSalesTotalWithVat = menuSalesTotal;
               </div>
             </div>
           ));
-        })()}
+               })()}
       </div>
     </div>
+  </div>
   );
 };
 
