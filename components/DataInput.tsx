@@ -1478,53 +1478,59 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
           </div>
         </div>
 
-        <div className="px-4 pb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
-              <div className="text-[10px] font-black text-slate-400">입력 매출 합계</div>
-              <div className="mt-1 text-[15px] font-black text-slate-900">
-                {formatCurrencyValue(enteredSalesTotal, (data as any).country)}
-              </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">{isJapanPilot ? "VAT 제외 입력 기준" : "POS + 배달"}</div>
-            </div>
-
-            <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
-              <div className="text-[10px] font-black text-slate-400">
-                {isJapanPilot ? "메뉴 매출 합계 (VAT 제외)" : "메뉴 매출 합계"}
-              </div>
-              <div className="mt-1 text-[15px] font-black text-slate-900">
-                {formatCurrencyValue(menuSalesTotal, (data as any).country)}
-              </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">
-                {isJapanPilot
-                  ? `VAT 포함 ${formatCurrencyValue(menuSalesTotalWithVat, (data as any).country)} / VAT ${formatCurrencyValue(menuVatTotal, (data as any).country)}`
-                  : "수량 × 메뉴가격"}
-              </div>
-            </div>
-
-            <div
-              className={`rounded-lg px-3 py-2 border ${
-                salesGap === 0
-                  ? "bg-emerald-50 border-emerald-200"
-                  : "bg-amber-50 border-amber-200"
-              }`}
-            >
-              <div className="text-[10px] font-black text-slate-400">오차</div>
-              <div
-                className={`mt-1 text-[15px] font-black ${
-                  salesGap === 0 ? "text-emerald-600" : "text-amber-600"
-                }`}
-              >
-                {salesGap > 0 ? "+" : ""}
-                {formatCurrencyValue(salesGap, (data as any).country)}
-              </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">
-                {isJapanPilot ? "입력 매출 - 메뉴 매출(VAT 제외)" : "입력 매출 - 메뉴 매출"}
-              </div>
-            </div>
-          </div>
-        </div>
+       <div className="px-4 pb-4">
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+    <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+      <div className="text-[10px] font-black text-slate-400">입력 매출 합계</div>
+      <div className="mt-1 text-[15px] font-black text-slate-900">
+        {formatCurrencyValue(enteredSalesTotal, (data as any).country)}
       </div>
+      <div className="mt-0.5 text-[10px] text-slate-400">
+        {isJapanPilot ? "VAT 포함 기준" : "POS + 배달"}
+      </div>
+    </div>
+
+    <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+      <div className="text-[10px] font-black text-slate-400">
+        메뉴 매출 합계
+      </div>
+
+      <div className="mt-1 text-[15px] font-black text-slate-900">
+        {formatCurrencyValue(
+          isJapanPilot ? menuSalesTotalWithVat : menuSalesTotal,
+          (data as any).country
+        )}
+      </div>
+
+      <div className="mt-0.5 text-[10px] text-slate-400">
+        수량 × 메뉴가격
+      </div>
+    </div>
+
+    <div
+      className={`rounded-lg px-3 py-2 border ${
+        salesGap === 0
+          ? "bg-emerald-50 border-emerald-200"
+          : "bg-amber-50 border-amber-200"
+      }`}
+    >
+      <div className="text-[10px] font-black text-slate-400">오차</div>
+
+      <div
+        className={`mt-1 text-[15px] font-black ${
+          salesGap === 0 ? "text-emerald-600" : "text-amber-600"
+        }`}
+      >
+        {salesGap > 0 ? "+" : ""}
+        {formatCurrencyValue(salesGap, (data as any).country)}
+      </div>
+
+      <div className="mt-0.5 text-[10px] text-slate-400">
+        입력 매출 - 메뉴 매출
+      </div>
+    </div>
+  </div>
+</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(() => {
