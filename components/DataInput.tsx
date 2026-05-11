@@ -942,26 +942,17 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const hasDataDateSet = useMemo(() => new Set(datesWithData || []), [datesWithData]);
 
   const menuSalesTotal = useMemo(() => {
-    return data.categories.reduce((sum, category) => {
-      return (
-        sum +
-        category.items.reduce((catSum, item) => {
-          return catSum + getMenuNetSales(item);
-        }, 0)
-      );
-    }, 0);
-  }, [data.categories, isJapanPilot]);
+  return data.categories.reduce((sum, category) => {
+    return (
+      sum +
+      category.items.reduce((catSum, item) => {
+        return catSum + getMenuGrossSales(item);
+      }, 0)
+    );
+  }, 0);
+}, [data.categories]);
 
-  const menuSalesTotalWithVat = useMemo(() => {
-    return data.categories.reduce((sum, category) => {
-      return (
-        sum +
-        category.items.reduce((catSum, item) => {
-          return catSum + getMenuGrossSales(item);
-        }, 0)
-      );
-    }, 0);
-  }, [data.categories, isJapanPilot]);
+const menuSalesTotalWithVat = menuSalesTotal;
 
   const menuVatTotal = menuSalesTotalWithVat - menuSalesTotal;
 
