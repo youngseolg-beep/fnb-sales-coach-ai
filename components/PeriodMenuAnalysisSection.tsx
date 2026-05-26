@@ -216,7 +216,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
       {/* Top 5 메뉴 비교 */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 text-[14px] font-bold text-slate-900">Top 5 메뉴 비교</h3>
-        <PeriodTopMenuCompare currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} minDays={1} currentDays={currentPeriodDays} comparisonDays={comparisonPeriodDays} />
+        <PeriodTopMenuCompare currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} minDays={1} currentDays={currentPeriodDays} comparisonDays={comparisonPeriodDays} country={country} />
       </section>
 
       {/* 분석 설정 패널 */}
