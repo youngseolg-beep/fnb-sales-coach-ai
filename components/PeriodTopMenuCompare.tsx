@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { formatCurrencyValue } from "../utils2/currency";
 
 export type PeriodMenuRow = {
   name: string;
@@ -22,14 +23,10 @@ interface PeriodTopMenuCompareProps {
   minDays?: number;
   currentDays?: number;
   comparisonDays?: number;
+  country?: string;
 }
 
 const numberFmt = new Intl.NumberFormat("en-US");
-
-const currencyFmt = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
 
 function mergeMenus(
   currentMenus: PeriodMenuRow[],
@@ -86,6 +83,7 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
   minDays = 1,
   currentDays = 0,
   comparisonDays = 0,
+  country,
 }) => {
   const [metric, setMetric] = useState<"qty" | "sales">("qty");
 
@@ -167,8 +165,12 @@ const PeriodTopMenuCompare: React.FC<PeriodTopMenuCompareProps> = ({
             const prevVal = isQty ? row.previousQty : row.previousSales;
             const diffVal = isQty ? row.diffQty : row.diffSales;
             
-            const formattedCurrent = isQty ? numberFmt.format(currentVal) : `$${currencyFmt.format(currentVal)}`;
-            const formattedPrev = isQty ? numberFmt.format(prevVal) : `$${currencyFmt.format(prevVal)}`;
+            const formattedCurrent = isQty
+              ? numberFmt.format(currentVal)
+              : formatCurrencyValue(currentVal, country);
+            const formattedPrev = isQty
+              ? numberFmt.format(prevVal)
+              : formatCurrencyValue(prevVal, country);
             
             const diffPercent = prevVal > 0 ? ((currentVal - prevVal) / prevVal) * 100 : 0;
             const isPositive = diffVal >= 0;
