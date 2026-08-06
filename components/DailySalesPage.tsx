@@ -24,6 +24,7 @@ interface Props {
   showToast: (msg: string) => void;
   onDelete: () => Promise<void>;
   storeId: number;
+  storeName: string;
 }
 
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
@@ -109,6 +110,7 @@ const DailySalesPage: React.FC<Props> = ({
   showToast,
   onDelete,
   storeId,
+  storeName,
 }) => {
   const [report, setReport] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -927,6 +929,7 @@ const DailySalesPage: React.FC<Props> = ({
             loading={loading}
             datesWithData={[...datesWithData]}
             onMonthChange={onMonthChange}
+            storeName={storeName}
           />
 
           {saveStatus && (

@@ -146,6 +146,7 @@ const App: React.FC = () => {
   const {
     selectedDate,
     setSelectedDate,
+    storeName,
     data,
     setData,
     originalCategories,
@@ -721,6 +722,7 @@ const salesPage = (
       showToast={showToast}
       onDelete={handleDelete}
       storeId={storeId!}
+      storeName={storeName}
     />
   );
 

@@ -12,6 +12,7 @@ type Props = {
   showToast: (msg: string) => void;
   onDelete: () => Promise<void>;
   storeId: number;
+  storeName: string;
 };
 
 const SalesPage: React.FC<Props> = ({
@@ -24,6 +25,7 @@ const SalesPage: React.FC<Props> = ({
   showToast,
   onDelete,
   storeId,
+  storeName,
 }) => {
   return (
     <DailySalesPage
@@ -36,6 +38,7 @@ const SalesPage: React.FC<Props> = ({
       showToast={showToast}
       onDelete={onDelete}
       storeId={storeId}
+      storeName={storeName}
     />
   );
 };
