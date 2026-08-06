@@ -877,12 +877,25 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   const confirmedItems = ocrItemsAccumulated.filter((item) => !item.needs_review);
 
   const scanTotal = useMemo(() => {
-    return ocrItemsAccumulated.reduce((sum, item) => {
-      const menuPrice = item.matched_id ? allMenus.find((m) => m.id === item.matched_id)?.price : null;
-      const priceToUse = menuPrice !== null && menuPrice !== undefined ? menuPrice : item.unit_price;
-      return sum + priceToUse * item.qty;
-    }, 0);
-  }, [ocrItemsAccumulated, allMenus]);
+    return ocrItemsAccumulated.reduce(
+      (sum, item) => sum + item.unit_price * item.qty,
+      0
+    );
+  }, [ocrItemsAccumulated]);
+
+  const ocrPriceMismatches = useMemo(
+    () =>
+      ocrItemsAccumulated.flatMap((item) => {
+        const menuPrice = item.matched_id
+          ? allMenus.find((menu) => menu.id === item.matched_id)?.price
+          : undefined;
+
+        return menuPrice !== undefined && menuPrice !== item.unit_price
+          ? [{ name: item.item_corrected, ocrPrice: item.unit_price, menuPrice }]
+          : [];
+      }),
+    [ocrItemsAccumulated, allMenus]
+  );
 
   const extractReceiptTotal = (text: string): number | null => {
     if (!text) return null;
@@ -990,8 +1003,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const files = Array.from<File>(e.currentTarget.files ?? []);
                 appendFiles(files);
                 e.currentTarget.value = "";
               }}
@@ -1002,8 +1015,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const files = Array.from<File>(e.currentTarget.files ?? []);
                 replaceAllFiles(files);
                 e.currentTarget.value = "";
               }}
@@ -1061,7 +1074,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     </button>
                   )}
 
-                  {Object.values(ocrFileStatuses).some((s) => s.status === "failed") && !ocrLoading && (
+                  {Object.values<FileStatus>(ocrFileStatuses).some((s) => s.status === "failed") && !ocrLoading && (
                     <button
                       type="button"
                       onClick={handleRetryFailed}
@@ -1173,6 +1186,13 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   {receiptTotal !== null && !isTotalMatched && (
                     <p className="mt-3 text-[10px] text-rose-500 font-medium italic">
                       * 차이: {formatCurrencyValue(scanTotal - receiptTotal, (data as any).country)}. 메뉴 수량/가격을 다시 확인해 주세요.
+                    </p>
+                  )}
+                  {ocrPriceMismatches.length > 0 && (
+                    <p className="mt-3 text-[10px] text-amber-600 font-medium">
+                      OCR price differs from Menu Master for {ocrPriceMismatches
+                        .map((item) => item.name)
+                        .join(", ")}. The OCR total uses the receipt prices.
                     </p>
                   )}
                 </div>

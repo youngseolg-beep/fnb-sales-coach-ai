@@ -3,6 +3,7 @@ import { formatLocalDate } from "../utils2/date";
 import { loadDaily, listDatesInMonth } from "../services/salesStorage";
 import { getMenuPricesForDate } from "../services/menuPriceService";
 import { supabase } from "../services/supabaseClient";
+import type { MenuCategory as MenuMasterCategory } from "../services/menuMasterService";
 import type { MenuCategory, SalesReportData } from "../types";
 
 const INITIAL_CATEGORIES: MenuCategory[] = [
@@ -91,7 +92,14 @@ const toSafeNumber = (value: any, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const normalizeMenuMasterCategories = (categories?: MenuCategory[] | null): MenuCategory[] => {
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === "") return undefined;
+  return Number(value);
+};
+
+const normalizeMenuMasterCategories = (
+  categories?: Array<MenuCategory | MenuMasterCategory> | null
+): MenuCategory[] => {
   if (!Array.isArray(categories) || categories.length === 0) {
     return cloneCategories(INITIAL_CATEGORIES);
   }
@@ -420,16 +428,13 @@ export const useSalesData = (params?: UseSalesDataParams) => {
               };
             }
 
+            const price = toOptionalNumber(item.price);
+            const unitCost = toOptionalNumber(item.unitCost);
+
             return {
               ...item,
-              price:
-                item.price === undefined || item.price === null || item.price === ""
-                  ? 0
-                  : Number(item.price),
-              unitCost:
-                item.unitCost === undefined || item.unitCost === null || item.unitCost === ""
-                  ? undefined
-                  : Number(item.unitCost),
+              price: price ?? 0,
+              unitCost,
             };
           }),
         }));

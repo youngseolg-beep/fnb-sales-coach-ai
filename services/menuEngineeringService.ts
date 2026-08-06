@@ -37,7 +37,7 @@ const pickPositiveNumber = (...values: any[]): number => {
   return 0;
 };
 
-const pickNullableNumber = (...values: any[]): number | null => {
+const pickNullableNumber = (...values: unknown[]): number | null => {
   for (const value of values) {
     if (value === undefined || value === null || value === "") continue;
     const n = Number(value);
@@ -151,6 +151,8 @@ const internalCalculate = async (
         if (excludedMenuNames && excludedMenuNames.has(itemName)) continue;
 
         const normalizedName = normalizeName(itemName);
+        const observedPrice = pickNullableNumber(item.price);
+        const observedUnitCost = pickNullableNumber(item.unitCost);
 
         if (item.id) {
           const prev = observedItemsById[item.id] || {};
@@ -158,14 +160,8 @@ const internalCalculate = async (
             ...prev,
             id: item.id,
             name: itemName || prev.name,
-            price:
-              item.price !== undefined && item.price !== null && item.price !== ""
-                ? Number(item.price)
-                : prev.price,
-            unitCost:
-              item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== ""
-                ? Number(item.unitCost)
-                : prev.unitCost,
+            price: observedPrice ?? prev.price,
+            unitCost: observedUnitCost ?? prev.unitCost,
           };
         }
 
@@ -175,14 +171,8 @@ const internalCalculate = async (
             ...prevByName,
             id: item.id || prevByName.id,
             name: itemName || prevByName.name,
-            price:
-              item.price !== undefined && item.price !== null && item.price !== ""
-                ? Number(item.price)
-                : prevByName.price,
-            unitCost:
-              item.unitCost !== undefined && item.unitCost !== null && item.unitCost !== ""
-                ? Number(item.unitCost)
-                : prevByName.unitCost,
+            price: observedPrice ?? prevByName.price,
+            unitCost: observedUnitCost ?? prevByName.unitCost,
           };
         }
 

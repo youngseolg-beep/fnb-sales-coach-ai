@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
+import { Fragment, useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { formatCurrencyValue } from "../utils2/currency";
@@ -363,27 +363,28 @@ export default function StoreOwnerShell({
             </button>
           </div>
 
-          <DayPicker
-            key={calendarRenderKey}
-            mode="single"
-            month={calendarMonth}
-            selected={parseLocalDate(selectedDate)}
-            onMonthChange={(month) => {
-              setCalendarMonth(month);
-              onMonthChange(month);
-            }}
-            onSelect={(date) => {
-              if (!date) return;
-              onChangeDate(formatLocalDate(date));
-              setShowCalendar(false);
-            }}
-            modifiers={{
-              hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
-            }}
-            modifiersClassNames={{
-              hasData: "has-data-day",
-            }}
-          />
+          <Fragment key={calendarRenderKey}>
+            <DayPicker
+              mode="single"
+              month={calendarMonth}
+              selected={parseLocalDate(selectedDate)}
+              onMonthChange={(month) => {
+                setCalendarMonth(month);
+                onMonthChange(month);
+              }}
+              onSelect={(date) => {
+                if (!date) return;
+                onChangeDate(formatLocalDate(date));
+                setShowCalendar(false);
+              }}
+              modifiers={{
+                hasData: (date) => datesWithDataSet.has(formatLocalDate(date)),
+              }}
+              modifiersClassNames={{
+                hasData: "has-data-day",
+              }}
+            />
+          </Fragment>
 
           <style>{`
             .has-data-day {

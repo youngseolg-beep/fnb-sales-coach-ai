@@ -35,7 +35,7 @@ type MasterDashboardViewData = {
   risks: RiskCard[];
   topMenus: TopMenuRow[];
   topMenusByBrand: Record<string, TopMenuRow[]>;
-  topMenusByStore?: Record<number, TopMenuRow[]>;
+  topMenusByStore: Record<number, TopMenuRow[]>;
   brandGrowth?: Record<string, { current: number; previous: number; rate: number | null }>;
   storeGrowth?: Record<number, { current: number; previous: number; rate: number | null }>;
 };
@@ -377,7 +377,7 @@ const topMenusByStore = result?.topMenusByStore || {};
   }, [groupedByBrand]);
 
   const brandSummaryCards = useMemo(() => {
-    return Object.entries(groupedByBrand).map(([brandName, rows]) => {
+    return Object.entries<StoreKpiRow[]>(groupedByBrand).map(([brandName, rows]) => {
       const storeCount = rows.length;
       const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
       const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
@@ -935,7 +935,7 @@ if (showApprovalPage) {
       </tr>
     </thead>
     <tbody>
-      {Object.entries(groupedByBrand)
+      {Object.entries<StoreKpiRow[]>(groupedByBrand)
         .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
         .map(([brand, rows]) => (
           <React.Fragment key={brand}>

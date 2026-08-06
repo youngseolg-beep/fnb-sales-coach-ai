@@ -82,6 +82,7 @@ export type MasterDashboardResult = {
   risks: RiskCard[];
   topMenus: TopMenuRow[];
   topMenusByBrand: Record<string, TopMenuRow[]>;
+  topMenusByStore: Record<number, TopMenuRow[]>;
   brandGrowth: Record<string, { current: number; previous: number; rate: number | null }>;
   storeGrowth: Record<number, { current: number; previous: number; rate: number | null }>;
 };
