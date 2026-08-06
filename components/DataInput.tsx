@@ -16,6 +16,150 @@ interface DataInputProps {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+type ReceiptDateValidation = {
+  status: "PASS" | "WARNING" | "BLOCK";
+  date: Date | null;
+  message: string;
+};
+
+type ReceiptDateCandidate = {
+  date: Date;
+  position: number;
+  hasReceiptDateLabel: boolean;
+  isUnrelatedDate: boolean;
+};
+
+const INDONESIAN_MONTHS: Record<string, number> = {
+  januari: 0,
+  jan: 0,
+  februari: 1,
+  feb: 1,
+  maret: 2,
+  mar: 2,
+  april: 3,
+  apr: 3,
+  mei: 4,
+  juni: 5,
+  jun: 5,
+  juli: 6,
+  jul: 6,
+  agustus: 7,
+  agu: 7,
+  ags: 7,
+  aug: 7,
+  september: 8,
+  sep: 8,
+  oktober: 9,
+  okt: 9,
+  oct: 9,
+  november: 10,
+  nov: 10,
+  desember: 11,
+  des: 11,
+  dec: 11,
+};
+
+function createReceiptDate(year: number, monthIndex: number, day: number): Date | null {
+  const date = new Date(year, monthIndex, day);
+  return date.getFullYear() === year && date.getMonth() === monthIndex && date.getDate() === day
+    ? date
+    : null;
+}
+
+function collectReceiptDateCandidates(rawText: string): ReceiptDateCandidate[] {
+  const candidates: ReceiptDateCandidate[] = [];
+  const receiptDateLabelPattern = /\b(date|tanggal|tgl|transaction\s+date|order\s+date)\b/i;
+  const unrelatedDatePattern = /\b(expiry|expired|valid\s+thru|berlaku\s+sampai|promo|promotion|print\s+date|printed|reference\s+date)\b/i;
+
+  const addCandidate = (date: Date | null, position: number) => {
+    if (!date) return;
+
+    const lineStart = rawText.lastIndexOf("\n", position) + 1;
+    const lineEnd = rawText.indexOf("\n", position);
+    const line = rawText.slice(lineStart, lineEnd === -1 ? rawText.length : lineEnd);
+
+    candidates.push({
+      date,
+      position,
+      hasReceiptDateLabel: receiptDateLabelPattern.test(line),
+      isUnrelatedDate: unrelatedDatePattern.test(line),
+    });
+  };
+
+  for (const match of rawText.matchAll(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g)) {
+    addCandidate(
+      createReceiptDate(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+      match.index
+    );
+  }
+
+  for (const match of rawText.matchAll(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/g)) {
+    const year = Number(match[3]);
+    addCandidate(
+      createReceiptDate(year < 100 ? 2000 + year : year, Number(match[2]) - 1, Number(match[1])),
+      match.index
+    );
+  }
+
+  const monthPattern = Object.keys(INDONESIAN_MONTHS).join("|");
+  const namedMonthPattern = new RegExp(
+    `\\b(\\d{1,2})\\s+(${monthPattern})\\.?\\s+(\\d{2,4})\\b`,
+    "gi"
+  );
+  for (const match of rawText.matchAll(namedMonthPattern)) {
+    const year = Number(match[3]);
+    const monthIndex = INDONESIAN_MONTHS[match[2].toLowerCase()];
+    addCandidate(
+      monthIndex === undefined
+        ? null
+        : createReceiptDate(year < 100 ? 2000 + year : year, monthIndex, Number(match[1])),
+      match.index
+    );
+  }
+
+  return candidates;
+}
+
+function parseReceiptDate(rawText: string): Date | null {
+  const usableCandidates = collectReceiptDateCandidates(rawText).filter(
+    (candidate) => !candidate.isUnrelatedDate
+  );
+
+  const selectedCandidate = usableCandidates.sort((a, b) => {
+    if (a.hasReceiptDateLabel !== b.hasReceiptDateLabel) {
+      return a.hasReceiptDateLabel ? -1 : 1;
+    }
+    return a.position - b.position;
+  })[0];
+
+  return selectedCandidate?.date ?? null;
+}
+
+function validateReceiptDate(rawText: string): ReceiptDateValidation {
+  const receiptDate = parseReceiptDate(rawText);
+  if (!receiptDate) {
+    return { status: "WARNING", date: null, message: "영수증 날짜를 확인할 수 없습니다." };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (receiptDate > today) {
+    return { status: "BLOCK", date: receiptDate, message: "영수증 날짜가 미래입니다. 날짜를 확인해 주세요." };
+  }
+
+  const ageInDays = Math.floor((today.getTime() - receiptDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (ageInDays > 90) {
+    return { status: "WARNING", date: receiptDate, message: "영수증 날짜가 90일을 초과했습니다. 확인 후 적용해 주세요." };
+  }
+
+  return { status: "PASS", date: receiptDate, message: "영수증 날짜가 정상입니다." };
+}
+
+function formatReceiptDate(date: Date | null): string {
+  if (!date) return "미검출";
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -918,6 +1062,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
   };
 
   const receiptTotal = useMemo(() => extractReceiptTotal(ocrRawText), [ocrRawText]);
+  const receiptDateValidation = useMemo(
+    () => validateReceiptDate(ocrRawText),
+    [ocrRawText]
+  );
 
   const isTotalMatched = useMemo(() => {
     if (receiptTotal === null) return null;
@@ -1190,11 +1338,30 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                   )}
                   {ocrPriceMismatches.length > 0 && (
                     <p className="mt-3 text-[10px] text-amber-600 font-medium">
-                      OCR price differs from Menu Master for {ocrPriceMismatches
+                      OCR 인식 가격과 메뉴 마스터 가격이 다른 메뉴: {ocrPriceMismatches
                         .map((item) => item.name)
-                        .join(", ")}. The OCR total uses the receipt prices.
+                        .join(", ")}. OCR 총액은 영수증 인식 가격으로 계산됩니다.
                     </p>
                   )}
+                  <div
+                    className={`mt-3 rounded-lg border px-3 py-2 text-[10px] font-medium ${
+                      receiptDateValidation.status === "PASS"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : receiptDateValidation.status === "BLOCK"
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    <span className="font-black">
+                      영수증 날짜 검증: {receiptDateValidation.status === "PASS"
+                        ? "정상"
+                        : receiptDateValidation.status === "BLOCK"
+                        ? "차단"
+                        : "경고"}
+                    </span>
+                    <span className="ml-2">검출 날짜: {formatReceiptDate(receiptDateValidation.date)}</span>
+                    <span className="ml-2">{receiptDateValidation.message}</span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1329,7 +1496,10 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
                   <button
                     onClick={applyOcr}
-                    disabled={ocrItemsAccumulated.length === 0}
+                    disabled={
+                      ocrItemsAccumulated.length === 0 ||
+                      receiptDateValidation.status === "BLOCK"
+                    }
                     className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95 disabled:bg-slate-200 flex items-center gap-2"
                   >
                     <i className="fa-solid fa-check"></i>
