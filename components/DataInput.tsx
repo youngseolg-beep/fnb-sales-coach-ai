@@ -12,6 +12,7 @@ interface DataInputProps {
   loading: boolean;
   datesWithData?: string[];
   onMonthChange?: (month: Date) => void;
+  storeName?: string;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -27,6 +28,22 @@ type ReceiptDateCandidate = {
   position: number;
   hasReceiptDateLabel: boolean;
   isUnrelatedDate: boolean;
+};
+
+type ReceiptStoreValidation = {
+  status: "PASS" | "WARNING" | "BLOCK";
+  message: string;
+};
+
+type ReceiptStoreFileValidation = ReceiptStoreValidation & {
+  fileKey: string;
+  fileName: string;
+  receiptStoreName: string | null;
+};
+
+type OcrReceiptStore = {
+  fileName: string;
+  receiptStoreName: string | null;
 };
 
 const INDONESIAN_MONTHS: Record<string, number> = {
@@ -158,6 +175,141 @@ function validateReceiptDate(rawText: string): ReceiptDateValidation {
 function formatReceiptDate(date: Date | null): string {
   if (!date) return "미검출";
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function normalizeStoreName(value: string): string {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function getStoreNameTokens(value: string): string[] {
+  return Array.from(
+    new Set(value.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((token) => token.length > 1))
+  );
+}
+
+function getLevenshteinDistance(first: string, second: string): number {
+  const previousRow = Array.from({ length: second.length + 1 }, (_, index) => index);
+
+  for (let firstIndex = 1; firstIndex <= first.length; firstIndex++) {
+    let previousDiagonal = previousRow[0];
+    previousRow[0] = firstIndex;
+
+    for (let secondIndex = 1; secondIndex <= second.length; secondIndex++) {
+      const previousValue = previousRow[secondIndex];
+      previousRow[secondIndex] = Math.min(
+        previousRow[secondIndex] + 1,
+        previousRow[secondIndex - 1] + 1,
+        previousDiagonal + (first[firstIndex - 1] === second[secondIndex - 1] ? 0 : 1)
+      );
+      previousDiagonal = previousValue;
+    }
+  }
+
+  return previousRow[second.length];
+}
+
+function isAbbreviationOf(shortToken: string, longToken: string): boolean {
+  if (shortToken.length < 3 || shortToken.length >= longToken.length) return false;
+
+  let shortIndex = 0;
+  for (const character of longToken) {
+    if (character === shortToken[shortIndex]) shortIndex++;
+  }
+  return shortIndex === shortToken.length;
+}
+
+function areStronglyEquivalentStoreTokens(first: string, second: string): boolean {
+  return (
+    getLevenshteinDistance(first, second) <= 1 ||
+    isAbbreviationOf(first, second) ||
+    isAbbreviationOf(second, first)
+  );
+}
+
+function haveSameStoreTokens(first: string[], second: string[]): boolean {
+  return first.length === second.length && first.every((token) => second.includes(token));
+}
+
+function isShorterStoreRepresentation(
+  receiptStoreName: string,
+  selectedStoreName: string
+): boolean {
+  const normalizedReceiptStoreName = normalizeStoreName(receiptStoreName);
+  const normalizedSelectedStoreName = normalizeStoreName(selectedStoreName);
+  if (
+    normalizedReceiptStoreName.length >= normalizedSelectedStoreName.length ||
+    !normalizedSelectedStoreName.startsWith(normalizedReceiptStoreName)
+  ) {
+    return false;
+  }
+
+  const receiptTokens = getStoreNameTokens(receiptStoreName);
+  const selectedTokens = getStoreNameTokens(selectedStoreName);
+  return (
+    receiptTokens.length >= 2 &&
+    receiptTokens.length < selectedTokens.length &&
+    receiptTokens.every((token, index) => selectedTokens[index] === token)
+  );
+}
+
+function hasStrongPartialStoreMatch(selectedTokens: string[], candidateTokens: string[]): boolean {
+  const sharedTokens = selectedTokens.filter((token) => candidateTokens.includes(token));
+  if (sharedTokens.length === 0) return false;
+
+  const unmatchedSelectedTokens = selectedTokens.filter((token) => !candidateTokens.includes(token));
+  const unmatchedCandidateTokens = candidateTokens.filter((token) => !selectedTokens.includes(token));
+
+  if (unmatchedSelectedTokens.length === 0 && unmatchedCandidateTokens.length === 0) return true;
+  if (unmatchedSelectedTokens.length === 0) return unmatchedCandidateTokens.length === 1;
+  if (unmatchedCandidateTokens.length === 0) return unmatchedSelectedTokens.length === 1;
+
+  return (
+    unmatchedSelectedTokens.length === unmatchedCandidateTokens.length &&
+    unmatchedSelectedTokens.every((selectedToken) =>
+      unmatchedCandidateTokens.some((candidateToken) =>
+        areStronglyEquivalentStoreTokens(selectedToken, candidateToken)
+      )
+    )
+  );
+}
+
+function validateReceiptStore(
+  receiptStoreName: string | null,
+  selectedStoreName: string
+): ReceiptStoreValidation {
+  const normalizedSelectedStoreName = normalizeStoreName(selectedStoreName);
+  if (!normalizedSelectedStoreName) {
+    return { status: "WARNING", message: "현재 선택된 매장 정보를 확인할 수 없습니다." };
+  }
+
+  const normalizedReceiptStoreName = normalizeStoreName(receiptStoreName || "");
+  if (!normalizedReceiptStoreName) {
+    return { status: "WARNING", message: "OCR에서 영수증 매장명을 인식하지 못했습니다." };
+  }
+
+  if (normalizedReceiptStoreName === normalizedSelectedStoreName) {
+    return { status: "PASS", message: "영수증 매장이 현재 선택된 매장과 일치합니다." };
+  }
+
+  if (isShorterStoreRepresentation(receiptStoreName || "", selectedStoreName)) {
+    return { status: "PASS", message: "영수증 매장이 현재 선택된 매장의 축약 표기와 일치합니다." };
+  }
+
+  if (!/\p{L}/u.test(receiptStoreName || "")) {
+    return { status: "WARNING", message: "영수증 매장명이 불확실합니다. 확인 후 적용해 주세요." };
+  }
+
+  const selectedTokens = getStoreNameTokens(selectedStoreName);
+  const receiptTokens = getStoreNameTokens(receiptStoreName || "");
+  if (haveSameStoreTokens(receiptTokens, selectedTokens)) {
+    return { status: "PASS", message: "영수증 매장이 현재 선택된 매장과 일치합니다." };
+  }
+
+  if (hasStrongPartialStoreMatch(selectedTokens, receiptTokens)) {
+    return { status: "WARNING", message: "영수증 매장명이 현재 선택된 매장과 유사합니다. 확인 후 적용해 주세요." };
+  }
+
+  return { status: "BLOCK", message: "영수증 매장이 현재 선택된 매장과 다릅니다." };
 }
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -329,7 +481,14 @@ type FileStatus = {
   retryCount?: number;
 };
 
-const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWithData, onMonthChange }) => {
+const DataInput: React.FC<DataInputProps> = ({
+  data,
+  onChange,
+  loading,
+  datesWithData,
+  onMonthChange,
+  storeName = "",
+}) => {
   const currency = getCurrencyByCountry((data as any).country);
 
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
@@ -413,6 +572,9 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
   const [ocrRawText, setOcrRawText] = useState<string>("");
   const [ocrItemsAccumulated, setOcrItemsAccumulated] = useState<CorrectedItem[]>([]);
+  const [ocrReceiptStoresByFile, setOcrReceiptStoresByFile] = useState<
+    Record<string, OcrReceiptStore>
+  >({});
   const [manualMappings, setManualMappings] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState<boolean>(false);
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null);
@@ -731,6 +893,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
 
     setOcrRawText("");
     setOcrItemsAccumulated([]);
+    setOcrReceiptStoresByFile({});
     setOcrError("");
     setOcrErrorDetail("");
     setOcrProgress(null);
@@ -806,6 +969,14 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
       if (!extractedText && structuredItems.length === 0) {
         throw new Error("텍스트 또는 메뉴를 추출하지 못했습니다.");
       }
+
+      setOcrReceiptStoresByFile((prev) => ({
+        ...prev,
+        [fileKey(currentFile)]: {
+          fileName: currentFile.name,
+          receiptStoreName: ocrResult.receipt_store_name,
+        },
+      }));
 
       if (extractedText) {
         setOcrRawText((prev) => {
@@ -921,6 +1092,7 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     setOcrFileStatuses({});
     setOcrRawText("");
     setOcrItemsAccumulated([]);
+    setOcrReceiptStoresByFile({});
     setOcrError("");
     setOcrErrorDetail("");
     setOcrProgress(null);
@@ -1066,6 +1238,34 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
     () => validateReceiptDate(ocrRawText),
     [ocrRawText]
   );
+  const receiptStoreFileValidations = useMemo<ReceiptStoreFileValidation[]>(
+    () =>
+      ocrFiles
+        .filter((file) => ocrFileStatuses[file.name]?.status === "success")
+        .map((file) => {
+          const key = fileKey(file);
+          const receiptStoreName = ocrReceiptStoresByFile[key]?.receiptStoreName ?? null;
+          return {
+            ...validateReceiptStore(receiptStoreName, storeName),
+            fileKey: key,
+            fileName: file.name,
+            receiptStoreName,
+          };
+        }),
+    [ocrFiles, ocrFileStatuses, ocrReceiptStoresByFile, storeName]
+  );
+  const receiptStoreValidation = useMemo<ReceiptStoreValidation>(() => {
+    if (receiptStoreFileValidations.some((validation) => validation.status === "BLOCK")) {
+      return { status: "BLOCK", message: "현재 선택된 매장과 다른 영수증이 있습니다." };
+    }
+    if (receiptStoreFileValidations.some((validation) => validation.status === "WARNING")) {
+      return { status: "WARNING", message: "영수증 매장명을 확인한 후 적용해 주세요." };
+    }
+    if (receiptStoreFileValidations.length > 0) {
+      return { status: "PASS", message: "모든 영수증 매장이 현재 선택된 매장과 일치합니다." };
+    }
+    return { status: "WARNING", message: "OCR에서 영수증 매장명을 인식하지 못했습니다." };
+  }, [receiptStoreFileValidations]);
 
   const isTotalMatched = useMemo(() => {
     if (receiptTotal === null) return null;
@@ -1362,6 +1562,41 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     <span className="ml-2">검출 날짜: {formatReceiptDate(receiptDateValidation.date)}</span>
                     <span className="ml-2">{receiptDateValidation.message}</span>
                   </div>
+                  <div
+                    className={`mt-3 rounded-lg border px-3 py-2 text-[10px] font-medium ${
+                      receiptStoreValidation.status === "PASS"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : receiptStoreValidation.status === "BLOCK"
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    <span className="font-black">
+                      영수증 매장 검증: {receiptStoreValidation.status === "PASS"
+                        ? "정상"
+                        : receiptStoreValidation.status === "BLOCK"
+                        ? "차단"
+                        : "경고"}
+                    </span>
+                    <span className="ml-2">현재 매장: {storeName || "미확인"}</span>
+                    <span className="ml-2">{receiptStoreValidation.message}</span>
+                    {receiptStoreFileValidations.map((validation) => (
+                      <div key={validation.fileKey} className="mt-1">
+                        <span className="font-black">{validation.fileName}</span>
+                        <span className="ml-2">
+                          OCR 매장명: {validation.receiptStoreName || "미인식"}
+                        </span>
+                        <span className="ml-2">
+                          {validation.status === "PASS"
+                            ? "정상"
+                            : validation.status === "BLOCK"
+                            ? "차단"
+                            : "경고"}
+                        </span>
+                        <span className="ml-2">{validation.message}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1498,7 +1733,8 @@ const DataInput: React.FC<DataInputProps> = ({ data, onChange, loading, datesWit
                     onClick={applyOcr}
                     disabled={
                       ocrItemsAccumulated.length === 0 ||
-                      receiptDateValidation.status === "BLOCK"
+                      receiptDateValidation.status === "BLOCK" ||
+                      receiptStoreValidation.status === "BLOCK"
                     }
                     className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95 disabled:bg-slate-200 flex items-center gap-2"
                   >

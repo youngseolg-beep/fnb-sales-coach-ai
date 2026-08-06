@@ -229,6 +229,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
   const [selectedDate, setSelectedDate] = useState<string>(() => formatLocalDate(new Date()));
   const [storeCountry, setStoreCountry] = useState<string>("KH");
+  const [storeName, setStoreName] = useState<string>("");
 
   const [data, setData] = useState<SalesReportData>(() => {
     const today = formatLocalDate(new Date());
@@ -263,6 +264,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   useEffect(() => {
     if (storeId == null || !supabase) {
       setStoreCountry("KH");
+      setStoreName("");
       setData((prev: any) => ({ ...prev, country: "KH" }));
       return;
     }
@@ -273,7 +275,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
       try {
         const { data: storeData, error } = await supabase
           .from("stores")
-          .select("country, brand")
+          .select("country, brand, store_name")
           .eq("id", storeId)
           .single();
 
@@ -281,12 +283,14 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
         if (error) {
           setStoreCountry("KH");
+          setStoreName("");
           setData((prev: any) => ({ ...prev, country: "KH" }));
           return;
         }
 
         const nextCountry = String(storeData?.country || "KH");
         setStoreCountry(nextCountry);
+        setStoreName(String(storeData?.store_name || ""));
         setData((prev: any) => ({
   ...prev,
   country: nextCountry,
@@ -296,6 +300,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         if (cancelled) return;
         console.error("loadStoreCountry error:", error);
         setStoreCountry("KH");
+        setStoreName("");
         setData((prev: any) => ({ ...prev, country: "KH" }));
       }
     };
@@ -466,6 +471,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   return {
     selectedDate,
     setSelectedDate,
+    storeName,
     data,
     setData,
     originalCategories,

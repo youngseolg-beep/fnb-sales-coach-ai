@@ -31,6 +31,12 @@ function extractJsonBlock(text: string) {
   return null;
 }
 
+function normalizeReceiptStoreName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const storeName = value.trim();
+  return storeName || null;
+}
+
 type MenuCandidateInput =
   | string
   | {
@@ -122,10 +128,14 @@ export default async function handler(req: any, res: any) {
               },
               {
                 text:
-                  "Extract all visible text from this receipt image exactly as it appears.\n" +
-                  "Keep line breaks.\n" +
-                  "Do not summarize or format.\n" +
-                  "Do not add anything.",
+                  "Extract the receipt into one JSON object only.\n" +
+                  "Return this exact shape:\n" +
+                  '{"raw_text":"all visible receipt text with line breaks preserved","receipt_store_name":"printed store or branch name, or null"}\n' +
+                  "raw_text must contain all visible receipt text exactly as it appears, including line breaks.\n" +
+                  "receipt_store_name must be the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt.\n" +
+                  "Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number.\n" +
+                  "Use null when the business name cannot be identified confidently.\n" +
+                  "Do not add markdown fences, explanations, or other fields.",
               },
             ],
           },
@@ -133,14 +143,24 @@ export default async function handler(req: any, res: any) {
       });
 
       const text = response?.text || "";
+      const parsed = extractJsonBlock(text);
+      const structuredResponse = parsed && !Array.isArray(parsed) ? parsed : null;
+      const rawText =
+        typeof structuredResponse?.raw_text === "string" && structuredResponse.raw_text.trim()
+          ? structuredResponse.raw_text
+          : text;
+      const receiptStoreName = normalizeReceiptStoreName(
+        structuredResponse?.receipt_store_name
+      );
 
       return res.status(200).json({
         ok: true,
         mode: "raw_text",
-        rawText: text,
+        rawText,
         items: [],
         totals: {},
         model_used: model,
+        receipt_store_name: receiptStoreName,
       });
     }
 
@@ -230,13 +250,17 @@ Rules:
 - matched_name must be exactly one name from the allowed menu list
 - Do not invent new menu names
 - Ignore subtotal, total, tax, address, phone, time, table, and staff info
+- Extract receipt_store_name as the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt
+- Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number when extracting receipt_store_name
+- Use null for receipt_store_name if the business name cannot be identified confidently
 - qty must be a number
 - price must be a number, use 0 if unknown
 - confidence must be 0 to 1
 - needs_review must be boolean
 
-Return JSON only in one of these shapes:
+Return JSON only in this shape:
 {
+  "receipt_store_name": "printed store or branch name, or null",
   "items": [
     {
       "receipt_name": "original text",
@@ -249,20 +273,6 @@ Return JSON only in one of these shapes:
     }
   ]
 }
-
-or
-
-[
-  {
-    "receipt_name": "original text",
-    "matched_name": "allowed Korean menu name",
-    "qty": 1,
-    "price": 0,
-    "order_type": "POS",
-    "confidence": 0.0,
-    "needs_review": false
-  }
-]
 `.trim();
 
     const response = await ai.models.generateContent({
@@ -292,6 +302,9 @@ or
       : Array.isArray(parsed?.items)
       ? parsed.items
       : [];
+    const receiptStoreName = normalizeReceiptStoreName(
+      !Array.isArray(parsed) ? parsed?.receipt_store_name : null
+    );
 
     const items = parsedItems.map((item: any) => {
       const matchedName = String(item?.matched_name || "").trim();
@@ -328,6 +341,7 @@ or
       items,
       totals: {},
       model_used: model,
+      receipt_store_name: receiptStoreName,
     });
   } catch (error: any) {
     return res.status(500).json({
