@@ -37,6 +37,28 @@ function normalizeReceiptStoreName(value: unknown): string | null {
   return storeName || null;
 }
 
+const SUPPORTED_RECEIPT_CURRENCIES = new Set([
+  "USD",
+  "IDR",
+  "PHP",
+  "TWD",
+  "SGD",
+  "MYR",
+  "MNT",
+  "EUR",
+  "AUD",
+  "THB",
+  "JPY",
+  "CNY",
+  "KRW",
+]);
+
+function normalizeReceiptCurrency(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const currency = value.trim().toUpperCase();
+  return SUPPORTED_RECEIPT_CURRENCIES.has(currency) ? currency : null;
+}
+
 type MenuCandidateInput =
   | string
   | {
@@ -130,11 +152,13 @@ export default async function handler(req: any, res: any) {
                 text:
                   "Extract the receipt into one JSON object only.\n" +
                   "Return this exact shape:\n" +
-                  '{"raw_text":"all visible receipt text with line breaks preserved","receipt_store_name":"printed store or branch name, or null"}\n' +
+                  '{"raw_text":"all visible receipt text with line breaks preserved","receipt_store_name":"printed store or branch name, or null","receipt_currency":"uppercase ISO currency code, or null"}\n' +
                   "raw_text must contain all visible receipt text exactly as it appears, including line breaks.\n" +
                   "receipt_store_name must be the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt.\n" +
                   "Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number.\n" +
                   "Use null when the business name cannot be identified confidently.\n" +
+                  "receipt_currency must be an uppercase ISO currency code using visible receipt evidence only. Rp, Rupiah, or IDR means IDR; USD or US$ means USD; $ means USD only when the receipt context clearly indicates USD; SGD or S$ means SGD; THB or ฿ means THB; KRW or ₩ means KRW; ¥ means JPY only when the receipt context clearly indicates Japan.\n" +
+                  "Do not infer receipt_currency from number formatting alone. If multiple currencies appear, use the currency for the final payable total; use null if it cannot be determined confidently.\n" +
                   "Do not add markdown fences, explanations, or other fields.",
               },
             ],
@@ -152,6 +176,9 @@ export default async function handler(req: any, res: any) {
       const receiptStoreName = normalizeReceiptStoreName(
         structuredResponse?.receipt_store_name
       );
+      const receiptCurrency = normalizeReceiptCurrency(
+        structuredResponse?.receipt_currency
+      );
 
       return res.status(200).json({
         ok: true,
@@ -161,6 +188,7 @@ export default async function handler(req: any, res: any) {
         totals: {},
         model_used: model,
         receipt_store_name: receiptStoreName,
+        receipt_currency: receiptCurrency,
       });
     }
 
@@ -253,6 +281,9 @@ Rules:
 - Extract receipt_store_name as the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt
 - Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number when extracting receipt_store_name
 - Use null for receipt_store_name if the business name cannot be identified confidently
+- Extract receipt_currency as an uppercase ISO currency code using visible receipt evidence only
+- Rp, Rupiah, or IDR means IDR; USD or US$ means USD; $ means USD only when the receipt context clearly indicates USD; SGD or S$ means SGD; THB or ฿ means THB; KRW or ₩ means KRW; ¥ means JPY only when the receipt context clearly indicates Japan
+- Do not infer receipt_currency from number formatting alone. If multiple currencies appear, use the currency for the final payable total; use null if it cannot be determined confidently
 - qty must be a number
 - price must be a number, use 0 if unknown
 - confidence must be 0 to 1
@@ -261,6 +292,7 @@ Rules:
 Return JSON only in this shape:
 {
   "receipt_store_name": "printed store or branch name, or null",
+  "receipt_currency": "uppercase ISO currency code, or null",
   "items": [
     {
       "receipt_name": "original text",
@@ -305,6 +337,9 @@ Return JSON only in this shape:
     const receiptStoreName = normalizeReceiptStoreName(
       !Array.isArray(parsed) ? parsed?.receipt_store_name : null
     );
+    const receiptCurrency = normalizeReceiptCurrency(
+      !Array.isArray(parsed) ? parsed?.receipt_currency : null
+    );
 
     const items = parsedItems.map((item: any) => {
       const matchedName = String(item?.matched_name || "").trim();
@@ -342,6 +377,7 @@ Return JSON only in this shape:
       totals: {},
       model_used: model,
       receipt_store_name: receiptStoreName,
+      receipt_currency: receiptCurrency,
     });
   } catch (error: any) {
     return res.status(500).json({

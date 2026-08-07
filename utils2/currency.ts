@@ -26,6 +26,8 @@ export const getCurrencyByCountry = (country?: string | null): string => {
       return "CNY";
     case "US":
       return "USD";
+    case "KR":
+      return "KRW";
     default:
       return "USD";
   }

@@ -41,9 +41,21 @@ type ReceiptStoreFileValidation = ReceiptStoreValidation & {
   receiptStoreName: string | null;
 };
 
+type ReceiptCurrencyValidation = {
+  status: "PASS" | "WARNING" | "BLOCK";
+  message: string;
+};
+
+type ReceiptCurrencyFileValidation = ReceiptCurrencyValidation & {
+  fileKey: string;
+  fileName: string;
+  receiptCurrency: string | null;
+};
+
 type OcrReceiptStore = {
   fileName: string;
   receiptStoreName: string | null;
+  receiptCurrency: string | null;
 };
 
 const INDONESIAN_MONTHS: Record<string, number> = {
@@ -310,6 +322,21 @@ function validateReceiptStore(
   }
 
   return { status: "BLOCK", message: "영수증 매장이 현재 선택된 매장과 다릅니다." };
+}
+
+function validateReceiptCurrency(
+  receiptCurrency: string | null,
+  expectedCurrency: string
+): ReceiptCurrencyValidation {
+  if (!receiptCurrency) {
+    return { status: "WARNING", message: "OCR에서 영수증 통화를 인식하지 못했습니다." };
+  }
+
+  if (receiptCurrency === expectedCurrency) {
+    return { status: "PASS", message: "영수증 통화가 예상 통화와 일치합니다." };
+  }
+
+  return { status: "BLOCK", message: "영수증 통화가 예상 통화와 다릅니다." };
 }
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -975,6 +1002,7 @@ const DataInput: React.FC<DataInputProps> = ({
         [fileKey(currentFile)]: {
           fileName: currentFile.name,
           receiptStoreName: ocrResult.receipt_store_name,
+          receiptCurrency: ocrResult.receipt_currency,
         },
       }));
 
@@ -1266,6 +1294,34 @@ const DataInput: React.FC<DataInputProps> = ({
     }
     return { status: "WARNING", message: "OCR에서 영수증 매장명을 인식하지 못했습니다." };
   }, [receiptStoreFileValidations]);
+  const receiptCurrencyFileValidations = useMemo<ReceiptCurrencyFileValidation[]>(
+    () =>
+      ocrFiles
+        .filter((file) => ocrFileStatuses[file.name]?.status === "success")
+        .map((file) => {
+          const key = fileKey(file);
+          const receiptCurrency = ocrReceiptStoresByFile[key]?.receiptCurrency ?? null;
+          return {
+            ...validateReceiptCurrency(receiptCurrency, currency),
+            fileKey: key,
+            fileName: file.name,
+            receiptCurrency,
+          };
+        }),
+    [ocrFiles, ocrFileStatuses, ocrReceiptStoresByFile, currency]
+  );
+  const receiptCurrencyValidation = useMemo<ReceiptCurrencyValidation>(() => {
+    if (receiptCurrencyFileValidations.some((validation) => validation.status === "BLOCK")) {
+      return { status: "BLOCK", message: "예상 통화와 다른 영수증이 있습니다." };
+    }
+    if (receiptCurrencyFileValidations.some((validation) => validation.status === "WARNING")) {
+      return { status: "WARNING", message: "영수증 통화를 확인한 후 적용해 주세요." };
+    }
+    if (receiptCurrencyFileValidations.length > 0) {
+      return { status: "PASS", message: "모든 영수증 통화가 예상 통화와 일치합니다." };
+    }
+    return { status: "WARNING", message: "OCR에서 영수증 통화를 인식하지 못했습니다." };
+  }, [receiptCurrencyFileValidations]);
 
   const isTotalMatched = useMemo(() => {
     if (receiptTotal === null) return null;
@@ -1597,6 +1653,41 @@ const DataInput: React.FC<DataInputProps> = ({
                       </div>
                     ))}
                   </div>
+                  <div
+                    className={`mt-3 rounded-lg border px-3 py-2 text-[10px] font-medium ${
+                      receiptCurrencyValidation.status === "PASS"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : receiptCurrencyValidation.status === "BLOCK"
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    <span className="font-black">
+                      영수증 통화 검증: {receiptCurrencyValidation.status === "PASS"
+                        ? "정상"
+                        : receiptCurrencyValidation.status === "BLOCK"
+                        ? "차단"
+                        : "경고"}
+                    </span>
+                    <span className="ml-2">예상 통화: {currency}</span>
+                    <span className="ml-2">{receiptCurrencyValidation.message}</span>
+                    {receiptCurrencyFileValidations.map((validation) => (
+                      <div key={validation.fileKey} className="mt-1">
+                        <span className="font-black">{validation.fileName}</span>
+                        <span className="ml-2">
+                          OCR 인식 통화: {validation.receiptCurrency || "미인식"}
+                        </span>
+                        <span className="ml-2">
+                          {validation.status === "PASS"
+                            ? "정상"
+                            : validation.status === "BLOCK"
+                            ? "차단"
+                            : "경고"}
+                        </span>
+                        <span className="ml-2">{validation.message}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1734,7 +1825,8 @@ const DataInput: React.FC<DataInputProps> = ({
                     disabled={
                       ocrItemsAccumulated.length === 0 ||
                       receiptDateValidation.status === "BLOCK" ||
-                      receiptStoreValidation.status === "BLOCK"
+                      receiptStoreValidation.status === "BLOCK" ||
+                      receiptCurrencyValidation.status === "BLOCK"
                     }
                     className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95 disabled:bg-slate-200 flex items-center gap-2"
                   >

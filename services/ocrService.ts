@@ -23,7 +23,24 @@ export type OcrResponse = {
   totals: Record<string, unknown>;
   model_used: string;
   receipt_store_name: string | null;
+  receipt_currency: string | null;
 };
+
+const SUPPORTED_RECEIPT_CURRENCIES = new Set([
+  "USD",
+  "IDR",
+  "PHP",
+  "TWD",
+  "SGD",
+  "MYR",
+  "MNT",
+  "EUR",
+  "AUD",
+  "THB",
+  "JPY",
+  "CNY",
+  "KRW",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -49,6 +66,10 @@ function normalizeOcrResponse(value: unknown): OcrResponse {
     typeof response.receipt_store_name === "string" && response.receipt_store_name.trim()
       ? response.receipt_store_name.trim()
       : null;
+  const receiptCurrency =
+    typeof response.receipt_currency === "string"
+      ? response.receipt_currency.trim().toUpperCase()
+      : "";
 
   return {
     ok: true,
@@ -58,6 +79,9 @@ function normalizeOcrResponse(value: unknown): OcrResponse {
     totals: isRecord(response.totals) ? response.totals : {},
     model_used: typeof response.model_used === "string" ? response.model_used : "",
     receipt_store_name: receiptStoreName,
+    receipt_currency: SUPPORTED_RECEIPT_CURRENCIES.has(receiptCurrency)
+      ? receiptCurrency
+      : null,
   };
 }
 
