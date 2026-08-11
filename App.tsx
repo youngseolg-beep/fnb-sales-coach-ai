@@ -745,6 +745,7 @@ const salesPage = (
       data={data}
       showToast={showToast}
       storeId={storeId!}
+      userEmail={email}
       homeLandingTarget={homeLandingTarget === "coach:insight" || homeLandingTarget === "coach:report" ? homeLandingTarget : null}
       onHomeLandingHandled={() => setHomeLandingTarget(null)}
     />

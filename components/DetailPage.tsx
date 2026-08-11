@@ -26,6 +26,7 @@ type Props = {
   data: SalesReportData;
   showToast: (msg: string) => void;
   storeId: number;
+  userEmail?: string;
   homeLandingTarget: "coach:insight" | "coach:report" | null;
   onHomeLandingHandled: () => void;
 };
@@ -92,7 +93,7 @@ const SOFT_DRINKS = [
 
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 
-const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, homeLandingTarget, onHomeLandingHandled }) => {
+const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, userEmail, homeLandingTarget, onHomeLandingHandled }) => {
   useEffect(() => {
     console.log("BRAND:", data.brand);
     console.log("COUNTRY:", data.country);
@@ -134,9 +135,11 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, h
   const makeRangeKey = (start: string, end: string) => `${start}__${end}`;
 
   const loadCoachRange = async (start: string, end: string): Promise<{ rows: any[]; usingDemo: boolean }> => {
+    if (isCoachDemoFixtureEnabled(userEmail)) {
+      return { rows: getCoachDemoRows(start, end, data.categories), usingDemo: true };
+    }
     const savedRows = await loadDailyRange(start, end, storeId);
-    if (savedRows.length > 0 || !isCoachDemoFixtureEnabled()) return { rows: savedRows, usingDemo: false };
-    return { rows: getCoachDemoRows(start, end), usingDemo: true };
+    return { rows: savedRows, usingDemo: false };
   };
 
   useEffect(() => {
@@ -656,8 +659,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, h
         return;
       }
       const savedRows = await loadDailyRange(periodRange.start, periodRange.end, storeId);
-      const demoRows: CoachDemoDailyRow[] = savedRows.length === 0 && isCoachDemoFixtureEnabled()
-        ? getCoachDemoRows(periodRange.start, periodRange.end)
+      const demoRows: CoachDemoDailyRow[] = isCoachDemoFixtureEnabled(userEmail)
+        ? getCoachDemoRows(periodRange.start, periodRange.end, data.categories)
         : [];
       const result = await calculateMenuEngineeringForRange(periodRange.start, periodRange.end, data.categories, {
         maxDays: 60,
@@ -897,7 +900,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, h
               {isCurrentMenuEngineeringAiResult && menuEngineeringAiResult && <div className="mt-3 space-y-3"><p className="text-[12px] font-semibold leading-5 text-[#302a38]">{menuEngineeringAiResult.summary}</p><div className="space-y-2">{menuEngineeringAiResult.priorities.map((priority) => <div key={`${priority.menuId}-${priority.priority}`} className="rounded-lg border border-[#ece7f7] bg-white p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-[#3b3146]">{priority.menuName}</b><span className="rounded-full bg-[#f0ecff] px-2 py-0.5 text-[9px] font-semibold text-[#6250bd]">{priority.priority}</span></div><p className="mt-1 text-[10px] leading-4 text-[#665d6d]">{priority.diagnosis}</p><p className="mt-1 text-[10px] font-semibold leading-4 text-[#57458e]">{priority.recommendedAction}</p></div>)}</div><div className="grid grid-cols-2 gap-2 text-[10px] leading-4 text-[#665d6d]"><p><b className="text-[#57458e]">Stars:</b> {menuEngineeringAiResult.categoryStrategies.stars}</p><p><b className="text-[#57458e]">Cash Cows:</b> {menuEngineeringAiResult.categoryStrategies.cashCows}</p><p><b className="text-[#57458e]">Puzzles:</b> {menuEngineeringAiResult.categoryStrategies.puzzles}</p><p><b className="text-[#57458e]">Dogs:</b> {menuEngineeringAiResult.categoryStrategies.dogs}</p></div></div>}
             </div>
           </div>
-        ) : <p className="py-3 text-center text-xs text-slate-500">기간 분석을 실행하면 메뉴 엔지니어링 결과를 확인할 수 있습니다.</p>
+        ) : <p className="py-3 text-center text-xs text-slate-500">먼저 선택한 기간의 매출 분석을 완료해 주세요.</p>
       }
       boostContent={
         boostPlans.length ? (
@@ -910,7 +913,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, h
               {isCurrentBoostPlanAiResult && boostPlanAiResult && <div className="mt-3 space-y-3"><p className="text-[12px] font-semibold leading-5 text-[#3a2c25]">{boostPlanAiResult.summary}</p><div className="rounded-lg bg-white p-2.5"><p className="text-[10px] font-semibold text-[#8b4d32]">{boostPlanAiResult.target.objective}</p><p className="mt-1 text-[10px] text-[#746a63]">{boostPlanAiResult.target.timeHorizon}{boostPlanAiResult.target.targetGrowthPercent !== null ? ` · 목표 ${boostPlanAiResult.target.targetGrowthPercent}%` : ""}</p></div>{boostPlanAiResult.actions.map((action) => <div key={action.priority} className="rounded-lg border border-[#f0e5de] bg-white p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-[#3a2c25]">{action.priority}. {action.title}</b><span className="text-[9px] text-[#8b5e3c]">{action.timing}</span></div><p className="mt-1 text-[10px] font-medium text-[#76503c]">{action.targetMenuNames.join(", ")}</p><p className="mt-1 text-[10px] leading-4 text-[#665d58]">{action.rationale}</p><ul className="mt-2 list-disc space-y-0.5 pl-4 text-[10px] leading-4 text-[#665d58]">{action.executionSteps.slice(0, 2).map((step) => <li key={step}>{step}</li>)}</ul><p className="mt-2 text-[10px] text-[#76503c]">예상 효과: {action.expectedEffect}</p></div>)}<div className="text-[10px] leading-4 text-[#665d58]">{boostPlanAiResult.watchouts.slice(0, 2).map((item) => <p key={item}>주의: {item}</p>)}{boostPlanAiResult.successMetrics.slice(0, 2).map((item) => <p key={item}>지표: {item}</p>)}</div></div>}
             </div>
           </div>
-        ) : <p className="py-3 text-center text-xs text-slate-500">현재 생성된 Boost Plan이 없습니다. 기간 분석 후 확인할 수 있습니다.</p>
+        ) : <p className="py-3 text-center text-xs text-slate-500">매출 분석과 메뉴 엔지니어링을 완료하면 실행 제안을 만들 수 있습니다.</p>
       }
       onPeriodChange={handleV4PeriodChange}
     />

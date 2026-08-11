@@ -10,6 +10,19 @@ interface ReportDisplayProps {
   sectionTitles?: string[];
 }
 
+const renderInlineMarkdown = (value: string) => value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+  part.startsWith("**") && part.endsWith("**")
+    ? <strong key={index} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>
+    : <React.Fragment key={index}>{part}</React.Fragment>
+);
+
+const renderMarkdownText = (value: string) => value.split("\n").map((line, index) => {
+  const text = line.replace(/^#{1,3}\s+/, "").replace(/^\d+[.)]\s*/, "").trim();
+  if (!text) return <div key={index} className="h-2" />;
+  if (/^[-*•]\s+/.test(line)) return <div key={index} className="flex gap-2"><span aria-hidden>•</span><span>{renderInlineMarkdown(line.replace(/^[-*•]\s+/, ""))}</span></div>;
+  return <p key={index}>{renderInlineMarkdown(text)}</p>;
+});
+
 const ReportDisplay: React.FC<ReportDisplayProps> = ({
   report,
   loading,
@@ -102,8 +115,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
                   <h3 className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.14em]">
                     {sectionTitles?.[idx] || config.title}
                   </h3>
-                  <div className="whitespace-pre-wrap text-[12px] font-bold leading-5 text-slate-800 md:text-sm md:leading-6">
-                    {content}
+                  <div className="space-y-2 break-words text-[13px] font-medium leading-6 text-slate-800 md:text-sm md:leading-7">
+                    {renderMarkdownText(content)}
                   </div>
                 </div>
               </div>
