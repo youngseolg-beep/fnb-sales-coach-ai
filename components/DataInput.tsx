@@ -21,6 +21,8 @@ interface DataInputProps {
 export type SalesV4InputModel = {
   data: SalesReportData;
   currency: string;
+  selectedDate: string;
+  storeName: string;
   enteredSalesTotal: number;
   menuSalesTotal: number;
   salesGap: number;
@@ -1411,8 +1413,6 @@ const DataInput: React.FC<DataInputProps> = ({
   }, [scanTotal, receiptTotal]);
   const isOcrApplyBlocked =
     ocrItemsAccumulated.length === 0 ||
-    receiptDateValidation.status === "BLOCK" ||
-    receiptStoreValidation.status === "BLOCK" ||
     receiptCurrencyValidation.status === "BLOCK";
 
   const statusBadge = (s?: FileStatus) => {
@@ -1450,6 +1450,8 @@ const DataInput: React.FC<DataInputProps> = ({
     return renderV4({
       data,
       currency,
+      selectedDate: data.date,
+      storeName,
       enteredSalesTotal,
       menuSalesTotal,
       salesGap,

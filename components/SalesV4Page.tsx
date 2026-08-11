@@ -46,10 +46,10 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
       </div>
 
       <div ref={model.ocrUploadRef}>
-        <section className="overflow-hidden rounded-[22px] border border-[#e7dfd9] bg-white p-4 shadow-[0_3px_12px_rgba(70,54,42,0.035)] sm:p-8">
-        <div className="flex items-start gap-4"><span className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] border border-[#eee6e0] bg-[#faf7f4] text-[28px] text-[#4d4a47] sm:h-28 sm:w-28 sm:text-[48px]"><i className="fa-regular fa-receipt" /><i className="fa-solid fa-camera absolute -bottom-1 -right-1 rounded-md bg-[#4d4a47] p-1 text-[10px] text-white sm:-bottom-2 sm:-right-2 sm:p-2 sm:text-[16px]" /></span><div className="min-w-0 pt-1"><h2 className="text-[15px] font-bold tracking-[-0.035em] sm:text-[24px]">영수증 자동입력 (OCR)</h2><p className="mt-2 text-[11px] leading-4 text-[#59514c] sm:max-w-[360px] sm:text-[16px] sm:leading-7">영수증을 스캔하거나 업로드하면 AI가 자동으로 인식하여 입력을 도와드립니다.</p><input ref={model.addInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.appendFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><input ref={model.replaceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.replaceAllFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><button type="button" onClick={() => { model.setShowOcr(true); model.addInputRef.current?.click(); }} className="mt-3 h-10 min-w-[154px] rounded-[8px] bg-[#8b5e3c] px-5 text-[12px] font-semibold text-white shadow-[0_5px_10px_rgba(108,70,44,0.16)] sm:mt-5 sm:h-14 sm:min-w-[260px] sm:px-8 sm:text-[18px]"><i className="fa-solid fa-camera mr-2" />영수증 스캔 / 업로드</button></div></div>
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#eee8e3] pt-3 text-[10px] text-[#625a55] sm:mt-7 sm:pt-5 sm:text-[15px]"><span>{model.ocrRawText ? "최근 OCR 결과를 확인할 수 있습니다." : "최근 OCR 결과가 없습니다."}</span><button type="button" onClick={() => model.setShowOcr(true)} className="h-8 shrink-0 rounded-[7px] border border-[#9a6749] px-3 text-[11px] font-semibold text-[#754c35] sm:h-11 sm:px-5 sm:text-[15px]">결과 보기</button></div>
-        {model.showOcr && <OcrReview model={model} failedFileCount={failedFileCount} country={country} />}
+        <section className="overflow-hidden rounded-[22px] border border-[#e7dfd9] bg-white p-3 shadow-[0_3px_12px_rgba(70,54,42,0.035)] sm:p-5">
+        <div className="flex items-start gap-3"><span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[#eee6e0] bg-[#faf7f4] text-[22px] text-[#4d4a47] sm:h-20 sm:w-20 sm:text-[34px]"><i className="fa-regular fa-receipt" /><i className="fa-solid fa-camera absolute -bottom-1 -right-1 rounded-md bg-[#4d4a47] p-1 text-[9px] text-white" /></span><div className="min-w-0 pt-0.5"><h2 className="text-[14px] font-bold tracking-[-0.035em] sm:text-[20px]">영수증 자동입력 (OCR)</h2><p className="mt-1 text-[10px] leading-4 text-[#59514c] sm:max-w-[360px] sm:text-[13px] sm:leading-5">영수증을 스캔하거나 업로드하면 AI가 자동으로 인식하여 입력을 도와드립니다.</p><input ref={model.addInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.appendFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><input ref={model.replaceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.replaceAllFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><button type="button" onClick={() => { model.setShowOcr(true); model.addInputRef.current?.click(); }} className="mt-2 h-9 min-w-[138px] rounded-[7px] bg-[#8b5e3c] px-4 text-[11px] font-semibold text-white shadow-[0_4px_8px_rgba(108,70,44,0.14)] sm:h-10 sm:text-[12px]"><i className="fa-solid fa-camera mr-1.5" />영수증 스캔 / 업로드</button></div></div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eee8e3] pt-2 text-[10px] text-[#625a55] sm:mt-4 sm:pt-3"><span>{model.ocrRawText ? "최근 OCR 결과를 확인할 수 있습니다." : "최근 OCR 결과가 없습니다."}</span><button type="button" onClick={() => model.setShowOcr(true)} className="h-7 shrink-0 rounded-[6px] border border-[#9a6749] px-2.5 text-[10px] font-semibold text-[#754c35]">결과 보기</button></div>
+        {model.showOcr && <CompactOcrReview model={model} failedFileCount={failedFileCount} country={country} />}
         </section>
       </div>
 
@@ -60,6 +60,72 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
       <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[12px] border border-[#e8e1db] bg-white p-2"><button type="button" onClick={onReset} className="h-10 rounded-[7px] border border-[#b99983] text-[12px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={onSave} className="h-10 rounded-[7px] bg-[#8b5e3c] text-[12px] font-semibold text-white">저장하기</button></div></div>
     </main>
   );
+};
+
+const CompactOcrReview: React.FC<{ model: SalesV4InputModel; failedFileCount: number; country?: string }> = ({ model, failedFileCount, country }) => {
+  const currencyStatus = model.receiptCurrencyValidation.status;
+  const canApply = !model.isOcrApplyBlocked;
+  const currencySummary = currencyStatus === "PASS"
+    ? `통화 일치 · ${model.currency}`
+    : currencyStatus === "BLOCK"
+      ? `통화 확인 필요 · ${model.currency}`
+      : `통화 미확인 · ${model.currency}`;
+  const totalSummary = model.receiptTotal === null
+    ? "영수증 총액 미검출 · 메뉴 합계 기준 확인"
+    : model.isTotalMatched
+      ? "영수증 총액 일치"
+      : "영수증 총액과 메뉴 합계가 다릅니다";
+
+  return <div className="mt-3 space-y-2.5 border-t border-[#eee8e3] pt-3">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[8px] bg-[#faf8f6] px-3 py-2 text-[10px] text-[#625a55]">
+      <i className="fa-solid fa-location-dot text-[#8b5e3c]" />
+      <span>적용 대상</span>
+      <b className="font-semibold text-[#3d332d]">{model.storeName || "현재 매장"}</b>
+      <span className="text-[#b1a7a0]">·</span>
+      <b className="font-semibold text-[#3d332d]">{model.selectedDate}</b>
+    </div>
+
+    <div className="flex flex-wrap gap-1.5">
+      <button type="button" onClick={() => model.addInputRef.current?.click()} className="h-8 rounded-[7px] border border-[#cdbbaa] bg-white px-2.5 text-[10px] font-semibold text-[#754c35]">사진 추가</button>
+      <button type="button" onClick={() => model.replaceInputRef.current?.click()} className="h-8 rounded-[7px] border border-[#cdbbaa] bg-white px-2.5 text-[10px] font-semibold text-[#754c35]">전체 교체</button>
+      <button type="button" disabled={!model.ocrFiles.length || model.ocrLoading} onClick={() => void model.handleOcr()} className="h-8 rounded-[7px] bg-[#3d332d] px-3 text-[10px] font-semibold text-white disabled:opacity-40">{model.ocrLoading ? "인식 중..." : "OCR 분석하기"}</button>
+      {failedFileCount > 0 && !model.ocrLoading && <button type="button" onClick={model.handleRetryFailed} className="h-8 rounded-[7px] bg-rose-600 px-2.5 text-[10px] font-semibold text-white">실패 파일 재시도</button>}
+      <button type="button" onClick={model.resetOcr} className="h-8 rounded-[7px] px-1.5 text-[10px] font-medium text-rose-600">OCR 초기화</button>
+    </div>
+
+    {model.ocrFiles.length > 0 && <div className="space-y-1">{model.ocrFiles.map((file, index) => {
+      const status = model.ocrFileStatuses[file.name];
+      return <div key={fileKey(file)} className="flex min-h-8 items-center gap-2 rounded-[7px] border border-[#eee8e3] bg-[#fdfbf9] px-2 py-1.5">
+        <span className="min-w-0 flex-1 truncate text-[10px]">{index + 1}. {file.name}</span>
+        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${statusColor[status?.status || "pending"]}`}>{statusLabel[status?.status || "pending"]}</span>
+        {status?.status === "failed" && status.error && <span className="max-w-[88px] truncate text-[9px] text-rose-600" title={status.error}>{status.error}</span>}
+      </div>;
+    })}</div>}
+
+    {model.ocrLoading && <p className="rounded-[8px] bg-violet-50 px-3 py-2 text-[10px] font-medium text-violet-700">{model.ocrProgress ? `${model.ocrProgress.current}/${model.ocrProgress.total}개 영수증을 분석 중입니다.` : "OCR 분석을 준비하고 있습니다."}</p>}
+    {model.ocrError && <div className="rounded-[8px] border border-rose-100 bg-rose-50 px-3 py-2 text-[10px] text-rose-700"><p>{model.ocrError}</p>{model.ocrErrorDetail && <details className="mt-1"><summary className="cursor-pointer font-semibold">오류 상세</summary><pre className="mt-1 whitespace-pre-wrap break-all text-[9px]">{model.ocrErrorDetail}</pre></details>}</div>}
+
+    {model.ocrRawText && <>
+      <div className="grid grid-cols-2 gap-1.5 rounded-[9px] border border-[#e7dfd9] bg-white p-2.5 text-[10px]">
+        <ReviewMetric label="인식 메뉴" value={`${model.ocrItems.length}개`} />
+        <ReviewMetric label="OCR 계산 합계" value={formatCurrencyValue(model.scanTotal, country)} />
+        <ReviewMetric label="통화" value={currencySummary} />
+        <ReviewMetric label="상태" value={canApply ? "적용 가능" : "확인 필요"} />
+      </div>
+      <p className={`rounded-[7px] px-2.5 py-1.5 text-[10px] ${model.receiptTotal === null ? "bg-slate-50 text-slate-600" : model.isTotalMatched ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{totalSummary}</p>
+      {model.ocrPriceMismatches.length > 0 && <p className="rounded-[7px] bg-amber-50 px-2.5 py-1.5 text-[10px] font-medium text-amber-700">가격 확인 필요 {model.ocrPriceMismatches.length}건</p>}
+      <ValidationCard title="통화 검증" value={model.receiptCurrencyValidation} details={model.receiptCurrencyFileValidations.map((item) => `${item.fileName}: ${item.receiptCurrency || "미인식"} · ${item.message}`)} />
+      <details className="rounded-[8px] border border-[#eee8e3] bg-[#faf8f6] px-2.5 py-2">
+        <summary className="cursor-pointer text-[10px] font-semibold text-[#4a413c]">OCR 결과 및 메뉴 매핑 상세 보기</summary>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="text-[10px] font-semibold text-[#4a413c]">OCR 원문<textarea readOnly value={model.ocrRawText} className="mt-1 h-28 w-full resize-none rounded-[7px] border border-[#e5ddd7] bg-white p-2 font-mono text-[9px] font-normal text-[#5d544e]" /></label>
+          <OcrItems model={model} />
+        </div>
+        {model.ocrPriceMismatches.length > 0 && <p className="mt-2 text-[10px] text-amber-700">가격 차이 메뉴: {model.ocrPriceMismatches.map((item) => item.name).join(", ")}</p>}
+      </details>
+      <button type="button" disabled={model.isOcrApplyBlocked} onClick={model.applyOcr} className="h-9 w-full rounded-[8px] bg-[#8b5e3c] px-4 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#d8d1cb]">{model.isOcrApplyBlocked ? "통화 또는 메뉴 확인 후 적용 가능" : "데이터 입력창에 적용하기"}</button>
+    </>}
+  </div>;
 };
 
 const OcrReview: React.FC<{ model: SalesV4InputModel; failedFileCount: number; country?: string }> = ({ model, failedFileCount, country }) => <div className="mt-4 space-y-3 border-t border-[#eee8e3] pt-4">
