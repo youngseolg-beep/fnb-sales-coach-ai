@@ -104,9 +104,9 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY_OCR;
     if (!apiKey) {
-      return res.status(500).json({ ok: false, error: "GEMINI_API_KEY is not set" });
+      return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_OCR is not configured" });
     }
 
     const {

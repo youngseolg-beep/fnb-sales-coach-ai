@@ -125,7 +125,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 4대 KPI 비교 카드 */}
       <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         {summaryCards.map((card) => {
@@ -135,10 +135,10 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           const isPositive = card.rate >= 0;
 
           return (
-            <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+          <div key={card.label} className="rounded-[16px] border border-[#e8e1db] bg-white p-3.5 shadow-[0_4px_12px_rgba(70,54,42,0.03)]">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-bold text-slate-500">{card.label}</span>
-                <span className={`text-[10px] font-black ${isPositive ? "text-blue-600" : "text-rose-500"}`}>
+                <span className={`text-[10px] font-semibold ${isPositive ? "text-[#2d8a55]" : "text-[#d83a32]"}`}>
                   {isPositive ? "↑" : "↓"} {Math.abs(card.rate).toFixed(1)}%
                 </span>
               </div>

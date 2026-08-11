@@ -1,5 +1,22 @@
 import { SalesReportData, CalculationResult, MenuEngineeringResult } from "../types";
 
+export type CoachingReportContext = {
+  storeId?: number;
+  storeName?: string;
+  periodType: "today" | "week" | "month" | "custom";
+  periodRange: { start: string; end: string };
+  comparisonRange: { start: string; end: string } | null;
+  current: { sales: number; orders: number; visitors: number; aov: number; conversion: number };
+  comparison: { sales: number; orders: number; visitors: number; aov: number; conversion: number } | null;
+  changes: { sales: number; orders: number; visitors: number; aov: number; conversion: number };
+  topMenus: Array<{ name: string; qty: number; sales: number; price?: number }>;
+};
+
+export type CoachingReportOptions = {
+  context?: CoachingReportContext;
+  throwOnError?: boolean;
+};
+
 const getCurrencyByCountry = (country: string) => {
   switch (country) {
     case "KH":
@@ -252,7 +269,8 @@ const ensureBrandMention = (text: string, brandLabel: string) => {
 export const generateCoachingReport = async (
   data: SalesReportData,
   results: CalculationResult,
-  menuEngineeringResult: MenuEngineeringResult | null
+  menuEngineeringResult: MenuEngineeringResult | null,
+  options: CoachingReportOptions = {}
 ): Promise<string> => {
   const country = String(data.country || "KH");
   const brand = String(data.brand || "PAIK_NOODLE");
@@ -267,6 +285,33 @@ export const generateCoachingReport = async (
   const topItemsText = topItems.length
     ? topItems.map((i) => `${i.name}(${i.qty}개)`).join(", ")
     : "없음";
+
+  const context = options.context;
+  const periodLabel = context?.periodType === "today"
+    ? "Today"
+    : context?.periodType === "week"
+      ? "This week"
+      : context?.periodType === "month"
+        ? "This month"
+        : context?.periodType === "custom"
+          ? "Selected period"
+          : "Today";
+  const scopedTopMenus = context?.topMenus.length
+    ? context.topMenus.slice(0, 5).map((item) => `${item.name}: qty ${item.qty}, sales ${currency} ${Math.round(item.sales)}${item.price !== undefined ? `, unit price ${currency} ${Math.round(item.price)}` : ""}`).join(" / ")
+    : topItemsText;
+  const periodContext = context ? `
+[Coach V4 Period Context]
+- Period type: ${periodLabel}
+- Current period: ${context.periodRange.start} ~ ${context.periodRange.end}
+- Comparison period: ${context.comparisonRange ? `${context.comparisonRange.start} ~ ${context.comparisonRange.end}` : "none"}
+- Store ID: ${context.storeId ?? "not provided"}
+- Store name: ${context.storeName || "not provided"}
+- Current KPI: sales ${currency} ${Math.round(context.current.sales)}, orders ${context.current.orders}, visitors ${context.current.visitors}, AOV ${currency} ${context.current.aov.toFixed(2)}, conversion ${context.current.conversion.toFixed(1)}%
+- Comparison KPI: ${context.comparison ? `sales ${currency} ${Math.round(context.comparison.sales)}, orders ${context.comparison.orders}, visitors ${context.comparison.visitors}, AOV ${currency} ${context.comparison.aov.toFixed(2)}, conversion ${context.comparison.conversion.toFixed(1)}%` : "not available"}
+- Change rates: sales ${context.changes.sales.toFixed(1)}%, orders ${context.changes.orders.toFixed(1)}%, visitors ${context.changes.visitors.toFixed(1)}%, AOV ${context.changes.aov.toFixed(1)}%, conversion ${context.changes.conversion.toFixed(1)}%
+- Top menus in current period: ${scopedTopMenus}
+- Use period-aware wording. Use daily wording only for a one-day period; otherwise describe the supplied period and next actions.
+` : "";
 
   let menuEngineeringSummary = "";
   if (menuEngineeringResult) {
@@ -328,6 +373,8 @@ ${brandGuide}
 - 메모: ${data.note || "없음"}
 
 ${menuEngineeringSummary}
+
+${periodContext}
 
 [리포트 목적]
 - 점주가 바로 이해하고
@@ -396,11 +443,25 @@ ${menuEngineeringSummary}
       body: JSON.stringify({ prompt, modelName, country, brand, currency }),
     });
 
-    const json = await res.json();
+    const body = await res.text();
+    let json: { ok?: boolean; text?: unknown; message?: unknown; error?: unknown } | null = null;
 
-    if (!res.ok || !json?.ok) {
-      const msg = json?.message || json?.error || "Unknown server error";
-      throw new Error(msg);
+    if (body.trim()) {
+      try {
+        json = JSON.parse(body);
+      } catch {
+        json = null;
+      }
+    }
+
+    if (!res.ok) {
+      const message = String(json?.message || json?.error || body || "No response body");
+      throw new Error(`Coach API ${res.status}: ${message}`);
+    }
+
+    if (!json?.ok) {
+      const message = String(json?.message || json?.error || body || "Invalid Coach API response");
+      throw new Error(`Coach API returned an invalid success response: ${message}`);
     }
 
     let text = String(json.text || "");
@@ -414,6 +475,8 @@ ${menuEngineeringSummary}
       message: error.message,
       stack: error.stack,
     });
+
+    if (options.throwOnError) throw error;
 
     const errMsg = error.message || "";
     if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {

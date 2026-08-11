@@ -6,12 +6,12 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY_COACH;
     if (!apiKey) {
-      return res.status(500).json({ error: "GEMINI_API_KEY is not set" });
+      return res.status(500).json({ error: "GEMINI_API_KEY_COACH is not configured" });
     }
 
-    const { prompt, modelName, country } = req.body || {};
+    const { prompt, country } = req.body || {};
 
     if (!prompt) {
       return res.status(400).json({ error: "prompt is required" });
@@ -19,10 +19,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const model =
-      modelName ||
-      process.env.GEMINI_MODEL_COACH ||
-      "gemini-2.5-flash";
+    const model = process.env.GEMINI_MODEL_COACH || "gemini-2.5-flash";
 
     // ✅ 핵심: 국가 기반 프롬프트 강화
     const countryContext = country

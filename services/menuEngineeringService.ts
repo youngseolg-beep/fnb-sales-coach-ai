@@ -1,5 +1,6 @@
 import { MenuCategory, MenuItem, MenuEngineeringItem, MenuEngineeringResult } from "../types";
 import { listDatesInMonth, loadDaily, listDatesInRange } from "./salesStorage";
+import type { CoachDemoDailyRow } from "./coachDemoData";
 
 const normalizeName = (name: string): string => {
   return (name || "").toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
@@ -70,7 +71,7 @@ export const calculateMenuEngineeringForRange = async (
   startDate: string,
   endDate: string,
   initialCategories: MenuCategory[],
-  options?: { maxDays?: number; excludedMenuNames?: string[] }
+  options?: { maxDays?: number; excludedMenuNames?: string[]; storeId?: number; demoRows?: CoachDemoDailyRow[] }
 ): Promise<MenuEngineeringResult | null> => {
   const mergedExcluded = [
     ...DEFAULT_EXCLUDED_MENU_NAMES,
@@ -81,20 +82,25 @@ export const calculateMenuEngineeringForRange = async (
 
   const excluded = new Set(mergedExcluded);
 
-  let dates = await listDatesInRange(startDate, endDate);
+  const storeId = options?.storeId ?? 1;
+  let dates = await listDatesInRange(startDate, endDate, storeId);
+  const suppliedRows = new Map((options?.demoRows ?? []).map((row) => [row.date, row]));
+  if (dates.length === 0 && suppliedRows.size > 0) dates = Array.from(suppliedRows.keys()).sort();
 
   const maxDays = options?.maxDays ?? 7;
   if (maxDays > 0 && dates.length > maxDays) {
     dates = dates.slice(-maxDays);
   }
 
-  return internalCalculate(dates, initialCategories, excluded);
+  return internalCalculate(dates, initialCategories, excluded, storeId, suppliedRows);
 };
 
 const internalCalculate = async (
   dates: string[],
   initialCategories: MenuCategory[],
-  excludedMenuNames?: Set<string>
+  excludedMenuNames?: Set<string>,
+  storeId: number = 1,
+  suppliedRows: Map<string, CoachDemoDailyRow> = new Map()
 ): Promise<MenuEngineeringResult | null> => {
   const datesCount = Array.isArray(dates) ? dates.length : 0;
 
@@ -130,7 +136,10 @@ const internalCalculate = async (
   const observedItemsByName: Record<string, Partial<MenuItem>> = {};
 
   for (const date of dates) {
-    const dailyData = await loadDaily(date);
+    const demoRow = suppliedRows.get(date);
+    const dailyData = demoRow
+      ? { date: demoRow.date, posSales: demoRow.sales, orders: demoRow.orders, visitCount: demoRow.visitors, categories: demoRow.categories }
+      : await loadDaily(date, storeId);
     if (!dailyData) continue;
 
     const cats = dailyData.categories;

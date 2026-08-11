@@ -13,6 +13,8 @@ type Props = {
   onDelete: () => Promise<void>;
   storeId: number;
   storeName: string;
+  homeLandingTarget: "sales:manual" | "sales:ocr" | null;
+  onHomeLandingHandled: () => void;
 };
 
 const SalesPage: React.FC<Props> = ({
@@ -26,6 +28,8 @@ const SalesPage: React.FC<Props> = ({
   onDelete,
   storeId,
   storeName,
+  homeLandingTarget,
+  onHomeLandingHandled,
 }) => {
   return (
     <DailySalesPage
@@ -39,6 +43,8 @@ const SalesPage: React.FC<Props> = ({
       onDelete={onDelete}
       storeId={storeId}
       storeName={storeName}
+      homeLandingTarget={homeLandingTarget}
+      onHomeLandingHandled={onHomeLandingHandled}
     />
   );
 };

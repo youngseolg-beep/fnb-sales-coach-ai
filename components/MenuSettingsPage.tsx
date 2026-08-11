@@ -190,18 +190,18 @@ const MobileMenuCard: React.FC<{
 }) => {
   return (
     <div
-      className={`grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 px-2 py-1.5 md:hidden ${
-        alternate ? "bg-slate-50" : "bg-white"
+      className={`grid grid-cols-1 gap-3 rounded-[14px] border border-[#eee8e3] p-3 md:hidden ${
+        alternate ? "bg-[#fdfbf9]" : "bg-white"
       }`}
     >
-      <div className="grid grid-cols-[26px_minmax(0,1fr)_64px] items-center gap-1">
+      <div className="grid grid-cols-[32px_minmax(0,1fr)_34px] items-center gap-2">
         <button
           ref={setActivatorNodeRef}
           type="button"
           {...attributes}
           {...listeners}
           disabled={actionSaving}
-          className="inline-flex h-7 w-7 shrink-0 touch-none select-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-8 w-8 shrink-0 touch-none select-none items-center justify-center rounded-[8px] border border-[#e7ddd5] bg-[#faf7f4] text-[12px] font-black text-[#8b6f5b] active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             WebkitTouchCallout: "none",
             WebkitUserSelect: "none",
@@ -218,24 +218,22 @@ const MobileMenuCard: React.FC<{
           onChange={(e) =>
             onUpdateItemField(categoryIndex, itemIndex, "name", e.target.value)
           }
-          className="min-w-0 rounded-lg border px-2 py-1 text-[12px] font-bold text-slate-900 outline-none focus:border-slate-400"
+          className="min-w-0 rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 py-2 text-[13px] font-semibold text-[#2d2723] outline-none focus:border-[#8b5e3c]"
         />
 
         <button
           type="button"
           onClick={onDelete}
           disabled={actionSaving}
-          className="inline-flex h-7 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1 text-[10px] font-bold text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#f1d8d3] bg-white text-[11px] text-[#d75048] disabled:cursor-not-allowed disabled:opacity-50"
         >
           메뉴삭제
         </button>
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr_64px_64px] items-end gap-1">
+      <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
         <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
-            PRICE
-          </div>
+          <div className="mb-1 text-[9px] font-semibold text-[#766b64]">판매가</div>
           <input
             type="number"
             step="0.01"
@@ -243,14 +241,12 @@ const MobileMenuCard: React.FC<{
             onChange={(e) =>
               onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
             }
-            className="h-7 w-full rounded-lg border px-1.5 text-[12px] outline-none focus:border-slate-400"
+            className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
           />
         </div>
 
         <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
-            UNIT COST
-          </div>
+          <div className="mb-1 text-[9px] font-semibold text-[#766b64]">원가</div>
           <input
             type="number"
             step="0.01"
@@ -258,36 +254,22 @@ const MobileMenuCard: React.FC<{
             onChange={(e) =>
               onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
             }
-            className="h-7 w-full rounded-lg border px-1.5 text-[12px] outline-none focus:border-slate-400"
+            className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
           />
         </div>
 
         <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
-            STATUS
-          </div>
-          <span
-            className={`flex h-7 w-full items-center justify-center rounded-lg px-1 text-[9px] font-bold ${
-              changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {changed ? "Changed" : "Saved"}
-          </span>
-        </div>
-
-        <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
-            HISTORY
-          </div>
+          <div className="mb-1 text-[9px] font-semibold text-transparent">기록</div>
           <button
             type="button"
             onClick={() => onOpenHistory(item.id, item.name)}
-            className="inline-flex h-7 w-full items-center justify-center rounded-lg border bg-white px-1 text-[10px] font-bold text-slate-700"
+            className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#ded5ce] bg-white px-2.5 text-[10px] font-semibold text-[#76503a]"
           >
-            History
+            기록
           </button>
         </div>
       </div>
+      {changed && <p className="text-[10px] font-medium text-[#b77721]">수정됨 · 저장 버튼을 눌러 반영하세요.</p>}
     </div>
   );
 };
@@ -752,6 +734,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const dirtyCount = changedItems.length;
   const isDateSwitching = draftSourceDate !== selectedDate;
   const uiDirtyCount = isDateSwitching ? 0 : dirtyCount;
+  const menuCount = draftCategories.reduce((sum, category) => sum + category.items.length, 0);
+  const categoryCount = draftCategories.length;
 
   const changedOrderItems = useMemo(() => {
     const rows: Array<{ id: string; displayOrder: number }> = [];
@@ -1035,11 +1019,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   return (
     <>
-      <section className="space-y-4 pb-28">
-        <div className="rounded-2xl border bg-white p-3 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <section className="mx-auto max-w-[430px] space-y-4 pb-36">
+        <div className="rounded-[18px] border border-[#e8e1db] bg-white p-4 shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-[12px] font-bold text-slate-900 md:text-xl">Menu Settings</h2>
+              <h2 className="text-[18px] font-semibold tracking-[-0.04em] text-[#1f1f1f] md:text-2xl">메뉴 관리</h2>
               <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
                 선택 날짜 기준으로 메뉴명 / 가격 / 원가를 수정합니다.
               </p>
@@ -1064,7 +1048,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 type="button"
                 onClick={() => setShowAddMenuModal(true)}
                 disabled={actionSaving}
-                className="inline-flex h-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#8b6f5b] bg-[#8b6f5b] px-3 text-[12px] font-semibold text-white shadow-[0_5px_12px_rgba(111,64,39,0.14)] hover:bg-[#745846] disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:px-4 md:text-sm"
               >
                 + 새 메뉴 만들기
               </button>
@@ -1078,7 +1062,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   hasDuplicateNames ||
                   (!uiOrderChanged && uiDirtyCount === 0)
                 }
-                className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#302722] px-3 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:px-4 md:text-sm"
               >
                 {saving || actionSaving
                   ? "Saving..."
@@ -1086,17 +1070,21 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               </button>
             </div>
           </div>
+          <div className="mt-4 flex items-center gap-2 border-t border-[#eee8e3] pt-3 text-[11px] text-[#746a63]">
+            <span className="rounded-full bg-[#f7efe9] px-2.5 py-1 font-semibold text-[#76503a]">메뉴 {menuCount}개</span>
+            <span className="rounded-full bg-[#faf8f6] px-2.5 py-1 font-medium">카테고리 {categoryCount}개</span>
+          </div>
         </div>
 
         {draftCategories.map((category, categoryIndex) => (
           <div
             key={category.name}
-            className="rounded-2xl border bg-white p-4 shadow-sm"
+            className="overflow-hidden rounded-[18px] border border-[#e8e1db] bg-white shadow-[0_4px_14px_rgba(70,54,42,0.035)]"
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">{category.name}</h3>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {category.items.length} items
+            <div className="flex items-center justify-between border-b border-[#eee8e3] bg-[#fdfaf8] px-4 py-3">
+              <h3 className="text-[15px] font-semibold tracking-[-0.03em] text-[#302722]">{category.name}</h3>
+              <span className="rounded-full bg-[#f5eee7] px-2.5 py-1 text-[10px] font-semibold text-[#765943]">
+                {category.items.length}개
               </span>
             </div>
 
@@ -1121,7 +1109,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 items={category.items.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="mt-3 space-y-3">
+                <div className="space-y-2 p-3">
                   {category.items.map((item, itemIndex) => {
                     const originalItem = originalItemMap.get(item.id);
 
@@ -1163,8 +1151,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           </div>
         ))}
 
-        <div className="fixed bottom-[56px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-2 md:bottom-20 md:px-4">
-          <div className="rounded-[18px] border bg-white/96 p-2 shadow-lg backdrop-blur">
+        <div className="fixed bottom-[76px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-3 md:bottom-[96px] md:px-4">
+          <div className="rounded-[18px] border border-[#e8e1db] bg-white/96 p-2 shadow-[0_10px_26px_rgba(70,54,42,0.12)] backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="truncate text-[11px] font-bold text-slate-900 md:text-sm">
@@ -1184,7 +1172,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   hasDuplicateNames ||
                   (!uiOrderChanged && uiDirtyCount === 0)
                 }
-                className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:rounded-xl md:px-4 md:text-sm md:font-semibold"
+                className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#8b6f5b] px-3 text-[12px] font-semibold text-white shadow-[0_5px_12px_rgba(111,64,39,0.14)] disabled:cursor-not-allowed disabled:opacity-50 md:px-4 md:text-sm"
               >
                 {saving || actionSaving ? "Saving..." : "변경사항 저장"}
               </button>
@@ -1195,21 +1183,21 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       {showAddMenuModal && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
           onClick={() => setShowAddMenuModal(false)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+            className="flex w-full max-w-lg max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b bg-indigo-50 px-6 py-4">
+            <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
               <h3 className="text-lg font-black text-indigo-900">새 메뉴 추가</h3>
               <p className="mt-1 text-sm text-indigo-700">
                 새 메뉴를 생성한 뒤 목록에 바로 반영합니다.
               </p>
             </div>
 
-            <div className="space-y-4 px-6 py-5">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
               <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3">
                 <p className="text-xs font-bold text-indigo-700">
                   메뉴 생성 후 초기 가격 / 원가도 함께 저장합니다.
@@ -1221,7 +1209,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 <select
                   value={newMenuCategoryName}
                   onChange={(e) => setNewMenuCategoryName(e.target.value)}
-                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
+                  className="h-11 w-full rounded-[10px] border border-[#e5ddd7] bg-white px-3 text-sm outline-none focus:border-[#8b5e3c]"
                 >
                   <option value="">카테고리 선택</option>
                   {draftCategories.map((category) => (
@@ -1238,39 +1226,39 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   type="text"
                   value={newMenuName}
                   onChange={(e) => setNewMenuName(e.target.value)}
-                  className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
+                  className="h-11 w-full rounded-[10px] border border-[#e5ddd7] bg-white px-3 text-sm outline-none focus:border-[#8b5e3c]"
                   placeholder="예: 군만두"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-500">Price</label>
+                  <label className="mb-1 block text-xs font-semibold text-[#766b64]">판매가</label>
                   <input
                     type="number"
                     step="0.01"
                     value={newMenuPrice}
                     onChange={(e) => setNewMenuPrice(e.target.value)}
-                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
+                    className="h-11 w-full rounded-[10px] border border-[#e5ddd7] bg-white px-3 text-sm outline-none focus:border-[#8b5e3c]"
                     placeholder="0"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-500">Unit Cost</label>
+                  <label className="mb-1 block text-xs font-semibold text-[#766b64]">원가</label>
                   <input
                     type="number"
                     step="0.01"
                     value={newMenuUnitCost}
                     onChange={(e) => setNewMenuUnitCost(e.target.value)}
-                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-indigo-400"
+                    className="h-11 w-full rounded-[10px] border border-[#e5ddd7] bg-white px-3 text-sm outline-none focus:border-[#8b5e3c]"
                     placeholder="0"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-[#eee8e3] bg-white px-5 py-3">
               <button
                 type="button"
                 onClick={() => setShowAddMenuModal(false)}
@@ -1293,24 +1281,24 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       {deleteTarget && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
           onClick={() => setDeleteTarget(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white shadow-xl"
+            className="flex w-full max-w-md max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b px-6 py-4">
+            <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
               <h3 className="text-lg font-black text-slate-900">메뉴 삭제</h3>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
               <p className="text-sm text-slate-700">
                 <span className="font-bold">{deleteTarget.itemName}</span> 메뉴를 삭제하시겠습니까?
               </p>
             </div>
 
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-[#eee8e3] bg-white px-5 py-3">
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
@@ -1333,21 +1321,21 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       {showConfirmModal && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
           onClick={() => setShowConfirmModal(false)}
         >
           <div
-            className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+            className="flex w-full max-w-2xl max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b px-6 py-4">
+            <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
               <h3 className="text-lg font-black text-slate-900">변경사항 저장 확인</h3>
               <p className="mt-1 text-sm text-slate-500">
                 선택한 날짜 기준 메뉴명 변경 / 가격 변경 / 현재 메뉴 순서가 함께 저장됩니다.
               </p>
             </div>
 
-            <div className="space-y-4 px-6 py-5">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-xl border bg-slate-50 p-3">
                   <div className="text-xs font-bold text-slate-400">Effective Date</div>
@@ -1367,7 +1355,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 </div>
               </div>
 
-              <div className="max-h-80 overflow-auto rounded-xl border">
+              <div className="max-h-[calc(100dvh-310px)] overflow-auto rounded-[12px] border border-[#e8e1db]">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b">
@@ -1426,7 +1414,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-[#eee8e3] bg-white px-5 py-3">
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
@@ -1449,25 +1437,25 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
       {showHistoryModal && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
           onClick={() => setShowHistoryModal(false)}
         >
           <div
-            className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+            className="flex w-full max-w-2xl max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b px-6 py-4">
+            <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
               <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
               <p className="mt-1 text-sm text-slate-500">
                 가격이 실제로 적용되는 기간 기준으로 표시합니다.
               </p>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
               {historyLoading ? (
                 <div className="py-10 text-center font-bold text-slate-400">불러오는 중...</div>
               ) : (
-                <div className="max-h-96 overflow-auto rounded-xl border">
+                <div className="max-h-[calc(100dvh-250px)] overflow-auto rounded-[12px] border border-[#e8e1db]">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b">
@@ -1502,7 +1490,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               )}
             </div>
 
-            <div className="flex justify-end border-t px-6 py-4">
+            <div className="flex shrink-0 justify-end border-t border-[#eee8e3] bg-white px-5 py-3">
               <button
                 type="button"
                 onClick={() => setShowHistoryModal(false)}

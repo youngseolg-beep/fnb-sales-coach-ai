@@ -7,6 +7,7 @@ interface ReportDisplayProps {
   menuEngineeringResult: MenuEngineeringResult | null;
   sortedMenuEngineering: any;
   boostPlans: any[];
+  sectionTitles?: string[];
 }
 
 const ReportDisplay: React.FC<ReportDisplayProps> = ({
@@ -15,6 +16,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   menuEngineeringResult,
   sortedMenuEngineering,
   boostPlans,
+  sectionTitles,
 }) => {
   void menuEngineeringResult;
   void sortedMenuEngineering;
@@ -22,9 +24,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
 
   if (loading) {
     return (
-      <div className="rounded-[20px] border border-slate-200 bg-white p-8 shadow-sm md:rounded-[28px] md:p-10">
+      <div className="rounded-[20px] border border-[#e8e1db] bg-white p-8 shadow-[0_6px_18px_rgba(70,54,42,0.04)] md:rounded-[24px] md:p-10">
         <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-500 md:h-12 md:w-12"></div>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#e8e2ff] border-t-[#7c6cf6] md:h-12 md:w-12"></div>
           <p className="text-sm font-bold text-slate-800 md:text-base">
             코칭 리포트 작성 중...
           </p>
@@ -35,7 +37,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
 
   if (!report) {
     return (
-      <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-slate-400 md:rounded-[28px] md:p-10">
+      <div className="rounded-[20px] border border-dashed border-[#e8e1db] bg-[#fdfaf8] p-8 text-center text-[#8b817a] md:rounded-[24px] md:p-10">
         <i className="fa-solid fa-bolt-lightning mb-2 text-xl opacity-20 md:text-2xl"></i>
         <p className="text-[12px] font-medium md:text-sm">
           데이터를 입력하고 빠른 코칭을 받으세요.
@@ -55,7 +57,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm md:rounded-[28px]">
+    <div className="overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_7px_20px_rgba(70,54,42,0.045)] md:rounded-[24px]">
       <div className="border-b border-slate-100 px-3 py-3 md:px-5 md:py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -74,7 +76,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
         </div>
       </div>
 
-      <div className="space-y-3 bg-slate-50/60 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
+      <div className="space-y-3 bg-[#fdfaf8] px-3 py-3 md:space-y-4 md:px-5 md:py-5">
         {sections.map((sectionContent, idx) => {
           const config = iconMap[idx] || {
             icon: "fa-check",
@@ -87,7 +89,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
           return (
             <div
               key={idx}
-              className="rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm md:rounded-[22px] md:p-4"
+              className="rounded-[16px] border border-[#ece7e1] bg-white p-3 shadow-[0_3px_10px_rgba(70,54,42,0.025)] md:rounded-[18px] md:p-4"
             >
               <div className="flex gap-3">
                 <div
@@ -98,7 +100,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
 
                 <div className="min-w-0 flex-1">
                   <h3 className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.14em]">
-                    {config.title}
+                    {sectionTitles?.[idx] || config.title}
                   </h3>
                   <div className="whitespace-pre-wrap text-[12px] font-bold leading-5 text-slate-800 md:text-sm md:leading-6">
                     {content}

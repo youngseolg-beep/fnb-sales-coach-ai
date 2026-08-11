@@ -3,7 +3,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { formatCurrencyValue } from "../utils2/currency";
 
-export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu";
+export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu" | "more";
 
 type MenuItem = {
   key: StoreOwnerPageKey;
@@ -30,10 +30,10 @@ type Props = {
 
 const MENU_ITEMS: MenuItem[] = [
   {
-    key: "summary",
-    label: "Summary",
-    description: "오늘 요약 및 핵심 KPI",
-    icon: "fa-solid fa-chart-line",
+    key: "detail",
+    label: "Coach",
+    description: "AI 코치와 매장 분석",
+    icon: "fa-solid fa-wand-magic",
   },
   {
     key: "sales",
@@ -42,16 +42,22 @@ const MENU_ITEMS: MenuItem[] = [
     icon: "fa-solid fa-pen-to-square",
   },
   {
-    key: "detail",
-    label: "Detail",
-    description: "리포트 및 상세 분석",
-    icon: "fa-solid fa-chart-pie",
+    key: "summary",
+    label: "Home",
+    description: "오늘의 브리프와 매장 상태",
+    icon: "fa-solid fa-house",
   },
   {
     key: "menu",
     label: "Menu",
     description: "메뉴 설정 및 가격 관리",
     icon: "fa-solid fa-utensils",
+  },
+  {
+    key: "more",
+    label: "More",
+    description: "설정 및 도움말",
+    icon: "fa-solid fa-ellipsis",
   },
 ];
 
@@ -229,38 +235,46 @@ export default function StoreOwnerShell({
   }, [selectedDate, visibleStartDate]);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 text-slate-900 sm:pb-24">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8f9fc]/95 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-2 pb-2 pt-2 sm:px-6 sm:pb-4 sm:pt-4">
-          <div className="rounded-[22px] border border-slate-200/80 bg-white px-2.5 py-2.5 shadow-sm sm:rounded-[28px] sm:px-5 sm:py-4">
+    <div className="min-h-screen bg-[#faf8f6] pb-[calc(env(safe-area-inset-bottom)+96px)] text-[#1f1f1f] sm:pb-[calc(env(safe-area-inset-bottom)+100px)]">
+      {currentPage !== "summary" && <header className="sticky top-0 z-40 border-b border-[#eee7e1] bg-[#faf8f6]/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-3">
+          {currentPage === "sales" ? (
+            <div className="flex h-14 items-center justify-between border-b border-[#eee8e3] bg-white px-2 sm:px-4">
+              <div className="flex items-center gap-3"><i className="fa-solid fa-arrow-left text-[15px] text-[#2e2824]" /><span className="text-[18px] font-bold tracking-[-0.05em] text-[#1f1f1f]">매출 입력</span></div>
+              <button ref={calendarButtonRef} type="button" onClick={toggleCalendar} className="relative z-[10000] inline-flex h-9 items-center gap-2 rounded-[9px] border border-[#e3d9d2] bg-white px-3 text-[11px] font-semibold text-[#3d342f]">
+                <span>{selectedDate}</span><i className="fa-regular fa-calendar text-[12px] text-[#5d4b3e]" />
+              </button>
+            </div>
+          ) : <>
+          <div className="rounded-[16px] border border-[#ece5df] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(79,60,45,0.035)] sm:rounded-[18px] sm:px-5 sm:py-3">
             <div className="flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-[11px]">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9b8d82] sm:text-[11px]">
                   {title}
                 </div>
-                <div className="mt-0.5 text-[18px] font-black tracking-tight text-slate-900 sm:mt-1 sm:text-2xl">
+                <div className="mt-0.5 text-[19px] font-bold tracking-[-0.04em] text-[#1f1f1f] sm:mt-1 sm:text-2xl">
                   {activeMenu.label}
                 </div>
-                <div className="mt-0.5 text-[10px] font-medium leading-tight text-slate-500 sm:mt-1 sm:text-sm">
+                <div className="mt-0.5 text-[10px] font-medium leading-tight text-[#81766d] sm:mt-1 sm:text-sm">
                   {activeMenu.description}
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-3">
-                <div className="rounded-[16px] bg-slate-50 px-2 py-1.5 text-right sm:px-3 sm:py-2">
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
+                <div className="hidden rounded-xl bg-[#f5eee7] px-2 py-1.5 text-right sm:px-3 sm:py-2">
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-[#9b7b65] sm:text-[10px]">
                     Goal
                   </div>
-                  <div className="text-[13px] font-black text-slate-900 sm:text-base">
+                  <div className="text-[13px] font-bold text-[#5f4737] sm:text-base">
                     {formatCurrencyValue(monthlyTarget, country)}
                   </div>
                 </div>
 
-                <div className="rounded-[16px] bg-indigo-50 px-2 py-1.5 text-right sm:px-3 sm:py-2">
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-indigo-400 sm:text-[10px]">
+                <div className="hidden rounded-xl bg-[#f3f0ff] px-2 py-1.5 text-right sm:px-3 sm:py-2">
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-[#8270cf] sm:text-[10px]">
                     Rate
                   </div>
-                  <div className="text-[13px] font-black text-indigo-600 sm:text-base">
+                  <div className="text-[13px] font-bold text-[#6857b6] sm:text-base">
                     {monthlyRate.toFixed(1)}%
                   </div>
                 </div>
@@ -268,20 +282,20 @@ export default function StoreOwnerShell({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="hidden h-11 items-center justify-center rounded-[18px] border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 sm:inline-flex"
+                  className="hidden h-11 items-center justify-center rounded-xl border border-[#eadbd1] bg-white px-4 text-sm font-semibold text-[#8b5146] transition-colors hover:bg-[#fbf4f0] sm:inline-flex"
                 >
                   Logout
                 </button>
               </div>
             </div>
 
-            <div className="mt-2.5 flex items-end justify-between gap-2 sm:mt-4 sm:gap-3">
+            <div className="mt-2 flex items-end justify-between gap-2 sm:mt-3 sm:gap-3">
               <div className="min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-[11px]">
+                <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#9b8d82] sm:text-[11px]">
                   {formatMonthTitle(selectedDateObj)}
                 </div>
-                <div className="mt-0.5 text-[9px] font-bold leading-tight text-slate-500 sm:mt-1 sm:text-xs">
-                  POWERED BY <span className="text-slate-900">YOUNGSEOL</span>
+                <div className="mt-0.5 text-[9px] font-medium leading-tight text-[#81766d] sm:mt-1 sm:text-xs">
+                  POWERED BY <span className="font-semibold text-[#1f1f1f]">YOUNGSEOL</span>
                 </div>
               </div>
 
@@ -289,15 +303,15 @@ export default function StoreOwnerShell({
                 ref={calendarButtonRef}
                 type="button"
                 onClick={toggleCalendar}
-                className="relative z-[10000] inline-flex h-8 items-center justify-center gap-1.5 rounded-[16px] border border-slate-200 bg-white px-2.5 text-[12px] font-black text-slate-900 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:gap-2 sm:rounded-[18px] sm:px-4 sm:text-sm"
+                className="relative z-[10000] inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#e7ddd5] bg-white px-2.5 text-[12px] font-semibold text-[#302a26] shadow-[0_4px_12px_rgba(79,60,45,0.05)] transition-colors hover:bg-[#fdfaf8] sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
               >
-                <i className="fa-solid fa-calendar-days text-[10px] text-slate-500 sm:text-[11px]"></i>
+                <i className="fa-solid fa-calendar-days text-[10px] text-[#8b6f5b] sm:text-[11px]"></i>
                 <span className="leading-none">{selectedDate}</span>
                 <i className="fa-solid fa-chevron-down text-[9px] text-slate-400 sm:text-[10px]"></i>
               </button>
             </div>
 
-            <div className="mt-2.5 overflow-x-auto pb-1 sm:mt-4">
+            <div className="hidden mt-2.5 overflow-x-auto pb-1 sm:mt-4">
               <div className="flex min-w-max gap-1.5 sm:gap-2.5">
                 {visibleDates.map((date) => {
                   const dateKey = formatLocalDate(date);
@@ -310,16 +324,16 @@ export default function StoreOwnerShell({
                       type="button"
                       onClick={() => onChangeDate(dateKey)}
                       className={[
-                        "relative flex h-[54px] w-[42px] shrink-0 flex-col items-center justify-center rounded-[18px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[22px]",
+                        "relative flex h-[54px] w-[42px] shrink-0 flex-col items-center justify-center rounded-[16px] border transition-all sm:h-[76px] sm:w-[60px] sm:rounded-[20px]",
                         active
-                          ? "border-slate-900 bg-slate-900 text-white shadow-md"
-                          : "border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-white",
+                          ? "border-[#1f1f1f] bg-[#1f1f1f] text-white shadow-sm"
+                          : "border-[#e8dfd8] bg-[#fdfaf8] text-[#61574f] hover:bg-white",
                       ].join(" ")}
                     >
                       <span
                         className={[
                           "text-[7px] font-bold uppercase tracking-wide sm:text-[8px]",
-                          active ? "text-slate-300" : "text-slate-400",
+                          active ? "text-[#ddd4cd]" : "text-[#9b8d82]",
                         ].join(" ")}
                       >
                         {formatWeekdayShort(date)}
@@ -332,7 +346,7 @@ export default function StoreOwnerShell({
                       <span
                         className={[
                           "absolute bottom-[4px] h-1 w-1 rounded-full sm:bottom-1.5 sm:h-1.5 sm:w-1.5",
-                          hasData ? (active ? "bg-indigo-300" : "bg-indigo-500") : "bg-transparent",
+                          hasData ? (active ? "bg-[#dcc2a1]" : "bg-[#8b6f5b]") : "bg-transparent",
                         ].join(" ")}
                       />
                     </button>
@@ -341,13 +355,14 @@ export default function StoreOwnerShell({
               </div>
             </div>
           </div>
+          </>}
         </div>
-      </header>
+      </header>}
 
       {showCalendar && (
         <div
           ref={calendarLayerRef}
-          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[28px]"
+          className="fixed z-[9998] w-[min(360px,calc(100vw-24px))] rounded-[20px] border border-[#e8dfd8] bg-white p-4 shadow-[0_20px_50px_rgba(79,60,45,0.16)] sm:rounded-[24px]"
           style={{
             top: `${calendarPos.top}px`,
             left: `${calendarPos.left}px`,
@@ -357,7 +372,7 @@ export default function StoreOwnerShell({
             <button
               type="button"
               onClick={() => setShowCalendar(false)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#e7ddd5] bg-white text-[#6f6258] hover:bg-[#f7f1ec]"
             >
               <i className="fa-solid fa-xmark text-sm"></i>
             </button>
@@ -399,20 +414,21 @@ export default function StoreOwnerShell({
               width: 5px;
               height: 5px;
               border-radius: 9999px;
-              background: #4f46e5;
+               background: #8b6f5b;
             }
           `}</style>
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl px-2 py-3 sm:px-6 sm:py-4">
+      <main className={`mx-auto ${currentPage === "summary" ? "max-w-[430px] px-5 py-5 sm:px-5" : "max-w-7xl px-3 py-5 sm:px-6 sm:py-7"}`}>
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-2 px-2 py-2 sm:px-3 sm:py-3">
+      <nav className="fixed inset-x-0 bottom-0 z-[10001] bg-[#faf8f6]/96 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
+        <div className="mx-auto grid h-[64px] max-w-[430px] grid-cols-5 items-end rounded-[18px] border border-[#eee8e3] bg-white px-2 py-2 shadow-[0_6px_20px_rgba(70,54,42,0.09)] sm:max-w-2xl">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
+            const isHome = item.key === "summary";
 
             return (
               <button
@@ -420,14 +436,20 @@ export default function StoreOwnerShell({
                 type="button"
                 onClick={() => onChangePage(item.key)}
                 className={[
-                  "flex h-11 flex-col items-center justify-center rounded-[16px] transition-all sm:h-14 sm:rounded-[18px]",
-                  active
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                  "flex h-11 flex-col items-center justify-center rounded-xl text-[#796f68] transition-colors",
+                  isHome
+                    ? active
+                      ? "-mt-4 h-[54px] rounded-[15px] bg-[#9b765c] text-white shadow-[0_6px_14px_rgba(126,92,67,0.18)] hover:bg-[#855f47]"
+                      : "-mt-4 h-[54px] rounded-[15px] border border-[#e6ddd6] bg-[#f8f4f0] text-[#785e4d] shadow-[0_4px_10px_rgba(79,60,45,0.07)] hover:bg-[#f2ebe5]"
+                    : active
+                    ? "text-[#8b6f5b]"
+                    : "hover:bg-[#faf7f4]",
                 ].join(" ")}
               >
-                <i className={`${item.icon} text-xs sm:text-sm`}></i>
-                <span className="mt-0.5 text-[10px] font-bold sm:mt-1 sm:text-[11px]">{item.label}</span>
+                <i className={`${item.icon} ${isHome ? "text-[15px]" : "text-[14px]"}`}></i>
+                <span className={`mt-0.5 font-semibold ${isHome ? "text-[10px]" : "text-[10px]"}`}>
+                  {item.label}
+                </span>
               </button>
             );
           })}

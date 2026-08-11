@@ -3,12 +3,17 @@ import { subDays } from "date-fns";
 
 import ReportDisplay from "./ReportDisplay";
 import PeriodMenuAnalysisSection from "./PeriodMenuAnalysisSection";
+import CoachV4Page from "./CoachV4Page";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
 import { generateCoachingReport } from "../services/geminiService";
 import { getComparisonRange, type ComparisonMode } from "../utils2/periodComparison";
 import { calculateMenuEngineeringForRange } from "../services/menuEngineeringService";
+import { generateAiMenuEngineering, type AiMenuEngineeringResult } from "../services/menuEngineeringAiService";
+import { generateAiBoostPlan, type AiBoostPlan } from "../services/boostPlanAiService";
 import { loadDailyRange } from "../services/salesStorage";
+import { getCoachDemoRows, isCoachDemoFixtureEnabled, type CoachDemoDailyRow } from "../services/coachDemoData";
+import { getCurrencyByCountry } from "../utils2/currency";
 
 import type {
   SalesReportData,
@@ -21,6 +26,8 @@ type Props = {
   data: SalesReportData;
   showToast: (msg: string) => void;
   storeId: number;
+  homeLandingTarget: "coach:insight" | "coach:report" | null;
+  onHomeLandingHandled: () => void;
 };
 
 const formatLocalDate = (date: Date) => {
@@ -85,7 +92,7 @@ const SOFT_DRINKS = [
 
 const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 
-const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId }) => {
+const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, homeLandingTarget, onHomeLandingHandled }) => {
   useEffect(() => {
     console.log("BRAND:", data.brand);
     console.log("COUNTRY:", data.country);
@@ -93,22 +100,27 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   
   const [report, setReport] = useState("");
   const [reportDate, setReportDate] = useState("");
+  const [reportScopeKey, setReportScopeKey] = useState("");
+  const [reportError, setReportError] = useState("");
   const [loading, setLoading] = useState(false);
+  const insightSectionRef = useRef<HTMLElement>(null);
+  const reportActionRef = useRef<HTMLButtonElement>(null);
 
   const [menuEngineeringResult, setMenuEngineeringResult] = useState<MenuEngineeringResult | null>(null);
+  const [menuEngineeringAiResult, setMenuEngineeringAiResult] = useState<AiMenuEngineeringResult | null>(null);
+  const [menuEngineeringAiScopeKey, setMenuEngineeringAiScopeKey] = useState("");
+  const [menuEngineeringAiLoading, setMenuEngineeringAiLoading] = useState(false);
+  const [menuEngineeringAiError, setMenuEngineeringAiError] = useState("");
+  const [boostPlanAiResult, setBoostPlanAiResult] = useState<AiBoostPlan | null>(null);
+  const [boostPlanAiScopeKey, setBoostPlanAiScopeKey] = useState("");
+  const [boostPlanAiLoading, setBoostPlanAiLoading] = useState(false);
+  const [boostPlanAiError, setBoostPlanAiError] = useState("");
 
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("WOW");
   const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
+  const [v4Period, setV4Period] = useState<"today" | "week" | "month" | "custom">("today");
 
-  const [periodRange, setPeriodRange] = useState(() => {
-    const end = new Date(selectedDate);
-    const start = subDays(end, 7);
-
-    return {
-      start: formatLocalDate(start),
-      end: selectedDate,
-    };
-  });
+  const [periodRange, setPeriodRange] = useState(() => ({ start: selectedDate, end: selectedDate }));
 
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
   const [comparisonStats, setComparisonStats] = useState<any>(null);
@@ -121,27 +133,31 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
   const makeRangeKey = (start: string, end: string) => `${start}__${end}`;
 
-  useEffect(() => {
-    const end = new Date(selectedDate);
-    const start = subDays(end, 7);
+  const loadCoachRange = async (start: string, end: string): Promise<{ rows: any[]; usingDemo: boolean }> => {
+    const savedRows = await loadDailyRange(start, end, storeId);
+    if (savedRows.length > 0 || !isCoachDemoFixtureEnabled()) return { rows: savedRows, usingDemo: false };
+    return { rows: getCoachDemoRows(start, end), usingDemo: true };
+  };
 
-    setPeriodRange({
-      start: formatLocalDate(start),
-      end: selectedDate,
-    });
+  useEffect(() => {
+    if (v4Period === "custom") return;
+
+    const end = new Date(selectedDate);
+    if (v4Period === "today") setPeriodRange({ start: selectedDate, end: selectedDate });
+    else if (v4Period === "week") setPeriodRange({ start: formatLocalDate(subDays(end, 6)), end: selectedDate });
+    else setPeriodRange({ start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: selectedDate });
 
     setReport("");
     setReportDate("");
-  }, [selectedDate]);
+    setReportScopeKey("");
+    setReportError("");
+  }, [selectedDate, v4Period]);
 
   useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
 
     if (comparisonMode === "MANUAL") {
-      setComparisonRange((prev) => {
-        if (prev?.start && prev?.end) return prev;
-        return getComparisonRange(periodRange, "MANUAL");
-      });
+      setComparisonRange(getComparisonRange(periodRange, "MANUAL"));
       return;
     }
 
@@ -197,20 +213,70 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   }, [data]);
 
   const handleGenerateReport = async () => {
-    if (!hasMeaningfulData) {
+    const currentSales = Number(currentPeriodStats?.sales || 0);
+    const currentOrders = Number(currentPeriodStats?.orders || 0);
+    const currentVisitors = Number(currentPeriodStats?.visitors || 0);
+    const currentAov = currentOrders > 0 ? currentSales / currentOrders : 0;
+    const currentConversion = currentVisitors > 0 ? (currentOrders / currentVisitors) * 100 : 0;
+    const comparisonSales = Number(comparisonStats?.sales || 0);
+    const comparisonOrders = Number(comparisonStats?.orders || 0);
+    const comparisonVisitors = Number(comparisonStats?.visitors || 0);
+    const comparisonAov = comparisonOrders > 0 ? comparisonSales / comparisonOrders : 0;
+    const comparisonConversion = comparisonVisitors > 0 ? (comparisonOrders / comparisonVisitors) * 100 : 0;
+    const hasPeriodData = Number(currentPeriodStats?.rows || 0) > 0 && (currentSales > 0 || currentOrders > 0 || currentVisitors > 0);
+
+    if (!hasPeriodData && !hasMeaningfulData) {
       showToast("해당 날짜에 생성할 매출 데이터가 없습니다.");
       return;
     }
 
     setLoading(true);
+    setReportError("");
     try {
-      const coachOnlyMenuEngineering = null;
-      const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
+      const reportData: SalesReportData = {
+        ...data,
+        date: periodRange.end,
+        posSales: hasPeriodData ? currentSales : data.posSales,
+        deliverySales: 0,
+        orders: hasPeriodData ? currentOrders : data.orders,
+        visitCount: hasPeriodData ? currentVisitors : data.visitCount,
+      };
+      const reportResults: CalculationResult = {
+        ...results,
+        calcSales: hasPeriodData ? currentSales : results.calcSales,
+        aov: hasPeriodData ? currentAov : results.aov,
+        conversionRate: hasPeriodData ? currentConversion : results.conversionRate,
+      };
+      const topMenus = aggregateMenusFromRows(currentPeriodStats?.rawRows || []).map((item) => ({
+        ...item,
+        price: item.qty > 0 ? item.sales / item.qty : undefined,
+      }));
+      const result = await generateCoachingReport(reportData, reportResults, menuEngineeringResult, {
+        throwOnError: true,
+        context: {
+          storeId,
+          periodType: v4Period,
+          periodRange,
+          comparisonRange,
+          current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors, aov: currentAov, conversion: currentConversion },
+          comparison: comparisonRange ? { sales: comparisonSales, orders: comparisonOrders, visitors: comparisonVisitors, aov: comparisonAov, conversion: comparisonConversion } : null,
+          changes: {
+            sales: calcChangeRate(currentSales, comparisonSales),
+            orders: calcChangeRate(currentOrders, comparisonOrders),
+            visitors: calcChangeRate(currentVisitors, comparisonVisitors),
+            aov: calcChangeRate(currentAov, comparisonAov),
+            conversion: calcChangeRate(currentConversion, comparisonConversion),
+          },
+          topMenus,
+        },
+      });
       setReport(result);
-      setReportDate(selectedDate);
+      setReportDate(periodRange.end);
+      setReportScopeKey(`${storeId}:${periodRange.start}:${periodRange.end}`);
       showToast("코칭 리포트 생성 완료");
     } catch (error) {
       console.error("DetailPage generate report error:", error);
+      setReportError("AI 코칭 리포트를 생성하지 못했습니다.");
       showToast("코칭 리포트 생성 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -242,7 +308,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     comparisonRangeRequestRef.current = requestKey;
 
     try {
-      const rows = await loadDailyRange(comparisonRange.start, comparisonRange.end, storeId);
+      const { rows } = await loadCoachRange(comparisonRange.start, comparisonRange.end);
       if (comparisonRangeRequestRef.current !== requestKey) return;
       const kpi = calculatePeriodKPI(rows);
       setComparisonStats({ ...kpi, rows: rows.length, rawRows: rows });
@@ -261,7 +327,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     currentRangeRequestRef.current = requestKey;
 
     try {
-      const rows = await loadDailyRange(periodRange.start, periodRange.end, storeId);
+      const { rows } = await loadCoachRange(periodRange.start, periodRange.end);
       if (currentRangeRequestRef.current !== requestKey) return;
       const kpi = calculatePeriodKPI(rows);
       setCurrentPeriodStats({ ...kpi, rows: rows.length, rawRows: rows });
@@ -296,12 +362,14 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     setPeriodStats(null);
 
     try {
-      const [currentRows, comparisonRows] = await Promise.all([
-        loadDailyRange(periodRange.start, periodRange.end, storeId),
+      const [currentResult, comparisonResult] = await Promise.all([
+        loadCoachRange(periodRange.start, periodRange.end),
         comparisonRange?.start && comparisonRange?.end
-          ? loadDailyRange(comparisonRange.start, comparisonRange.end, storeId)
-          : Promise.resolve([]),
+          ? loadCoachRange(comparisonRange.start, comparisonRange.end)
+          : Promise.resolve({ rows: [], usingDemo: false }),
       ]);
+      const currentRows = currentResult.rows;
+      const comparisonRows = comparisonResult.rows;
 
       if (periodStatsRequestRef.current !== requestKey) return;
 
@@ -353,6 +421,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
   }, [periodRange.start, periodRange.end]);
 
   const canRunPeriodAnalysis = selectedPeriodDays >= 7;
+
+  useEffect(() => {
+    void fetchPeriodStats();
+  }, [periodRange.start, periodRange.end, comparisonRange?.start, comparisonRange?.end, storeId]);
 
   const salesChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.sales || 0), Number(comparisonStats?.sales || 0)), [currentPeriodStats?.sales, comparisonStats?.sales]);
   const ordersChangeRate = useMemo(() => calcChangeRate(Number(currentPeriodStats?.orders || 0), Number(comparisonStats?.orders || 0)), [currentPeriodStats?.orders, comparisonStats?.orders]);
@@ -466,7 +538,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
 
     const getSecondItemForSetDiscount = (mainItem: any) => {
       const availableSoftDrinks = allMenuItemsFlat.filter((item) => SOFT_DRINKS.includes(item.name) && item.id !== mainItem.id && item.unitCost != null);
-      if (availableSoftDrinks.length > 0) return availableSoftDrinks[Math.floor(Math.random() * availableSoftDrinks.length)];
+      if (availableSoftDrinks.length > 0) return availableSoftDrinks[0];
 
       const compatibleItems = allMenuItemsFlat
         .filter((item) => {
@@ -517,7 +589,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     let staffUpsellTarget = getUnusedTargetItem(targetableStars) || getUnusedTargetItem(targetableCashCows);
     if (staffUpsellTarget) {
       usedItemIds.add(staffUpsellTarget.id);
-      const randomSoftDrink = SOFT_DRINKS[Math.floor(Math.random() * SOFT_DRINKS.length)];
+      const randomSoftDrink = SOFT_DRINKS[0];
       const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(staffUpsellTarget.qty_month || 0, analyzedDatesCount, "STAFF_UPSELL");
       plans.push({
         puzzleItemName: staffUpsellTarget.name,
@@ -576,21 +648,287 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
     return plans.slice(0, 3);
   }, [menuEngineeringResult, sortedMenuEngineering, data.categories]);
 
+  useEffect(() => {
+    let active = true;
+    const loadEngineering = async () => {
+      if (selectedPeriodDays < 7) {
+        if (active) setMenuEngineeringResult(null);
+        return;
+      }
+      const savedRows = await loadDailyRange(periodRange.start, periodRange.end, storeId);
+      const demoRows: CoachDemoDailyRow[] = savedRows.length === 0 && isCoachDemoFixtureEnabled()
+        ? getCoachDemoRows(periodRange.start, periodRange.end)
+        : [];
+      const result = await calculateMenuEngineeringForRange(periodRange.start, periodRange.end, data.categories, {
+        maxDays: 60,
+        storeId,
+        demoRows,
+      });
+      if (active) setMenuEngineeringResult(result);
+    };
+    void loadEngineering();
+    return () => { active = false; };
+  }, [periodRange.start, periodRange.end, selectedPeriodDays, data.categories, storeId]);
+
+  const boostPlanScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
+  const isCurrentBoostPlanAiResult = boostPlanAiScopeKey === boostPlanScopeKey && !!boostPlanAiResult;
+
+  const handleGenerateAiBoostPlan = async () => {
+    if (!menuEngineeringResult || boostPlans.length === 0 || boostPlanAiLoading) return;
+
+    const currentSales = Number(currentPeriodStats?.sales || 0);
+    const currentOrders = Number(currentPeriodStats?.orders || 0);
+    const currentVisitors = Number(currentPeriodStats?.visitors || 0);
+    const currentAov = currentOrders > 0 ? currentSales / currentOrders : 0;
+    const currentConversion = currentVisitors > 0 ? (currentOrders / currentVisitors) * 100 : 0;
+    const comparisonSales = Number(comparisonStats?.sales || 0);
+    const comparisonOrders = Number(comparisonStats?.orders || 0);
+    const comparisonVisitors = Number(comparisonStats?.visitors || 0);
+    const comparisonAov = comparisonOrders > 0 ? comparisonSales / comparisonOrders : 0;
+    const comparisonConversion = comparisonVisitors > 0 ? (comparisonOrders / comparisonVisitors) * 100 : 0;
+    const classificationMap: Record<string, "STAR" | "CASH_COW" | "PUZZLE" | "DOG"> = {
+      Stars: "STAR", "Cash Cows": "CASH_COW", Puzzles: "PUZZLE", Dogs: "DOG",
+    };
+
+    setBoostPlanAiLoading(true);
+    setBoostPlanAiError("");
+    try {
+      const result = await generateAiBoostPlan({
+        store: { storeId, brand: data.brand, country: data.country, currency: getCurrencyByCountry(data.country || "") },
+        period: { current: periodRange, comparison: comparisonRange },
+        performance: {
+          totalSales: currentSales,
+          salesDelta: calcChangeRate(currentSales, comparisonSales),
+          orders: currentOrders,
+          ordersDelta: calcChangeRate(currentOrders, comparisonOrders),
+          visitors: currentVisitors,
+          visitorsDelta: calcChangeRate(currentVisitors, comparisonVisitors),
+          averageTicket: currentAov,
+          aovDelta: calcChangeRate(currentAov, comparisonAov),
+          conversion: currentConversion,
+          conversionDelta: calcChangeRate(currentConversion, comparisonConversion),
+          monthlyTarget: Number(data.monthlyTarget || 0) > 0 ? Number(data.monthlyTarget) : null,
+          targetGap: Number(data.monthlyTarget || 0) > 0 ? Math.max(0, Number(data.monthlyTarget) - Number(data.mtdSales || 0)) : null,
+        },
+        menuEngineering: {
+          popularityThreshold: Number(menuEngineeringResult.popularityThreshold || 0),
+          profitabilityThreshold: Number(menuEngineeringResult.profitabilityThreshold || 0),
+          analyzedDayCount: Number(menuEngineeringResult.analyzedDatesCount || 0),
+          menus: menuEngineeringResult.items.map((item) => ({
+            id: item.id, name: item.name, classification: classificationMap[item.category],
+            quantity: item.qty_month, price: item.price, unitCost: item.unitCost ?? null,
+            revenue: item.revenue_month, contributionMargin: item.cm ?? null,
+          })),
+        },
+        aiMenuEngineering: isCurrentMenuEngineeringAiResult ? menuEngineeringAiResult : null,
+        deterministicCandidates: boostPlans,
+      });
+      setBoostPlanAiResult(result);
+      setBoostPlanAiScopeKey(boostPlanScopeKey);
+    } catch (error) {
+      console.error("DetailPage AI Boost Plan error:", error);
+      setBoostPlanAiError("AI 부스트 플랜을 생성하지 못했습니다.");
+    } finally {
+      setBoostPlanAiLoading(false);
+    }
+  };
+
   const isShowingCurrentDateReport = reportDate === selectedDate && !!report;
 
+  useEffect(() => {
+    if (!homeLandingTarget) return;
+    const target = homeLandingTarget === "coach:insight" ? insightSectionRef.current : reportActionRef.current;
+    if (!target) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      onHomeLandingHandled();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [homeLandingTarget, onHomeLandingHandled]);
+
+  const handleV4PeriodChange = (period: "today" | "week" | "month" | "custom") => {
+    setV4Period(period);
+    if (period === "today") {
+      setComparisonMode("MANUAL");
+      return;
+    }
+
+    if (period === "week") {
+      setComparisonMode("WOW");
+      return;
+    }
+
+    if (period === "custom") {
+      setComparisonMode("MANUAL");
+      return;
+    }
+
+    setComparisonMode("MOM");
+  };
+
+  const handleCustomRangeChange = (next: { start: string; end: string }) => {
+    setV4Period("custom");
+    setComparisonMode("MANUAL");
+    setPeriodRange(next);
+  };
+
+  const menuEngineeringScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
+  const isCurrentMenuEngineeringAiResult =
+    menuEngineeringAiScopeKey === menuEngineeringScopeKey && !!menuEngineeringAiResult;
+
+  const handleGenerateMenuEngineeringAi = async () => {
+    if (!menuEngineeringResult || menuEngineeringAiLoading) return;
+
+    setMenuEngineeringAiLoading(true);
+    setMenuEngineeringAiError("");
+    try {
+      const classificationMap: Record<string, "STAR" | "CASH_COW" | "PUZZLE" | "DOG"> = {
+        Stars: "STAR",
+        "Cash Cows": "CASH_COW",
+        Puzzles: "PUZZLE",
+        Dogs: "DOG",
+      };
+      const result = await generateAiMenuEngineering({
+        store: {
+          storeId,
+          brand: data.brand,
+          country: data.country,
+          currency: getCurrencyByCountry(data.country || ""),
+        },
+        period: periodRange,
+        overall: {
+          totalSales: Number(currentPeriodStats?.sales || 0),
+          orders: Number(currentPeriodStats?.orders || 0),
+          visitors: Number(currentPeriodStats?.visitors || 0),
+          averageTicket: Number(currentPeriodStats?.aov || 0),
+        },
+        summary: {
+          popularityThreshold: Number(menuEngineeringResult.popularityThreshold || 0),
+          profitabilityThreshold: Number(menuEngineeringResult.profitabilityThreshold || 0),
+          analyzedDayCount: Number(menuEngineeringResult.analyzedDatesCount || 0),
+        },
+        menus: menuEngineeringResult.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          classification: classificationMap[item.category],
+          quantity: Number(item.qty_month || 0),
+          price: Number(item.price || 0),
+          unitCost: item.unitCost ?? null,
+          revenue: Number(item.revenue_month || 0),
+          contributionMargin: item.cm ?? null,
+          popularity: item.popularity,
+          profitability: item.profitability,
+        })),
+      });
+      setMenuEngineeringAiResult(result);
+      setMenuEngineeringAiScopeKey(menuEngineeringScopeKey);
+    } catch (error) {
+      console.error("DetailPage Menu Engineering AI error:", error);
+      setMenuEngineeringAiError("AI 메뉴 분석을 생성하지 못했습니다.");
+    } finally {
+      setMenuEngineeringAiLoading(false);
+    }
+  };
+
+  const canGenerateV4Report =
+    (Number(currentPeriodStats?.rows || 0) > 0 && (
+      Number(currentPeriodStats?.sales || 0) > 0 ||
+      Number(currentPeriodStats?.orders || 0) > 0 ||
+      Number(currentPeriodStats?.visitors || 0) > 0
+    )) || hasMeaningfulData;
+
   return (
-    <div className="space-y-6 text-slate-900 pb-10">
+    <CoachV4Page
+      data={data}
+      storeId={storeId}
+      selectedDate={selectedDate}
+      loading={loading}
+      report={report}
+      reportScopeKey={reportScopeKey}
+      reportError={reportError}
+      salesChangeRate={salesChangeRate}
+      ordersChangeRate={ordersChangeRate}
+      visitorsChangeRate={visitorsChangeRate}
+      aovChangeRate={aovChangeRate}
+      starCount={menuEngineeringResult?.stars.length || 0}
+      activePeriod={v4Period}
+      periodRange={periodRange}
+      comparisonRange={comparisonRange}
+      periodStats={currentPeriodStats ? { sales: Number(currentPeriodStats.sales || 0), orders: Number(currentPeriodStats.orders || 0), visitors: Number(currentPeriodStats.visitors || 0) } : null}
+      canGenerateReport={canGenerateV4Report}
+      onGenerateReport={handleGenerateReport}
+      insightRef={insightSectionRef}
+      reportActionRef={reportActionRef}
+      currentPeriodMenus={currentPeriodMenus}
+      comparisonPeriodMenus={comparisonPeriodMenus}
+      trendRows={periodStats?.list || []}
+      onCustomRangeChange={handleCustomRangeChange}
+      engineeringContent={
+        menuEngineeringResult ? (
+          <div className="space-y-2">
+            {[
+              ["Stars", menuEngineeringResult.stars],
+              ["Cash Cows", menuEngineeringResult.cashCows],
+              ["Puzzles", menuEngineeringResult.puzzles],
+              ["Dogs", menuEngineeringResult.dogs],
+            ].map(([name, items]) => (
+              <div key={String(name)} className="rounded-lg border border-[#eee8e3] p-3">
+                <div className="text-xs font-bold text-[#624634]">{name} ({(items as any[]).length})</div>
+                <div className="mt-1 text-[11px] text-[#746a63]">
+                  {(items as any[]).slice(0, 3).map((item) => item.name).join(", ") || "데이터 없음"}
+                </div>
+              </div>
+            ))}
+            <div className="rounded-lg border border-[#e5ddff] bg-[#fbfaff] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-[#57458e]">AI 메뉴 전략</div>
+                  <div className="mt-1 text-[10px] text-[#746a63]">분류 결과를 기반으로 실행 우선순위를 제안합니다.</div>
+                </div>
+                {!isCurrentMenuEngineeringAiResult && !menuEngineeringAiLoading && (
+                  <button type="button" onClick={() => void handleGenerateMenuEngineeringAi()} className="shrink-0 rounded-lg bg-[#7456e5] px-3 py-2 text-[11px] font-semibold text-white">
+                    AI 메뉴 분석하기
+                  </button>
+                )}
+              </div>
+              {menuEngineeringAiLoading && <p className="mt-3 text-[11px] font-medium text-[#62587c]">AI가 메뉴 성과를 분석하고 있습니다...</p>}
+              {menuEngineeringAiError && !menuEngineeringAiLoading && <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#f1d7d7] bg-white p-2.5"><p className="text-[11px] font-medium text-[#9f3f3f]">{menuEngineeringAiError}</p><button type="button" onClick={() => void handleGenerateMenuEngineeringAi()} className="shrink-0 text-[11px] font-semibold text-[#7b4e38]">다시 시도</button></div>}
+              {isCurrentMenuEngineeringAiResult && menuEngineeringAiResult && <div className="mt-3 space-y-3"><p className="text-[12px] font-semibold leading-5 text-[#302a38]">{menuEngineeringAiResult.summary}</p><div className="space-y-2">{menuEngineeringAiResult.priorities.map((priority) => <div key={`${priority.menuId}-${priority.priority}`} className="rounded-lg border border-[#ece7f7] bg-white p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-[#3b3146]">{priority.menuName}</b><span className="rounded-full bg-[#f0ecff] px-2 py-0.5 text-[9px] font-semibold text-[#6250bd]">{priority.priority}</span></div><p className="mt-1 text-[10px] leading-4 text-[#665d6d]">{priority.diagnosis}</p><p className="mt-1 text-[10px] font-semibold leading-4 text-[#57458e]">{priority.recommendedAction}</p></div>)}</div><div className="grid grid-cols-2 gap-2 text-[10px] leading-4 text-[#665d6d]"><p><b className="text-[#57458e]">Stars:</b> {menuEngineeringAiResult.categoryStrategies.stars}</p><p><b className="text-[#57458e]">Cash Cows:</b> {menuEngineeringAiResult.categoryStrategies.cashCows}</p><p><b className="text-[#57458e]">Puzzles:</b> {menuEngineeringAiResult.categoryStrategies.puzzles}</p><p><b className="text-[#57458e]">Dogs:</b> {menuEngineeringAiResult.categoryStrategies.dogs}</p></div></div>}
+            </div>
+          </div>
+        ) : <p className="py-3 text-center text-xs text-slate-500">기간 분석을 실행하면 메뉴 엔지니어링 결과를 확인할 수 있습니다.</p>
+      }
+      boostContent={
+        boostPlans.length ? (
+          <div className="space-y-2">
+            {boostPlans.map((plan: any, index: number) => <div key={`${plan.puzzleItemName}-${index}`} className="rounded-lg border border-[#eee8e3] p-3"><div className="text-xs font-bold text-[#624634]">{plan.setName}</div><p className="mt-1 text-[11px] leading-4 text-[#746a63]">{plan.reason}</p></div>)}
+            <div className="rounded-lg border border-[#f1dfd5] bg-[#fffaf7] p-3">
+              <div className="flex items-center justify-between gap-3"><div><div className="text-xs font-bold text-[#8b4d32]">AI 부스트 플랜</div><p className="mt-1 text-[10px] text-[#746a63]">기존 후보와 마진 가드레일 안에서 실행 우선순위를 만듭니다.</p></div>{!isCurrentBoostPlanAiResult && !boostPlanAiLoading && <button type="button" onClick={() => void handleGenerateAiBoostPlan()} className="shrink-0 rounded-lg bg-[#8b5e3c] px-3 py-2 text-[11px] font-semibold text-white">AI 부스트 플랜 만들기</button>}</div>
+              {boostPlanAiLoading && <p className="mt-3 text-[11px] font-medium text-[#76503c]">AI가 매출 향상 실행안을 만들고 있습니다...</p>}
+              {boostPlanAiError && !boostPlanAiLoading && <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[#f1d7d7] bg-white p-2.5"><p className="text-[11px] font-medium text-[#9f3f3f]">{boostPlanAiError}</p><button type="button" onClick={() => void handleGenerateAiBoostPlan()} className="shrink-0 text-[11px] font-semibold text-[#7b4e38]">다시 시도</button></div>}
+              {isCurrentBoostPlanAiResult && boostPlanAiResult && <div className="mt-3 space-y-3"><p className="text-[12px] font-semibold leading-5 text-[#3a2c25]">{boostPlanAiResult.summary}</p><div className="rounded-lg bg-white p-2.5"><p className="text-[10px] font-semibold text-[#8b4d32]">{boostPlanAiResult.target.objective}</p><p className="mt-1 text-[10px] text-[#746a63]">{boostPlanAiResult.target.timeHorizon}{boostPlanAiResult.target.targetGrowthPercent !== null ? ` · 목표 ${boostPlanAiResult.target.targetGrowthPercent}%` : ""}</p></div>{boostPlanAiResult.actions.map((action) => <div key={action.priority} className="rounded-lg border border-[#f0e5de] bg-white p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-[#3a2c25]">{action.priority}. {action.title}</b><span className="text-[9px] text-[#8b5e3c]">{action.timing}</span></div><p className="mt-1 text-[10px] font-medium text-[#76503c]">{action.targetMenuNames.join(", ")}</p><p className="mt-1 text-[10px] leading-4 text-[#665d58]">{action.rationale}</p><ul className="mt-2 list-disc space-y-0.5 pl-4 text-[10px] leading-4 text-[#665d58]">{action.executionSteps.slice(0, 2).map((step) => <li key={step}>{step}</li>)}</ul><p className="mt-2 text-[10px] text-[#76503c]">예상 효과: {action.expectedEffect}</p></div>)}<div className="text-[10px] leading-4 text-[#665d58]">{boostPlanAiResult.watchouts.slice(0, 2).map((item) => <p key={item}>주의: {item}</p>)}{boostPlanAiResult.successMetrics.slice(0, 2).map((item) => <p key={item}>지표: {item}</p>)}</div></div>}
+            </div>
+          </div>
+        ) : <p className="py-3 text-center text-xs text-slate-500">현재 생성된 Boost Plan이 없습니다. 기간 분석 후 확인할 수 있습니다.</p>
+      }
+      onPeriodChange={handleV4PeriodChange}
+    />
+  );
+
+  return (
+    <div className="mx-auto max-w-[760px] space-y-5 pb-28 text-[#1f1f1f]">
       {/* 1. 프리미엄 페이지 타이틀 섹션 */}
-      <section className="flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-white px-6 py-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] md:flex-row md:items-center md:justify-between md:px-8 md:py-8">
+      <section ref={insightSectionRef} className="flex flex-col gap-4 rounded-[20px] border border-[#e8e1db] bg-white px-5 py-5 shadow-[0_6px_18px_rgba(70,54,42,0.04)] md:flex-row md:items-center md:justify-between md:px-8 md:py-7">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 border border-white shadow-sm">
+          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-[#e7ddff] bg-[linear-gradient(135deg,#f1eeff_0%,#e2dcff_100%)] shadow-sm">
             <span className="text-2xl">✨</span>
           </div>
           <div>
-            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c6cf6]">
               Insight Detail
             </div>
-            <h2 className="mt-1 text-[20px] font-extrabold text-slate-900 md:text-[24px]">
+            <h2 className="mt-1 text-[22px] font-bold tracking-[-0.04em] text-[#1f1f1f] md:text-[26px]">
               매출 분석 & AI 코칭
             </h2>
             <p className="mt-1 text-[13px] font-medium text-slate-500">
@@ -601,12 +939,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
       </section>
 
       {/* 2. AI 코칭 리포트 패널 (비서 느낌의 UI) */}
-      <section className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.05)]">
+      <section id="coach-report" className="relative overflow-hidden rounded-[20px] border border-[#e5def7] bg-white shadow-[0_8px_22px_rgba(70,54,42,0.055)]">
         {/* 패널 헤더 */}
-        <div className="border-b border-slate-100/60 bg-gradient-to-r from-slate-50/50 to-indigo-50/30 px-5 py-5 md:px-8 md:py-6">
+        <div className="border-b border-[#eee8fa] bg-[linear-gradient(110deg,#fbfaff_0%,#f4f1ff_100%)] px-5 py-5 md:px-8 md:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md">
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-[#7c6cf6] text-white shadow-[0_5px_12px_rgba(124,108,246,0.24)]">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 {/* 반짝이는 점 */}
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -631,10 +969,11 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
               </div>
 
               <button
+                ref={reportActionRef}
                 type="button"
                 onClick={handleGenerateReport}
                 disabled={loading}
-                className="group relative inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-6 text-[13px] font-bold text-white shadow-md transition-all hover:bg-indigo-600 disabled:bg-slate-300 sm:w-auto sm:rounded-full"
+                className="group relative inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#7c6cf6] px-6 text-[13px] font-semibold text-white shadow-[0_6px_14px_rgba(124,108,246,0.22)] transition hover:bg-[#6958db] disabled:bg-[#ccc6ec] sm:w-auto"
               >
                 {loading ? (
                   <>
@@ -683,7 +1022,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId })
             </div>
           ) : (
             /* 매력적인 Empty State */
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30 py-16 text-center">
+            <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-[#ddd5f6] bg-[#fbfaff] py-16 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-500 mb-4">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               </div>

@@ -7,6 +7,7 @@ type Props = {
   salesPage: ReactNode;
   detailPage: ReactNode;
   menuPage: ReactNode;
+  morePage: ReactNode;
 };
 
 export default function StoreOwnerPageRouter({
@@ -15,6 +16,7 @@ export default function StoreOwnerPageRouter({
   salesPage,
   detailPage,
   menuPage,
+  morePage,
 }: Props) {
   if (currentPage === "summary") {
     return <>{summaryPage}</>;
@@ -30,6 +32,10 @@ export default function StoreOwnerPageRouter({
 
   if (currentPage === "menu") {
     return <>{menuPage}</>;
+  }
+
+  if (currentPage === "more") {
+    return <>{morePage}</>;
   }
 
   return <>{summaryPage}</>;

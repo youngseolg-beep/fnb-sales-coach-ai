@@ -23,6 +23,7 @@ import SalesPage from "./components/SalesPage";
 import MasterDashboardPage from "./components/MasterDashboardPage";
 import SummaryPage from "./components/SummaryPage";
 import DetailPage from "./components/DetailPage";
+import MorePage from "./components/MorePage";
 import { supabase } from "./services/supabaseClient";
 
 import StoreOwnerShell, { type StoreOwnerPageKey } from "./components/StoreOwnerShell";
@@ -40,6 +41,8 @@ type SummaryCompareStats = {
   hasPrevData: boolean;
   avg7Count: number;
 };
+
+type HomeLandingTarget = "sales:manual" | "sales:ocr" | "coach:insight" | "coach:report" | null;
 
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
@@ -116,7 +119,8 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState("");
   const [authScreen, setAuthScreen] = useState<"login" | "signup">("login");
 
-  const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("sales");
+  const [storeOwnerPage, setStoreOwnerPage] = useState<StoreOwnerPageKey>("summary");
+  const [homeLandingTarget, setHomeLandingTarget] = useState<HomeLandingTarget>(null);
   const [priceSaving, setPriceSaving] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSeq, setToastSeq] = useState(0);
@@ -589,32 +593,29 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e3a8a_0%,_#0f172a_40%,_#020617_100%)] flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen bg-[#faf8f6] bg-[radial-gradient(circle_at_50%_-10%,rgba(220,194,161,0.36),transparent_36%)] flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-[720px]">
           {authScreen === "login" ? (
-            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur">
-              <div className="bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] px-8 pb-10 pt-9 text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-white/15 backdrop-blur-sm">
-                  <i className="fa-solid fa-user text-2xl text-white"></i>
+            <div className="overflow-hidden rounded-[28px] border border-[#e9e1da] bg-white/95 shadow-[0_20px_52px_rgba(81,57,40,0.12)] backdrop-blur">
+              <div className="px-8 pb-8 pt-10 text-center sm:px-14 sm:pt-14">
+                <div className="relative mx-auto mb-6 flex h-[72px] w-[72px] items-center justify-center rounded-[21px] bg-[linear-gradient(135deg,#a8866b_0%,#6f4027_100%)] shadow-[0_10px_24px_rgba(111,64,39,0.22)]">
+                  <i className="fa-solid fa-chart-simple text-[29px] text-white"></i>
+                  <i className="fa-solid fa-sparkles absolute -right-5 -top-3 text-xl text-[#dcc2a1]"></i>
                 </div>
 
-                <h1 className="text-[30px] font-black tracking-tight text-white">
+                <h1 className="text-[29px] font-bold tracking-[0.06em] text-[#3a2116] sm:text-[38px]">
                   SALES COACH AI
                 </h1>
 
-                <p className="mt-3 text-sm font-semibold text-indigo-100/95">
+                <p className="mt-3 text-sm font-medium leading-6 text-[#4e413a] sm:text-base">
                   운영 데이터를 빠르게 입력하고, 바로 코칭까지 확인하세요.
                 </p>
 
-                <div className="mt-5 inline-flex flex-col rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-white/95 backdrop-blur-sm">
-                  <div>ID : test</div>
-                  <div className="mt-1">PW : 0000</div>
-                </div>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4 px-6 pb-7 pt-6 sm:px-8 sm:pb-8">
+              <form onSubmit={handleLogin} className="mx-auto max-w-[560px] space-y-5 px-6 pb-8 sm:px-12 sm:pb-12">
                 <div>
-                  <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  <label className="mb-2 block text-[13px] font-semibold text-[#332722]">
                     ID
                   </label>
                   <input
@@ -622,13 +623,13 @@ const App: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="아이디 입력"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                    className="h-14 w-full rounded-[14px] border border-[#ded6d0] bg-white px-5 text-center text-base font-medium text-[#1f1f1f] outline-none transition focus:border-[#a8866b] focus:ring-4 focus:ring-[#f6eee8]"
                     autoFocus
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  <label className="mb-2 block text-[13px] font-semibold text-[#332722]">
                     Password
                   </label>
                   <input
@@ -636,10 +637,10 @@ const App: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="비밀번호 입력"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                    className="h-14 w-full rounded-[14px] border border-[#ded6d0] bg-white px-5 text-center text-base font-medium text-[#1f1f1f] outline-none transition focus:border-[#a8866b] focus:ring-4 focus:ring-[#f6eee8]"
                   />
                   {authError && (
-                    <p className="mt-3 text-center text-xs font-bold text-rose-500">
+                    <p className="mt-3 text-center text-xs font-semibold text-[#d83a32]">
                       {authError}
                     </p>
                   )}
@@ -647,7 +648,7 @@ const App: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6d28d9_100%)] py-4 text-lg font-black text-white shadow-[0_10px_25px_rgba(79,70,229,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="h-14 w-full rounded-[14px] bg-[linear-gradient(135deg,#8b6f5b_0%,#76472e_100%)] text-[17px] font-semibold text-white shadow-[0_9px_19px_rgba(111,64,39,0.2)] transition hover:brightness-105 active:scale-[0.99]"
                 >
                   로그인
                 </button>
@@ -655,7 +656,7 @@ const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setAuthScreen("signup")}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-4 text-base font-black text-slate-700 transition-all hover:bg-slate-50"
+                  className="h-14 w-full rounded-[14px] border border-[#d9d0c9] bg-white text-base font-semibold text-[#332722] transition hover:bg-[#fdfaf8]"
                 >
                   계정 생성
                 </button>
@@ -689,6 +690,7 @@ const App: React.FC = () => {
   const summaryPage = (
   <SummaryPage
     date={data.date}
+    storeName={storeName}
     monthlyStats={monthlyStats}
     monthlyRate={monthlyRate}
     monthlyTarget={monthlyTarget}
@@ -698,11 +700,20 @@ const App: React.FC = () => {
       deliverySales: Number(data.deliverySales ?? 0),
       orders: Number(data.orders ?? 0),
     }}
+    hasSavedSalesData={datesWithData.includes(data.date)}
     onChangeTarget={(v) => {
       setMonthlyTarget(v);
       setData((prev) => ({ ...prev, monthlyTarget: v }));
     }}
     onSaveTarget={() => handleSaveMonthlyTarget(targetMonthKey, monthlyTarget)}
+    onGoToSales={(target) => {
+      setHomeLandingTarget(target);
+      setStoreOwnerPage("sales");
+    }}
+    onViewCoach={(target) => {
+      setHomeLandingTarget(target);
+      setStoreOwnerPage("detail");
+    }}
     country={data.country || storeCountry}
   />
 );
@@ -723,6 +734,8 @@ const salesPage = (
       onDelete={handleDelete}
       storeId={storeId!}
       storeName={storeName}
+      homeLandingTarget={homeLandingTarget === "sales:manual" || homeLandingTarget === "sales:ocr" ? homeLandingTarget : null}
+      onHomeLandingHandled={() => setHomeLandingTarget(null)}
     />
   );
 
@@ -732,6 +745,8 @@ const salesPage = (
       data={data}
       showToast={showToast}
       storeId={storeId!}
+      homeLandingTarget={homeLandingTarget === "coach:insight" || homeLandingTarget === "coach:report" ? homeLandingTarget : null}
+      onHomeLandingHandled={() => setHomeLandingTarget(null)}
     />
   );
 
@@ -748,6 +763,8 @@ const salesPage = (
       onShowToast={showToast}
     />
   );
+
+  const morePage = <MorePage onLogout={handleLogout} />;
 
   if (storeOwnerPage === "admin_create") {
     return <AdminCreateUserPage />;
@@ -777,6 +794,7 @@ const salesPage = (
           salesPage={salesPage}
           detailPage={detailPage}
           menuPage={menuPage}
+          morePage={morePage}
         />
       </StoreOwnerShell>
     </>

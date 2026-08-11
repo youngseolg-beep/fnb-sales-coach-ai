@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { subDays } from "date-fns";
 
 import DataInput from "./DataInput";
+import SalesV4Page from "./SalesV4Page";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
 import { getComparisonRange, type ComparisonMode } from "../utils2/periodComparison";
@@ -25,6 +26,8 @@ interface Props {
   onDelete: () => Promise<void>;
   storeId: number;
   storeName: string;
+  homeLandingTarget: "sales:manual" | "sales:ocr" | null;
+  onHomeLandingHandled: () => void;
 }
 
 const MONTHLY_TARGET_PREFIX = "fb_coach_monthly_target_";
@@ -111,6 +114,8 @@ const DailySalesPage: React.FC<Props> = ({
   onDelete,
   storeId,
   storeName,
+  homeLandingTarget,
+  onHomeLandingHandled,
 }) => {
   const [report, setReport] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -912,24 +917,22 @@ const DailySalesPage: React.FC<Props> = ({
 
   return (
     <>
-      <div className="space-y-4 pb-28 md:pb-36">
-        <header className="space-y-1.5">
-          <div>
-            <h2 className="text-[18px] font-black tracking-tight text-slate-900 md:text-3xl">매출 입력</h2>
-            <p className="text-[12px] font-medium leading-snug text-slate-500 md:text-base">
-              날짜를 선택하고 매출, 방문객, 주문수, 메뉴 판매 수량을 입력한 뒤 저장하세요.
-            </p>
-          </div>
-        </header>
-
-        <div className="relative">
-          <DataInput
+      <DataInput
             data={data}
             onChange={handleDataChange}
             loading={loading}
             datesWithData={[...datesWithData]}
             onMonthChange={onMonthChange}
             storeName={storeName}
+            homeLandingTarget={homeLandingTarget}
+            onHomeLandingHandled={onHomeLandingHandled}
+            renderV4={(model) => (
+              <SalesV4Page
+                model={model}
+                onReset={() => setShowResetModal(true)}
+                onSave={() => void handleSave(false)}
+              />
+            )}
           />
 
           {saveStatus && (
@@ -955,17 +958,15 @@ const DailySalesPage: React.FC<Props> = ({
               마지막 저장: {lastSavedAt}
             </div>
           )}
-        </div>
-      </div>
 
-      <div className="fixed bottom-[56px] left-0 right-0 z-[9997] px-2 sm:px-3 md:bottom-[92px] md:px-6">
+      {false && <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/96 px-3 py-2 backdrop-blur sm:px-4 md:bottom-[96px] md:px-6">
         <div className="mx-auto w-full max-w-md md:max-w-7xl">
-          <div className="rounded-2xl border border-slate-200 bg-white/94 p-2 shadow-lg backdrop-blur md:rounded-3xl md:p-3">
+          <div className="rounded-[14px] border border-[#e8e1db] bg-white p-2 shadow-[0_5px_16px_rgba(70,54,42,0.08)] md:rounded-[16px] md:p-3">
             <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
               <button
                 type="button"
                 onClick={() => setShowResetModal(true)}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-[12px] font-black text-rose-600 transition-all hover:bg-rose-100 active:scale-[0.98] md:h-12 md:min-w-[180px] md:gap-2 md:rounded-2xl md:px-5 md:text-sm"
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[9px] border border-[#b99983] bg-white px-2.5 text-[12px] font-semibold text-[#6f4932] transition hover:bg-[#faf5f1] active:scale-[0.98] md:h-12 md:min-w-[180px] md:px-5 md:text-sm"
               >
                 <i className="fa-solid fa-trash-can text-[10px] md:text-xs"></i>
                 일 데이터 리셋
@@ -974,10 +975,10 @@ const DailySalesPage: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => handleSave(false)}
-                className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[12px] font-black transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:gap-2 md:rounded-2xl md:px-6 md:text-sm ${
+                className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] font-semibold transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:px-6 md:text-sm ${
                   ocrApplied && !dataSaved
-                    ? "border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                    ? "border-[#9c7b64] bg-[#9c7b64] text-white hover:bg-[#855f47]"
+                    : "border-[#8b5e3c] bg-[#8b5e3c] text-white hover:bg-[#745846]"
                 }`}
               >
                 <i className="fa-solid fa-floppy-disk text-[10px] md:text-xs"></i>
@@ -986,7 +987,7 @@ const DailySalesPage: React.FC<Props> = ({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {showResetModal && (
         <div
@@ -994,7 +995,7 @@ const DailySalesPage: React.FC<Props> = ({
           onClick={() => setShowResetModal(false)}
         >
           <div
-            className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+            className="w-full max-w-sm space-y-4 rounded-[20px] border border-[#e8e1db] bg-white p-6 shadow-[0_18px_44px_rgba(31,31,31,0.18)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-black text-slate-900">일 데이터 리셋</h3>

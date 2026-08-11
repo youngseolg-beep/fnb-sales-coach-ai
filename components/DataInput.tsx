@@ -13,11 +13,63 @@ interface DataInputProps {
   datesWithData?: string[];
   onMonthChange?: (month: Date) => void;
   storeName?: string;
+  homeLandingTarget?: "sales:manual" | "sales:ocr" | null;
+  onHomeLandingHandled?: () => void;
+  renderV4?: (model: SalesV4InputModel) => React.ReactNode;
 }
+
+export type SalesV4InputModel = {
+  data: SalesReportData;
+  currency: string;
+  enteredSalesTotal: number;
+  menuSalesTotal: number;
+  salesGap: number;
+  updateBaseField: (field: keyof SalesReportData, value: any) => void;
+  updateQty: (categoryIndex: number, itemIndex: number, qty: number) => void;
+  getDineInQty: (item: any) => number;
+  getTakeoutQty: (item: any) => number;
+  updateChannelQty: (categoryIndex: number, itemIndex: number, channel: "DINE_IN" | "TAKEOUT", value: number) => void;
+  showOcr: boolean;
+  setShowOcr: React.Dispatch<React.SetStateAction<boolean>>;
+  manualSalesRef: React.RefObject<HTMLDivElement | null>;
+  ocrUploadRef: React.RefObject<HTMLDivElement | null>;
+  addInputRef: React.RefObject<HTMLInputElement | null>;
+  replaceInputRef: React.RefObject<HTMLInputElement | null>;
+  appendFiles: (files: File[]) => void;
+  replaceAllFiles: (files: File[]) => void;
+  handleOcr: () => Promise<void>;
+  resetOcr: () => void;
+  applyOcr: () => void;
+  ocrFiles: File[];
+  ocrFileStatuses: Record<string, FileStatus>;
+  ocrFilePreviewUrls: Record<string, string>;
+  ocrLoading: boolean;
+  ocrProgress: { current: number; total: number } | null;
+  ocrError: string;
+  ocrErrorDetail: string;
+  ocrRawText: string;
+  ocrItems: CorrectedItem[];
+  needsReviewItems: CorrectedItem[];
+  confirmedItems: CorrectedItem[];
+  handleRetryFailed: () => void;
+  handleConfirmCorrection: (index: number, matchedId: string) => void;
+  availableMenus: Array<{ id: string; name: string }>;
+  receiptDateValidation: ReceiptDateValidation;
+  receiptStoreValidation: ReceiptStoreValidation;
+  receiptStoreFileValidations: ReceiptStoreFileValidation[];
+  receiptCurrencyValidation: ReceiptCurrencyValidation;
+  receiptCurrencyFileValidations: ReceiptCurrencyFileValidation[];
+  ocrPriceMismatches: Array<{ name: string; ocrPrice: number; menuPrice: number }>;
+  isOcrApplyBlocked: boolean;
+  isJapanPilot: boolean;
+  scanTotal: number;
+  receiptTotal: number | null;
+  isTotalMatched: boolean | null;
+};
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type ReceiptDateValidation = {
+export type ReceiptDateValidation = {
   status: "PASS" | "WARNING" | "BLOCK";
   date: Date | null;
   message: string;
@@ -30,23 +82,23 @@ type ReceiptDateCandidate = {
   isUnrelatedDate: boolean;
 };
 
-type ReceiptStoreValidation = {
+export type ReceiptStoreValidation = {
   status: "PASS" | "WARNING" | "BLOCK";
   message: string;
 };
 
-type ReceiptStoreFileValidation = ReceiptStoreValidation & {
+export type ReceiptStoreFileValidation = ReceiptStoreValidation & {
   fileKey: string;
   fileName: string;
   receiptStoreName: string | null;
 };
 
-type ReceiptCurrencyValidation = {
+export type ReceiptCurrencyValidation = {
   status: "PASS" | "WARNING" | "BLOCK";
   message: string;
 };
 
-type ReceiptCurrencyFileValidation = ReceiptCurrencyValidation & {
+export type ReceiptCurrencyFileValidation = ReceiptCurrencyValidation & {
   fileKey: string;
   fileName: string;
   receiptCurrency: string | null;
@@ -502,7 +554,7 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
   return Object.values(merged);
 }
 
-type FileStatus = {
+export type FileStatus = {
   status: "pending" | "processing" | "success" | "failed" | "retrying";
   error?: string;
   retryCount?: number;
@@ -515,6 +567,9 @@ const DataInput: React.FC<DataInputProps> = ({
   datesWithData,
   onMonthChange,
   storeName = "",
+  homeLandingTarget = null,
+  onHomeLandingHandled,
+  renderV4,
 }) => {
   const currency = getCurrencyByCountry((data as any).country);
 
@@ -590,7 +645,7 @@ const DataInput: React.FC<DataInputProps> = ({
   };
 
   const inputClasses =
-    "w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:ring-1 focus:ring-indigo-400 outline-none transition-all";
+    "h-12 w-full rounded-[12px] border border-[#e5ddd7] bg-white px-3 text-[14px] text-[#1f1f1f] placeholder:text-[#aaa19a] outline-none transition focus:border-[#a8866b] focus:ring-4 focus:ring-[#f7eee8]";
   const numericInputClasses = `${inputClasses} text-right pr-10`;
 
   const [ocrFiles, setOcrFiles] = useState<File[]>([]);
@@ -609,7 +664,30 @@ const DataInput: React.FC<DataInputProps> = ({
   const [ocrError, setOcrError] = useState<string>("");
   const [ocrErrorDetail, setOcrErrorDetail] = useState<string>("");
   const [showOcr, setShowOcr] = useState<boolean>(false);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [ocrUserEmail, setOcrUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    if (expandedCategories.length === 0 && data.categories.length > 0) {
+      setExpandedCategories([data.categories[0].name]);
+    }
+  }, [data.categories, expandedCategories.length]);
+  useEffect(() => {
+    if (homeLandingTarget === "sales:ocr") setShowOcr(true);
+  }, [homeLandingTarget]);
+
+  useEffect(() => {
+    if (!homeLandingTarget) return;
+    const target = homeLandingTarget === "sales:manual" ? manualSalesRef.current : ocrUploadRef.current;
+    if (!target) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      onHomeLandingHandled?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [homeLandingTarget, onHomeLandingHandled, showOcr]);
+
   const isJapanPilot = ocrUserEmail.trim().toUpperCase() === "JP_PN@THEBORN.CO.KR";
   const getMenuGrossSales = (item: any) => {
     const price = Number(item?.price || 0);
@@ -628,6 +706,8 @@ const DataInput: React.FC<DataInputProps> = ({
 
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const manualSalesRef = useRef<HTMLDivElement>(null);
+  const ocrUploadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1329,6 +1409,11 @@ const DataInput: React.FC<DataInputProps> = ({
     const tolerance = Math.max(receiptTotal * 0.01, 1);
     return diff <= tolerance;
   }, [scanTotal, receiptTotal]);
+  const isOcrApplyBlocked =
+    ocrItemsAccumulated.length === 0 ||
+    receiptDateValidation.status === "BLOCK" ||
+    receiptStoreValidation.status === "BLOCK" ||
+    receiptCurrencyValidation.status === "BLOCK";
 
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
@@ -1361,26 +1446,75 @@ const DataInput: React.FC<DataInputProps> = ({
 
   const salesGap = enteredSalesTotal - menuSalesTotal;
 
+  if (renderV4) {
+    return renderV4({
+      data,
+      currency,
+      enteredSalesTotal,
+      menuSalesTotal,
+      salesGap,
+      updateBaseField,
+      updateQty,
+      getDineInQty,
+      getTakeoutQty,
+      updateChannelQty,
+      showOcr,
+      setShowOcr,
+      manualSalesRef,
+      ocrUploadRef,
+      addInputRef,
+      replaceInputRef,
+      appendFiles,
+      replaceAllFiles,
+      handleOcr,
+      resetOcr,
+      applyOcr,
+      ocrFiles,
+      ocrFileStatuses,
+      ocrFilePreviewUrls: thumbUrls,
+      ocrLoading,
+      ocrProgress,
+      ocrError,
+      ocrErrorDetail,
+      ocrRawText,
+      ocrItems: ocrItemsAccumulated,
+      needsReviewItems,
+      confirmedItems,
+      handleRetryFailed,
+      handleConfirmCorrection,
+      availableMenus: allMenus.map(({ id, name }) => ({ id, name })),
+      receiptDateValidation,
+      receiptStoreValidation,
+      receiptStoreFileValidations,
+      receiptCurrencyValidation,
+      receiptCurrencyFileValidations,
+      ocrPriceMismatches,
+      isOcrApplyBlocked,
+      isJapanPilot,
+      scanTotal,
+      receiptTotal,
+      isTotalMatched,
+    });
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowOcr(!showOcr)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black border border-indigo-100 hover:bg-indigo-100 transition-all"
-        >
-          <i className="fa-solid fa-receipt"></i>
-          {showOcr ? "OCR 닫기" : "영수증 업로드로 자동 입력"}
-        </button>
-      </div>
+    <div className="flex flex-col gap-5">
+      <section className="order-2 overflow-hidden rounded-[16px] border border-[#e8e1db] bg-white shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
+        <div className="flex items-center gap-4 px-4 py-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-[#f8f1eb] text-[25px] text-[#8b5e3c]"><i className="fa-regular fa-receipt" /></span>
+          <div className="min-w-0 flex-1"><h2 className="text-[14px] font-semibold tracking-[-0.04em] text-[#302722]">영수증 자동입력 (OCR)</h2><p className="mt-1 text-[11px] leading-4 text-[#766c65]">영수증을 스캔하거나 업로드하면 AI가 자동으로 인식해 드려요.</p></div>
+        </div>
+        <div className="border-t border-[#eee8e3] px-4 py-3"><button type="button" onClick={() => setShowOcr(!showOcr)} className="mx-auto flex h-9 min-w-[170px] items-center justify-center gap-2 rounded-[7px] bg-[#8b5e3c] px-4 text-[11px] font-semibold text-white shadow-[0_3px_8px_rgba(111,64,39,0.16)]"><i className="fa-solid fa-camera" />{showOcr ? "OCR 닫기" : "영수증 스캔 모드"}</button></div>
+      </section>
 
       {showOcr && (
-        <div className="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-visible animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i className="fa-solid fa-receipt text-indigo-500"></i>
+        <div id="ocr-workflow" className="order-3 overflow-visible rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_8px_22px_rgba(70,54,42,0.05)] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between border-b border-[#eee7f7] bg-[#faf9ff] px-5 py-4">
+            <h2 className="flex items-center gap-2 text-[16px] font-semibold text-[#302a37]">
+              <i className="fa-solid fa-receipt text-[#7c6cf6]"></i>
               영수증 OCR 분석
             </h2>
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Beta</span>
+            <span className="rounded-full bg-[#efeaff] px-2 py-1 text-[10px] font-semibold text-[#6857b6]">AI OCR</span>
           </div>
 
           <div className="p-6 space-y-4">
@@ -1427,7 +1561,7 @@ const DataInput: React.FC<DataInputProps> = ({
               className="hidden"
             />
 
-            <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+            <div ref={ocrUploadRef} className="flex flex-col md:flex-row gap-3 items-start md:items-center">
               <div className="flex-1 w-full">
                 <div className="flex justify-between items-end mb-1">
                   <label className="block text-xs font-bold text-slate-500">
@@ -1452,7 +1586,7 @@ const DataInput: React.FC<DataInputProps> = ({
                   <button
                     type="button"
                     onClick={() => addInputRef.current?.click()}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2"
+                    className="flex h-10 items-center gap-2 rounded-[8px] bg-[#8b5e3c] px-4 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(111,64,39,0.16)] transition hover:bg-[#745846]"
                   >
                     <i className="fa-solid fa-plus"></i>
                     사진 추가
@@ -1461,7 +1595,7 @@ const DataInput: React.FC<DataInputProps> = ({
                   <button
                     type="button"
                     onClick={() => replaceInputRef.current?.click()}
-                    className="px-4 py-2 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-black hover:bg-slate-50 transition-all flex items-center gap-2"
+                    className="flex h-10 items-center gap-2 rounded-[8px] border border-[#cdbbaa] bg-white px-4 text-xs font-semibold text-[#6f4932] transition hover:bg-[#faf5f1]"
                   >
                     <i className="fa-solid fa-rotate"></i>
                     전체 교체(리셋)
@@ -1471,7 +1605,7 @@ const DataInput: React.FC<DataInputProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOcr()}
-                      className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-black shadow-md hover:bg-slate-800 transition-all flex items-center gap-2"
+                      className="flex h-10 items-center gap-2 rounded-[8px] bg-[#3d332d] px-5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2d2521]"
                     >
                       <i className="fa-solid fa-magnifying-glass"></i>
                       {notSuccessCount > 0 ? `분석 (미분석 ${notSuccessCount}장)` : "분석 (변경 없음)"}
@@ -1828,7 +1962,7 @@ const DataInput: React.FC<DataInputProps> = ({
                       receiptStoreValidation.status === "BLOCK" ||
                       receiptCurrencyValidation.status === "BLOCK"
                     }
-                    className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95 disabled:bg-slate-200 flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-xl bg-[#8b6f5b] px-6 py-3 text-sm font-semibold text-white shadow-[0_7px_16px_rgba(111,64,39,0.16)] transition hover:bg-[#745846] active:scale-95 disabled:bg-[#d8d1cb]"
                   >
                     <i className="fa-solid fa-check"></i>
                     ✅ 데이터 입력창에 적용하기
@@ -1847,15 +1981,15 @@ const DataInput: React.FC<DataInputProps> = ({
         </div>
       )}
 
-      <div className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-visible">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
-            <i className="fa-solid fa-calendar-day text-indigo-500"></i>
+      <div ref={manualSalesRef} className="order-1 overflow-visible rounded-[16px] border border-[#e8e1db] bg-white shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
+        <div className="border-b border-[#eee8e3] bg-[#fdfaf8] px-4 py-3">
+          <h2 className="flex items-center gap-2 text-[14px] font-semibold text-[#302a27]">
+            <i className="fa-solid fa-calendar-day text-[#8b6f5b]"></i>
             기본 정보 및 목표
           </h2>
         </div>
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 p-4">
           <div>
             <label className="block text-[11px] font-black text-slate-500 mb-1">POS 총매출</label>
             <div className="relative">
@@ -1958,7 +2092,7 @@ const DataInput: React.FC<DataInputProps> = ({
             </div>
           </div>
 
-          <div className="lg:col-span-4">
+          <div>
             <label className="block text-[11px] font-black text-slate-500 mb-1">특이사항 (날씨, 인력, 품절 등)</label>
             <input
               type="text"
@@ -1969,10 +2103,12 @@ const DataInput: React.FC<DataInputProps> = ({
             />
           </div>
         </div>
+      </div>
 
-       <div className="px-4 pb-4">
-  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-    <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+      <section className="order-3 rounded-[16px] border border-[#dce9df] bg-white p-4 shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
+       <div>
+  <div className="grid grid-cols-1 gap-0 overflow-hidden rounded-[12px] border border-[#dfe7f0] sm:grid-cols-3 sm:gap-0">
+    <div className="bg-[#f8fbff] px-3 py-3 sm:border-r sm:border-[#dfe7f0]">
       <div className="text-[10px] font-black text-slate-400">입력 매출 합계</div>
       <div className="mt-1 text-[15px] font-black text-slate-900">
         {formatCurrencyValue(enteredSalesTotal, (data as any).country)}
@@ -1982,7 +2118,7 @@ const DataInput: React.FC<DataInputProps> = ({
       </div>
     </div>
 
-    <div className="rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
+    <div className="border-t border-[#dfe7f0] bg-[#f8fbff] px-3 py-3 sm:border-t-0 sm:border-r">
       <div className="text-[10px] font-black text-slate-400">
         메뉴 매출 합계
       </div>
@@ -2000,7 +2136,7 @@ const DataInput: React.FC<DataInputProps> = ({
     </div>
 
     <div
-      className={`rounded-lg px-3 py-2 border ${
+      className={`border-t px-3 py-3 sm:border-t-0 ${
         salesGap === 0
           ? "bg-emerald-50 border-emerald-200"
           : "bg-amber-50 border-amber-200"
@@ -2023,17 +2159,19 @@ const DataInput: React.FC<DataInputProps> = ({
     </div>
   </div>
 </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      </section>
+      <section className="order-4 overflow-hidden rounded-[16px] border border-[#e8e1db] bg-white shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
+        <div className="flex items-center justify-between border-b border-[#eee8e3] bg-[#fdfaf8] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#302a27]">메뉴 판매량 입력</h2><span className="text-[10px] font-medium text-[#857a73]">모든 금액은 원 기준</span></div>
+      <div className="divide-y divide-[#eee8e3]">
         {(() => {
           let flatInputIndex = 0;
 
           return data.categories.map((cat, catIdx) => (
-            <div key={cat.name} className="bg-white rounded-[16px] shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-indigo-50/50 border-b border-indigo-100 px-4 py-2.5">
-                <h3 className="font-black text-indigo-900 text-[13px]">{cat.name}</h3>
-              </div>
-              <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+            <div key={cat.name}>
+              <button type="button" onClick={() => setExpandedCategories((current) => current.includes(cat.name) ? current.filter((name) => name !== cat.name) : [...current, cat.name])} className="flex w-full items-center justify-between px-4 py-3 text-left">
+                <h3 className="text-[13px] font-semibold text-[#302a27]">{cat.name}</h3><i className={`fa-solid fa-chevron-${expandedCategories.includes(cat.name) ? "up" : "down"} text-[11px] text-[#766b64]`} />
+              </button>
+              {expandedCategories.includes(cat.name) && <div className="grid grid-cols-1 gap-x-4 gap-y-2 border-t border-[#f0ebe7] px-4 pb-3 pt-1 sm:grid-cols-2">
                 {cat.items.map((item, itemIdx) => {
                   const currentFlatIndex = flatInputIndex;
                   flatInputIndex += isJapanPilot ? 2 : 1;
@@ -2064,7 +2202,7 @@ const DataInput: React.FC<DataInputProps> = ({
                                 focusNextMenuQtyInput(currentFlatIndex);
                               }
                             }}
-                            className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-2 text-right text-[14px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
+                            className="w-full rounded-[8px] border border-[#e3dad3] bg-white px-2 py-2 text-right text-[14px] font-semibold text-[#332923] outline-none focus:border-[#a8866b] focus:ring-2 focus:ring-[#f5ece5]"
                             placeholder="0"
                           />
                         </div>
@@ -2083,7 +2221,7 @@ const DataInput: React.FC<DataInputProps> = ({
                                 focusNextMenuQtyInput(currentFlatIndex + 1);
                               }
                             }}
-                            className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-2 text-right text-[14px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
+                            className="w-full rounded-[8px] border border-[#e3dad3] bg-white px-2 py-2 text-right text-[14px] font-semibold text-[#332923] outline-none focus:border-[#a8866b] focus:ring-2 focus:ring-[#f5ece5]"
                             placeholder="0"
                           />
                         </div>
@@ -2113,19 +2251,19 @@ const DataInput: React.FC<DataInputProps> = ({
                               focusNextMenuQtyInput(currentFlatIndex);
                             }
                           }}
-                          className="w-full bg-white text-[#111827] placeholder-[#9CA3AF] border border-slate-200 rounded-lg px-2 py-2 text-right text-[14px] font-black focus:ring-1 focus:ring-indigo-400 outline-none"
+                          className="w-full rounded-[8px] border border-[#e3dad3] bg-white px-2 py-2 text-right text-[14px] font-semibold text-[#332923] outline-none focus:border-[#a8866b] focus:ring-2 focus:ring-[#f5ece5]"
                           placeholder="0"
                         />
                       </div>
                     </div>
                   );
                 })}
-              </div>
+              </div>}
             </div>
           ));
                })()}
       </div>
-    </div>
+      </section>
   </div>
   );
 };

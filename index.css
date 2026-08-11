@@ -1,6 +1,72 @@
 @import "tailwindcss";
 @import "react-day-picker/dist/style.css";
 
+:root {
+  --sc-bg: #faf8f6;
+  --sc-surface: #ffffff;
+  --sc-text: #1f1f1f;
+  --sc-text-secondary: #706a66;
+  --sc-text-muted: #9c948e;
+  --sc-primary: #8b6f5b;
+  --sc-primary-soft: #a8866b;
+  --sc-beige: #dcc2a1;
+  --sc-border: #ece7e1;
+  --sc-ai: #7c6cf6;
+  --sc-success: #22c55e;
+  --sc-warning: #f59e0b;
+  --sc-danger: #ef4444;
+  font-family: Inter, Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  color: #1f1f1f;
+  background: #faf8f6;
+  font-synthesis: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: #faf8f6;
+  color: #1f1f1f;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--sc-primary-soft);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #e8dbd0;
+  color: var(--sc-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* calendar dot indicator */
 .rdp-day {
   position: relative;
@@ -19,6 +85,6 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #6366f1;
+  background-color: #8b6f5b;
   pointer-events: none;
 }
