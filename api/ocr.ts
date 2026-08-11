@@ -59,6 +59,15 @@ function normalizeReceiptCurrency(value: unknown): string | null {
   return SUPPORTED_RECEIPT_CURRENCIES.has(currency) ? currency : null;
 }
 
+function normalizeAmount(value: unknown): number | null {
+  const amount = typeof value === "number"
+    ? value
+    : typeof value === "string"
+      ? Number(value.replace(/,/g, "").trim())
+      : Number.NaN;
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
 type MenuCandidateInput =
   | string
   | {
@@ -112,14 +121,26 @@ export default async function handler(req: any, res: any) {
     const {
       imageBase64,
       mimeType,
+      images,
       userEmail,
       country,
       brand,
       menuCandidates,
     } = req.body || {};
 
-    if (!imageBase64) {
-      return res.status(400).json({ ok: false, error: "imageBase64 is required" });
+    const receiptImages = Array.isArray(images) && images.length > 0
+      ? images
+          .filter((image: any) => typeof image?.imageBase64 === "string" && image.imageBase64.trim())
+          .map((image: any) => ({
+            data: image.imageBase64,
+            mimeType: typeof image.mimeType === "string" && image.mimeType ? image.mimeType : "image/jpeg",
+          }))
+      : typeof imageBase64 === "string" && imageBase64
+        ? [{ data: imageBase64, mimeType: mimeType || "image/jpeg" }]
+        : [];
+
+    if (receiptImages.length === 0) {
+      return res.status(400).json({ ok: false, error: "At least one receipt image is required" });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -142,23 +163,19 @@ export default async function handler(req: any, res: any) {
           {
             role: "user",
             parts: [
-              {
-                inlineData: {
-                  data: imageBase64,
-                  mimeType: mimeType || "image/jpeg",
-                },
-              },
+              ...receiptImages.map((image) => ({ inlineData: image })),
               {
                 text:
-                  "Extract the receipt into one JSON object only.\n" +
+                  "Treat all supplied images as sequential parts of ONE receipt document, in upload order. Extract the receipt into one JSON object only.\n" +
                   "Return this exact shape:\n" +
-                  '{"raw_text":"all visible receipt text with line breaks preserved","receipt_store_name":"printed store or branch name, or null","receipt_currency":"uppercase ISO currency code, or null"}\n' +
+                  '{"raw_text":"all visible receipt text with line breaks preserved","receipt_store_name":"printed store or branch name, or null","receipt_currency":"uppercase ISO currency code, or null","receipt_subtotal":null,"service_charge":null,"tax":null,"receipt_total":null}\n' +
                   "raw_text must contain all visible receipt text exactly as it appears, including line breaks.\n" +
                   "receipt_store_name must be the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt.\n" +
                   "Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number.\n" +
                   "Use null when the business name cannot be identified confidently.\n" +
                   "receipt_currency must be an uppercase ISO currency code using visible receipt evidence only. Rp, Rupiah, or IDR means IDR; USD or US$ means USD; $ means USD only when the receipt context clearly indicates USD; SGD or S$ means SGD; THB or ฿ means THB; KRW or ₩ means KRW; ¥ means JPY only when the receipt context clearly indicates Japan.\n" +
                   "Do not infer receipt_currency from number formatting alone. If multiple currencies appear, use the currency for the final payable total; use null if it cannot be determined confidently.\n" +
+                  "receipt_subtotal is the menu/item subtotal before service charge and tax. receipt_total is the final paid amount. Keep service_charge and tax separate. Use null when a value is absent or uncertain.\n" +
                   "Do not add markdown fences, explanations, or other fields.",
               },
             ],
@@ -185,7 +202,12 @@ export default async function handler(req: any, res: any) {
         mode: "raw_text",
         rawText,
         items: [],
-        totals: {},
+        totals: {
+          receipt_subtotal: normalizeAmount(structuredResponse?.receipt_subtotal),
+          service_charge: normalizeAmount(structuredResponse?.service_charge),
+          tax: normalizeAmount(structuredResponse?.tax),
+          receipt_total: normalizeAmount(structuredResponse?.receipt_total),
+        },
         model_used: model,
         receipt_store_name: receiptStoreName,
         receipt_currency: receiptCurrency,
@@ -257,7 +279,7 @@ export default async function handler(req: any, res: any) {
       .join("\n");
 
     const prompt = `
-Analyze this Japanese restaurant receipt or admin sales image.
+Analyze these Japanese restaurant receipt images as one receipt document in the supplied upload order.
 
 Context:
 - Pilot account: JP_PN@THEBORN.CO.KR
@@ -271,13 +293,15 @@ Allowed menu list:
 ${menuListText}
 
 Rules:
+- The supplied images are consecutive sections of ONE long receipt. Extract every sold menu row across all sections before reading the financial summary.
+- Adjacent photos can overlap. Remove an item only when it is clearly the same printed boundary row repeated in adjacent image context; never globally deduplicate identical menu names because separate purchases can be legitimate.
 - Use Japanese reference names as strong hints.
 - If item starts with "※" or "★", order_type = "DELIVERY"
 - Otherwise, order_type = "POS"
 - Keep original text in receipt_name
-- matched_name must be exactly one name from the allowed menu list
-- Do not invent new menu names
-- Ignore subtotal, total, tax, address, phone, time, table, and staff info
+- matched_name must be exactly one name from the allowed menu list when confidence is high enough; otherwise return an empty string and needs_review = true
+- Do not invent new menu names or force an uncertain item to an allowed menu
+- Ignore subtotal, service charge, tax, payment, change, address, phone, time, table, and staff info when extracting menu items
 - Extract receipt_store_name as the largest business, store, outlet, branch, or restaurant title printed near the top of the receipt
 - Ignore address, phone, tax ID, cashier, table, transaction number, and receipt number when extracting receipt_store_name
 - Use null for receipt_store_name if the business name cannot be identified confidently
@@ -285,20 +309,27 @@ Rules:
 - Rp, Rupiah, or IDR means IDR; USD or US$ means USD; $ means USD only when the receipt context clearly indicates USD; SGD or S$ means SGD; THB or ฿ means THB; KRW or ₩ means KRW; ¥ means JPY only when the receipt context clearly indicates Japan
 - Do not infer receipt_currency from number formatting alone. If multiple currencies appear, use the currency for the final payable total; use null if it cannot be determined confidently
 - qty must be a number
-- price must be a number, use 0 if unknown
+- price is always the unit price, never the line total; use 0 if unknown
+- line_total is the printed line amount when visible, otherwise null
 - confidence must be 0 to 1
 - needs_review must be boolean
+- receipt_subtotal is the menu/item subtotal before service charge and tax; service_charge and tax are separate optional amounts; receipt_total is the final charged/payment total
 
 Return JSON only in this shape:
 {
   "receipt_store_name": "printed store or branch name, or null",
   "receipt_currency": "uppercase ISO currency code, or null",
+  "receipt_subtotal": null,
+  "service_charge": null,
+  "tax": null,
+  "receipt_total": null,
   "items": [
     {
       "receipt_name": "original text",
       "matched_name": "allowed Korean menu name",
       "qty": 1,
       "price": 0,
+      "line_total": null,
       "order_type": "POS",
       "confidence": 0.0,
       "needs_review": false
@@ -313,12 +344,7 @@ Return JSON only in this shape:
         {
           role: "user",
           parts: [
-            {
-              inlineData: {
-                data: imageBase64,
-                mimeType: mimeType || "image/jpeg",
-              },
-            },
+            ...receiptImages.map((image) => ({ inlineData: image })),
             {
               text: prompt,
             },
@@ -343,9 +369,7 @@ Return JSON only in this shape:
 
     const items = parsedItems.map((item: any) => {
       const matchedName = String(item?.matched_name || "").trim();
-      const safeMatchedName = finalMenuNames.includes(matchedName)
-        ? matchedName
-        : finalMenuNames[0] || "";
+      const safeMatchedName = finalMenuNames.includes(matchedName) ? matchedName : "";
 
       const qty = Number(item?.qty || 0);
       const price = Number(item?.price || 0);
@@ -354,6 +378,7 @@ Return JSON only in this shape:
         Number.isFinite(confidenceRaw) && confidenceRaw >= 0
           ? Math.min(1, confidenceRaw)
           : 0;
+      const lineTotal = normalizeAmount(item?.line_total);
 
       const rawOrderType = String(item?.order_type || "POS").trim().toUpperCase();
       const orderType = rawOrderType === "DELIVERY" ? "DELIVERY" : "POS";
@@ -363,9 +388,10 @@ Return JSON only in this shape:
         matched_name: safeMatchedName,
         qty: Number.isFinite(qty) ? qty : 0,
         price: Number.isFinite(price) ? price : 0,
+        line_total: lineTotal,
         order_type: orderType,
         confidence,
-        needs_review: Boolean(item?.needs_review ?? true),
+        needs_review: Boolean(item?.needs_review) || !safeMatchedName || confidence < 0.88 || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0,
       };
     });
 
@@ -374,7 +400,12 @@ Return JSON only in this shape:
       mode: "japan_pilot_structured",
       rawText: text,
       items,
-      totals: {},
+      totals: {
+        receipt_subtotal: normalizeAmount(!Array.isArray(parsed) ? parsed?.receipt_subtotal : null),
+        service_charge: normalizeAmount(!Array.isArray(parsed) ? parsed?.service_charge : null),
+        tax: normalizeAmount(!Array.isArray(parsed) ? parsed?.tax : null),
+        receipt_total: normalizeAmount(!Array.isArray(parsed) ? parsed?.receipt_total : null),
+      },
       model_used: model,
       receipt_store_name: receiptStoreName,
       receipt_currency: receiptCurrency,

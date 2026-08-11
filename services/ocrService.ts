@@ -10,6 +10,7 @@ export type OcrItem = {
   matched_name?: string;
   qty?: number;
   price?: number;
+  line_total?: number;
   order_type?: string;
   confidence?: number;
   needs_review?: boolean;
@@ -54,6 +55,7 @@ function normalizeOcrItems(value: unknown): OcrItem[] {
     matched_name: typeof item.matched_name === "string" ? item.matched_name : undefined,
     qty: typeof item.qty === "number" ? item.qty : undefined,
     price: typeof item.price === "number" ? item.price : undefined,
+    line_total: typeof item.line_total === "number" ? item.line_total : undefined,
     order_type: typeof item.order_type === "string" ? item.order_type : undefined,
     confidence: typeof item.confidence === "number" ? item.confidence : undefined,
     needs_review: typeof item.needs_review === "boolean" ? item.needs_review : undefined,
@@ -101,6 +103,41 @@ export async function callOcr(
     body: JSON.stringify({
       imageBase64,
       mimeType,
+      userEmail: options?.userEmail || "",
+      country: options?.country || "",
+      brand: options?.brand || "",
+      menuCandidates: options?.menuCandidates || [],
+    }),
+  });
+
+  const json: unknown = await res.json();
+  if (!res.ok || !isRecord(json) || !json.ok) {
+    throw new Error(
+      isRecord(json) && typeof json.message === "string"
+        ? json.message
+        : isRecord(json) && typeof json.error === "string"
+        ? json.error
+        : "OCR server error"
+    );
+  }
+
+  return normalizeOcrResponse(json);
+}
+
+export async function callOcrBatch(
+  images: Array<{ imageBase64: string; mimeType: string; fileName?: string }>,
+  options?: {
+    userEmail?: string;
+    country?: string;
+    brand?: string;
+    menuCandidates?: OcrMenuCandidate[];
+  }
+) {
+  const res = await fetch("/api/ocr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      images,
       userEmail: options?.userEmail || "",
       country: options?.country || "",
       brand: options?.brand || "",

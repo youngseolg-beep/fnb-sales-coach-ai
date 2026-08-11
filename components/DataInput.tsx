@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { DayPicker } from "react-day-picker";
-import { callOcr } from "../services/ocrService";
+import { callOcr, callOcrBatch } from "../services/ocrService";
 import { formatLocalDate, parseLocalDate } from "../utils2/date";
 import { getCurrencyByCountry, formatCurrencyValue } from "../utils2/currency";
 import { supabase } from "../services/supabaseClient";
@@ -65,6 +65,9 @@ export type SalesV4InputModel = {
   isOcrApplyBlocked: boolean;
   isJapanPilot: boolean;
   scanTotal: number;
+  receiptSubtotal: number | null;
+  serviceCharge: number | null;
+  receiptTax: number | null;
   receiptTotal: number | null;
   isTotalMatched: boolean | null;
 };
@@ -656,6 +659,7 @@ const DataInput: React.FC<DataInputProps> = ({
 
   const [ocrRawText, setOcrRawText] = useState<string>("");
   const [ocrItemsAccumulated, setOcrItemsAccumulated] = useState<CorrectedItem[]>([]);
+  const [ocrTotals, setOcrTotals] = useState<Record<string, unknown>>({});
   const [ocrReceiptStoresByFile, setOcrReceiptStoresByFile] = useState<
     Record<string, OcrReceiptStore>
   >({});
@@ -918,10 +922,9 @@ const DataInput: React.FC<DataInputProps> = ({
     };
   };
 
- const callOcrWithRetry = async (
-  imageBase64: string,
-  mimeType: string,
-  fileName: string,
+ const callOcrBatchWithRetry = async (
+  images: Array<{ imageBase64: string; mimeType: string; fileName: string }>,
+  fileNames: string[],
   options?: {
     userEmail?: string;
     country?: string;
@@ -934,7 +937,7 @@ const DataInput: React.FC<DataInputProps> = ({
 
   for (let attempt = 0; attempt <= 3; attempt++) {
     try {
-      return await callOcr(imageBase64, mimeType, {
+      return await callOcrBatch(images, {
         userEmail: options?.userEmail || "",
         country: options?.country || "",
         brand: options?.brand || "",
@@ -952,11 +955,9 @@ const DataInput: React.FC<DataInputProps> = ({
         const delay = delays[attempt] + Math.random() * 800;
         setOcrFileStatuses((prev) => ({
           ...prev,
-          [fileName]: {
-            ...(prev[fileName] || { status: "pending" }),
-            status: "retrying",
-            retryCount: attempt + 1,
-          },
+          ...Object.fromEntries(fileNames.map((fileName) => [fileName, {
+            ...(prev[fileName] || { status: "pending" }), status: "retrying", retryCount: attempt + 1,
+          }])),
         }));
         await sleep(delay);
         continue;
@@ -968,6 +969,13 @@ const DataInput: React.FC<DataInputProps> = ({
 
   throw lastErr;
 };
+
+const callOcrWithRetry = async (
+  imageBase64: string,
+  mimeType: string,
+  _fileName: string,
+  options?: { userEmail?: string; country?: string; brand?: string; menuCandidates?: { name: string; jp_name?: string | null }[] }
+) => callOcr(imageBase64, mimeType, options);
 
   const appendFiles = (files: File[]) => {
     if (!files || files.length === 0) return;
@@ -1002,20 +1010,15 @@ const DataInput: React.FC<DataInputProps> = ({
 
     setOcrRawText("");
     setOcrItemsAccumulated([]);
+    setOcrTotals({});
     setOcrReceiptStoresByFile({});
     setOcrError("");
     setOcrErrorDetail("");
     setOcrProgress(null);
   };
 
-  const handleOcr = async (filesToProcessOverride?: File[]) => {
-  const statuses = ocrFileStatuses || {};
-  const defaultTargets = ocrFiles.filter((f) => {
-    const s = statuses[f.name]?.status;
-    return s !== "success";
-  });
-
-  const filesToProcess = filesToProcessOverride || defaultTargets;
+  const handleOcr = async (_filesToProcessOverride?: File[]) => {
+  const filesToProcess = ocrFiles;
   if (filesToProcess.length === 0) return;
 
   setOcrLoading(true);
@@ -1181,11 +1184,76 @@ const DataInput: React.FC<DataInputProps> = ({
     }
   };
 
-  const batchSize = 2;
-
-  for (let start = 0; start < filesToProcess.length; start += batchSize) {
-    const batch = filesToProcess.slice(start, start + batchSize);
-    await Promise.all(batch.map((file) => processSingleFile(file)));
+  try {
+    setOcrFileStatuses((prev) => ({
+      ...prev,
+      ...Object.fromEntries(filesToProcess.map((file) => [file.name, { status: "processing" }])),
+    }));
+    setOcrOptimizing(true);
+    const images = await Promise.all(filesToProcess.map(async (file) => {
+      const optimizedFile = await compressForOcr(file, 1024, 0.6);
+      const { base64, mimeType } = await fileToBase64(optimizedFile);
+      return { imageBase64: base64, mimeType, fileName: file.name };
+    }));
+    setOcrOptimizing(false);
+    const ocrResult = await callOcrBatchWithRetry(images, filesToProcess.map((file) => file.name), {
+      userEmail: currentUserEmail,
+      country: ocrCountry,
+      brand: ocrBrand,
+      menuCandidates,
+    });
+    const extractedText = String(ocrResult.rawText || "").trim();
+    const structuredItems = Array.isArray(ocrResult.items) ? ocrResult.items : [];
+    if (!extractedText && structuredItems.length === 0) throw new Error("OCR did not return receipt text or menu items.");
+    setOcrRawText(extractedText ? `--- Receipt batch: ${filesToProcess.map((file) => file.name).join(" | ")} ---\n${extractedText}` : "");
+    setOcrTotals(ocrResult.totals || {});
+    setOcrReceiptStoresByFile(Object.fromEntries(filesToProcess.map((file) => [fileKey(file), {
+      fileName: file.name,
+      receiptStoreName: ocrResult.receipt_store_name,
+      receiptCurrency: ocrResult.receipt_currency,
+    }])));
+    const correctedBatchItems = structuredItems.length > 0
+      ? structuredItems.map((item: any) => {
+          const receiptName = String(item?.receipt_name || item?.matched_name || "").trim();
+          const matchedName = String(item?.matched_name || "").trim();
+          const matchedMenu = allMenus.find((menu) => menu.name === matchedName);
+          const qty = Number(item?.qty || 0);
+          const unitPrice = Number(item?.price || 0);
+          const confidenceRaw = Number(item?.confidence || 0);
+          const confidence = Number.isFinite(confidenceRaw) && confidenceRaw >= 0 ? Math.min(1, confidenceRaw) : 0;
+          const isTakeout = /[?삘쁾]/.test(receiptName);
+          const needsReview = Boolean(item?.needs_review) || !matchedMenu || confidence < 0.88 || !Number.isFinite(unitPrice) || unitPrice <= 0;
+          return {
+            matched_id: matchedMenu?.id,
+            item_original: receiptName,
+            item_corrected: matchedMenu?.name || matchedName || receiptName,
+            unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+            qty: Number.isFinite(qty) ? qty : 0,
+            order_channel: isTakeout ? "TAKEOUT" : "DINE_IN",
+            dine_in_qty: isTakeout ? 0 : qty,
+            takeout_qty: isTakeout ? qty : 0,
+            confidence,
+            needs_review: needsReview,
+            candidates: needsReview ? allMenus.slice(0, 5).map((menu) => ({ name: menu.name, id: menu.id, score: menu.name === matchedName ? 1 : 0 })) : undefined,
+          } as CorrectedItem;
+        }).filter((item) => item.item_original && Number(item.qty || 0) > 0)
+      : extractMenuItemsFromRawText(extractedText).map((item) => autoCorrectItem(item));
+    setOcrItemsAccumulated(correctedBatchItems);
+    setOcrFileStatuses((prev) => ({
+      ...prev,
+      ...Object.fromEntries(filesToProcess.map((file) => [file.name, { status: "success" }])),
+    }));
+    setOcrProgress({ current: filesToProcess.length, total: filesToProcess.length });
+  } catch (err: any) {
+    const errorDetail = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+    setOcrFileStatuses((prev) => ({
+      ...prev,
+      ...Object.fromEntries(filesToProcess.map((file) => [file.name, { status: "failed", error: err?.message || "OCR processing failed" }])),
+    }));
+    setOcrError("영수증 묶음 인식에 실패했습니다.");
+    setOcrErrorDetail(errorDetail);
+  } finally {
+    setOcrOptimizing(false);
   }
 
   setOcrLoading(false);
@@ -1194,7 +1262,7 @@ const DataInput: React.FC<DataInputProps> = ({
 
   const handleRetryFailed = () => {
     const failedFiles = ocrFiles.filter((f) => ocrFileStatuses[f.name]?.status === "failed");
-    if (failedFiles.length > 0) handleOcr(failedFiles);
+    if (failedFiles.length > 0) void handleOcr();
   };
 
   const resetOcr = () => {
@@ -1202,6 +1270,7 @@ const DataInput: React.FC<DataInputProps> = ({
     setOcrFileStatuses({});
     setOcrRawText("");
     setOcrItemsAccumulated([]);
+    setOcrTotals({});
     setOcrReceiptStoresByFile({});
     setOcrError("");
     setOcrErrorDetail("");
@@ -1227,8 +1296,8 @@ const DataInput: React.FC<DataInputProps> = ({
         const fallbackDineInQty = dineInQty + takeoutQty > 0 ? dineInQty : rawQty;
         const prev = qtyById.get(item.matched_id) || { dineIn: 0, takeout: 0 };
         qtyById.set(item.matched_id, {
-          dineIn: Math.max(prev.dineIn, fallbackDineInQty),
-          takeout: Math.max(prev.takeout, takeoutQty),
+          dineIn: prev.dineIn + fallbackDineInQty,
+          takeout: prev.takeout + takeoutQty,
         });
       }
 
@@ -1251,17 +1320,17 @@ const DataInput: React.FC<DataInputProps> = ({
       return;
     }
 
-    const qtyMaxById = new Map<string, number>();
+    const qtyById = new Map<string, number>();
     for (const item of ocrItemsAccumulated) {
       if (item.needs_review || !item.matched_id) continue;
-      const prev = qtyMaxById.get(item.matched_id) || 0;
-      qtyMaxById.set(item.matched_id, Math.max(prev, Number(item.qty || 0)));
+      const prev = qtyById.get(item.matched_id) || 0;
+      qtyById.set(item.matched_id, prev + Number(item.qty || 0));
     }
 
     let appliedCount = 0;
     newCategories.forEach((cat) => {
       cat.items.forEach((menuItem) => {
-        const v = qtyMaxById.get(menuItem.id);
+        const v = qtyById.get(menuItem.id);
         if (v !== undefined && v > 0) {
           menuItem.qty = v;
           appliedCount++;
@@ -1323,9 +1392,8 @@ const DataInput: React.FC<DataInputProps> = ({
     [ocrItemsAccumulated, allMenus]
   );
 
-  const extractReceiptTotal = (text: string): number | null => {
+  const extractReceiptAmount = (text: string, keywords: string[]): number | null => {
     if (!text) return null;
-    const keywords = ["TOTAL", "합계", "총액", "GRAND TOTAL", "AMOUNT", "NET TOTAL", "G.TOTAL"];
     const lines = text.split("\n");
     for (let i = lines.length - 1; i >= 0; i--) {
       const line = lines[i].toUpperCase();
@@ -1343,7 +1411,27 @@ const DataInput: React.FC<DataInputProps> = ({
     return null;
   };
 
-  const receiptTotal = useMemo(() => extractReceiptTotal(ocrRawText), [ocrRawText]);
+  const getOcrTotal = (key: string): number | null => {
+    const value = ocrTotals[key];
+    const amount = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(/,/g, "")) : Number.NaN;
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+  };
+  const receiptSubtotal = useMemo(
+    () => getOcrTotal("receipt_subtotal") ?? extractReceiptAmount(ocrRawText, ["SUBTOTAL", "SUB TOTAL", "小計", "상품합계"]),
+    [ocrTotals, ocrRawText]
+  );
+  const serviceCharge = useMemo(
+    () => getOcrTotal("service_charge") ?? extractReceiptAmount(ocrRawText, ["SERVICE CHARGE", "SERVICE"]),
+    [ocrTotals, ocrRawText]
+  );
+  const receiptTax = useMemo(
+    () => getOcrTotal("tax") ?? extractReceiptAmount(ocrRawText, ["TAX", "VAT", "消費税"]),
+    [ocrTotals, ocrRawText]
+  );
+  const receiptTotal = useMemo(
+    () => getOcrTotal("receipt_total") ?? extractReceiptAmount(ocrRawText, ["GRAND TOTAL", "NET TOTAL", "G.TOTAL", "TOTAL", "AMOUNT"]),
+    [ocrTotals, ocrRawText]
+  );
   const receiptDateValidation = useMemo(
     () => validateReceiptDate(ocrRawText),
     [ocrRawText]
@@ -1406,14 +1494,15 @@ const DataInput: React.FC<DataInputProps> = ({
   }, [receiptCurrencyFileValidations]);
 
   const isTotalMatched = useMemo(() => {
-    if (receiptTotal === null) return null;
-    const diff = Math.abs(scanTotal - receiptTotal);
-    const tolerance = Math.max(receiptTotal * 0.01, 1);
+    if (receiptSubtotal === null) return null;
+    const diff = Math.abs(scanTotal - receiptSubtotal);
+    const tolerance = Math.max(receiptSubtotal * 0.01, 1);
     return diff <= tolerance;
-  }, [scanTotal, receiptTotal]);
+  }, [scanTotal, receiptSubtotal]);
   const isOcrApplyBlocked =
     ocrItemsAccumulated.length === 0 ||
-    receiptCurrencyValidation.status === "BLOCK";
+    receiptCurrencyValidation.status === "BLOCK" ||
+    isTotalMatched === false;
 
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
@@ -1494,6 +1583,9 @@ const DataInput: React.FC<DataInputProps> = ({
       isOcrApplyBlocked,
       isJapanPilot,
       scanTotal,
+      receiptSubtotal,
+      serviceCharge,
+      receiptTax,
       receiptTotal,
       isTotalMatched,
     });
