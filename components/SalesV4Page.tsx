@@ -74,7 +74,7 @@ const CompactOcrReview: React.FC<{ model: SalesV4InputModel; failedFileCount: nu
     ? "영수증 소계 미검출 · 메뉴 합계 기준 확인"
     : model.isTotalMatched
       ? "메뉴 합계와 영수증 소계 일치"
-      : "메뉴 합계와 영수증 소계가 다릅니다 · 검토 필요";
+      : "메뉴 합계와 영수증 소계가 다릅니다 · 적용 전 확인해 주세요.";
 
   return <div className="mt-3 space-y-2.5 border-t border-[#eee8e3] pt-3">
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[8px] bg-[#faf8f6] px-3 py-2 text-[10px] text-[#625a55]">

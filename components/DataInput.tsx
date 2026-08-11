@@ -1501,8 +1501,7 @@ const callOcrWithRetry = async (
   }, [scanTotal, receiptSubtotal]);
   const isOcrApplyBlocked =
     ocrItemsAccumulated.length === 0 ||
-    receiptCurrencyValidation.status === "BLOCK" ||
-    isTotalMatched === false;
+    receiptCurrencyValidation.status === "BLOCK";
 
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
