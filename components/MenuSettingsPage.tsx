@@ -142,278 +142,30 @@ const cloneCategories = (rows: MenuCategory[]) =>
 
 interface SortableMenuItemProps {
   item: any;
+  categoryName: string;
   categoryIndex: number;
   itemIndex: number;
   changed: boolean;
   actionSaving: boolean;
-  onUpdateItemField: (
-    categoryIndex: number,
-    itemIndex: number,
-    field: "name" | "price" | "unitCost",
-    value: string
-  ) => void;
-  onOpenHistory: (menuId: string, menuName: string) => void;
-  onDelete: () => void;
+  onEdit: () => void;
 }
 
-const MobileMenuCard: React.FC<{
-  item: any;
-  changed: boolean;
-  actionSaving: boolean;
-  categoryIndex: number;
-  itemIndex: number;
-  alternate: boolean;
-  setActivatorNodeRef?: (element: HTMLElement | null) => void;
-  attributes?: any;
-  listeners?: any;
-  onUpdateItemField: (
-    categoryIndex: number,
-    itemIndex: number,
-    field: "name" | "price" | "unitCost",
-    value: string
-  ) => void;
-  onOpenHistory: (menuId: string, menuName: string) => void;
-  onDelete: () => void;
-}> = ({
-  item,
-  changed,
-  actionSaving,
-  categoryIndex,
-  itemIndex,
-  alternate,
-  setActivatorNodeRef,
-  attributes,
-  listeners,
-  onUpdateItemField,
-  onOpenHistory,
-  onDelete,
-}) => {
-  return (
-    <div
-      className={`grid grid-cols-1 gap-3 rounded-[14px] border border-[#eee8e3] p-3 md:hidden ${
-        alternate ? "bg-[#fdfbf9]" : "bg-white"
-      }`}
-    >
-      <div className="grid grid-cols-[32px_minmax(0,1fr)_34px] items-center gap-2">
-        <button
-          ref={setActivatorNodeRef}
-          type="button"
-          {...attributes}
-          {...listeners}
-          disabled={actionSaving}
-          className="inline-flex h-8 w-8 shrink-0 touch-none select-none items-center justify-center rounded-[8px] border border-[#e7ddd5] bg-[#faf7f4] text-[12px] font-black text-[#8b6f5b] active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-          style={{
-            WebkitTouchCallout: "none",
-            WebkitUserSelect: "none",
-            userSelect: "none",
-          }}
-          title="드래그해서 순서 변경"
-        >
-          ⋮⋮
-        </button>
+const formatMenuNumber = (value: any) => normalizeNumber(value).toLocaleString();
 
-        <input
-          type="text"
-          value={item.name}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "name", e.target.value)
-          }
-          className="min-w-0 rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 py-2 text-[13px] font-semibold text-[#2d2723] outline-none focus:border-[#8b5e3c]"
-        />
-
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={actionSaving}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#f1d8d3] bg-white text-[11px] text-[#d75048] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          메뉴삭제
-        </button>
-      </div>
-
-      <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-        <div>
-          <div className="mb-1 text-[9px] font-semibold text-[#766b64]">판매가</div>
-          <input
-            type="number"
-            step="0.01"
-            value={normalizeNumber(item.price)}
-            onChange={(e) =>
-              onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
-            }
-            className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
-          />
-        </div>
-
-        <div>
-          <div className="mb-1 text-[9px] font-semibold text-[#766b64]">원가</div>
-          <input
-            type="number"
-            step="0.01"
-            value={normalizeNumber(item.unitCost)}
-            onChange={(e) =>
-              onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-            }
-            className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
-          />
-        </div>
-
-        <div>
-          <div className="mb-1 text-[9px] font-semibold text-transparent">기록</div>
-          <button
-            type="button"
-            onClick={() => onOpenHistory(item.id, item.name)}
-            className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#ded5ce] bg-white px-2.5 text-[10px] font-semibold text-[#76503a]"
-          >
-            기록
-          </button>
-        </div>
-      </div>
-      {changed && <p className="text-[10px] font-medium text-[#b77721]">수정됨 · 저장 버튼을 눌러 반영하세요.</p>}
-    </div>
-  );
-};
-
-const DesktopMenuCard: React.FC<{
-  item: any;
-  changed: boolean;
-  actionSaving: boolean;
-  categoryIndex: number;
-  itemIndex: number;
-  alternate: boolean;
-  setActivatorNodeRef?: (element: HTMLElement | null) => void;
-  attributes?: any;
-  listeners?: any;
-  onUpdateItemField: (
-    categoryIndex: number,
-    itemIndex: number,
-    field: "name" | "price" | "unitCost",
-    value: string
-  ) => void;
-  onOpenHistory: (menuId: string, menuName: string) => void;
-  onDelete: () => void;
-}> = ({
-  item,
-  changed,
-  actionSaving,
-  categoryIndex,
-  itemIndex,
-  alternate,
-  setActivatorNodeRef,
-  attributes,
-  listeners,
-  onUpdateItemField,
-  onOpenHistory,
-  onDelete,
-}) => {
-  return (
-    <div
-      className={`hidden rounded-2xl border border-slate-200 p-3 md:grid md:grid-cols-12 md:items-center md:gap-3 ${
-        alternate ? "bg-slate-50" : "bg-white"
-      }`}
-    >
-      <div className="md:col-span-2">
-        <div className="flex items-center gap-2">
-          <button
-            ref={setActivatorNodeRef}
-            type="button"
-            {...attributes}
-            {...listeners}
-            disabled={actionSaving}
-            className="inline-flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-lg font-black text-slate-500 shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              WebkitTouchCallout: "none",
-              WebkitUserSelect: "none",
-              userSelect: "none",
-            }}
-            title="드래그해서 순서 변경"
-          >
-            ⋮⋮
-          </button>
-          <div className="min-w-0 flex-1">
-            <input
-              type="text"
-              value={item.name}
-              onChange={(e) =>
-                onUpdateItemField(categoryIndex, itemIndex, "name", e.target.value)
-              }
-              className="w-full rounded-xl border px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-slate-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="md:col-span-2">
-        <div className="text-xs font-semibold text-slate-400">드래그로 순서 변경</div>
-      </div>
-
-      <div className="md:col-span-2">
-        <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.price)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "price", e.target.value)
-          }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <input
-          type="number"
-          step="0.01"
-          value={normalizeNumber(item.unitCost)}
-          onChange={(e) =>
-            onUpdateItemField(categoryIndex, itemIndex, "unitCost", e.target.value)
-          }
-          className="h-11 w-full rounded-xl border px-3 text-sm outline-none focus:border-slate-400"
-        />
-      </div>
-
-      <div className="md:col-span-1">
-        <span
-          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
-            changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {changed ? "Changed" : "Saved"}
-        </span>
-      </div>
-
-      <div className="md:col-span-1">
-        <button
-          type="button"
-          onClick={() => onOpenHistory(item.id, item.name)}
-          className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          History
-        </button>
-      </div>
-
-      <div className="md:col-span-2">
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={actionSaving}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          메뉴 삭제
-        </button>
-      </div>
-    </div>
-  );
+const getFoodCostRate = (price: any, unitCost: any) => {
+  const normalizedPrice = normalizeNumber(price);
+  if (normalizedPrice <= 0) return 0;
+  return (normalizeNumber(unitCost) / normalizedPrice) * 100;
 };
 
 const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
   item,
+  categoryName,
   categoryIndex,
   itemIndex,
   changed,
   actionSaving,
-  onUpdateItemField,
-  onOpenHistory,
-  onDelete,
+  onEdit,
 }) => {
   const {
     attributes,
@@ -432,104 +184,84 @@ const SortableMenuItem: React.FC<SortableMenuItemProps> = ({
     userSelect: "none",
   };
 
-  const alternate = itemIndex % 2 === 1;
-
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={isDragging ? "opacity-30" : ""}
     >
-      <MobileMenuCard
-        item={item}
-        changed={changed}
-        actionSaving={actionSaving}
-        categoryIndex={categoryIndex}
-        itemIndex={itemIndex}
-        alternate={alternate}
-        setActivatorNodeRef={setActivatorNodeRef}
-        attributes={attributes}
-        listeners={listeners}
-        onUpdateItemField={onUpdateItemField}
-        onOpenHistory={onOpenHistory}
-        onDelete={onDelete}
-      />
+      <div className="relative rounded-[14px] border border-[#e7dfd8] bg-white shadow-[0_2px_8px_rgba(65,47,35,0.035)] transition-colors hover:border-[#d6c7bc]">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="block w-full px-3.5 py-3 text-left"
+          aria-label={`${item.name} 메뉴 수정`}
+        >
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h4 className="break-words text-[14px] font-semibold leading-5 tracking-[-0.02em] text-[#211c19]">
+                  {item.name}
+                </h4>
+                {changed && (
+                  <span className="shrink-0 rounded-full bg-[#fff2d9] px-1.5 py-0.5 text-[8px] font-bold text-[#a1661d]">
+                    수정됨
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[9px] font-medium text-[#93877f]">{categoryName}</p>
+            </div>
+            <span className="pt-0.5 text-[18px] leading-none text-[#7c6b60]">›</span>
+          </div>
 
-      <DesktopMenuCard
-        item={item}
-        changed={changed}
-        actionSaving={actionSaving}
-        categoryIndex={categoryIndex}
-        itemIndex={itemIndex}
-        alternate={alternate}
-        setActivatorNodeRef={setActivatorNodeRef}
-        attributes={attributes}
-        listeners={listeners}
-        onUpdateItemField={onUpdateItemField}
-        onOpenHistory={onOpenHistory}
-        onDelete={onDelete}
-      />
+          <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[#f0eae5] pt-2.5">
+            <div>
+              <p className="text-[9px] font-medium text-[#8c817a]">판매가</p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#211c19]">{formatMenuNumber(item.price)}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-medium text-[#8c817a]">원가</p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#211c19]">{formatMenuNumber(item.unitCost)}</p>
+            </div>
+            <div className="rounded-[9px] bg-[#f8f4f0] px-2 py-1.5 text-right">
+              <p className="text-[9px] font-medium text-[#8c817a]">원가율</p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#6f4a32]">
+                {getFoodCostRate(item.price, item.unitCost).toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          {...attributes}
+          {...listeners}
+          disabled={actionSaving}
+          onClick={(event) => event.stopPropagation()}
+          className="absolute right-8 top-2.5 inline-flex h-7 w-7 touch-none select-none items-center justify-center rounded-[8px] text-[12px] font-bold text-[#b1a69e] hover:bg-[#f5f0ec] hover:text-[#76503a] disabled:opacity-40"
+          style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
+          title="드래그해서 순서 변경"
+          aria-label={`${item.name} 순서 변경`}
+        >
+          ⋮⋮
+        </button>
+      </div>
     </div>
   );
 };
 
 const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
   return (
-    <div className="grid grid-cols-1 gap-1 rounded-[16px] border border-slate-200 bg-white px-2 py-1.5 shadow-2xl ring-2 ring-indigo-200 md:hidden">
-      <div className="grid grid-cols-[26px_minmax(0,1fr)_64px] items-center gap-1">
-        <div className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-[11px] font-black text-indigo-500">
-          ⋮⋮
-        </div>
-
-        <div className="min-w-0 truncate text-[12px] font-bold text-slate-900">
-          {item.name}
-        </div>
-
-        <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border border-rose-200 bg-white px-1 text-[10px] font-bold text-rose-600">
-          메뉴삭제
-        </div>
+    <div className="w-[340px] rounded-[14px] border border-[#d6c7bc] bg-white p-3.5 shadow-xl ring-1 ring-[#8b5e3c]/15 md:hidden">
+      <div className="flex items-center justify-between gap-3">
+        <div className="truncate text-[14px] font-semibold text-[#211c19]">{item.name}</div>
+        <span className="text-[#9b8e85]">⋮⋮</span>
       </div>
-
-      <div className="grid grid-cols-[1fr_1fr_64px_64px] items-end gap-1">
-        <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
-            PRICE
-          </div>
-          <div className="h-7 rounded-lg border bg-slate-50 px-1.5 text-[12px] leading-[28px] text-slate-900">
-            {normalizeNumber(item.price)}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">
-            UNIT COST
-          </div>
-          <div className="h-7 rounded-lg border bg-slate-50 px-1.5 text-[12px] leading-[28px] text-slate-900">
-            {normalizeNumber(item.unitCost)}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
-            STATUS
-          </div>
-          <span
-            className={`flex h-7 w-full items-center justify-center rounded-lg px-1 text-[9px] font-bold ${
-              item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {item.changed ? "Changed" : "Saved"}
-          </span>
-        </div>
-
-        <div>
-          <div className="mb-0.5 text-[8px] font-black uppercase tracking-wide text-transparent">
-            HISTORY
-          </div>
-          <div className="inline-flex h-7 w-full items-center justify-center rounded-lg border bg-white px-1 text-[10px] font-bold text-slate-700">
-            History
-          </div>
-        </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 border-t border-[#f0eae5] pt-2">
+        <div><p className="text-[9px] text-[#8c817a]">판매가</p><p className="text-[12px] font-semibold">{formatMenuNumber(item.price)}</p></div>
+        <div><p className="text-[9px] text-[#8c817a]">원가</p><p className="text-[12px] font-semibold">{formatMenuNumber(item.unitCost)}</p></div>
+        <div><p className="text-[9px] text-[#8c817a]">원가율</p><p className="text-[12px] font-semibold text-[#6f4a32]">{getFoodCostRate(item.price, item.unitCost).toFixed(1)}%</p></div>
       </div>
     </div>
   );
@@ -537,56 +269,12 @@ const MobileDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) =>
 
 const DesktopDragPreviewCard: React.FC<{ item: DragPreviewItem }> = ({ item }) => {
   return (
-    <div className="hidden scale-[1.01] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl ring-2 ring-indigo-200 md:grid md:grid-cols-12 md:items-center md:gap-3">
-      <div className="md:col-span-2">
-        <div className="flex items-center gap-2">
-          <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-50 text-lg font-black text-indigo-500 shadow-sm">
-            ⋮⋮
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-slate-900">
-              {item.name}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="md:col-span-2">
-        <div className="text-xs font-semibold text-indigo-400">드래그로 순서 변경</div>
-      </div>
-
-      <div className="md:col-span-2">
-        <div className="h-11 rounded-xl border bg-slate-50 px-3 text-sm leading-[44px] text-slate-900">
-          {normalizeNumber(item.price)}
-        </div>
-      </div>
-
-      <div className="md:col-span-2">
-        <div className="h-11 rounded-xl border bg-slate-50 px-3 text-sm leading-[44px] text-slate-900">
-          {normalizeNumber(item.unitCost)}
-        </div>
-      </div>
-
-      <div className="md:col-span-1">
-        <span
-          className={`inline-flex h-9 items-center rounded-full px-3 text-xs font-semibold ${
-            item.changed ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {item.changed ? "Changed" : "Saved"}
-        </span>
-      </div>
-
-      <div className="md:col-span-1">
-        <div className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold text-slate-700">
-          History
-        </div>
-      </div>
-
-      <div className="md:col-span-2">
-        <div className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-600">
-          메뉴 삭제
-        </div>
+    <div className="hidden w-[520px] rounded-[14px] border border-[#d6c7bc] bg-white p-4 shadow-xl ring-1 ring-[#8b5e3c]/15 md:block">
+      <div className="flex items-center justify-between"><div className="text-[15px] font-semibold text-[#211c19]">{item.name}</div><span className="text-[#9b8e85]">⋮⋮</span></div>
+      <div className="mt-3 grid grid-cols-3 gap-3 border-t border-[#f0eae5] pt-3">
+        <div><p className="text-[10px] text-[#8c817a]">판매가</p><p className="text-[14px] font-semibold">{formatMenuNumber(item.price)}</p></div>
+        <div><p className="text-[10px] text-[#8c817a]">원가</p><p className="text-[14px] font-semibold">{formatMenuNumber(item.unitCost)}</p></div>
+        <div><p className="text-[10px] text-[#8c817a]">원가율</p><p className="text-[14px] font-semibold text-[#6f4a32]">{getFoodCostRate(item.price, item.unitCost).toFixed(1)}%</p></div>
       </div>
     </div>
   );
@@ -627,6 +315,17 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const [newMenuName, setNewMenuName] = useState("");
   const [newMenuPrice, setNewMenuPrice] = useState("");
   const [newMenuUnitCost, setNewMenuUnitCost] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategoryName, setActiveCategoryName] = useState("전체");
+  const [editTarget, setEditTarget] = useState<{
+    categoryIndex: number;
+    itemIndex: number;
+    itemId: string;
+    categoryName: string;
+  } | null>(null);
+  const [editMenuName, setEditMenuName] = useState("");
+  const [editMenuPrice, setEditMenuPrice] = useState("");
+  const [editMenuUnitCost, setEditMenuUnitCost] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<{
     categoryIndex: number;
@@ -775,37 +474,87 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     return false;
   }, [draftCategories]);
 
-  const updateItemField = (
+  const openEditMenu = (
     categoryIndex: number,
     itemIndex: number,
-    field: "name" | "price" | "unitCost",
-    value: string
+    item: any,
+    categoryName: string
   ) => {
-    const next = draftCategories.map((category, cIdx) => {
-      if (cIdx !== categoryIndex) return category;
-
-      return {
-        ...category,
-        items: category.items.map((item, iIdx) => {
-          if (iIdx !== itemIndex) return item;
-
-          if (field === "name") {
-            return {
-              ...item,
-              name: value,
-            };
-          }
-
-          return {
-            ...item,
-            [field]: toNumber(value),
-          };
-        }),
-      };
-    });
-
-    setDraftCategories(next);
+    setEditTarget({ categoryIndex, itemIndex, itemId: item.id, categoryName });
+    setEditMenuName(normalizeNameValue(item.name));
+    setEditMenuPrice(String(normalizeNumber(item.price)));
+    setEditMenuUnitCost(String(normalizeNumber(item.unitCost)));
   };
+
+  const closeEditMenu = () => {
+    setEditTarget(null);
+    setEditMenuName("");
+    setEditMenuPrice("");
+    setEditMenuUnitCost("");
+  };
+
+  const handleApplyEdit = () => {
+    if (!editTarget) return;
+
+    const normalizedName = normalizeNameValue(editMenuName);
+    if (!normalizedName) {
+      notify("메뉴명을 비워둘 수 없습니다.");
+      return;
+    }
+
+    const duplicated = draftCategories.some((category) =>
+      category.items.some(
+        (item) =>
+          item.id !== editTarget.itemId &&
+          normalizeNameValue(item.name).toLowerCase() === normalizedName.toLowerCase()
+      )
+    );
+
+    if (duplicated) {
+      notify("같은 이름의 메뉴가 이미 있습니다.");
+      return;
+    }
+
+    setDraftCategories((currentCategories) =>
+      currentCategories.map((category, categoryIndex) => {
+        if (categoryIndex !== editTarget.categoryIndex) return category;
+        return {
+          ...category,
+          items: category.items.map((item, itemIndex) =>
+            itemIndex === editTarget.itemIndex
+              ? {
+                  ...item,
+                  name: normalizedName,
+                  price: toNumber(editMenuPrice),
+                  unitCost: toNumber(editMenuUnitCost),
+                }
+              : item
+          ),
+        };
+      })
+    );
+    closeEditMenu();
+  };
+
+  const filteredCategories = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return draftCategories
+      .filter(
+        (category) => activeCategoryName === "전체" || category.name === activeCategoryName
+      )
+      .map((category, categoryIndex) => ({
+        category,
+        categoryIndex,
+        items: category.items
+          .map((item, itemIndex) => ({ item, itemIndex }))
+          .filter(({ item }) => {
+            if (!normalizedQuery) return true;
+            return `${item.name} ${category.name}`.toLowerCase().includes(normalizedQuery);
+          }),
+      }))
+      .filter(({ items }) => items.length > 0);
+  }, [activeCategoryName, draftCategories, searchQuery]);
 
   const handleCategoryDragStart = (categoryIndex: number, event: DragStartEvent) => {
     const activeId = String(event.active.id);
@@ -1019,100 +768,86 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   return (
     <>
-      <section className="mx-auto max-w-[430px] space-y-4 pb-36">
-        <div className="rounded-[18px] border border-[#e8e1db] bg-white p-4 shadow-[0_4px_14px_rgba(70,54,42,0.04)]">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-[18px] font-semibold tracking-[-0.04em] text-[#1f1f1f] md:text-2xl">메뉴 관리</h2>
-              <p className="mt-0.5 text-[12px] font-medium text-slate-500 md:text-sm">
-                선택 날짜 기준으로 메뉴명 / 가격 / 원가를 수정합니다.
-              </p>
-              <p className="mt-0.5 text-[12px] font-medium text-slate-700 md:text-sm">
-                Effective Date: {selectedDate}
-              </p>
-              <p className="mt-0.5 text-[12px] font-medium text-amber-600 md:text-xs">
-                선택한 날짜부터 이 가격이 적용됩니다.
-              </p>
-              <p className="mt-1 hidden text-xs font-semibold text-indigo-600 md:block">
-                모바일에서는 손잡이 버튼을 길게 누른 뒤 끌어서 순서를 바꾸세요.
-              </p>
-              {hasDuplicateNames && (
-                <p className="mt-1 text-[12px] font-bold text-rose-600 md:text-xs">
-                  중복 메뉴명이 있습니다. 저장 전에 수정해 주세요.
-                </p>
-              )}
+      <section className="mx-auto max-w-[430px] space-y-3.5 pb-40">
+        <div className="rounded-[16px] border border-[#e7ded7] bg-white p-4 shadow-[0_3px_12px_rgba(70,54,42,0.045)]">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f8eee6] text-[#875333]">
+              <i className="fa-solid fa-utensils text-[20px]" aria-hidden="true" />
             </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setShowAddMenuModal(true)}
-                disabled={actionSaving}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#8b6f5b] bg-[#8b6f5b] px-3 text-[12px] font-semibold text-white shadow-[0_5px_12px_rgba(111,64,39,0.14)] hover:bg-[#745846] disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:px-4 md:text-sm"
-              >
-                + 새 메뉴 만들기
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                disabled={
-                  saving ||
-                  actionSaving ||
-                  hasDuplicateNames ||
-                  (!uiOrderChanged && uiDirtyCount === 0)
-                }
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#302722] px-3 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 md:h-11 md:px-4 md:text-sm"
-              >
-                {saving || actionSaving
-                  ? "Saving..."
-                  : `변경사항 저장${uiDirtyCount > 0 ? ` (${uiDirtyCount})` : uiOrderChanged ? " (순서)" : ""}`}
-              </button>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[16px] font-semibold tracking-[-0.03em] text-[#6f4027]">Menu Management</h2>
+              <p className="mt-1 text-[11px] text-[#504842]">메뉴 {menuCount}개를 관리하고 있습니다.</p>
+              <p className="mt-0.5 text-[9px] font-medium text-[#978980]">적용일 {selectedDate} · 카테고리 {categoryCount}개</p>
             </div>
+            <strong className="shrink-0 text-[28px] font-semibold tracking-[-0.05em] text-[#8b5e3c]">
+              {menuCount}<span className="ml-0.5 text-[11px] font-medium">개</span>
+            </strong>
           </div>
-          <div className="mt-4 flex items-center gap-2 border-t border-[#eee8e3] pt-3 text-[11px] text-[#746a63]">
-            <span className="rounded-full bg-[#f7efe9] px-2.5 py-1 font-semibold text-[#76503a]">메뉴 {menuCount}개</span>
-            <span className="rounded-full bg-[#faf8f6] px-2.5 py-1 font-medium">카테고리 {categoryCount}개</span>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAddMenuModal(true)}
+            disabled={actionSaving}
+            className="mt-3.5 inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-[#8b5e3c] text-[13px] font-semibold text-white shadow-[0_4px_10px_rgba(111,64,39,0.14)] hover:bg-[#74472d] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="mr-2 text-[18px] font-light">＋</span> 메뉴 추가
+          </button>
+
+          {hasDuplicateNames && (
+            <p className="mt-2 text-[10px] font-semibold text-[#d75048]">중복 메뉴명이 있습니다. 저장 전에 수정해 주세요.</p>
+          )}
         </div>
 
-        {draftCategories.map((category, categoryIndex) => (
-          <div
-            key={category.name}
-            className="overflow-hidden rounded-[18px] border border-[#e8e1db] bg-white shadow-[0_4px_14px_rgba(70,54,42,0.035)]"
-          >
-            <div className="flex items-center justify-between border-b border-[#eee8e3] bg-[#fdfaf8] px-4 py-3">
-              <h3 className="text-[15px] font-semibold tracking-[-0.03em] text-[#302722]">{category.name}</h3>
-              <span className="rounded-full bg-[#f5eee7] px-2.5 py-1 text-[10px] font-semibold text-[#765943]">
-                {category.items.length}개
-              </span>
-            </div>
+        <label className="relative block">
+          <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] text-[#8c7e75]" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="메뉴명, 카테고리 검색"
+            className="h-11 w-full rounded-full border border-[#ded4cc] bg-white pl-10 pr-4 text-[12px] text-[#29231f] outline-none placeholder:text-[#a99f98] focus:border-[#8b5e3c]"
+          />
+        </label>
 
-            <div className="hidden grid-cols-12 gap-2 border-b pb-2 text-xs font-bold text-slate-500 md:grid">
-              <div className="col-span-2">메뉴명</div>
-              <div className="col-span-2">순서</div>
-              <div className="col-span-2">Price</div>
-              <div className="col-span-2">Unit Cost</div>
-              <div className="col-span-1">상태</div>
-              <div className="col-span-1">History</div>
-              <div className="col-span-2">Delete</div>
-            </div>
-
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={(event) => handleCategoryDragStart(categoryIndex, event)}
-              onDragEnd={(event) => handleCategoryDragEnd(categoryIndex, event)}
-              onDragCancel={handleCategoryDragCancel}
-            >
-              <SortableContext
-                items={category.items.map((item) => item.id)}
-                strategy={verticalListSortingStrategy}
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {["전체", ...draftCategories.map((category) => category.name)].map((name) => {
+            const active = activeCategoryName === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setActiveCategoryName(name)}
+                className={`h-8 shrink-0 rounded-full border px-3.5 text-[11px] font-medium transition-colors ${
+                  active
+                    ? "border-[#8b5e3c] bg-[#8b5e3c] text-white"
+                    : "border-[#e2d9d2] bg-white text-[#5f554f]"
+                }`}
               >
-                <div className="space-y-2 p-3">
-                  {category.items.map((item, itemIndex) => {
-                    const originalItem = originalItemMap.get(item.id);
+                {name}
+              </button>
+            );
+          })}
+        </div>
 
+        <div className="space-y-3">
+          {filteredCategories.map(({ category, categoryIndex, items }) => (
+            <div key={category.name}>
+              <div className="mb-2 flex items-center justify-between px-0.5">
+                <h3 className="text-[12px] font-semibold text-[#3b312b]">{category.name}</h3>
+                <span className="text-[9px] font-medium text-[#998c84]">{items.length}개</span>
+              </div>
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={(event) => handleCategoryDragStart(categoryIndex, event)}
+                onDragEnd={(event) => handleCategoryDragEnd(categoryIndex, event)}
+                onDragCancel={handleCategoryDragCancel}
+              >
+                <SortableContext items={category.items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                  {items.map(({ item, itemIndex }) => {
+                    const originalItem = originalItemMap.get(item.id);
                     const changed =
                       !isDateSwitching && originalItem
                         ? !isSameName(item.name, originalItem.name) ||
@@ -1124,43 +859,39 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       <SortableMenuItem
                         key={item.id}
                         item={item}
+                        categoryName={category.name}
                         categoryIndex={categoryIndex}
                         itemIndex={itemIndex}
                         changed={changed}
                         actionSaving={actionSaving}
-                        onUpdateItemField={updateItemField}
-                        onOpenHistory={handleOpenHistory}
-                        onDelete={() =>
-                          setDeleteTarget({
-                            categoryIndex,
-                            itemIndex,
-                            itemId: item.id,
-                            itemName: item.name,
-                          })
-                        }
+                        onEdit={() => openEditMenu(categoryIndex, itemIndex, item, category.name)}
                       />
                     );
                   })}
-                </div>
-              </SortableContext>
+                  </div>
+                </SortableContext>
 
-              <DragOverlay dropAnimation={null}>
-                {activeDragItem ? <DragPreviewCard item={activeDragItem} /> : null}
-              </DragOverlay>
-            </DndContext>
-          </div>
-        ))}
+                <DragOverlay dropAnimation={null}>
+                  {activeDragItem ? <DragPreviewCard item={activeDragItem} /> : null}
+                </DragOverlay>
+              </DndContext>
+            </div>
+          ))}
 
-        <div className="fixed bottom-[76px] left-0 right-0 z-20 mx-auto w-full max-w-6xl px-3 md:bottom-[96px] md:px-4">
-          <div className="rounded-[18px] border border-[#e8e1db] bg-white/96 p-2 shadow-[0_10px_26px_rgba(70,54,42,0.12)] backdrop-blur">
+          {filteredCategories.length === 0 && (
+            <div className="rounded-[14px] border border-[#e7dfd8] bg-white px-4 py-10 text-center">
+              <p className="text-[12px] font-semibold text-[#5d514a]">검색 결과가 없습니다.</p>
+              <p className="mt-1 text-[10px] text-[#958981]">다른 메뉴명이나 카테고리를 검색해 보세요.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-0 right-0 z-[10000] mx-auto w-full max-w-[430px] px-3">
+          <div className="rounded-[14px] border border-[#e2d8d0] bg-white/96 p-2 shadow-[0_8px_20px_rgba(70,54,42,0.11)] backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="truncate text-[11px] font-bold text-slate-900 md:text-sm">
-                  메뉴 가격 설정
-                </div>
-                <div className="text-[10px] leading-tight text-slate-500 md:text-xs">
-                  변경된 메뉴 수: {uiDirtyCount} / Effective Date: {selectedDate}
-                </div>
+                <div className="truncate text-[11px] font-semibold text-[#302722]">메뉴 변경사항</div>
+                <div className="text-[9px] leading-tight text-[#887b73]">변경 {uiDirtyCount}개{uiOrderChanged ? " · 순서 변경" : ""} · 적용일 {selectedDate}</div>
               </div>
 
               <button
@@ -1172,14 +903,117 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   hasDuplicateNames ||
                   (!uiOrderChanged && uiDirtyCount === 0)
                 }
-                className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#8b6f5b] px-3 text-[12px] font-semibold text-white shadow-[0_5px_12px_rgba(111,64,39,0.14)] disabled:cursor-not-allowed disabled:opacity-50 md:px-4 md:text-sm"
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-[9px] bg-[#8b5e3c] px-4 text-[12px] font-semibold text-white shadow-[0_4px_10px_rgba(111,64,39,0.14)] disabled:cursor-not-allowed disabled:bg-[#d8d1cc] disabled:shadow-none"
               >
-                {saving || actionSaving ? "Saving..." : "변경사항 저장"}
+                {saving || actionSaving ? "저장 중..." : "저장하기"}
               </button>
             </div>
           </div>
         </div>
       </section>
+
+      {editTarget && (
+        <div
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
+          onClick={closeEditMenu}
+        >
+          <div
+            className="flex w-full max-w-[410px] max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[18px] border border-[#e5dcd5] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-[#eee7e1] px-4 py-3.5">
+              <h3 className="text-[16px] font-semibold tracking-[-0.03em] text-[#211c19]">메뉴 수정</h3>
+              <p className="mt-0.5 text-[9px] text-[#91857d]">적용일 {selectedDate}</p>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-4 py-4">
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">메뉴명</label>
+                <input
+                  type="text"
+                  value={editMenuName}
+                  onChange={(event) => setEditMenuName(event.target.value)}
+                  className="h-11 w-full rounded-[10px] border border-[#dfd6cf] px-3 text-[13px] outline-none focus:border-[#8b5e3c]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">카테고리</label>
+                <div className="flex h-11 items-center rounded-[10px] border border-[#e7dfd8] bg-[#faf8f6] px-3 text-[13px] text-[#6e625b]">
+                  {editTarget.categoryName}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">판매가</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editMenuPrice}
+                    onChange={(event) => setEditMenuPrice(event.target.value)}
+                    className="h-11 w-full rounded-[10px] border border-[#dfd6cf] px-3 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">원가</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editMenuUnitCost}
+                    onChange={(event) => setEditMenuUnitCost(event.target.value)}
+                    className="h-11 w-full rounded-[10px] border border-[#dfd6cf] px-3 text-right text-[13px] outline-none focus:border-[#8b5e3c]"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-[10px] border border-[#e8dfd8] bg-[#faf7f4] px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-[#756961]">원가율 (자동 계산)</span>
+                  <strong className="text-[14px] font-semibold text-[#6f4a32]">
+                    {getFoodCostRate(editMenuPrice, editMenuUnitCost).toFixed(1)}%
+                  </strong>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleOpenHistory(editTarget.itemId, editMenuName)}
+                className="inline-flex h-9 w-full items-center justify-between rounded-[9px] border border-[#e4dbd4] px-3 text-[11px] font-medium text-[#6f4a32]"
+              >
+                가격 변경 이력 <span>›</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-[0.9fr_1.1fr] gap-2 border-t border-[#eee7e1] px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget({
+                    categoryIndex: editTarget.categoryIndex,
+                    itemIndex: editTarget.itemIndex,
+                    itemId: editTarget.itemId,
+                    itemName: editMenuName,
+                  });
+                  closeEditMenu();
+                }}
+                disabled={actionSaving}
+                className="h-10 rounded-[9px] border border-[#efcfc9] text-[12px] font-semibold text-[#d83c35] disabled:opacity-50"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyEdit}
+                disabled={actionSaving}
+                className="h-10 rounded-[9px] bg-[#8b5e3c] text-[12px] font-semibold text-white shadow-[0_4px_10px_rgba(111,64,39,0.14)] disabled:opacity-50"
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddMenuModal && (
         <div
@@ -1191,21 +1025,13 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
-              <h3 className="text-lg font-black text-indigo-900">새 메뉴 추가</h3>
-              <p className="mt-1 text-sm text-indigo-700">
-                새 메뉴를 생성한 뒤 목록에 바로 반영합니다.
-              </p>
+              <h3 className="text-[16px] font-semibold text-[#211c19]">메뉴 추가</h3>
+              <p className="mt-1 text-[10px] text-[#8c817a]">적용일 {selectedDate} 기준으로 새 메뉴를 등록합니다.</p>
             </div>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3">
-                <p className="text-xs font-bold text-indigo-700">
-                  메뉴 생성 후 초기 가격 / 원가도 함께 저장합니다.
-                </p>
-              </div>
-
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">카테고리</label>
+                <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">카테고리</label>
                 <select
                   value={newMenuCategoryName}
                   onChange={(e) => setNewMenuCategoryName(e.target.value)}
@@ -1221,7 +1047,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">메뉴명</label>
+                <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">메뉴명</label>
                 <input
                   type="text"
                   value={newMenuName}
@@ -1233,7 +1059,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-[#766b64]">판매가</label>
+                  <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">판매가</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1245,7 +1071,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-[#766b64]">원가</label>
+                  <label className="mb-1 block text-[10px] font-semibold text-[#5e534c]">원가</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1254,6 +1080,15 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                     className="h-11 w-full rounded-[10px] border border-[#e5ddd7] bg-white px-3 text-sm outline-none focus:border-[#8b5e3c]"
                     placeholder="0"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-[10px] border border-[#e8dfd8] bg-[#faf7f4] px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-[#756961]">원가율 (자동 계산)</span>
+                  <strong className="text-[14px] font-semibold text-[#6f4a32]">
+                    {getFoodCostRate(newMenuPrice, newMenuUnitCost).toFixed(1)}%
+                  </strong>
                 </div>
               </div>
             </div>
@@ -1270,9 +1105,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 type="button"
                 onClick={handleAddMenu}
                 disabled={actionSaving}
-                className="rounded-xl bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[9px] bg-[#8b5e3c] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#74472d] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {actionSaving ? "처리 중..." : "확인"}
+                {actionSaving ? "처리 중..." : "추가"}
               </button>
             </div>
           </div>
@@ -1293,8 +1128,12 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-              <p className="text-sm text-slate-700">
-                <span className="font-bold">{deleteTarget.itemName}</span> 메뉴를 삭제하시겠습니까?
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fff0ed] text-[20px] text-[#d83c35]">
+                <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
+              </div>
+              <p className="mt-3 text-center text-[15px] font-semibold text-[#211c19]">메뉴를 삭제하시겠습니까?</p>
+              <p className="mt-2 text-center text-[11px] leading-5 text-[#786c65]">
+                <span className="font-semibold text-[#3d342f]">{deleteTarget.itemName}</span> 메뉴를 삭제하면<br />Sales 입력에서 선택할 수 없습니다.
               </p>
             </div>
 
@@ -1310,7 +1149,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 type="button"
                 onClick={handleDeleteMenu}
                 disabled={actionSaving}
-                className="rounded-xl bg-rose-600 px-5 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[9px] bg-[#df3832] px-5 py-2 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {actionSaving ? "처리 중..." : "삭제"}
               </button>
@@ -1445,8 +1284,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
-              <h3 className="text-lg font-black text-slate-900">{historyMenuName} 가격 변경 로그</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <h3 className="text-[16px] font-semibold text-[#211c19]">{historyMenuName} 가격 변경 이력</h3>
+              <p className="mt-1 text-[10px] text-[#8c817a]">
                 가격이 실제로 적용되는 기간 기준으로 표시합니다.
               </p>
             </div>
@@ -1459,9 +1298,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b">
-                        <th className="px-4 py-3 text-left font-black text-slate-500">변경 시각</th>
-                        <th className="px-4 py-3 text-right font-black text-slate-500">Price</th>
-                        <th className="px-4 py-3 text-right font-black text-slate-500">Unit Cost</th>
+                        <th className="px-4 py-3 text-left text-[10px] font-semibold text-[#796d66]">변경 시각</th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold text-[#796d66]">판매가</th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold text-[#796d66]">원가</th>
                       </tr>
                     </thead>
                     <tbody>
