@@ -105,7 +105,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const [reportScopeKey, setReportScopeKey] = useState("");
   const [reportError, setReportError] = useState("");
   const [persistedOperatingStatus, setPersistedOperatingStatus] = useState<"generating" | "completed" | "failed" | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [operatingLoadingScopeKey, setOperatingLoadingScopeKey] = useState("");
   const insightSectionRef = useRef<HTMLElement>(null);
   const reportActionRef = useRef<HTMLButtonElement>(null);
 
@@ -113,12 +113,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const [menuEngineeringResultScopeKey, setMenuEngineeringResultScopeKey] = useState("");
   const [menuEngineeringAiResult, setMenuEngineeringAiResult] = useState<AiMenuEngineeringResult | null>(null);
   const [menuEngineeringAiScopeKey, setMenuEngineeringAiScopeKey] = useState("");
-  const [menuEngineeringAiLoading, setMenuEngineeringAiLoading] = useState(false);
+  const [menuEngineeringAiLoadingScopeKey, setMenuEngineeringAiLoadingScopeKey] = useState("");
   const [menuEngineeringAiError, setMenuEngineeringAiError] = useState("");
   const [menuEngineeringAiStatus, setMenuEngineeringAiStatus] = useState<"generating" | "completed" | "failed" | null>(null);
   const [boostPlanAiResult, setBoostPlanAiResult] = useState<AiBoostPlan | null>(null);
   const [boostPlanAiScopeKey, setBoostPlanAiScopeKey] = useState("");
-  const [boostPlanAiLoading, setBoostPlanAiLoading] = useState(false);
+  const [boostPlanAiLoadingScopeKey, setBoostPlanAiLoadingScopeKey] = useState("");
   const [boostPlanAiError, setBoostPlanAiError] = useState("");
   const [boostPlanAiStatus, setBoostPlanAiStatus] = useState<"generating" | "completed" | "failed" | null>(null);
 
@@ -141,6 +141,31 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const reportScope = (reportType: "operating_coaching" | "menu_engineering" | "boost_plan") => ({
     storeId, reportType, periodStart: periodRange.start, periodEnd: periodRange.end,
   });
+  const scopeKey = (scope: ReturnType<typeof reportScope>) => `${scope.storeId}:${scope.reportType}:${scope.periodStart}:${scope.periodEnd}`;
+  const activeScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
+  const activeScopeRef = useRef(activeScopeKey);
+  activeScopeRef.current = activeScopeKey;
+  const isActiveScope = (scope: ReturnType<typeof reportScope>) =>
+    activeScopeRef.current === `${scope.storeId}:${scope.periodStart}:${scope.periodEnd}`;
+  const operatingLoading = operatingLoadingScopeKey === scopeKey(reportScope("operating_coaching"));
+  const menuEngineeringAiLoading = menuEngineeringAiLoadingScopeKey === scopeKey(reportScope("menu_engineering"));
+  const boostPlanAiLoading = boostPlanAiLoadingScopeKey === scopeKey(reportScope("boost_plan"));
+
+  useEffect(() => {
+    setReport("");
+    setReportDate("");
+    setReportScopeKey("");
+    setReportError("");
+    setPersistedOperatingStatus(null);
+    setMenuEngineeringAiResult(null);
+    setMenuEngineeringAiScopeKey("");
+    setMenuEngineeringAiError("");
+    setMenuEngineeringAiStatus(null);
+    setBoostPlanAiResult(null);
+    setBoostPlanAiScopeKey("");
+    setBoostPlanAiError("");
+    setBoostPlanAiStatus(null);
+  }, [activeScopeKey]);
 
   useEffect(() => {
     let active = true;
@@ -289,6 +314,9 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   }, [data]);
 
   const handleGenerateReport = async () => {
+    const requestScope = reportScope("operating_coaching");
+    const requestScopeKey = scopeKey(requestScope);
+    const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
     const currentSales = Number(currentPeriodStats?.sales || 0);
     const currentOrders = Number(currentPeriodStats?.orders || 0);
     const currentVisitors = Number(currentPeriodStats?.visitors || 0);
@@ -306,10 +334,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       return;
     }
 
-    setLoading(true);
-    setReportError("");
-    setPersistedOperatingStatus("generating");
-    void saveCoachReport({ ...reportScope("operating_coaching"), periodPreset: v4Period, status: "generating", result: null });
+    setOperatingLoadingScopeKey(requestScopeKey);
+    if (isActiveScope(requestScope)) {
+      setReportError("");
+      setPersistedOperatingStatus("generating");
+    }
+    void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "generating", result: null });
     try {
       const reportData: SalesReportData = {
         ...data,
@@ -348,23 +378,27 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
           topMenus,
         },
       });
-      setReport(result);
-      setReportDate(periodRange.end);
-      setReportScopeKey(`${storeId}:${periodRange.start}:${periodRange.end}`);
-      setPersistedOperatingStatus("completed");
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setReport(result);
+        setReportDate(requestScope.periodEnd);
+        setReportScopeKey(requestActiveScopeKey);
+        setPersistedOperatingStatus("completed");
+      }
       void saveCoachReport({
-        ...reportScope("operating_coaching"), periodPreset: v4Period, status: "completed", result,
+        ...requestScope, periodPreset: v4Period, status: "completed", result,
         inputSnapshot: { current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors }, comparison: comparisonRange },
       });
       showToast("코칭 리포트 생성 완료");
     } catch (error) {
       console.error("DetailPage generate report error:", error);
-      setReportError("AI 코칭 리포트를 생성하지 못했습니다.");
-      setPersistedOperatingStatus("failed");
-      void saveCoachReport({ ...reportScope("operating_coaching"), periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setReportError("AI 코칭 리포트를 생성하지 못했습니다.");
+        setPersistedOperatingStatus("failed");
+      }
+      void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
       showToast("코칭 리포트 생성 중 오류가 발생했습니다.");
     } finally {
-      setLoading(false);
+      setOperatingLoadingScopeKey((current) => current === requestScopeKey ? "" : current);
     }
   };
 
@@ -734,6 +768,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   }, [menuEngineeringResult, sortedMenuEngineering, data.categories]);
 
   const loadDeterministicMenuEngineering = async () => {
+    const requestActiveScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
     const demoRows: CoachDemoDailyRow[] = isCoachDemoFixtureEnabled(userEmail)
       ? getCoachDemoRows(periodRange.start, periodRange.end, data.categories)
       : [];
@@ -742,8 +777,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       storeId,
       demoRows,
     });
-    setMenuEngineeringResult(result);
-    setMenuEngineeringResultScopeKey(`${storeId}:${periodRange.start}:${periodRange.end}`);
+    if (activeScopeRef.current === requestActiveScopeKey) {
+      setMenuEngineeringResult(result);
+      setMenuEngineeringResultScopeKey(requestActiveScopeKey);
+    }
     return result;
   };
 
@@ -752,8 +789,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     setMenuEngineeringResult(null);
     setMenuEngineeringResultScopeKey("");
     const loadEngineering = async () => {
-      const result = await loadDeterministicMenuEngineering();
-      if (active) setMenuEngineeringResult(result);
+      await loadDeterministicMenuEngineering();
     };
     void loadEngineering();
     return () => { active = false; };
@@ -764,14 +800,19 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const deterministicMenuEngineeringScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
 
   const handleGenerateAiBoostPlan = async () => {
-    if (boostPlanAiLoading) return;
+    const requestScope = reportScope("boost_plan");
+    const requestScopeKey = scopeKey(requestScope);
+    const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
+    if (boostPlanAiLoadingScopeKey === requestScopeKey) return;
 
     const deterministicMenuEngineering = menuEngineeringResult?.items.length && menuEngineeringResultScopeKey === deterministicMenuEngineeringScopeKey
       ? menuEngineeringResult
       : await loadDeterministicMenuEngineering();
     if (!deterministicMenuEngineering?.items.length) {
-      setBoostPlanAiError("선택한 기간에 부스트 플랜을 만들 메뉴 성과 데이터가 없습니다.");
-      setBoostPlanAiStatus("failed");
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setBoostPlanAiError("선택한 기간에 부스트 플랜을 만들 메뉴 성과 데이터가 없습니다.");
+        setBoostPlanAiStatus("failed");
+      }
       return;
     }
     const deterministicCandidates = menuEngineeringResult === deterministicMenuEngineering && boostPlans.length > 0
@@ -803,10 +844,12 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       Stars: "STAR", "Cash Cows": "CASH_COW", Puzzles: "PUZZLE", Dogs: "DOG",
     };
 
-    setBoostPlanAiLoading(true);
-    setBoostPlanAiError("");
-    setBoostPlanAiStatus("generating");
-    void saveCoachReport({ ...reportScope("boost_plan"), periodPreset: v4Period, status: "generating", result: null });
+    setBoostPlanAiLoadingScopeKey(requestScopeKey);
+    if (activeScopeRef.current === requestActiveScopeKey) {
+      setBoostPlanAiError("");
+      setBoostPlanAiStatus("generating");
+    }
+    void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "generating", result: null });
     try {
       const result = await generateAiBoostPlan({
         store: { storeId, brand: data.brand, country: data.country, currency: getCurrencyByCountry(data.country || "") },
@@ -838,17 +881,21 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
         aiMenuEngineering: isCurrentMenuEngineeringAiResult ? menuEngineeringAiResult : null,
         deterministicCandidates,
       });
-      setBoostPlanAiResult(result);
-      setBoostPlanAiScopeKey(boostPlanScopeKey);
-      setBoostPlanAiStatus("completed");
-      void saveCoachReport({ ...reportScope("boost_plan"), periodPreset: v4Period, status: "completed", result });
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setBoostPlanAiResult(result);
+        setBoostPlanAiScopeKey(requestActiveScopeKey);
+        setBoostPlanAiStatus("completed");
+      }
+      void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "completed", result });
     } catch (error) {
       console.error("DetailPage AI Boost Plan error:", error);
-      setBoostPlanAiStatus("failed");
-      setBoostPlanAiError("AI 부스트 플랜을 생성하지 못했습니다.");
-      void saveCoachReport({ ...reportScope("boost_plan"), periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setBoostPlanAiStatus("failed");
+        setBoostPlanAiError("AI 부스트 플랜을 생성하지 못했습니다.");
+      }
+      void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
     } finally {
-      setBoostPlanAiLoading(false);
+      setBoostPlanAiLoadingScopeKey((current) => current === requestScopeKey ? "" : current);
     }
   };
 
@@ -897,21 +944,28 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     menuEngineeringAiScopeKey === menuEngineeringScopeKey && !!menuEngineeringAiResult;
 
   const handleGenerateMenuEngineeringAi = async () => {
-    if (menuEngineeringAiLoading) return;
+    const requestScope = reportScope("menu_engineering");
+    const requestScopeKey = scopeKey(requestScope);
+    const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
+    if (menuEngineeringAiLoadingScopeKey === requestScopeKey) return;
 
     const deterministicMenuEngineering = menuEngineeringResult?.items.length && menuEngineeringResultScopeKey === deterministicMenuEngineeringScopeKey
       ? menuEngineeringResult
       : await loadDeterministicMenuEngineering();
     if (!deterministicMenuEngineering?.items.length) {
-      setMenuEngineeringAiError("선택한 기간에 AI 메뉴 분석을 만들 메뉴 성과 데이터가 없습니다.");
-      setMenuEngineeringAiStatus("failed");
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setMenuEngineeringAiError("선택한 기간에 AI 메뉴 분석을 만들 메뉴 성과 데이터가 없습니다.");
+        setMenuEngineeringAiStatus("failed");
+      }
       return;
     }
 
-    setMenuEngineeringAiLoading(true);
-    setMenuEngineeringAiError("");
-    setMenuEngineeringAiStatus("generating");
-    void saveCoachReport({ ...reportScope("menu_engineering"), periodPreset: v4Period, status: "generating", result: null });
+    setMenuEngineeringAiLoadingScopeKey(requestScopeKey);
+    if (activeScopeRef.current === requestActiveScopeKey) {
+      setMenuEngineeringAiError("");
+      setMenuEngineeringAiStatus("generating");
+    }
+    void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "generating", result: null });
     try {
       const classificationMap: Record<string, "STAR" | "CASH_COW" | "PUZZLE" | "DOG"> = {
         Stars: "STAR",
@@ -951,17 +1005,19 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
           profitability: item.profitability,
         })),
       });
-      setMenuEngineeringAiResult(result);
-      setMenuEngineeringAiScopeKey(menuEngineeringScopeKey);
-      setMenuEngineeringAiStatus("completed");
-      void saveCoachReport({ ...reportScope("menu_engineering"), periodPreset: v4Period, status: "completed", result });
+      if (activeScopeRef.current === requestActiveScopeKey) {
+        setMenuEngineeringAiResult(result);
+        setMenuEngineeringAiScopeKey(requestActiveScopeKey);
+        setMenuEngineeringAiStatus("completed");
+      }
+      void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "completed", result });
     } catch (error) {
       console.error("DetailPage Menu Engineering AI error:", error);
-      setMenuEngineeringAiStatus("failed");
-      setMenuEngineeringAiError("AI 메뉴 분석을 생성하지 못했습니다.");
-      void saveCoachReport({ ...reportScope("menu_engineering"), periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
+      if (activeScopeRef.current === requestActiveScopeKey) setMenuEngineeringAiStatus("failed");
+      if (activeScopeRef.current === requestActiveScopeKey) setMenuEngineeringAiError("AI 메뉴 분석을 생성하지 못했습니다.");
+      void saveCoachReport({ ...requestScope, periodPreset: v4Period, status: "failed", result: null, errorMessage: String((error as Error)?.message || error) });
     } finally {
-      setMenuEngineeringAiLoading(false);
+      setMenuEngineeringAiLoadingScopeKey((current) => current === requestScopeKey ? "" : current);
     }
   };
 
@@ -977,7 +1033,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       data={data}
       storeId={storeId}
       selectedDate={selectedDate}
-      loading={loading}
+      loading={operatingLoading}
       reportStatus={persistedOperatingStatus}
       report={report}
       reportScopeKey={reportScopeKey}
@@ -1108,10 +1164,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
                 ref={reportActionRef}
                 type="button"
                 onClick={handleGenerateReport}
-                disabled={loading}
+                disabled={operatingLoading}
                 className="group relative inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#7c6cf6] px-6 text-[13px] font-semibold text-white shadow-[0_6px_14px_rgba(124,108,246,0.22)] transition hover:bg-[#6958db] disabled:bg-[#ccc6ec] sm:w-auto"
               >
-                {loading ? (
+                {operatingLoading ? (
                   <>
                     <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -1132,7 +1188,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
         {/* 패널 본문 (리포트 또는 Empty State) */}
         <div className="p-5 md:p-8">
-          {loading ? (
+          {operatingLoading ? (
             /* 스켈레톤 로딩 애니메이션 */
             <div className="animate-pulse space-y-6 py-4">
               <div className="h-4 w-1/4 rounded-full bg-slate-200"></div>
