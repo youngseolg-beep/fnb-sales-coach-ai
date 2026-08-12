@@ -930,7 +930,7 @@ const DailySalesPage: React.FC<Props> = ({
               <SalesV4Page
                 model={model}
                 onReset={() => setShowResetModal(true)}
-                onSave={() => void handleSave(false)}
+                onSave={() => handleSave(false)}
               />
             )}
           />

@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { CorrectedItem } from "../types";
 import type { ReceiptCurrencyValidation, ReceiptDateValidation, ReceiptStoreValidation, SalesV4InputModel } from "./DataInput";
 import { formatCurrencyValue } from "../utils2/currency";
 
-type Props = { model: SalesV4InputModel; onReset: () => void; onSave: () => void };
+type Props = { model: SalesV4InputModel; onReset: () => void; onSave: () => Promise<boolean> };
 type Validation = ReceiptDateValidation | ReceiptStoreValidation | ReceiptCurrencyValidation;
 
 const fileKey = (file: File) => `${file.name}__${file.size}__${file.lastModified}`;
@@ -12,6 +12,7 @@ const statusColor: Record<string, string> = { pending: "bg-slate-100 text-slate-
 
 const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
   const [openCategories, setOpenCategories] = useState<string[]>(() => model.data.categories.slice(0, 1).map((category) => category.name));
+  const [saveFeedback, setSaveFeedback] = useState("");
   const country = (model.data as { country?: string }).country;
   const filled = [model.data.posSales, (model.data as { deliverySales?: number }).deliverySales, model.data.orders, model.data.visitCount].filter((value) => Number(value || 0) > 0).length;
   const progress = Math.round((filled / 4) * 100);
@@ -22,42 +23,55 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
     { label: "방문객", field: "visitCount", unit: "명" },
   ];
   const failedFileCount = model.ocrFiles.filter((file) => model.ocrFileStatuses[file.name]?.status === "failed").length;
+  const validationStatus = model.salesGap === 0 ? "PASS" : "WARNING";
+
+  useEffect(() => {
+    if (!saveFeedback) return;
+    const timer = window.setTimeout(() => setSaveFeedback(""), 2600);
+    return () => window.clearTimeout(timer);
+  }, [saveFeedback]);
+
+  const handleSaveClick = async () => {
+    const saved = await onSave();
+    if (saved) setSaveFeedback(`${model.selectedDate} 매출 데이터가 저장되었습니다.`);
+  };
 
   return (
-    <main className="mx-auto w-full max-w-[430px] space-y-4 pb-36 text-[#1f1f1f]">
-      <section className="rounded-[22px] border border-[#e7dfd9] bg-white px-4 py-5 shadow-[0_3px_12px_rgba(70,54,42,0.035)] sm:px-8 sm:py-7">
-        <h2 className="text-[17px] font-bold tracking-[-0.04em]">오늘 요약</h2>
-        <div className="mt-5 grid divide-x divide-[#e7e1dd]" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+    <main className="mx-auto w-full max-w-[430px] space-y-3 pb-36 text-[#1f1f1f]">
+      {saveFeedback && <div role="status" className="fixed left-1/2 top-[76px] z-[10020] w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 rounded-[10px] border border-[#cfe7d5] bg-[#f2fbf4] px-3 py-2 text-center text-[11px] font-semibold text-[#278a4d] shadow-[0_5px_16px_rgba(39,138,77,0.10)]"><i className="fa-solid fa-circle-check mr-1.5" />{saveFeedback}</div>}
+      <section className="rounded-[14px] border border-[#e7dfd9] bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">
+        <h2 className="text-[14px] font-bold tracking-[-0.035em]">오늘 요약</h2>
+        <div className="mt-3 grid divide-x divide-[#e7e1dd]" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
           <SummaryCell label="오늘 매출" value={formatCurrencyValue(model.enteredSalesTotal, country)} />
           <SummaryCell label="주문 수" value={`${model.data.orders || 0}건`} />
           <SummaryCell label="방문객" value={`${model.data.visitCount || 0}명`} />
-          <div className="min-w-0 px-2.5 last:pr-0"><p className="text-[10px] text-[#766c66]">입력 진행률</p><b className="mt-2 block text-[16px] leading-none">{progress}%</b><div className="mt-4 h-2 w-full rounded-full bg-[#e9e4e0]"><div className="h-full rounded-full bg-[#8b5e3c]" style={{ width: `${progress}%` }} /></div></div>
+          <div className="min-w-0 px-2 last:pr-0"><p className="whitespace-nowrap text-[9px] text-[#766c66]">입력 진행률</p><b className="mt-1.5 block text-[14px] leading-none">{progress}%</b><div className="mt-2.5 h-1.5 w-full rounded-full bg-[#e9e4e0]"><div className="h-full rounded-full bg-[#8b5e3c]" style={{ width: `${progress}%` }} /></div></div>
         </div>
       </section>
 
       <div ref={model.manualSalesRef}>
-        <section className="overflow-hidden rounded-[22px] border border-[#e7dfd9] bg-white shadow-[0_3px_12px_rgba(70,54,42,0.025)]">
+        <section className="overflow-hidden rounded-[14px] border border-[#e7dfd9] bg-white shadow-[0_2px_8px_rgba(70,54,42,0.02)]">
         <SectionTitle icon="fa-calendar-day" title="기본 매출 정보" />
-        <div className="space-y-4 p-4 sm:p-8">
-          {fields.map(({ label, field, unit }) => <label key={String(field)} className="grid items-center gap-3 text-[12px] font-medium text-[#3a332e] sm:gap-8 sm:text-[16px]" style={{ gridTemplateColumns: "clamp(84px, 29%, 180px) minmax(0, 1fr)" }}><span>{label}</span><span className="relative block"><input type="number" value={Number(model.data[field]) || ""} onChange={(event) => model.updateBaseField(field, Number(event.target.value))} className="h-11 w-full rounded-[10px] border border-[#dcd7d3] px-3 pr-12 text-right text-[14px] outline-none focus:border-[#8b5e3c] sm:h-16 sm:px-5 sm:text-[17px]" placeholder="0" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#302a26] sm:right-5 sm:text-[15px]">{unit}</span></span></label>)}
-          <label className="grid items-start gap-3 text-[12px] font-medium text-[#3a332e] sm:gap-8 sm:text-[16px]" style={{ gridTemplateColumns: "clamp(84px, 29%, 180px) minmax(0, 1fr)" }}><span className="pt-3">특이사항 (선택)</span><span><textarea value={model.data.note} maxLength={100} onChange={(event) => model.updateBaseField("note", event.target.value)} className="h-24 w-full resize-none rounded-[10px] border border-[#dcd7d3] p-3 text-[13px] outline-none focus:border-[#8b5e3c] sm:h-36 sm:p-5 sm:text-[16px]" placeholder="오늘 매장 특이사항을 입력하세요." /><span className="mt-1 block text-right text-[11px] text-[#615852]">{model.data.note.length} / 100</span></span></label>
+        <div className="space-y-2.5 p-3.5">
+          {fields.map(({ label, field, unit }) => <label key={String(field)} className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-2.5 text-[11px] font-medium text-[#3a332e]"><span>{label}</span><span className="relative block"><input type="number" inputMode="decimal" value={Number(model.data[field]) || ""} onChange={(event) => model.updateBaseField(field, Number(event.target.value))} className="h-9 w-full rounded-[8px] border border-[#dcd7d3] bg-white px-3 pr-12 text-right text-[12px] outline-none focus:border-[#8b5e3c]" placeholder="0" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-[#6f6258]">{unit}</span></span></label>)}
+          <label className="grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2.5 text-[11px] font-medium text-[#3a332e]"><span className="pt-2.5">특이사항 (선택)</span><span><textarea value={model.data.note} maxLength={100} onChange={(event) => model.updateBaseField("note", event.target.value)} className="h-[74px] w-full resize-none rounded-[8px] border border-[#dcd7d3] p-2.5 text-[11px] leading-4 outline-none focus:border-[#8b5e3c]" placeholder="오늘 매장 특이사항을 입력하세요." /><span className="mt-0.5 block text-right text-[9px] text-[#8a8079]">{model.data.note.length} / 100</span></span></label>
         </div>
         </section>
       </div>
 
       <div ref={model.ocrUploadRef}>
-        <section className="overflow-hidden rounded-[22px] border border-[#e7dfd9] bg-white p-3 shadow-[0_3px_12px_rgba(70,54,42,0.035)] sm:p-5">
-        <div className="flex items-start gap-3"><span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] border border-[#eee6e0] bg-[#faf7f4] text-[22px] text-[#4d4a47] sm:h-20 sm:w-20 sm:text-[34px]"><i className="fa-regular fa-receipt" /><i className="fa-solid fa-camera absolute -bottom-1 -right-1 rounded-md bg-[#4d4a47] p-1 text-[9px] text-white" /></span><div className="min-w-0 pt-0.5"><h2 className="text-[14px] font-bold tracking-[-0.035em] sm:text-[20px]">영수증 자동입력 (OCR)</h2><p className="mt-1 text-[10px] leading-4 text-[#59514c] sm:max-w-[360px] sm:text-[13px] sm:leading-5">영수증을 스캔하거나 업로드하면 AI가 자동으로 인식하여 입력을 도와드립니다.</p><input ref={model.addInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.appendFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><input ref={model.replaceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.replaceAllFiles(Array.from(event.currentTarget.files || [])); event.currentTarget.value = ""; }} /><button type="button" onClick={() => { model.setShowOcr(true); model.addInputRef.current?.click(); }} className="mt-2 h-9 min-w-[138px] rounded-[7px] bg-[#8b5e3c] px-4 text-[11px] font-semibold text-white shadow-[0_4px_8px_rgba(108,70,44,0.14)] sm:h-10 sm:text-[12px]"><i className="fa-solid fa-camera mr-1.5" />영수증 스캔 / 업로드</button></div></div>
+        <section className="overflow-hidden rounded-[14px] border border-[#e7dfd9] bg-white p-3 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">
+        <div className="flex items-start gap-3"><span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-[#eee6e0] bg-[#faf7f4] text-[19px] text-[#6f4b36]"><i className="fa-regular fa-receipt" /><i className="fa-solid fa-camera absolute -bottom-1 -right-1 rounded-md bg-[#6f4b36] p-1 text-[8px] text-white" /></span><div className="min-w-0 flex-1"><h2 className="text-[13px] font-bold tracking-[-0.03em]">영수증 자동입력 (OCR)</h2><p className="mt-1 text-[10px] leading-4 text-[#665d57]">영수증을 스캔하거나 업로드하면 AI가 자동으로 인식하여 입력을 도와드립니다.</p><input ref={model.addInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.appendFiles(Array.from(event.currentTarget.files || [])); model.setShowOcr(true); event.currentTarget.value = ""; }} /><input ref={model.replaceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { model.replaceAllFiles(Array.from(event.currentTarget.files || [])); model.setShowOcr(true); event.currentTarget.value = ""; }} /><button type="button" onClick={() => model.addInputRef.current?.click()} className="mt-2 h-8 rounded-[7px] bg-[#8b5e3c] px-3.5 text-[10px] font-semibold text-white shadow-[0_3px_7px_rgba(108,70,44,0.12)]"><i className="fa-solid fa-camera mr-1.5" />영수증 스캔 / 업로드</button></div></div>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eee8e3] pt-2 text-[10px] text-[#625a55] sm:mt-4 sm:pt-3"><span>{model.ocrRawText ? "최근 OCR 결과를 확인할 수 있습니다." : "최근 OCR 결과가 없습니다."}</span><button type="button" onClick={() => model.setShowOcr(true)} className="h-7 shrink-0 rounded-[6px] border border-[#9a6749] px-2.5 text-[10px] font-semibold text-[#754c35]">결과 보기</button></div>
         {model.showOcr && <CompactOcrReview model={model} failedFileCount={failedFileCount} country={country} />}
         </section>
       </div>
 
-      <section className="rounded-[14px] border border-[#d6eadb] bg-white p-4"><h2 className="mb-3 text-[14px] font-semibold">매출 맞춤 확인</h2><div className="grid grid-cols-3 divide-x divide-[#dbe9df]"><ValidationCell label="입력 매출 합계" value={formatCurrencyValue(model.enteredSalesTotal, country)} /><ValidationCell label="메뉴 매출 합계" value={formatCurrencyValue(model.menuSalesTotal, country)} /><ValidationCell label="차이" value={formatCurrencyValue(model.salesGap, country)} green /></div><p className="mt-3 text-[11px] font-semibold text-[#22a55b]"><i className="fa-solid fa-circle-check mr-1" />정상 범위입니다.</p></section>
+      <section className={`rounded-[14px] border bg-white p-3.5 ${validationStatus === "PASS" ? "border-[#d6eadb]" : "border-[#eadfcf]"}`}><h2 className="mb-2.5 text-[13px] font-semibold">매출 맞춤 확인</h2><div className="grid grid-cols-3 divide-x divide-[#e5e0dc]"><ValidationCell label="입력 매출 합계" value={formatCurrencyValue(model.enteredSalesTotal, country)} /><ValidationCell label="메뉴 매출 합계" value={formatCurrencyValue(model.menuSalesTotal, country)} /><ValidationCell label="차이" value={formatCurrencyValue(model.salesGap, country)} green={validationStatus === "PASS"} /></div><p className={`mt-2.5 text-[10px] font-semibold ${validationStatus === "PASS" ? "text-[#22a55b]" : "text-[#a66a2c]"}`}><i className={`fa-solid ${validationStatus === "PASS" ? "fa-circle-check" : "fa-circle-exclamation"} mr-1`} />{validationStatus === "PASS" ? "정상 범위입니다." : "입력 매출과 메뉴 매출의 차이를 확인해 주세요."}</p></section>
 
-      <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-4 py-3"><h2 className="text-[14px] font-semibold">메뉴 판매량 입력</h2><span className="text-[10px] text-[#776b63]">모든 금액은 원 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold"><span>{category.name}</span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[10px]`} /></button>{isOpen && <div className="px-4 pb-2">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
+      <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="text-[9px] text-[#776b63]">{model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
 
-      <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[12px] border border-[#e8e1db] bg-white p-2"><button type="button" onClick={onReset} className="h-10 rounded-[7px] border border-[#b99983] text-[12px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={onSave} className="h-10 rounded-[7px] bg-[#8b5e3c] text-[12px] font-semibold text-white">저장하기</button></div></div>
+      <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[11px] border border-[#e8e1db] bg-white p-1.5 shadow-[0_3px_12px_rgba(70,54,42,0.05)]"><button type="button" onClick={onReset} className="h-9 rounded-[7px] border border-[#b99983] text-[11px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={() => void handleSaveClick()} className="h-9 rounded-[7px] bg-[#8b5e3c] text-[11px] font-semibold text-white">저장하기</button></div></div>
     </main>
   );
 };
@@ -143,11 +157,22 @@ const OcrItem: React.FC<{ item: CorrectedItem; index: number; model: SalesV4Inpu
 
 const ValidationCard: React.FC<{ title: string; value: Validation; details?: string[] }> = ({ title, value, details }) => { const palette = value.status === "PASS" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : value.status === "BLOCK" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <div className={`rounded-[8px] border p-2 text-[10px] ${palette}`}><b>{title}: {value.status}</b><span className="ml-2">{value.message}</span>{details?.map((detail) => <p key={detail} className="mt-1">{detail}</p>)}</div>; };
 
-const MenuQuantityRow: React.FC<{ item: any; categoryIndex: number; itemIndex: number; model: SalesV4InputModel; country?: string }> = ({ item, categoryIndex, itemIndex, model, country }) => { const dineIn = model.getDineInQty(item); const takeout = model.getTakeoutQty(item); if (model.isJapanPilot) return <div className="grid grid-cols-[1fr_58px_58px] items-center gap-2 border-t border-[#f3efec] py-2"><span className="min-w-0 truncate text-[12px] font-medium">{item.name}<small className="ml-1 text-[10px] text-[#8f82a9]">({formatCurrencyValue(item.price, country)})</small><small className="mt-1 block text-[9px] text-[#776b63]">합계 {dineIn + takeout}</small></span><label className="text-center text-[9px] text-sky-600">DINE-IN<input type="number" min="0" value={dineIn || ""} onChange={(event) => model.updateChannelQty(categoryIndex, itemIndex, "DINE_IN", Number(event.target.value))} className="mt-1 h-8 w-full rounded-[6px] border border-[#dfd6d0] text-center text-[12px] text-[#1f1f1f]" /></label><label className="text-center text-[9px] text-amber-600">TAKEOUT<input type="number" min="0" value={takeout || ""} onChange={(event) => model.updateChannelQty(categoryIndex, itemIndex, "TAKEOUT", Number(event.target.value))} className="mt-1 h-8 w-full rounded-[6px] border border-[#dfd6d0] text-center text-[12px] text-[#1f1f1f]" /></label></div>; const quantity = Number(item.qty || 0); return <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-[#f3efec] py-2"><span className="min-w-0 truncate text-[12px] font-medium">{item.name}<small className="ml-1 text-[10px] text-[#8f82a9]">({formatCurrencyValue(item.price, country)})</small></span><div className="flex h-8 items-center overflow-hidden rounded-[6px] border border-[#dfd6d0]"><button type="button" onClick={() => model.updateQty(categoryIndex, itemIndex, Math.max(0, quantity - 1))} className="w-8 text-[#8b5e3c]">−</button><span className="w-8 text-center text-[12px]">{quantity}</span><button type="button" onClick={() => model.updateQty(categoryIndex, itemIndex, quantity + 1)} className="w-8 text-[#8b5e3c]">＋</button></div></div>; };
+const MenuQuantityRow: React.FC<{ item: any; categoryIndex: number; itemIndex: number; model: SalesV4InputModel; country?: string }> = ({ item, categoryIndex, itemIndex, model, country }) => {
+  const dineIn = model.getDineInQty(item);
+  const takeout = model.getTakeoutQty(item);
+  if (model.isJapanPilot) return <div className="border-t border-[#f3efec] py-1.5">
+    <div className="flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{item.name}</span><span className="shrink-0 text-[9px] text-[#8a8079]">{formatCurrencyValue(item.price, country)}</span></div>
+    <div className="mt-1 grid grid-cols-[1fr_1fr_auto] items-end gap-1.5"><ChannelInput label="DINE-IN" value={dineIn} onChange={(value) => model.updateChannelQty(categoryIndex, itemIndex, "DINE_IN", value)} /><ChannelInput label="TAKEOUT" value={takeout} onChange={(value) => model.updateChannelQty(categoryIndex, itemIndex, "TAKEOUT", value)} /><span className="pb-1.5 text-[9px] font-semibold text-[#6f6258]">합계 {dineIn + takeout}</span></div>
+  </div>;
+  const quantity = Number(item.qty || 0);
+  return <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-t border-[#f3efec] py-1.5"><span className="min-w-0 truncate text-[11px] font-semibold">{item.name}</span><span className="text-[9px] text-[#8a8079]">{formatCurrencyValue(item.price, country)}</span><div className="flex h-7 items-center overflow-hidden rounded-[6px] border border-[#dfd6d0]"><button type="button" onClick={() => model.updateQty(categoryIndex, itemIndex, Math.max(0, quantity - 1))} className="h-full w-7 text-[#8b5e3c]">−</button><span className="w-7 text-center text-[11px]">{quantity}</span><button type="button" onClick={() => model.updateQty(categoryIndex, itemIndex, quantity + 1)} className="h-full w-7 text-[#8b5e3c]">＋</button></div></div>;
+};
+
+const ChannelInput: React.FC<{ label: string; value: number; onChange: (value: number) => void }> = ({ label, value, onChange }) => <label className="grid grid-cols-[42px_1fr] items-center gap-1 text-[8px] font-semibold text-[#8a6b56]"><span>{label}</span><input type="number" inputMode="numeric" min="0" value={value || ""} onChange={(event) => onChange(Number(event.target.value))} className="h-7 min-w-0 rounded-[6px] border border-[#dfd6d0] text-center text-[11px] text-[#1f1f1f]" /></label>;
 
 const ReviewMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="rounded-[8px] bg-[#faf8f6] p-2"><p className="text-[10px] text-[#766c66]">{label}</p><b className="mt-1 block text-[13px]">{value}</b></div>;
-const SummaryCell: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="min-w-0 px-2.5 first:pl-0 last:pr-0"><p className="whitespace-nowrap text-[10px] text-[#766c66]">{label}</p><b className="mt-2 block whitespace-nowrap text-[16px] leading-none tracking-[-0.04em]">{value}</b></div>;
+const SummaryCell: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="min-w-0 px-2 first:pl-0 last:pr-0"><p className="whitespace-nowrap text-[9px] text-[#766c66]">{label}</p><b className="mt-1.5 block truncate whitespace-nowrap text-[14px] leading-none tracking-[-0.05em]">{value}</b></div>;
 const ValidationCell: React.FC<{ label: string; value: string; green?: boolean }> = ({ label, value, green }) => <div className="px-2 first:pl-0 last:pr-0"><p className="text-[10px] text-[#718178]">{label}</p><b className={`mt-1 block text-[13px] ${green ? "text-[#22a55b]" : ""}`}>{value}</b></div>;
-const SectionTitle: React.FC<{ icon: string; title: string }> = ({ icon, title }) => <h2 className="border-b border-[#eee8e3] bg-[#fdfaf8] px-4 py-3 text-[14px] font-semibold"><i className={`fa-solid ${icon} mr-2 text-[#8b5e3c]`} />{title}</h2>;
+const SectionTitle: React.FC<{ icon: string; title: string }> = ({ icon, title }) => <h2 className="border-b border-[#eee8e3] bg-[#fdfaf8] px-3.5 py-2.5 text-[13px] font-semibold"><i className={`fa-solid ${icon} mr-2 text-[#8b5e3c]`} />{title}</h2>;
 
 export default SalesV4Page;
