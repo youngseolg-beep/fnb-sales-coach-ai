@@ -18,25 +18,18 @@ export default function StoreOwnerPageRouter({
   menuPage,
   morePage,
 }: Props) {
-  if (currentPage === "summary") {
-    return <>{summaryPage}</>;
-  }
+  const visiblePage = currentPage === "summary"
+    ? summaryPage
+    : currentPage === "sales"
+      ? salesPage
+      : currentPage === "menu"
+        ? menuPage
+        : currentPage === "more"
+          ? morePage
+          : null;
 
-  if (currentPage === "sales") {
-    return <>{salesPage}</>;
-  }
-
-  if (currentPage === "detail") {
-    return <>{detailPage}</>;
-  }
-
-  if (currentPage === "menu") {
-    return <>{menuPage}</>;
-  }
-
-  if (currentPage === "more") {
-    return <>{morePage}</>;
-  }
-
-  return <>{summaryPage}</>;
+  return <>
+    <div className={currentPage === "detail" ? "" : "hidden"} aria-hidden={currentPage !== "detail"}>{detailPage}</div>
+    {visiblePage}
+  </>;
 }
