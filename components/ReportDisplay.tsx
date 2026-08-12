@@ -37,7 +37,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
 
   if (loading) {
     return (
-      <div className="rounded-[20px] border border-[#e8e1db] bg-white p-8 shadow-[0_6px_18px_rgba(70,54,42,0.04)] md:rounded-[24px] md:p-10">
+      <div className="rounded-[14px] border border-[#e8e1db] bg-white p-5 shadow-[0_3px_10px_rgba(70,54,42,0.03)]">
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#e8e2ff] border-t-[#7c6cf6] md:h-12 md:w-12"></div>
           <p className="text-sm font-bold text-slate-800 md:text-base">
@@ -50,7 +50,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
 
   if (!report) {
     return (
-      <div className="rounded-[20px] border border-dashed border-[#e8e1db] bg-[#fdfaf8] p-8 text-center text-[#8b817a] md:rounded-[24px] md:p-10">
+      <div className="rounded-[14px] border border-dashed border-[#e8e1db] bg-[#fdfaf8] p-5 text-center text-[#8b817a]">
         <i className="fa-solid fa-bolt-lightning mb-2 text-xl opacity-20 md:text-2xl"></i>
         <p className="text-[12px] font-medium md:text-sm">
           데이터를 입력하고 빠른 코칭을 받으세요.
@@ -70,26 +70,26 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_7px_20px_rgba(70,54,42,0.045)] md:rounded-[24px]">
-      <div className="border-b border-slate-100 px-3 py-3 md:px-5 md:py-4">
+    <div className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white shadow-[0_3px_10px_rgba(70,54,42,0.03)]">
+      <div className="border-b border-[#eee8e3] px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.16em]">
               Coach Report
             </div>
-            <h2 className="mt-1 text-base font-black tracking-tight text-slate-900 md:text-lg">
+            <h2 className="mt-0.5 text-[17px] font-bold tracking-tight text-[#302a26]">
               AI 코칭 리포트
             </h2>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-indigo-600 md:px-3 md:text-[11px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[#f4ece6] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8b5e3c]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8b5e3c]"></span>
             AI Active
           </div>
         </div>
       </div>
 
-      <div className="space-y-3 bg-[#fdfaf8] px-3 py-3 md:space-y-4 md:px-5 md:py-5">
+      <div className="space-y-2 bg-[#fdfaf8] p-2.5">
         {sections.map((sectionContent, idx) => {
           const config = iconMap[idx] || {
             icon: "fa-check",
@@ -102,20 +102,20 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
           return (
             <div
               key={idx}
-              className="rounded-[16px] border border-[#ece7e1] bg-white p-3 shadow-[0_3px_10px_rgba(70,54,42,0.025)] md:rounded-[18px] md:p-4"
+              className="rounded-[11px] border border-[#ece7e1] bg-white p-2.5"
             >
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/5 text-sm ${config.color} md:h-10 md:w-10 md:text-base`}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/5 text-[11px] ${config.color}`}
                 >
                   <i className={`fa-solid ${config.icon}`}></i>
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 md:text-[11px] md:tracking-[0.14em]">
+                  <h3 className="mb-1 text-[12px] font-bold text-[#624634]">
                     {sectionTitles?.[idx] || config.title}
                   </h3>
-                  <div className="space-y-2 break-words text-[13px] font-medium leading-6 text-slate-800 md:text-sm md:leading-7">
+                  <div className="space-y-1.5 break-words text-[12px] font-normal leading-[1.6] text-[#4f4843]">
                     {renderMarkdownText(content)}
                   </div>
                 </div>
@@ -125,7 +125,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({
         })}
       </div>
 
-      <div className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 text-center md:px-5 md:py-3">
+      <div className="border-t border-[#eee8e3] bg-[#faf8f6] px-3 py-2 text-center">
         <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 md:text-[10px] md:tracking-[0.16em]">
           Action based on real data leads to growth.
         </p>

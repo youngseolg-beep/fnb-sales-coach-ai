@@ -1106,10 +1106,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
               ["🧩 Puzzles", "판매 ↓ · 수익 ↑", menuEngineeringResult.puzzles],
               ["🐕 Dogs", "판매 ↓ · 수익 ↓", menuEngineeringResult.dogs],
             ].map(([name, meaning, items]) => (
-              <div key={String(name)} className="rounded-lg border border-[#eee8e3] p-3">
+              <div key={String(name)} className="rounded-lg border border-[#eee8e3] p-2.5">
                 <div className="text-xs font-bold text-[#624634]">{name} · {(items as any[]).length}</div>
                 <div className="mt-0.5 text-[9px] font-medium text-[#8a7e76]">{meaning}</div>
-                <div className="mt-1 text-[11px] text-[#746a63]">
+                <div className="mt-1 text-[10px] leading-4 text-[#746a63]">
                   {(items as any[]).slice(0, 3).map((item) => item.name).join(", ") || "데이터 없음"}
                 </div>
               </div>
