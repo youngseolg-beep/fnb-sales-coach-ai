@@ -104,28 +104,6 @@ const internalCalculate = async (
 ): Promise<MenuEngineeringResult | null> => {
   const datesCount = Array.isArray(dates) ? dates.length : 0;
 
-  if (datesCount < 7) {
-    return {
-      items: [],
-      popularityThreshold: 0,
-      profitabilityThreshold: 0,
-      stars: [],
-      cashCows: [],
-      puzzles: [],
-      dogs: [],
-      noCostItems: [],
-      analyzedDatesCount: datesCount,
-      debugStats: {
-        datesCount,
-        loadedCount: 0,
-        categoriesCountTotal: 0,
-        itemsCountTotal: 0,
-        qtyPositiveItemsCount: 0,
-        aggregatedIdsCount: 0,
-      },
-    };
-  }
-
   let loadedCount = 0;
   let categoriesCountTotal = 0;
   let itemsCountTotal = 0;
