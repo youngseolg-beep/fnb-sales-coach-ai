@@ -14,6 +14,7 @@ import {
   saveMenuPriceHistory,
 } from "./services/menuPriceService";
 import { loadMenuMaster } from "./services/menuMasterService";
+import { ensureDemoSalesContinuity } from "./services/demoSalesService";
 import { formatLocalDate } from "./utils2/date";
 
 import type { MenuCategory } from "./types";
@@ -142,6 +143,7 @@ const App: React.FC = () => {
 
   const { monthlyTarget, setMonthlyTarget, handleSaveMonthlyTarget } = useMonthlyTarget(storeId);
   const monthlyStatsRequestRef = useRef("");
+  const demoContinuityRequestRef = useRef("");
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -492,6 +494,41 @@ const App: React.FC = () => {
       isMounted = false;
     };
   }, [isLoggedIn, storeId]);
+
+  useEffect(() => {
+    if (!isLoggedIn || storeId !== 5 || data.country !== "DEMO" || data.brand !== "DEMO") return;
+    if (menuMasterLoading || menuMasterCategories.length === 0) return;
+
+    const today = formatLocalDate(new Date());
+    const requestKey = `${storeId}:${today}`;
+    if (demoContinuityRequestRef.current === requestKey) return;
+    demoContinuityRequestRef.current = requestKey;
+
+    let cancelled = false;
+    const ensureContinuity = async () => {
+      try {
+        const result = await ensureDemoSalesContinuity({
+          storeId,
+          country: data.country,
+          brand: data.brand,
+        });
+        if (cancelled || result.createdDates.length === 0) return;
+
+        setSelectedDate(today);
+        await Promise.all([
+          refreshDatesInMonth(today),
+          fetchData(today, menuMasterCategories),
+          refreshMonthlyStats(today.slice(0, 7)),
+        ]);
+      } catch (error) {
+        console.error("Demo sales continuity generation failed:", error);
+        demoContinuityRequestRef.current = "";
+      }
+    };
+
+    void ensureContinuity();
+    return () => { cancelled = true; };
+  }, [isLoggedIn, storeId, data.country, data.brand, menuMasterLoading, menuMasterCategories, refreshDatesInMonth, fetchData, refreshMonthlyStats, setSelectedDate]);
 
   useEffect(() => {
     if (!isLoggedIn) return;

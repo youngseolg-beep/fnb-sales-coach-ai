@@ -442,7 +442,7 @@ export default function StoreOwnerShell({
                       ? "-mt-4 h-[54px] rounded-[15px] bg-[#9b765c] text-white shadow-[0_6px_14px_rgba(126,92,67,0.18)] hover:bg-[#855f47]"
                       : "-mt-4 h-[54px] rounded-[15px] border border-[#e6ddd6] bg-[#f8f4f0] text-[#785e4d] shadow-[0_4px_10px_rgba(79,60,45,0.07)] hover:bg-[#f2ebe5]"
                     : active
-                    ? "text-[#8b6f5b]"
+                    ? "bg-[#f8f4f0] text-[#8b6f5b]"
                     : "hover:bg-[#faf7f4]",
                 ].join(" ")}
               >

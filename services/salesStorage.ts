@@ -217,6 +217,28 @@ export async function saveDailyData(payload: DailyPayload, storeId: number = 1) 
   return await saveDaily(payload, storeId);
 }
 
+// Insert-only path for deterministic Demo continuity. It deliberately never
+// falls back to saveDaily, which would update an existing manual/seeded row.
+export async function insertDailyIfMissing(payload: DailyPayload, storeId: number) {
+  if (!supabase) {
+    return { ok: false, inserted: false, error: new Error("Supabase is unavailable") };
+  }
+
+  const row = buildDbRow(payload, storeId);
+  const { error } = await supabase.from(TABLE).insert(row);
+
+  if (error) {
+    // A competing request may have inserted this exact store/date after the
+    // continuity service read the range. Treat that as safely preserved.
+    if ((error as any).code === "23505") {
+      return { ok: true, inserted: false, conflict: true };
+    }
+    return { ok: false, inserted: false, error };
+  }
+
+  return { ok: true, inserted: true };
+}
+
 export async function loadDaily(dateStr: string, storeId: number = 1) {
   const safeDate = String(dateStr).slice(0, 10);
   const key = buildStorageKey(storeId, safeDate);

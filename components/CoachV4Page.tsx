@@ -86,7 +86,7 @@ const CoachV4Page: React.FC<Props> = ({
     </section>
 
     <section><h2 className="mb-3 text-[16px] font-bold tracking-[-0.04em]">선택 기간 KPI <span className="text-[11px] font-medium text-[#746c66]">(근거 데이터)</span></h2><div className="grid grid-cols-5 gap-2">{[
-      ["fa-won-sign", "오늘 매출", formatCurrencyValue(sales, country), salesChangeRate, "bg-[#eee9ff] text-[#7a65dc]"],
+      ["fa-won-sign", "매출", formatCurrencyValue(sales, country), salesChangeRate, "bg-[#eee9ff] text-[#7a65dc]"],
       ["fa-bag-shopping", "주문수", `${orders}건`, ordersChangeRate, "bg-[#e9f8e8] text-[#43a353]"],
       ["fa-user", "객단가", formatCurrencyValue(aov, country), aovChangeRate, "bg-[#fff3d9] text-[#e49d22]"],
       ["fa-users", "방문객", `${visitors}명`, visitorsChangeRate, "bg-[#e7f3ff] text-[#5a9ddd]"],
