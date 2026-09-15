@@ -38,6 +38,23 @@ type AdminApprovalPageProps = {
   initialTab?: StatusTab;
 };
 
+const getPrivilegedApiHeaders = async () => {
+  if (!supabase) {
+    throw new Error("인증 서비스를 사용할 수 없습니다.");
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (error || !accessToken) {
+    throw new Error("세션이 만료되었습니다. 다시 로그인해 주세요.");
+  }
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+};
+
 const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -205,11 +222,11 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
     try {
       setLoading(true);
 
+      const headers = await getPrivilegedApiHeaders();
+
       const response = await fetch("/api/create-approved-user", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           requestId: item.id,
         }),
@@ -254,11 +271,11 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
     try {
       setPasswordUpdatingId(item.id);
 
+      const headers = await getPrivilegedApiHeaders();
+
       const response = await fetch("/api/update-approved-user-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           email,
           newPassword,

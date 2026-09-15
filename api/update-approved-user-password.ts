@@ -1,17 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
-
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { requireMasterAuthorization } from "./_serverAuth";
 
 function json(res: VercelResponse, status: number, body: Record<string, any>) {
   return res.status(status).json(body);
@@ -23,12 +11,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (!supabaseUrl || !serviceRoleKey) {
-      return json(res, 500, {
-        ok: false,
-        error: "Missing server environment variables",
-      });
+    const authorization = await requireMasterAuthorization(req);
+    if (authorization.ok === false) {
+      return json(res, authorization.status, { ok: false, error: authorization.error });
     }
+    const { admin } = authorization;
 
     const { email, newPassword } = req.body ?? {};
 
@@ -50,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let foundUserId: string | null = null;
 
     while (!foundUserId) {
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      const { data, error } = await admin.auth.admin.listUsers({
         page,
         perPage: 1000,
       });
@@ -83,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error: updateError } = await admin.auth.admin.updateUserById(
       foundUserId,
       {
         password: safePassword,

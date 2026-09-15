@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { requireMasterAuthorization } from "./_serverAuth";
 
 type ApproveRequestBody = {
   requestId: number;
@@ -92,18 +92,12 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return res.status(500).json({
-      error: "Missing Supabase server environment variables",
-    });
+  const authorization = await requireMasterAuthorization(req);
+  if (authorization.ok === false) {
+    return res.status(authorization.status).json({ error: authorization.error });
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  const { admin } = authorization;
 
   try {
     const body: ApproveRequestBody =
