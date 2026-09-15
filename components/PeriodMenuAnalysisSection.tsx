@@ -76,10 +76,29 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   const safeNumber = (value: any) => Number(value || 0);
   const country = (data as any)?.country;
   const [activeTooltipIdx, setActiveTooltipIdx] = useState<number | null>(null);
-  
-  const isFirstMount = useRef(true);
+  const [isConfidenceGuideOpen, setIsConfidenceGuideOpen] = useState(false);
+  const confidenceGuideRef = useRef<HTMLSpanElement>(null);
+  const menuAnalysisRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (!isConfidenceGuideOpen) return;
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      if (!confidenceGuideRef.current?.contains(event.target as Node)) {
+        setIsConfidenceGuideOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [isConfidenceGuideOpen]);
 
   const runAnalysis = useCallback(async (isManual = false) => {
+    const requestId = ++menuAnalysisRequestRef.current;
+    setMenuEngineeringResult(null);
+
+    if (selectedPeriodDays < 1) return;
+
     try {
       await Promise.all([
         loadCurrentPeriodData(isManual),
@@ -87,17 +106,20 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
         fetchPeriodStats(isManual)
       ]);
 
-      if (selectedPeriodDays >= 7) {
-        const meResult = await calculateMenuEngineeringForRange(
-          periodRange.start,
-          periodRange.end,
-          data.categories,
-          { maxDays: 60, storeId }
-        );
+      const meResult = await calculateMenuEngineeringForRange(
+        periodRange.start,
+        periodRange.end,
+        data.categories,
+        { maxDays: 60, storeId }
+      );
+
+      if (requestId === menuAnalysisRequestRef.current) {
         setMenuEngineeringResult(meResult);
       }
     } catch (error) {
-      console.error("Analysis Error:", error);
+      if (requestId === menuAnalysisRequestRef.current) {
+        console.error("Analysis Error:", error);
+      }
     }
   }, [
     periodRange.start,
@@ -113,12 +135,17 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   ]);
 
   useEffect(() => {
-    if (isFirstMount.current && periodRange.start && periodRange.end) {
-      isFirstMount.current = false;
-      void runAnalysis(false);
-    }
+    void runAnalysis(false);
+    // runAnalysis intentionally changes with loaders supplied by DetailPage.
+    // Recalculate only when the active range or authenticated store changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [periodRange.start, periodRange.end, selectedPeriodDays, storeId]);
+
+  const confidenceMessage = selectedPeriodDays >= 1 && selectedPeriodDays <= 6
+    ? { className: "bg-amber-50 text-amber-700", text: "데이터가 적어 결과 변동성이 클 수 있습니다." }
+    : selectedPeriodDays >= 7 && selectedPeriodDays <= 13
+      ? { className: "bg-slate-50 text-slate-500", text: "단기 분석 결과입니다." }
+      : null;
 
   const summaryCards = [
     { label: "매출", current: formatCurrencyValue(safeNumber(currentPeriodStats?.sales), country), compare: formatCurrencyValue(safeNumber(comparisonStats?.sales), country), rawCurrent: safeNumber(currentPeriodStats?.sales), rawCompare: safeNumber(comparisonStats?.sales), rate: salesChangeRate },
@@ -249,7 +276,23 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
       {/* 메뉴 엔지니어링 & 부스트 플랜 */}
       <div className="grid grid-cols-1 gap-4">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-[14px] font-bold text-slate-900">메뉴 엔지니어링</h3>
+          <div className="mb-3 flex items-center gap-1.5">
+            <h3 className="text-[14px] font-bold text-slate-900">메뉴 엔지니어링</h3>
+            <span ref={confidenceGuideRef} className="relative" onMouseEnter={() => setIsConfidenceGuideOpen(true)} onMouseLeave={() => setIsConfidenceGuideOpen(false)}>
+              <button type="button" aria-label="메뉴 엔지니어링 분석 신뢰도 기준" aria-expanded={isConfidenceGuideOpen} onClick={() => setIsConfidenceGuideOpen((open) => !open)} className="text-[13px] leading-none text-slate-400 hover:text-slate-600">ⓘ</button>
+              {isConfidenceGuideOpen && <div role="tooltip" className="absolute left-0 top-5 z-30 w-72 rounded-lg border border-slate-200 bg-white p-3 text-[10px] leading-4 text-slate-600 shadow-lg">
+                <p className="font-bold text-slate-800">분석 신뢰도 기준</p>
+                <div className="mt-2 space-y-2">
+                  <p><b>1~6일 · 신뢰도 낮음</b><br />데이터가 적어 결과 변동성이 클 수 있습니다.</p>
+                  <p><b>7~13일 · 신뢰도 보통</b><br />단기 흐름을 확인하기에 적합합니다.</p>
+                  <p><b>14~27일 · 신뢰도 높음</b><br />메뉴 성과 판단에 활용할 수 있습니다.</p>
+                  <p><b>28~60일 · 신뢰도 매우 높음</b><br />메뉴 전략 판단에 권장되는 기간입니다.</p>
+                </div>
+                <p className="mt-2 border-t border-slate-100 pt-2 text-slate-500">※ 실제 신뢰도는 판매량과 주문 수에 따라서도 달라질 수 있습니다.<br />※ 60일을 초과한 기간은 최근 최대 60일 기준으로 분석합니다.</p>
+              </div>}
+            </span>
+          </div>
+          {confidenceMessage && <p className={`mb-3 rounded-lg p-2 text-[10px] leading-4 ${confidenceMessage.className}`}>{confidenceMessage.text}</p>}
           <PeriodMenuEngineering sortedMenuEngineering={sortedMenuEngineering} />
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -1099,7 +1099,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       engineeringContent={
         menuEngineeringResult ? (
           <div className="space-y-2">
-            {selectedPeriodDays < 7 && <p className="rounded-lg bg-amber-50 p-2 text-[10px] leading-4 text-amber-700">분석 기간이 짧아 메뉴 성과 판단의 정확도가 낮을 수 있습니다.</p>}
+            {selectedPeriodDays >= 1 && selectedPeriodDays <= 6 && <p className="rounded-lg bg-amber-50 p-2 text-[10px] leading-4 text-amber-700">데이터가 적어 결과 변동성이 클 수 있습니다.</p>}
+            {selectedPeriodDays >= 7 && selectedPeriodDays <= 13 && <p className="rounded-lg bg-[#faf8f6] p-2 text-[10px] leading-4 text-[#746a63]">단기 분석 결과입니다.</p>}
             {[
               ["⭐ Stars", "판매 ↑ · 수익 ↑", menuEngineeringResult.stars],
               ["🐄 Cash Cows", "판매 ↑ · 수익 ↓", menuEngineeringResult.cashCows],
