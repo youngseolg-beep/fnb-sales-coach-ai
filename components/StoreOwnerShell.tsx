@@ -235,7 +235,13 @@ export default function StoreOwnerShell({
   }, [selectedDate, visibleStartDate]);
 
   return (
-    <div className="min-h-screen bg-[#faf8f6] pb-[calc(env(safe-area-inset-bottom)+96px)] text-[#1f1f1f] sm:pb-[calc(env(safe-area-inset-bottom)+100px)]">
+    <div className="min-h-screen bg-[#faf8f6] pb-[calc(env(safe-area-inset-bottom)+96px)] text-[#1f1f1f] sm:pb-[calc(env(safe-area-inset-bottom)+100px)] lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:pb-0">
+      <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-[#e8e1db] lg:bg-white lg:p-5">
+        <div className="mb-8"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8b5e3c]">Sales Coach AI</p><h1 className="mt-2 text-xl font-bold text-[#302a26]">Store Owner</h1></div>
+        <nav className="space-y-1.5">{MENU_ITEMS.map((item) => <button key={item.key} type="button" onClick={() => onChangePage(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors ${item.key === currentPage ? "bg-[#f4ede8] text-[#7b513a]" : "text-[#675d57] hover:bg-[#faf7f4]"}`}><i className={`${item.icon} w-4 text-center`} /><span>{item.label}</span></button>)}</nav>
+        <button type="button" onClick={onLogout} className="mt-auto flex items-center gap-3 rounded-xl border border-[#e7ddd6] px-3 py-3 text-left text-sm font-semibold text-[#76503c] hover:bg-[#fffaf7]"><i className="fa-solid fa-right-from-bracket w-4 text-center" /><span>Logout</span></button>
+      </aside>
+      <div className="min-w-0">
       {currentPage !== "summary" && <header className="sticky top-0 z-40 border-b border-[#eee7e1] bg-[#faf8f6]/95 backdrop-blur">
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-3">
           {currentPage === "sales" ? (
@@ -420,11 +426,11 @@ export default function StoreOwnerShell({
         </div>
       )}
 
-      <main className={`mx-auto ${currentPage === "summary" ? "max-w-[430px] px-5 py-5 sm:px-5" : "max-w-7xl px-3 py-5 sm:px-6 sm:py-7"}`}>
+      <main className={`mx-auto ${currentPage === "summary" ? "max-w-[430px] px-5 py-5 sm:px-5 lg:max-w-[1240px] lg:px-8 lg:py-8" : "max-w-7xl px-3 py-5 sm:px-6 sm:py-7 lg:max-w-[1280px] lg:px-8 lg:py-8"}`}>
         {children}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-[10001] bg-[#faf8f6]/96 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-[10001] bg-[#faf8f6]/96 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden">
         <div className="mx-auto grid h-[64px] max-w-[430px] grid-cols-5 items-end rounded-[18px] border border-[#eee8e3] bg-white px-2 py-2 shadow-[0_6px_20px_rgba(70,54,42,0.09)] sm:max-w-2xl">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
@@ -455,6 +461,7 @@ export default function StoreOwnerShell({
           })}
         </div>
       </nav>
+      </div>
     </div>
   );
 }

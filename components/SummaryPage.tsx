@@ -98,7 +98,7 @@ const SummaryPage: React.FC<Props> = ({
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[390px] pb-[108px] pt-[3px] text-[#1f1f1f]">
+    <div className="mx-auto w-full max-w-[390px] pb-[108px] pt-[3px] text-[#1f1f1f] lg:max-w-[1180px] lg:pb-8">
       <header className="px-[3px] pt-[5px]">
         <div className="flex items-start justify-between gap-4">
           <div>

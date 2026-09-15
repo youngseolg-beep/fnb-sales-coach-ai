@@ -37,7 +37,7 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
   };
 
   return (
-    <main className="mx-auto w-full max-w-[430px] space-y-3 pb-36 text-[#1f1f1f]">
+    <main className="mx-auto w-full max-w-[430px] space-y-3 pb-36 text-[#1f1f1f] lg:max-w-[1180px] lg:pb-10">
       {saveFeedback && <div role="status" className="fixed left-1/2 top-[76px] z-[10020] w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 rounded-[10px] border border-[#cfe7d5] bg-[#f2fbf4] px-3 py-2 text-center text-[11px] font-semibold text-[#278a4d] shadow-[0_5px_16px_rgba(39,138,77,0.10)]"><i className="fa-solid fa-circle-check mr-1.5" />{saveFeedback}</div>}
       <section className="rounded-[14px] border border-[#e7dfd9] bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">
         <h2 className="text-[14px] font-bold tracking-[-0.035em]">오늘 요약</h2>
@@ -71,7 +71,7 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
 
       <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="text-[9px] text-[#776b63]">{model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
 
-      <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[11px] border border-[#e8e1db] bg-white p-1.5 shadow-[0_3px_12px_rgba(70,54,42,0.05)]"><button type="button" onClick={onReset} className="h-9 rounded-[7px] border border-[#b99983] text-[11px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={() => void handleSaveClick()} className="h-9 rounded-[7px] bg-[#8b5e3c] text-[11px] font-semibold text-white">저장하기</button></div></div>
+      <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur lg:sticky lg:bottom-4 lg:rounded-xl lg:border"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[11px] border border-[#e8e1db] bg-white p-1.5 shadow-[0_3px_12px_rgba(70,54,42,0.05)] lg:max-w-[1180px]"><button type="button" onClick={onReset} className="h-9 rounded-[7px] border border-[#b99983] text-[11px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={() => void handleSaveClick()} className="h-9 rounded-[7px] bg-[#8b5e3c] text-[11px] font-semibold text-white">저장하기</button></div></div>
     </main>
   );
 };

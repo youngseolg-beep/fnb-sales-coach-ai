@@ -27,7 +27,7 @@ const StaticRow = ({ title, description, icon }: { title: string; description: s
 
 export default function MorePage({ onLogout }: Props) {
   return (
-    <div className="mx-auto max-w-[430px] space-y-7 pb-28 pt-3">
+    <div className="mx-auto max-w-[430px] space-y-7 pb-28 pt-3 lg:max-w-[980px] lg:pb-8">
       <section className="px-2">
         <h1 className="text-[28px] font-bold tracking-[-0.055em] text-[#1f1f1f]">More</h1>
         <div className="mt-6 flex items-center gap-4">

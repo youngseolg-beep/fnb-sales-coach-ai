@@ -768,7 +768,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
   return (
     <>
-      <section className="mx-auto max-w-[430px] space-y-3.5 pb-40">
+      <section className="mx-auto max-w-[430px] space-y-3.5 pb-40 lg:max-w-[1180px] lg:pb-10">
         <div className="rounded-[16px] border border-[#e7ded7] bg-white p-4 shadow-[0_3px_12px_rgba(70,54,42,0.045)]">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f8eee6] text-[#875333]">
@@ -886,7 +886,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           )}
         </div>
 
-        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-0 right-0 z-[10000] mx-auto w-full max-w-[430px] px-3">
+        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-0 right-0 z-[10000] mx-auto w-full max-w-[430px] px-3 lg:bottom-6 lg:max-w-[1180px]">
           <div className="rounded-[14px] border border-[#e2d8d0] bg-white/96 p-2 shadow-[0_8px_20px_rgba(70,54,42,0.11)] backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
