@@ -44,11 +44,18 @@ const calcChangeRate = (current: number, previous: number) => {
   return ((current - previous) / previous) * 100;
 };
 
-const getPresetPeriodRange = (period: "today" | "week" | "month", selectedDate: string) => {
-  const end = new Date(selectedDate);
-  if (period === "today") return { start: selectedDate, end: selectedDate };
-  if (period === "week") return { start: formatLocalDate(subDays(end, 6)), end: selectedDate };
-  return { start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: selectedDate };
+const getLocalYesterday = () => formatLocalDate(subDays(new Date(), 1));
+
+const getPresetPeriodRange = (period: "yesterday" | "week" | "month") => {
+  const yesterday = getLocalYesterday();
+  const end = new Date(yesterday);
+  if (period === "yesterday") return { start: yesterday, end: yesterday };
+  if (period === "week") {
+    const monday = new Date(end);
+    monday.setDate(end.getDate() - ((end.getDay() + 6) % 7));
+    return { start: formatLocalDate(monday), end: yesterday };
+  }
+  return { start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: yesterday };
 };
 
 const getInclusiveDayCountFromStrings = (start: string, end: string) => {
@@ -128,9 +135,9 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("WOW");
   const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
-  const [v4Period, setV4Period] = useState<"today" | "week" | "month" | "custom">("week");
+  const [v4Period, setV4Period] = useState<"yesterday" | "week" | "month" | "custom">("yesterday");
 
-  const [periodRange, setPeriodRange] = useState(() => getPresetPeriodRange("week", selectedDate));
+  const [periodRange, setPeriodRange] = useState(() => getPresetPeriodRange("yesterday"));
 
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
   const [comparisonStats, setComparisonStats] = useState<any>(null);
@@ -276,8 +283,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   useEffect(() => {
     if (v4Period === "custom") return;
-    setPeriodRange(getPresetPeriodRange(v4Period, selectedDate));
-  }, [selectedDate, v4Period]);
+    setPeriodRange(getPresetPeriodRange(v4Period));
+  }, [v4Period]);
 
   useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
@@ -339,6 +346,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   }, [data]);
 
   const handleGenerateReport = async () => {
+    if (periodRange.end > getLocalYesterday()) {
+      showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
+      return;
+    }
     const requestScope = reportScope("operating_coaching");
     const requestScopeKey = scopeKey(requestScope);
     const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
@@ -381,6 +392,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
         calcSales: hasPeriodData ? currentSales : results.calcSales,
         aov: hasPeriodData ? currentAov : results.aov,
         conversionRate: hasPeriodData ? currentConversion : results.conversionRate,
+        gapUsd: v4Period === "yesterday" ? results.gapUsd : 0,
+        gapRate: v4Period === "yesterday" ? results.gapRate : 0,
       };
       const topMenus = aggregateMenusFromRows(currentPeriodStats?.rawRows || []).map((item) => ({
         ...item,
@@ -829,6 +842,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const deterministicMenuEngineeringScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
 
   const handleGenerateAiBoostPlan = async () => {
+    if (periodRange.end > getLocalYesterday()) {
+      showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
+      return;
+    }
     const requestScope = reportScope("boost_plan");
     const requestScopeKey = scopeKey(requestScope);
     const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
@@ -945,16 +962,16 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     return () => window.cancelAnimationFrame(frame);
   }, [homeLandingTarget, onHomeLandingHandled]);
 
-  const handleV4PeriodChange = (period: "today" | "week" | "month" | "custom") => {
-    if (period === "today") {
-      setPeriodRange(getPresetPeriodRange("today", selectedDate));
+  const handleV4PeriodChange = (period: "yesterday" | "week" | "month" | "custom") => {
+    if (period === "yesterday") {
+      setPeriodRange(getPresetPeriodRange("yesterday"));
       setV4Period(period);
       setComparisonMode("MANUAL");
       return;
     }
 
     if (period === "week") {
-      setPeriodRange(getPresetPeriodRange("week", selectedDate));
+      setPeriodRange(getPresetPeriodRange("week"));
       setV4Period(period);
       setComparisonMode("WOW");
       return;
@@ -966,15 +983,18 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       return;
     }
 
-    setPeriodRange(getPresetPeriodRange("month", selectedDate));
+    setPeriodRange(getPresetPeriodRange("month"));
     setV4Period(period);
     setComparisonMode("MOM");
   };
 
   const handleCustomRangeChange = (next: { start: string; end: string }) => {
+    const yesterday = getLocalYesterday();
+    const end = next.end > yesterday ? yesterday : next.end;
+    const start = next.start > end ? end : next.start;
     setV4Period("custom");
     setComparisonMode("MANUAL");
-    setPeriodRange(next);
+    setPeriodRange({ start, end });
   };
 
   const menuEngineeringScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
@@ -982,6 +1002,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     menuEngineeringAiScopeKey === menuEngineeringScopeKey && !!menuEngineeringAiResult;
 
   const handleGenerateMenuEngineeringAi = async () => {
+    if (periodRange.end > getLocalYesterday()) {
+      showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
+      return;
+    }
     const requestScope = reportScope("menu_engineering");
     const requestScopeKey = scopeKey(requestScope);
     const requestActiveScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;

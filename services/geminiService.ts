@@ -3,7 +3,7 @@ import { SalesReportData, CalculationResult, MenuEngineeringResult } from "../ty
 export type CoachingReportContext = {
   storeId?: number;
   storeName?: string;
-  periodType: "today" | "week" | "month" | "custom";
+  periodType: "yesterday" | "week" | "month" | "custom";
   periodRange: { start: string; end: string };
   comparisonRange: { start: string; end: string } | null;
   current: { sales: number; orders: number; visitors: number; aov: number; conversion: number };
@@ -308,15 +308,15 @@ export const generateCoachingReport = async (
     : "없음";
 
   const context = options.context;
-  const periodLabel = context?.periodType === "today"
-    ? "Today"
+  const periodLabel = context?.periodType === "yesterday"
+    ? "Yesterday"
     : context?.periodType === "week"
       ? "This week"
       : context?.periodType === "month"
         ? "This month"
         : context?.periodType === "custom"
           ? "Selected period"
-          : "Today";
+          : "Selected period";
   const scopedTopMenus = context?.topMenus.length
     ? context.topMenus.slice(0, 5).map((item) => `${item.name}: qty ${item.qty}, sales ${currency} ${Math.round(item.sales)}${item.price !== undefined ? `, unit price ${currency} ${Math.round(item.price)}` : ""}`).join(" / ")
     : topItemsText;
@@ -331,8 +331,14 @@ export const generateCoachingReport = async (
 - Comparison KPI: ${context.comparison ? `sales ${currency} ${Math.round(context.comparison.sales)}, orders ${context.comparison.orders}, visitors ${context.comparison.visitors}, AOV ${currency} ${context.comparison.aov.toFixed(2)}, conversion ${context.comparison.conversion.toFixed(1)}%` : "not available"}
 - Change rates: sales ${context.changes.sales.toFixed(1)}%, orders ${context.changes.orders.toFixed(1)}%, visitors ${context.changes.visitors.toFixed(1)}%, AOV ${context.changes.aov.toFixed(1)}%, conversion ${context.changes.conversion.toFixed(1)}%
 - Top menus in current period: ${scopedTopMenus}
-- Use period-aware wording. Use daily wording only for a one-day period; otherwise describe the supplied period and next actions.
+- Use the supplied period KPI and top menus as authoritative. Do not use legacy daily categories, notes, POS/menu reconciliation, or monthly live-state values as facts.
 ` : "";
+  const legacyDailyContextAllowed = !context;
+  const legacyMonthlyTargetContext = !context
+    ? `- 월 목표 ${currency} ${Math.round(data.monthlyTarget)} / 누적 ${currency} ${Math.round(data.mtdSales)} / 잔여 ${currency} ${Math.round(
+        (data.monthlyTarget || 0) - (data.mtdSales || 0) - results.calcSales
+      )}\n- 메모: ${data.note || "없음"}`
+    : "";
 
   let menuEngineeringSummary = "";
   if (menuEngineeringResult) {
@@ -383,15 +389,12 @@ ${marketGuide}
 
 ${brandGuide}
 
-[오늘 데이터]
-- 메뉴 합계 매출: ${currency} ${Math.round(results.calcSales)}
+[${context?.periodType === "yesterday" ? "어제 데이터" : context ? "선택 기간 데이터" : "일별 데이터"}]
+${legacyDailyContextAllowed ? `- 메뉴 합계 매출: ${currency} ${Math.round(results.calcSales)}
 - POS 입력값: ${currency} ${Math.round(data.posSales)} (오차 ${currency} ${Math.round(results.gapUsd)} / ${results.status})
 - 주문 ${data.orders}건, 방문 ${data.visitCount}명, 객단가 ${currency} ${results.aov.toFixed(2)}, 전환율 ${results.conversionRate.toFixed(1)}%
-- TOP 메뉴: ${topItemsText}
-- 월 목표 ${currency} ${Math.round(data.monthlyTarget)} / 누적 ${currency} ${Math.round(data.mtdSales)} / 잔여 ${currency} ${Math.round(
-    (data.monthlyTarget || 0) - (data.mtdSales || 0) - results.calcSales
-  )}
-- 메모: ${data.note || "없음"}
+- TOP 메뉴: ${topItemsText}` : "- 기간 KPI와 기간별 상위 메뉴는 Coach V4 Period Context만 사용한다."}
+${legacyMonthlyTargetContext}
 
 ${menuEngineeringSummary}
 

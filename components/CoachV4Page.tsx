@@ -4,8 +4,9 @@ import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 import PeriodTopMenuCompare from "./PeriodTopMenuCompare";
 import ReportDisplay from "./ReportDisplay";
 import { formatCurrencyValue } from "../utils2/currency";
+import { formatLocalDate } from "../utils2/date";
 
-type PeriodKey = "today" | "week" | "month" | "custom";
+type PeriodKey = "yesterday" | "week" | "month" | "custom";
 
 const getInclusiveDayCount = (start: string, end: string) => {
   const startDate = new Date(start);
@@ -66,9 +67,13 @@ const CoachV4Page: React.FC<Props> = ({
   }, [salesChangeRate]);
   const scopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
   const reportMatchesScope = Boolean(report) && reportScopeKey === scopeKey;
-  const reportSectionTitles = activePeriod === "today"
-    ? ["오늘 요약", "핵심 원인", "목표 및 성과 진단", "데일리 액션 플랜", "실행 체크리스트"]
-    : ["운영 요약", "핵심 원인", "목표 및 성과 진단", "다음 실행 액션", "실행 체크리스트"];
+  const reportSectionTitles = activePeriod === "yesterday"
+    ? ["어제 요약", "핵심 포인트", "오늘 실행 액션", "실행 체크리스트"]
+    : activePeriod === "week"
+      ? ["이번 주 누적 요약", "핵심 변화", "남은 주 운영 방향", "남은 주 실행 액션", "실행 체크리스트"]
+      : activePeriod === "month"
+        ? ["이번 달 누적 요약", "핵심 변화", "월 목표 관점", "남은 달 실행 액션", "실행 체크리스트"]
+        : ["선택 기간 요약", "핵심 변화", "운영 진단", "다음 실행 액션", "실행 체크리스트"];
 
   const rows = [
     { key: "analysis" as const, icon: "fa-chart-column", title: "매출 분석", copy: "선택한 기간의 변화와 상위 메뉴를 비교합니다.", badge: `매출 ${salesChangeRate >= 0 ? "+" : ""}${salesChangeRate.toFixed(1)}%`, color: "text-[#735ce8]" },
@@ -138,10 +143,15 @@ const CoachGlobalPeriodSelector: React.FC<{
         : periodDays <= 60
           ? { label: "신뢰도 매우 높음", message: "" }
           : { label: "신뢰도 매우 높음", message: "메뉴 분석은 최근 최대 60일 기준으로 분석합니다." };
-  const presets = ["week", "month", "custom"] as const;
-  const labels: Record<typeof presets[number], string> = { week: "이번 주", month: "이번 달", custom: "직접 선택" };
+  const localYesterday = formatLocalDate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1));
+  const currentWeekStart = new Date(localYesterday);
+  currentWeekStart.setDate(currentWeekStart.getDate() - ((currentWeekStart.getDay() + 6) % 7));
+  const weekUnavailable = new Date().getDay() === 1;
+  const monthUnavailable = new Date().getDate() === 1;
+  const presets = ["yesterday", "week", "month", "custom"] as const;
+  const labels: Record<typeof presets[number], string> = { yesterday: "어제", week: "이번 주", month: "이번 달", custom: "선택 기간" };
 
-  return <section className="rounded-[13px] border border-[#eee8e3] bg-white p-3 shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><div className="flex items-center justify-between gap-2"><h2 className="text-[13px] font-bold text-[#302a26]">분석 기간</h2><AnalysisConfidenceInfo /></div><div className="mt-3 grid grid-cols-3 gap-1"><>{presets.map((period) => <button key={period} type="button" onClick={() => onPeriodChange(period)} className={`h-8 rounded-[7px] text-[10px] font-semibold ${activePeriod === period ? "bg-[#8b5e3c] text-white" : "bg-[#faf8f6] text-[#514840]"}`}>{labels[period]}</button>)}</></div>{activePeriod === "custom" && <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1"><input aria-label="시작일" type="date" value={periodRange.start} onChange={(event) => onCustomRangeChange({ ...periodRange, start: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /><span className="text-[#857a72]">~</span><input aria-label="종료일" type="date" value={periodRange.end} onChange={(event) => onCustomRangeChange({ ...periodRange, end: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /></div>}<p className="mt-3 text-[10px] font-medium text-[#746a63]">{periodRange.start} ~ {periodRange.end}</p><p className="mt-1 text-[10px] text-[#857a72]"><b className="font-semibold text-[#665d57]">{confidence.label}</b>{confidence.message && <> · {confidence.message}</>}</p></section>;
+  return <section className="rounded-[13px] border border-[#eee8e3] bg-white p-3 shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><div className="flex items-center justify-between gap-2"><h2 className="text-[13px] font-bold text-[#302a26]">분석 기간</h2><AnalysisConfidenceInfo /></div><div className="mt-3 grid grid-cols-4 gap-1"><>{presets.map((period) => { const disabled = period === "week" ? weekUnavailable : period === "month" ? monthUnavailable : false; return <button key={period} type="button" disabled={disabled} onClick={() => onPeriodChange(period)} className={`h-8 rounded-[7px] text-[10px] font-semibold disabled:opacity-40 ${activePeriod === period ? "bg-[#8b5e3c] text-white" : "bg-[#faf8f6] text-[#514840]"}`}>{labels[period]}</button>; })}</></div>{activePeriod === "custom" && <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1"><input aria-label="시작일" type="date" max={localYesterday} value={periodRange.start} onChange={(event) => onCustomRangeChange({ ...periodRange, start: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /><span className="text-[#857a72]">~</span><input aria-label="종료일" type="date" max={localYesterday} value={periodRange.end} onChange={(event) => onCustomRangeChange({ ...periodRange, end: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /></div>}<p className="mt-3 text-[10px] font-medium text-[#746a63]">{periodRange.start} ~ {periodRange.end}</p>{weekUnavailable && activePeriod === "yesterday" && <p className="mt-1 text-[10px] text-[#857a72]">이번 주 완료 데이터가 아직 없습니다.</p>}{monthUnavailable && activePeriod === "yesterday" && <p className="mt-1 text-[10px] text-[#857a72]">이번 달 완료 데이터가 아직 없습니다.</p>}<p className="mt-1 text-[10px] text-[#857a72]"><b className="font-semibold text-[#665d57]">{confidence.label}</b>{confidence.message && <> · {confidence.message}</>}</p></section>;
 };
 
 const PeriodAnalysis: React.FC<{ periodRange: { start: string; end: string }; comparisonRange: { start: string; end: string } | null; salesChangeRate: number; ordersChangeRate: number; visitorsChangeRate: number; aovChangeRate: number; conversion: number; trendRows: Array<{ date: string; total_sales: number; orders: number }>; highestSales: number; currentMenus: PeriodMenuRow[]; comparisonMenus: PeriodMenuRow[]; country?: string }> = ({ periodRange, comparisonRange, salesChangeRate, ordersChangeRate, visitorsChangeRate, aovChangeRate, conversion, trendRows, currentMenus, comparisonPeriodMenus: _comparisonPeriodMenus, comparisonMenus, country }) => <div className="space-y-3 text-[11px]"><div className="grid grid-cols-2 gap-2"><PeriodDate label="현재 기간" value={`${periodRange.start} ~ ${periodRange.end}`} /><PeriodDate label="비교 기간" value={comparisonRange ? `${comparisonRange.start} ~ ${comparisonRange.end}` : "비교 기간 없음"} /></div><div className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg border border-[#eee8e3] p-2.5">{[["매출", salesChangeRate], ["주문수", ordersChangeRate], ["방문객", visitorsChangeRate], ["객단가", aovChangeRate], ["전환율", conversion]].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between"><span className="text-[#766c65]">{label}</span><b className={Number(value) < 0 ? "text-[#e45252]" : "text-[#2f9a5b]"}>{label === "전환율" ? `${Number(value).toFixed(1)}%` : `${Number(value) >= 0 ? "+" : ""}${Number(value).toFixed(1)}%`}</b></div>)}</div><p className="rounded-lg bg-[#f7f2ee] px-3 py-2 leading-5 text-[#765f50]">비교 기간의 매출과 주문 변화를 바탕으로 다음 실행 항목을 확인하세요.</p><section><h3 className="mb-2 font-bold text-[#302a26]">일별 추이</h3><DailyTrendChart rows={trendRows} country={country} /></section><section><h3 className="mb-2 font-bold text-[#302a26]">Top 5 메뉴 비교</h3><PeriodTopMenuCompare currentMenus={currentMenus} comparisonMenus={comparisonMenus} minDays={1} currentDays={trendRows.length} comparisonDays={comparisonMenus.length ? 1 : 0} country={country} /></section></div>;
