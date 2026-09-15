@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 
 const COUNTRY_OPTIONS = [
+  { code: "DEMO", label: "Demo" },
   { code: "US", label: "미국 (United States)" },
   { code: "JP", label: "일본 (Japan)" },
   { code: "CN", label: "중국 (China)" },
@@ -17,6 +18,7 @@ const COUNTRY_OPTIONS = [
 ];
 
 const BRAND_OPTIONS = [
+  { code: "DEMO", label: "Demo Brand" },
   { code: "PAIK_NOODLE", label: "홍콩반점 (Paik's Noodle)" },
   { code: "BORNGA", label: "본가 (Bornga)" },
   { code: "SAEMAEUL", label: "새마을식당 (Saemaeul)" },

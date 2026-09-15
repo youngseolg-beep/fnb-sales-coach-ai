@@ -13,6 +13,10 @@ type MenuSeedItem = {
 };
 
 const getBrandMenuSeed = (brand: string): MenuSeedItem[] => {
+  if (brand === "DEMO") {
+    return [];
+  }
+
   if (brand === "BORNGA") {
     return [
       { id: "bornga-m1", name: "우삼겹", category: "고기 메뉴", display_order: 1, is_active: true },
@@ -210,7 +214,9 @@ export default async function handler(req: any, res: any) {
       store_id: storeId,
     }));
 
-    const { error: menuSeedError } = await admin.from("menu_master").insert(menuSeedRows);
+    const { error: menuSeedError } = menuSeedRows.length > 0
+      ? await admin.from("menu_master").insert(menuSeedRows)
+      : { error: null };
 
     if (menuSeedError) {
       await admin.from("users").delete().eq("id", userId);

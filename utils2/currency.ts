@@ -1,5 +1,7 @@
 export const getCurrencyByCountry = (country?: string | null): string => {
   switch (String(country || "").toUpperCase()) {
+    case "DEMO":
+      return "USD";
     case "KH":
       return "USD";
     case "ID":

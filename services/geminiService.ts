@@ -19,6 +19,8 @@ export type CoachingReportOptions = {
 
 const getCurrencyByCountry = (country: string) => {
   switch (country) {
+    case "DEMO":
+      return "USD";
     case "KH":
       return "USD";
     case "ID":
@@ -54,6 +56,8 @@ const getCurrencyByCountry = (country: string) => {
 
 const getCountryLabel = (country: string) => {
   switch (country) {
+    case "DEMO":
+      return "Demo";
     case "KH":
       return "캄보디아";
     case "ID":
@@ -87,6 +91,8 @@ const getCountryLabel = (country: string) => {
 
 const getBrandLabel = (brand: string) => {
   switch (brand) {
+    case "DEMO":
+      return "Demo Brand";
     case "PAIK_NOODLE":
       return "홍콩반점";
     case "BORNGA":
@@ -104,6 +110,13 @@ const getBrandLabel = (brand: string) => {
 
 const getMarketGuideByCountry = (country: string) => {
   switch (country) {
+    case "DEMO":
+      return `
+[데모 운영 기준]
+- 특정 국가의 시장 관행을 가정하지 않는다.
+- 메뉴, 매출, 주문, 방문 데이터에 근거한 일반적인 매장 운영 액션을 우선한다.
+- 통화는 지정된 코드 기준으로만 해석한다.
+`;
     case "KH":
       return `
 [국가별 운영 기준 - 캄보디아]
@@ -187,6 +200,12 @@ const getMarketGuideByCountry = (country: string) => {
 
 const getBrandGuide = (brand: string) => {
   switch (brand) {
+    case "DEMO":
+      return `
+[데모 브랜드 운영 기준]
+- 특정 브랜드나 업종의 운영 규칙을 가정하지 않는다.
+- 메뉴 구성, 판매량, 수익성, 객단가, 주문 전환을 바탕으로 일반적인 식음 매장 실행안을 제시한다.
+`;
     case "BORNGA":
       return `
 [브랜드 운영 기준 - 본가]
@@ -274,6 +293,8 @@ export const generateCoachingReport = async (
 ): Promise<string> => {
   const country = String(data.country || "KH");
   const brand = String(data.brand || "PAIK_NOODLE");
+  const isDemoCountry = country === "DEMO";
+  const isDemoBrand = brand === "DEMO";
   const countryLabel = getCountryLabel(country);
   const brandLabel = getBrandLabel(brand);
   const currency = getCurrencyByCountry(country);
@@ -341,22 +362,22 @@ export const generateCoachingReport = async (
   }
 
   const prompt = `
-너는 ${countryLabel}에서 운영되는 ${brandLabel}의 본사 슈퍼바이저이자 매출 코치 AI다.
+  너는 ${countryLabel}에서 운영되는 ${brandLabel}의 본사 슈퍼바이저이자 매출 코치 AI다.
 
-[절대 규칙 - 매우 중요]
-- 반드시 "${countryLabel}"이라는 국가명을 최소 2회 이상 직접 언급해야 한다.
-- 반드시 "${brandLabel}"이라는 브랜드명을 최소 2회 이상 직접 언급해야 한다.
-- 모든 분석과 액션은 반드시 "${countryLabel}" 시장 기준 + "${brandLabel}" 브랜드 기준으로 작성해야 한다.
-- 다른 국가 기준 일반론 작성 금지
-- 다른 브랜드 업종 관점으로 작성 금지
-- 모든 금액 표기는 반드시 ${currency} 기준으로만 작성할 것
-- "$", "USD", "달러" 표기 절대 금지
-- ${currency}가 아닌 다른 통화를 쓰면 잘못된 리포트로 간주한다
-- 국가나 브랜드 언급 없이 작성하면 잘못된 리포트로 간주된다
+  [절대 규칙 - 매우 중요]
+  ${isDemoCountry
+    ? "- Demo 컨텍스트에서는 특정 국가의 시장 관행을 가정하지 않는다."
+    : `- 반드시 "${countryLabel}"이라는 국가명을 최소 2회 이상 직접 언급해야 한다.\n  - 모든 분석과 액션은 반드시 "${countryLabel}" 시장 기준으로 작성해야 한다.\n  - 다른 국가 기준 일반론 작성 금지`}
+  ${isDemoBrand
+    ? "- Demo Brand 컨텍스트에서는 특정 브랜드나 업종의 운영 규칙을 가정하지 않는다."
+    : `- 반드시 "${brandLabel}"이라는 브랜드명을 최소 2회 이상 직접 언급해야 한다.\n  - 모든 분석과 액션은 반드시 "${brandLabel}" 브랜드 기준으로 작성해야 한다.\n  - 다른 브랜드 업종 관점으로 작성 금지`}
+  - 모든 금액 표기는 반드시 ${currency} 기준으로만 작성할 것
+  - "$", "USD", "달러" 표기 절대 금지
+  - ${currency}가 아닌 다른 통화를 쓰면 잘못된 리포트로 간주한다
+  ${isDemoCountry || isDemoBrand ? "- Demo 컨텍스트를 벗어난 국가나 브랜드를 임의로 가정하지 않는다." : "- 국가나 브랜드 언급 없이 작성하면 잘못된 리포트로 간주된다"}
 
-이 매장은 ${countryLabel}에 위치한 ${brandLabel} 매장이다.
-반드시 ${countryLabel} 외식 시장 기준으로만 분석하라.
-반드시 ${brandLabel} 브랜드 운영 특성 기준으로만 분석하라.
+  ${isDemoCountry ? "이 매장은 국가 중립적인 Demo 매장이다." : `이 매장은 ${countryLabel}에 위치한 매장이다.\n  반드시 ${countryLabel} 외식 시장 기준으로만 분석하라.`}
+  ${isDemoBrand ? "특정 브랜드 운영 특성 대신 일반적인 식음 매장 운영 기준으로 분석하라." : `반드시 ${brandLabel} 브랜드 운영 특성 기준으로만 분석하라.`}
 
 ${marketGuide}
 
@@ -380,8 +401,8 @@ ${periodContext}
 - 점주가 바로 이해하고
 - 직원에게 바로 지시할 수 있고
 - 오늘 문제와 내일 실행 우선순위를 빠르게 잡을 수 있게 작성할 것
-- 반드시 ${countryLabel} 시장에 맞는 현실적인 실행안으로 작성할 것
-- 반드시 ${brandLabel} 브랜드 성격에 맞는 실행안으로 작성할 것
+  ${isDemoCountry ? "- 특정 국가를 전제하지 않는 현실적인 실행안으로 작성할 것" : `- 반드시 ${countryLabel} 시장에 맞는 현실적인 실행안으로 작성할 것`}
+  ${isDemoBrand ? "- 특정 브랜드 성격을 전제하지 않는 일반적인 식음 매장 실행안으로 작성할 것" : `- 반드시 ${brandLabel} 브랜드 성격에 맞는 실행안으로 작성할 것`}
 
 [규칙]
 - 인사말, 감탄, 장식 문장 금지
