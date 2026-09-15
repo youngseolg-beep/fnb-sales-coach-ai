@@ -138,6 +138,7 @@ const App: React.FC = () => {
   });
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
+  const [menuMasterError, setMenuMasterError] = useState<string | null>(null);
 
   const { monthlyTarget, setMonthlyTarget, handleSaveMonthlyTarget } = useMonthlyTarget(storeId);
   const monthlyStatsRequestRef = useRef("");
@@ -244,6 +245,7 @@ const App: React.FC = () => {
     setAuthScreen("login");
     setMenuMasterCategories([]);
     setMenuMasterLoading(true);
+    setMenuMasterError(null);
     monthlyStatsRequestRef.current = "";
   };
 
@@ -291,17 +293,25 @@ const App: React.FC = () => {
 
     try {
       setMenuMasterLoading(true);
+      setMenuMasterError(null);
 
       const loadedMenuCategories = await loadMenuMaster(storeId);
+      if (loadedMenuCategories.length === 0) {
+        setMenuMasterCategories([]);
+        setMenuMasterError("메뉴 설정이 완료되지 않았습니다.");
+        return;
+      }
+
       const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-      const nextMenuCategories =
-        normalized.length > 0 ? normalized : cloneCategories(initialCategories);
+      const nextMenuCategories = normalized;
 
       setMenuMasterCategories(nextMenuCategories);
       await fetchData(data.date, nextMenuCategories);
       await refreshMonthlyStats(data.date.substring(0, 7));
     } catch (error) {
       console.error("reloadMenuMaster error:", error);
+      setMenuMasterCategories([]);
+      setMenuMasterError("메뉴를 불러오지 못했습니다.");
       showToast("메뉴 목록 새로고침 중 오류가 발생했습니다.");
     } finally {
       setMenuMasterLoading(false);
@@ -448,11 +458,18 @@ const App: React.FC = () => {
     const initMenuMaster = async () => {
       try {
         setMenuMasterLoading(true);
+        setMenuMasterError(null);
 
         const loadedMenuCategories = await loadMenuMaster(storeId);
+        if (loadedMenuCategories.length === 0) {
+          if (!isMounted) return;
+          setMenuMasterCategories([]);
+          setMenuMasterError("메뉴 설정이 완료되지 않았습니다.");
+          return;
+        }
+
         const normalized = normalizeMenuMasterCategories(loadedMenuCategories);
-        const nextMenuCategories =
-          normalized.length > 0 ? normalized : cloneCategories(initialCategories);
+        const nextMenuCategories = normalized;
 
         if (!isMounted) return;
         setMenuMasterCategories(nextMenuCategories);
@@ -460,7 +477,8 @@ const App: React.FC = () => {
         console.error("Menu Master Load Error:", error);
 
         if (!isMounted) return;
-        setMenuMasterCategories(cloneCategories(initialCategories));
+        setMenuMasterCategories([]);
+        setMenuMasterError("메뉴를 불러오지 못했습니다.");
       } finally {
         if (isMounted) {
           setMenuMasterLoading(false);
@@ -685,6 +703,18 @@ const App: React.FC = () => {
 
   if (userRole === "master") {
     return <MasterDashboardPage />;
+  }
+
+  if (menuMasterError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm">
+          <div className="text-lg font-black text-slate-900">Menu Setup Incomplete</div>
+          <div className="mt-2 text-sm font-semibold text-slate-600">{menuMasterError}</div>
+          <div className="mt-1 text-xs text-slate-500">관리자에게 메뉴 마스터 설정을 요청해 주세요.</div>
+        </div>
+      </div>
+    );
   }
 
   const summaryPage = (
