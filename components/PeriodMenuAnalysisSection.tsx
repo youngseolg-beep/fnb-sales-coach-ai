@@ -9,6 +9,7 @@ import PeriodBoostPlan from "./PeriodBoostPlan";
 import { formatCurrencyValue } from "../utils2/currency";
 
 interface Props {
+  storeId: number;
   periodRange: { start: string; end: string };
   setPeriodRange: React.Dispatch<React.SetStateAction<{ start: string; end: string }>>;
   comparisonMode: ComparisonMode;
@@ -41,6 +42,7 @@ interface Props {
 }
 
 const PeriodMenuAnalysisSection: React.FC<Props> = ({
+  storeId,
   periodRange,
   setPeriodRange,
   comparisonMode,
@@ -90,7 +92,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
           periodRange.start,
           periodRange.end,
           data.categories,
-          { maxDays: 60 }
+          { maxDays: 60, storeId }
         );
         setMenuEngineeringResult(meResult);
       }
@@ -100,6 +102,7 @@ const PeriodMenuAnalysisSection: React.FC<Props> = ({
   }, [
     periodRange.start,
     periodRange.end,
+    storeId,
     selectedPeriodDays,
     data.categories,
     loadCurrentPeriodData,

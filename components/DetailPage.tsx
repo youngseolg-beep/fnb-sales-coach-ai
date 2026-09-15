@@ -1273,6 +1273,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
       {/* 3. 하단 기간 분석 섹션 (기존 유지) */}
       <PeriodMenuAnalysisSection
+        storeId={storeId}
         periodRange={periodRange}
         setPeriodRange={setPeriodRange}
         comparisonMode={comparisonMode}
