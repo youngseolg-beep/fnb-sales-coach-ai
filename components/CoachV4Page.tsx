@@ -7,6 +7,14 @@ import { formatCurrencyValue } from "../utils2/currency";
 
 type PeriodKey = "today" | "week" | "month" | "custom";
 
+const getInclusiveDayCount = (start: string, end: string) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+};
+
 type Props = {
   data: SalesReportData;
   storeId: number;
@@ -70,14 +78,14 @@ const CoachV4Page: React.FC<Props> = ({
   ];
 
   return <main className="mx-auto w-full max-w-[430px] space-y-4 pb-32 text-[#1f1f1f]">
-    {activePeriod === "custom" && <section className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[12px] border border-[#eee8e3] bg-white p-3"><input aria-label="시작일" type="date" value={periodRange.start} onChange={(event) => onCustomRangeChange({ ...periodRange, start: event.target.value })} className="min-w-0 rounded-lg border border-[#e7ded7] px-2 py-2 text-xs" /><span className="text-[#857a72]">~</span><input aria-label="종료일" type="date" value={periodRange.end} onChange={(event) => onCustomRangeChange({ ...periodRange, end: event.target.value })} className="min-w-0 rounded-lg border border-[#e7ded7] px-2 py-2 text-xs" /></section>}
+    <CoachGlobalPeriodSelector activePeriod={activePeriod} periodRange={periodRange} onPeriodChange={onPeriodChange} onCustomRangeChange={onCustomRangeChange} />
 
     <section ref={insightRef} className="overflow-hidden rounded-[18px] border border-[#e5ddff] bg-[linear-gradient(135deg,#fcfbff_0%,#f3efff_100%)] p-5 shadow-[0_5px_16px_rgba(101,78,171,0.08)]">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-semibold text-[#6d55df]"><i className="fa-solid fa-robot mr-1" />AI Coach · 오늘의 판단</p><h2 className="mt-5 max-w-[235px] text-[21px] font-bold leading-[1.3] tracking-[-0.055em]">{insight}</h2></div><div className="relative mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/75 shadow-[0_8px_18px_rgba(96,76,152,0.12)]"><i className="fa-solid fa-robot text-[34px] text-[#2b2635]" /><i className="fa-solid fa-sparkles absolute -bottom-1 -left-2 text-[15px] text-[#9b7cff]" /></div></div>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-semibold text-[#6d55df]"><i className="fa-solid fa-robot mr-1" />AI Coach · 기간 분석</p><h2 className="mt-5 max-w-[235px] text-[21px] font-bold leading-[1.3] tracking-[-0.055em]">{insight}</h2></div><div className="relative mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/75 shadow-[0_8px_18px_rgba(96,76,152,0.12)]"><i className="fa-solid fa-robot text-[34px] text-[#2b2635]" /><i className="fa-solid fa-sparkles absolute -bottom-1 -left-2 text-[15px] text-[#9b7cff]" /></div></div>
       <div className="mt-5 grid grid-cols-[1fr_12px_1fr_12px_1fr] items-stretch gap-1"><ReasonCard title="원인" main={`주문수 ${ordersChangeRate.toFixed(0)}%`} sub={`객단가 ${aovChangeRate.toFixed(0)}%`} /><Arrow /><ReasonCard title="추천" main="세트 메뉴" sub="상단 노출" /><Arrow /><ReasonCard title="예상 효과" main="+4~7%" sub="매출 회복 가능" /></div>
     </section>
 
-    <section><h2 className="mb-3 text-[16px] font-bold tracking-[-0.04em]">오늘의 KPI <span className="text-[11px] font-medium text-[#746c66]">(근거 데이터)</span></h2><div className="grid grid-cols-5 gap-2">{[
+    <section><h2 className="mb-3 text-[16px] font-bold tracking-[-0.04em]">선택 기간 KPI <span className="text-[11px] font-medium text-[#746c66]">(근거 데이터)</span></h2><div className="grid grid-cols-5 gap-2">{[
       ["fa-won-sign", "오늘 매출", formatCurrencyValue(sales, country), salesChangeRate, "bg-[#eee9ff] text-[#7a65dc]"],
       ["fa-bag-shopping", "주문수", `${orders}건`, ordersChangeRate, "bg-[#e9f8e8] text-[#43a353]"],
       ["fa-user", "객단가", formatCurrencyValue(aov, country), aovChangeRate, "bg-[#fff3d9] text-[#e49d22]"],
@@ -85,11 +93,11 @@ const CoachV4Page: React.FC<Props> = ({
       ["fa-chart-pie", "전환율", visitors > 0 ? `${conversion.toFixed(1)}%` : "-", 0, "bg-[#e3f8f6] text-[#47afa9]"],
     ].map(([icon, label, value, delta, color]) => <KpiCard key={String(label)} icon={String(icon)} label={String(label)} value={String(value)} delta={Number(delta)} color={String(color)} />)}</div></section>
 
-    <section className="space-y-2">{rows.map((row) => <React.Fragment key={row.key}><div className="flex w-full items-center gap-3 rounded-[13px] border border-[#eee8e3] bg-white p-3 text-left shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><button ref={row.key === "report" ? reportActionRef : undefined} type="button" onClick={() => setOpenPanel((current) => current === row.key ? null : row.key)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#faf7ff] ${row.color}`}><i className={`fa-solid ${row.icon}`} /></span><span className="min-w-0 flex-1"><b className="block text-[13px]">{row.title}</b><small className="mt-0.5 block truncate text-[10px] text-[#736a63]">{row.copy}</small></span></button>{row.key === "engineering" && <EngineeringConfidenceInfo />}<span className="shrink-0 rounded-[8px] border border-[#ede7df] px-2 py-1 text-[10px] font-semibold text-[#7a604c]">{loading && row.key === "report" ? "분석 중" : row.badge}</span><i className="fa-solid fa-chevron-right shrink-0 text-[10px] text-[#7f746d]" /></div>{openPanel === row.key && <div className="overflow-hidden rounded-[13px] border border-[#eee8e3] bg-white p-3"><CoachPeriodSelector activePeriod={activePeriod} periodRange={periodRange} allowToday={row.key !== "engineering"} onPeriodChange={onPeriodChange} onCustomRangeChange={onCustomRangeChange} />{row.key === "analysis" ? <PeriodAnalysis periodRange={periodRange} comparisonRange={comparisonRange} salesChangeRate={salesChangeRate} ordersChangeRate={ordersChangeRate} visitorsChangeRate={visitorsChangeRate} aovChangeRate={aovChangeRate} conversion={conversion} trendRows={trendRows} currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} country={country} /> : row.key === "report" ? <V4Report report={report} reportMatchesScope={reportMatchesScope} loading={loading} persistedStatus={reportStatus} error={reportError} canGenerateReport={canGenerateReport} onRetry={onGenerateReport} /> : row.key === "engineering" ? engineeringContent : boostContent}</div>}</React.Fragment>)}</section>
+    <section className="space-y-2">{rows.map((row) => <React.Fragment key={row.key}><div className="flex w-full items-center gap-3 rounded-[13px] border border-[#eee8e3] bg-white p-3 text-left shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><button ref={row.key === "report" ? reportActionRef : undefined} type="button" onClick={() => setOpenPanel((current) => current === row.key ? null : row.key)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#faf7ff] ${row.color}`}><i className={`fa-solid ${row.icon}`} /></span><span className="min-w-0 flex-1"><b className="block text-[13px]">{row.title}</b><small className="mt-0.5 block truncate text-[10px] text-[#736a63]">{row.copy}</small></span></button><span className="shrink-0 rounded-[8px] border border-[#ede7df] px-2 py-1 text-[10px] font-semibold text-[#7a604c]">{loading && row.key === "report" ? "분석 중" : row.badge}</span><i className="fa-solid fa-chevron-right shrink-0 text-[10px] text-[#7f746d]" /></div>{openPanel === row.key && <div className="overflow-hidden rounded-[13px] border border-[#eee8e3] bg-white p-3">{row.key === "analysis" ? <PeriodAnalysis periodRange={periodRange} comparisonRange={comparisonRange} salesChangeRate={salesChangeRate} ordersChangeRate={ordersChangeRate} visitorsChangeRate={visitorsChangeRate} aovChangeRate={aovChangeRate} conversion={conversion} trendRows={trendRows} currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} country={country} /> : row.key === "report" ? <V4Report report={report} reportMatchesScope={reportMatchesScope} loading={loading} persistedStatus={reportStatus} error={reportError} canGenerateReport={canGenerateReport} onRetry={onGenerateReport} /> : row.key === "engineering" ? engineeringContent : boostContent}</div>}</React.Fragment>)}</section>
   </main>;
 };
 
-const EngineeringConfidenceInfo: React.FC = () => {
+const AnalysisConfidenceInfo: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const guideRef = useRef<HTMLSpanElement>(null);
 
@@ -102,7 +110,7 @@ const EngineeringConfidenceInfo: React.FC = () => {
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
   }, [isOpen]);
 
-  return <span ref={guideRef} className="relative shrink-0" onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}><button type="button" aria-label="메뉴 엔지니어링 분석 신뢰도 기준" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)} className="text-[13px] leading-none text-[#8a8079] hover:text-[#514840]">ⓘ</button>{isOpen && <div role="tooltip" className="absolute right-0 top-5 z-30 w-72 rounded-lg border border-[#e8e1db] bg-white p-3 text-[10px] leading-4 text-[#665d57] shadow-lg"><p className="font-bold text-[#302a26]">분석 신뢰도 기준</p><div className="mt-2 space-y-2"><p><b>1~6일 · 신뢰도 낮음</b><br />데이터가 적어 결과 변동성이 클 수 있습니다.</p><p><b>7~13일 · 신뢰도 보통</b><br />단기 흐름을 확인하기에 적합합니다.</p><p><b>14~27일 · 신뢰도 높음</b><br />메뉴 성과 판단에 활용할 수 있습니다.</p><p><b>28~60일 · 신뢰도 매우 높음</b><br />메뉴 전략 판단에 권장되는 기간입니다.</p></div><p className="mt-2 border-t border-[#f0ebe6] pt-2 text-[#7a7069]">※ 실제 신뢰도는 판매량과 주문 수에 따라서도 달라질 수 있습니다.<br />※ 60일을 초과한 기간은 최근 최대 60일 기준으로 분석합니다.</p></div>}</span>;
+  return <span ref={guideRef} className="relative shrink-0" onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}><button type="button" aria-label="분석 신뢰도 기준" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)} className="text-[13px] leading-none text-[#8a8079] hover:text-[#514840]">ⓘ</button>{isOpen && <div role="tooltip" className="absolute right-0 top-5 z-30 w-72 rounded-lg border border-[#e8e1db] bg-white p-3 text-[10px] leading-4 text-[#665d57] shadow-lg"><p className="font-bold text-[#302a26]">분석 신뢰도 기준</p><div className="mt-2 space-y-2"><p><b>1~6일 · 신뢰도 낮음</b><br />데이터가 적어 결과 변동성이 클 수 있습니다.</p><p><b>7~13일 · 신뢰도 보통</b><br />단기 흐름을 확인하기에 적합합니다.</p><p><b>14~27일 · 신뢰도 높음</b><br />메뉴 성과 판단에 활용할 수 있습니다.</p><p><b>28~60일 · 신뢰도 매우 높음</b><br />메뉴 전략 판단에 권장되는 기간입니다.</p></div><p className="mt-2 border-t border-[#f0ebe6] pt-2 text-[#7a7069]">※ 실제 신뢰도는 판매량과 주문 수에 따라서도 달라질 수 있습니다.<br />※ 60일을 초과한 기간은 메뉴 분석 시 최근 최대 60일 기준으로 분석합니다.</p></div>}</span>;
 };
 
 const V4Report: React.FC<{ report: string; reportMatchesScope: boolean; loading: boolean; persistedStatus: "generating" | "completed" | "failed" | null; error: string; canGenerateReport: boolean; onRetry: () => Promise<void>; sectionTitles: string[] }> = ({ report, reportMatchesScope, loading, persistedStatus, error, canGenerateReport, onRetry, sectionTitles }) => {
@@ -114,16 +122,26 @@ const V4Report: React.FC<{ report: string; reportMatchesScope: boolean; loading:
   return <div className="rounded-xl bg-[#fbfaff] p-5 text-center"><p className="text-sm font-medium text-[#62587c]">현재 기간의 운영 데이터를 AI로 분석합니다.</p><button type="button" onClick={() => void onRetry()} className="mt-3 rounded-lg bg-[#7456e5] px-3 py-2 text-xs font-semibold text-white">AI 운영 코칭 분석하기</button></div>;
 };
 
-const CoachPeriodSelector: React.FC<{
+const CoachGlobalPeriodSelector: React.FC<{
   activePeriod: PeriodKey;
   periodRange: { start: string; end: string };
-  allowToday: boolean;
   onPeriodChange: (period: PeriodKey) => void;
   onCustomRangeChange: (range: { start: string; end: string }) => void;
-}> = ({ activePeriod, periodRange, allowToday, onPeriodChange, onCustomRangeChange }) => {
-  const presets = (["today", "week", "month", "custom"] as const).filter((period) => allowToday || period !== "today");
-  const labels: Record<PeriodKey, string> = { today: "오늘", week: "이번 주", month: "이번 달", custom: "직접 선택" };
-  return <div className="mb-3 rounded-[10px] bg-[#faf8f6] p-2"><p className="mb-2 text-[10px] font-semibold text-[#746a63]">분석 기간 · {periodRange.start} ~ {periodRange.end}</p><div className={`grid gap-1 ${allowToday ? "grid-cols-4" : "grid-cols-3"}`}>{presets.map((period) => <button key={period} type="button" onClick={() => onPeriodChange(period)} className={`h-8 rounded-[7px] text-[10px] font-semibold ${activePeriod === period ? "bg-[#8b5e3c] text-white" : "bg-white text-[#514840]"}`}>{labels[period]}</button>)}</div>{activePeriod === "custom" && <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1"><input aria-label="시작일" type="date" value={periodRange.start} onChange={(event) => onCustomRangeChange({ ...periodRange, start: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1 text-[10px]" /><span>~</span><input aria-label="종료일" type="date" value={periodRange.end} onChange={(event) => onCustomRangeChange({ ...periodRange, end: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1 text-[10px]" /></div>}</div>;
+}> = ({ activePeriod, periodRange, onPeriodChange, onCustomRangeChange }) => {
+  const periodDays = Math.max(0, getInclusiveDayCount(periodRange.start, periodRange.end));
+  const confidence = periodDays <= 6
+    ? { label: "신뢰도 낮음", message: "데이터가 적어 결과 변동성이 클 수 있습니다." }
+    : periodDays <= 13
+      ? { label: "신뢰도 보통", message: "단기 분석 결과입니다." }
+      : periodDays <= 27
+        ? { label: "신뢰도 높음", message: "" }
+        : periodDays <= 60
+          ? { label: "신뢰도 매우 높음", message: "" }
+          : { label: "신뢰도 매우 높음", message: "메뉴 분석은 최근 최대 60일 기준으로 분석합니다." };
+  const presets = ["week", "month", "custom"] as const;
+  const labels: Record<typeof presets[number], string> = { week: "이번 주", month: "이번 달", custom: "직접 선택" };
+
+  return <section className="rounded-[13px] border border-[#eee8e3] bg-white p-3 shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><div className="flex items-center justify-between gap-2"><h2 className="text-[13px] font-bold text-[#302a26]">분석 기간</h2><AnalysisConfidenceInfo /></div><div className="mt-3 grid grid-cols-3 gap-1"><>{presets.map((period) => <button key={period} type="button" onClick={() => onPeriodChange(period)} className={`h-8 rounded-[7px] text-[10px] font-semibold ${activePeriod === period ? "bg-[#8b5e3c] text-white" : "bg-[#faf8f6] text-[#514840]"}`}>{labels[period]}</button>)}</></div>{activePeriod === "custom" && <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1"><input aria-label="시작일" type="date" value={periodRange.start} onChange={(event) => onCustomRangeChange({ ...periodRange, start: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /><span className="text-[#857a72]">~</span><input aria-label="종료일" type="date" value={periodRange.end} onChange={(event) => onCustomRangeChange({ ...periodRange, end: event.target.value })} className="min-w-0 rounded-md border border-[#e7ded7] bg-white px-1.5 py-1.5 text-[10px]" /></div>}<p className="mt-3 text-[10px] font-medium text-[#746a63]">{periodRange.start} ~ {periodRange.end}</p><p className="mt-1 text-[10px] text-[#857a72]"><b className="font-semibold text-[#665d57]">{confidence.label}</b>{confidence.message && <> · {confidence.message}</>}</p></section>;
 };
 
 const PeriodAnalysis: React.FC<{ periodRange: { start: string; end: string }; comparisonRange: { start: string; end: string } | null; salesChangeRate: number; ordersChangeRate: number; visitorsChangeRate: number; aovChangeRate: number; conversion: number; trendRows: Array<{ date: string; total_sales: number; orders: number }>; highestSales: number; currentMenus: PeriodMenuRow[]; comparisonMenus: PeriodMenuRow[]; country?: string }> = ({ periodRange, comparisonRange, salesChangeRate, ordersChangeRate, visitorsChangeRate, aovChangeRate, conversion, trendRows, currentMenus, comparisonPeriodMenus: _comparisonPeriodMenus, comparisonMenus, country }) => <div className="space-y-3 text-[11px]"><div className="grid grid-cols-2 gap-2"><PeriodDate label="현재 기간" value={`${periodRange.start} ~ ${periodRange.end}`} /><PeriodDate label="비교 기간" value={comparisonRange ? `${comparisonRange.start} ~ ${comparisonRange.end}` : "비교 기간 없음"} /></div><div className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg border border-[#eee8e3] p-2.5">{[["매출", salesChangeRate], ["주문수", ordersChangeRate], ["방문객", visitorsChangeRate], ["객단가", aovChangeRate], ["전환율", conversion]].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between"><span className="text-[#766c65]">{label}</span><b className={Number(value) < 0 ? "text-[#e45252]" : "text-[#2f9a5b]"}>{label === "전환율" ? `${Number(value).toFixed(1)}%` : `${Number(value) >= 0 ? "+" : ""}${Number(value).toFixed(1)}%`}</b></div>)}</div><p className="rounded-lg bg-[#f7f2ee] px-3 py-2 leading-5 text-[#765f50]">비교 기간의 매출과 주문 변화를 바탕으로 다음 실행 항목을 확인하세요.</p><section><h3 className="mb-2 font-bold text-[#302a26]">일별 추이</h3><DailyTrendChart rows={trendRows} country={country} /></section><section><h3 className="mb-2 font-bold text-[#302a26]">Top 5 메뉴 비교</h3><PeriodTopMenuCompare currentMenus={currentMenus} comparisonMenus={comparisonMenus} minDays={1} currentDays={trendRows.length} comparisonDays={comparisonMenus.length ? 1 : 0} country={country} /></section></div>;
