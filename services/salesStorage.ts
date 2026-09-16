@@ -70,6 +70,11 @@ const getMonthRange = (yearMonth: string) => {
 
 const buildStorageKey = (storeId: number, dateStr: string) => `${storeId}:${dateStr}`;
 
+const belongsToStore = (row: any, storeId: number) => {
+  const rowStoreId = row?.store_id ?? row?.payload?.storeId;
+  return rowStoreId != null && Number(rowStoreId) === storeId;
+};
+
 const buildDbRow = (payload: DailyPayload, storeId: number) => {
   const safeDate = String(payload.date).slice(0, 10);
   const safeCategories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -124,7 +129,7 @@ const mapRowToDaily = (row: any) => {
   };
 };
 
-export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
+export async function saveDaily(payload: DailyPayload, storeId: number) {
   const row = buildDbRow(payload, storeId);
   const key = buildStorageKey(storeId, row.date);
 
@@ -213,7 +218,7 @@ export async function saveDaily(payload: DailyPayload, storeId: number = 1) {
   };
 }
 
-export async function saveDailyData(payload: DailyPayload, storeId: number = 1) {
+export async function saveDailyData(payload: DailyPayload, storeId: number) {
   return await saveDaily(payload, storeId);
 }
 
@@ -239,7 +244,7 @@ export async function insertDailyIfMissing(payload: DailyPayload, storeId: numbe
   return { ok: true, inserted: true };
 }
 
-export async function loadDaily(dateStr: string, storeId: number = 1) {
+export async function loadDaily(dateStr: string, storeId: number) {
   const safeDate = String(dateStr).slice(0, 10);
   const key = buildStorageKey(storeId, safeDate);
 
@@ -273,7 +278,7 @@ export async function loadDaily(dateStr: string, storeId: number = 1) {
   return mapRowToDaily(data);
 }
 
-export async function deleteDaily(dateStr: string, storeId: number = 1) {
+export async function deleteDaily(dateStr: string, storeId: number) {
   const safeDate = String(dateStr).slice(0, 10);
   const key = buildStorageKey(storeId, safeDate);
 
@@ -297,7 +302,7 @@ export async function deleteDaily(dateStr: string, storeId: number = 1) {
   }
 }
 
-export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
+export async function listDatesInMonth(yearMonth: string, storeId: number) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   const hasMeaningfulPayload = (payload: any) => {
@@ -326,7 +331,7 @@ export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
 
     return Object.values(all)
       .filter((row: any) => {
-        const sameStore = Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId;
+        const sameStore = belongsToStore(row, storeId);
         const rowDate = String(row.date);
         const inMonth = rowDate >= start && rowDate < nextMonthStart;
         return sameStore && inMonth && hasMeaningfulPayload(row.payload);
@@ -356,7 +361,7 @@ export async function listDatesInMonth(yearMonth: string, storeId: number = 1) {
 export async function listDatesInRange(
   startDate: string,
   endDate: string,
-  storeId: number = 1
+  storeId: number
 ): Promise<string[]> {
   if (!supabase) {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -366,7 +371,7 @@ export async function listDatesInRange(
     return Object.values(all)
       .filter(
         (row: any) =>
-          Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId &&
+          belongsToStore(row, storeId) &&
           String(row.date) >= startDate &&
           String(row.date) <= endDate
       )
@@ -390,7 +395,7 @@ export async function listDatesInRange(
   return ((data ?? []) as any[]).map((r) => String(r.date));
 }
 
-export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
+export async function getMonthlyTotal(yearMonth: string, storeId: number) {
   const { start, nextMonthStart } = getMonthRange(yearMonth);
 
   if (!supabase) {
@@ -401,8 +406,7 @@ export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
     let sum = 0;
 
     for (const row of Object.values(all) as any[]) {
-      const sameStore =
-        Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId;
+      const sameStore = belongsToStore(row, storeId);
       const rowDate = String(row.date);
 
       if (!sameStore) continue;
@@ -437,7 +441,7 @@ export async function getMonthlyTotal(yearMonth: string, storeId: number = 1) {
 export async function loadDailyRange(
   start: string,
   end: string,
-  storeId: number = 1
+  storeId: number
 ) {
   if (!supabase) {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -447,7 +451,7 @@ export async function loadDailyRange(
     return Object.values(all)
       .filter(
         (row: any) =>
-          Number(row.store_id ?? row.payload?.storeId ?? 1) === storeId &&
+          belongsToStore(row, storeId) &&
           String(row.date) >= start &&
           String(row.date) <= end
       )

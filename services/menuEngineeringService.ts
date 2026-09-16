@@ -61,17 +61,18 @@ const sortByRevenueAsc = (a: MenuEngineeringItem, b: MenuEngineeringItem) =>
 
 export const calculateMenuEngineering = async (
   yearMonth: string,
-  initialCategories: MenuCategory[]
+  initialCategories: MenuCategory[],
+  storeId: number
 ): Promise<MenuEngineeringResult | null> => {
-  const dates = await listDatesInMonth(yearMonth);
-  return internalCalculate(dates, initialCategories);
+  const dates = await listDatesInMonth(yearMonth, storeId);
+  return internalCalculate(dates, initialCategories, undefined, storeId);
 };
 
 export const calculateMenuEngineeringForRange = async (
   startDate: string,
   endDate: string,
   initialCategories: MenuCategory[],
-  options?: { maxDays?: number; excludedMenuNames?: string[]; storeId?: number; demoRows?: CoachDemoDailyRow[] }
+  options: { maxDays?: number; excludedMenuNames?: string[]; storeId: number; demoRows?: CoachDemoDailyRow[] }
 ): Promise<MenuEngineeringResult | null> => {
   const mergedExcluded = [
     ...DEFAULT_EXCLUDED_MENU_NAMES,
@@ -82,7 +83,7 @@ export const calculateMenuEngineeringForRange = async (
 
   const excluded = new Set(mergedExcluded);
 
-  const storeId = options?.storeId ?? 1;
+  const storeId = options.storeId;
   let dates = await listDatesInRange(startDate, endDate, storeId);
   const suppliedRows = new Map((options?.demoRows ?? []).map((row) => [row.date, row]));
   if (dates.length === 0 && suppliedRows.size > 0) dates = Array.from(suppliedRows.keys()).sort();
@@ -98,8 +99,8 @@ export const calculateMenuEngineeringForRange = async (
 const internalCalculate = async (
   dates: string[],
   initialCategories: MenuCategory[],
-  excludedMenuNames?: Set<string>,
-  storeId: number = 1,
+  excludedMenuNames: Set<string> | undefined,
+  storeId: number,
   suppliedRows: Map<string, CoachDemoDailyRow> = new Map()
 ): Promise<MenuEngineeringResult | null> => {
   const datesCount = Array.isArray(dates) ? dates.length : 0;

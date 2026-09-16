@@ -2,7 +2,7 @@ import { supabase } from "./supabaseClient";
 
 export async function loadMonthlyTarget(
   targetMonth: string,
-  storeId: number = 1
+  storeId: number
 ): Promise<number> {
   const { data, error } = await supabase
     .from("monthly_targets")
@@ -22,7 +22,7 @@ export async function loadMonthlyTarget(
 export async function saveMonthlyTarget(
   targetMonth: string,
   targetAmount: number,
-  storeId: number = 1
+  storeId: number
 ): Promise<void> {
   const { error } = await supabase
     .from("monthly_targets")

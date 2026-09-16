@@ -14,7 +14,7 @@ export interface MenuCategory {
   items: MenuMasterRow[];
 }
 
-export async function loadMenuMaster(storeId: number = 1): Promise<MenuCategory[]> {
+export async function loadMenuMaster(storeId: number): Promise<MenuCategory[]> {
   const { data, error } = await supabase
     .from("menu_master")
     .select("*")
@@ -67,7 +67,7 @@ export async function createMenu(
   name: string,
   category: string,
   displayOrder: number,
-  storeId: number = 1
+  storeId: number
 ) {
   const { error } = await supabase.from("menu_master").insert([
     {
@@ -89,7 +89,7 @@ export async function createMenu(
 export async function updateMenuOrder(
   id: string,
   displayOrder: number,
-  storeId: number = 1
+  storeId: number
 ) {
   const { data, error } = await supabase
     .from("menu_master")
@@ -112,7 +112,7 @@ export async function updateMenuOrder(
   console.log("updateMenuOrder success:", data[0]);
 }
 
-export async function deactivateMenu(id: string, storeId: number = 1) {
+export async function deactivateMenu(id: string, storeId: number) {
   const { error } = await supabase
     .from("menu_master")
     .update({ is_active: false })
