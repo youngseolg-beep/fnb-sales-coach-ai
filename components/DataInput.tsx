@@ -449,6 +449,10 @@ async function compressForOcr(file: File, maxW = 1024, quality = 0.6): Promise<F
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
+function stripReceiptRowIndex(name: string): string {
+  return name.replace(/^\s*0*\d{1,3}(?:[.)])?\s+(?=\S)/, "").trim();
+}
+
 function extractMenuItemsFromRawText(rawText: string): { name: string; price: number; qty: number }[] {
   const lines = rawText
     .split("\n")
@@ -484,7 +488,7 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
   ];
 
   const cleanMenuName = (name: string) =>
-    name
+    stripReceiptRowIndex(name)
       .replace(/[\/|]+$/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -888,8 +892,25 @@ const DataInput: React.FC<DataInputProps> = ({
       .map(({ name, id, score }) => ({ name, id, score }));
   };
 
+  const getVariantTokens = (name: string): string[] => {
+    const normalized = name.toLowerCase();
+    const tokens = new Set<string>();
+    for (const match of normalized.matchAll(/\b(?:s|m|l|xl|regular|large)\b/g)) tokens.add(match[0]);
+    for (const match of normalized.matchAll(/소|중|대|곱빼기/g)) tokens.add(match[0]);
+    for (const match of normalized.matchAll(/\b\d+(?:\.\d+)?\s*(?:ml|cc|g|kg|oz|l)\b/g)) {
+      tokens.add(match[0].replace(/\s+/g, ""));
+    }
+    return [...tokens].sort();
+  };
+
+  const areVariantTokensCompatible = (receiptName: string, menuName: string) => {
+    const receiptTokens = getVariantTokens(receiptName);
+    const menuTokens = getVariantTokens(menuName);
+    return receiptTokens.length === menuTokens.length && receiptTokens.every((token, index) => token === menuTokens[index]);
+  };
+
   const autoCorrectItem = (ocrItem: { name: string; price: number; qty: number }): CorrectedItem => {
-    const originalName = ocrItem.name;
+    const originalName = stripReceiptRowIndex(ocrItem.name);
     const normalizedOcrName = normalizeName(originalName);
 
     if (manualMappings[originalName]) {
@@ -922,19 +943,53 @@ const DataInput: React.FC<DataInputProps> = ({
 
     const candidates = getRankedCandidates(originalName);
     const bestMatch = candidates[0];
+    const secondMatch = candidates[1];
     const confidence = bestMatch?.score ?? 0;
     const usedPrice = ocrItem.price || allMenus.find((menu) => menu.id === bestMatch?.id)?.price || 0;
+    const canAutoConfirmFuzzy =
+      Boolean(bestMatch) &&
+      confidence >= 0.96 &&
+      confidence - (secondMatch?.score ?? 0) >= 0.1 &&
+      areVariantTokensCompatible(originalName, bestMatch.name) &&
+      Number.isInteger(ocrItem.qty) &&
+      ocrItem.qty > 0;
 
     return {
-      matched_id: undefined,
+      matched_id: canAutoConfirmFuzzy ? bestMatch?.id : undefined,
       item_original: originalName,
       item_corrected: bestMatch?.name || originalName,
       unit_price: usedPrice,
       qty: ocrItem.qty,
       confidence,
-      needs_review: true,
+      needs_review: !canAutoConfirmFuzzy,
       candidates,
     };
+  };
+
+  const resolveStructuredMenuMatch = (
+    receiptName: string,
+    matchedName: string,
+    qty: number,
+    unitPrice: number,
+    explicitlyUncertain: boolean
+  ): CorrectedItem => {
+    const exactMatchedMenu = allMenus.find((menu) => menu.name === matchedName);
+    if (exactMatchedMenu && !explicitlyUncertain) {
+      return {
+        matched_id: exactMatchedMenu.id,
+        item_original: receiptName,
+        item_corrected: exactMatchedMenu.name,
+        unit_price: unitPrice || exactMatchedMenu.price || 0,
+        qty,
+        confidence: 1,
+        needs_review: false,
+      };
+    }
+
+    const fallback = autoCorrectItem({ name: receiptName, price: unitPrice, qty });
+    return explicitlyUncertain
+      ? { ...fallback, matched_id: undefined, needs_review: true }
+      : fallback;
   };
 
  const callOcrBatchWithRetry = async (
@@ -1125,42 +1180,38 @@ const callOcrWithRetry = async (
       if (structuredItems.length > 0) {
         correctedNewItems = structuredItems
           .map((item: any) => {
-            const receiptName = String(
-              item?.receipt_name || item?.matched_name || ""
-            ).trim();
+            const receiptName = stripReceiptRowIndex(
+              String(item?.receipt_name || item?.matched_name || "").trim()
+            );
 
             const matchedName = String(item?.matched_name || "").trim();
-            const matchedMenu = allMenus.find((m) => m.name === matchedName);
-
             const qty = Number(item?.qty || 0);
             const unitPrice = Number(item?.price || 0);
-            const confidenceRaw = Number(item?.confidence || 0);
-            const confidence =
-              Number.isFinite(confidenceRaw) && confidenceRaw >= 0
-                ? Math.min(1, confidenceRaw)
-                : 0;
+            const resolvedMatch = resolveStructuredMenuMatch(
+              receiptName,
+              matchedName,
+              Number.isFinite(qty) ? qty : 0,
+              Number.isFinite(unitPrice) ? unitPrice : 0,
+              Boolean(item?.needs_review)
+            );
 
             const isTakeout = /[※★]/.test(receiptName);
             const orderChannel = isTakeout ? "TAKEOUT" : "DINE_IN";
             const dineInQty = isTakeout ? 0 : qty;
             const takeoutQty = isTakeout ? qty : 0;
 
-            const needsReview = Boolean(item?.needs_review) || !matchedMenu;
-
             return {
-              matched_id: matchedMenu?.id,
+              matched_id: resolvedMatch.matched_id,
               item_original: receiptName,
-              item_corrected: matchedMenu?.name || matchedName || receiptName,
-              unit_price: unitPrice || matchedMenu?.price || 0,
+              item_corrected: resolvedMatch.item_corrected,
+              unit_price: resolvedMatch.unit_price,
               qty: Number.isFinite(qty) ? qty : 0,
               order_channel: orderChannel,
               dine_in_qty: Number.isFinite(dineInQty) ? dineInQty : 0,
               takeout_qty: Number.isFinite(takeoutQty) ? takeoutQty : 0,
-              confidence,
-              needs_review: needsReview,
-              candidates: needsReview
-                ? getRankedCandidates(receiptName || matchedName)
-                : undefined,
+              confidence: resolvedMatch.confidence,
+              needs_review: resolvedMatch.needs_review,
+              candidates: resolvedMatch.candidates,
             } as CorrectedItem;
           })
           .filter((item) => item.item_original && Number(item.qty || 0) > 0);
@@ -1229,27 +1280,30 @@ const callOcrWithRetry = async (
     }])));
     const correctedBatchItems = structuredItems.length > 0
       ? structuredItems.map((item: any) => {
-          const receiptName = String(item?.receipt_name || item?.matched_name || "").trim();
+          const receiptName = stripReceiptRowIndex(String(item?.receipt_name || item?.matched_name || "").trim());
           const matchedName = String(item?.matched_name || "").trim();
-          const matchedMenu = allMenus.find((menu) => menu.name === matchedName);
           const qty = Number(item?.qty || 0);
           const unitPrice = Number(item?.price || 0);
-          const confidenceRaw = Number(item?.confidence || 0);
-          const confidence = Number.isFinite(confidenceRaw) && confidenceRaw >= 0 ? Math.min(1, confidenceRaw) : 0;
+          const resolvedMatch = resolveStructuredMenuMatch(
+            receiptName,
+            matchedName,
+            Number.isFinite(qty) ? qty : 0,
+            Number.isFinite(unitPrice) ? unitPrice : 0,
+            Boolean(item?.needs_review)
+          );
           const isTakeout = /[?삘쁾]/.test(receiptName);
-          const needsReview = Boolean(item?.needs_review) || !matchedMenu || confidence < 0.88 || !Number.isFinite(unitPrice) || unitPrice <= 0;
           return {
-            matched_id: matchedMenu?.id,
+            matched_id: resolvedMatch.matched_id,
             item_original: receiptName,
-            item_corrected: matchedMenu?.name || matchedName || receiptName,
-            unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+            item_corrected: resolvedMatch.item_corrected,
+            unit_price: resolvedMatch.unit_price,
             qty: Number.isFinite(qty) ? qty : 0,
             order_channel: isTakeout ? "TAKEOUT" : "DINE_IN",
             dine_in_qty: isTakeout ? 0 : qty,
             takeout_qty: isTakeout ? qty : 0,
-            confidence,
-            needs_review: needsReview,
-            candidates: needsReview ? getRankedCandidates(receiptName || matchedName) : undefined,
+            confidence: resolvedMatch.confidence,
+            needs_review: resolvedMatch.needs_review,
+            candidates: resolvedMatch.candidates,
           } as CorrectedItem;
         }).filter((item) => item.item_original && Number(item.qty || 0) > 0)
       : extractMenuItemsFromRawText(extractedText).map((item) => autoCorrectItem(item));
