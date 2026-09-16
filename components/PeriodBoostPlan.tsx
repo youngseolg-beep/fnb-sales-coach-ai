@@ -10,7 +10,7 @@ const TYPE_META: Record<
 > = {
   MENU_BOARD: { badge: "대표 노출", tone: "text-blue-600", bg: "bg-blue-50" },
   STAFF_UPSELL: { badge: "직원 추천", tone: "text-emerald-600", bg: "bg-emerald-50" },
-  SET_DISCOUNT: { badge: "세트 할인", tone: "text-amber-600", bg: "bg-amber-50" },
+  SET_DISCOUNT: { badge: "세트 검토", tone: "text-amber-600", bg: "bg-amber-50" },
 };
 
 const PeriodBoostPlan: React.FC<Props> = ({ boostPlans }) => {
@@ -19,7 +19,7 @@ const PeriodBoostPlan: React.FC<Props> = ({ boostPlans }) => {
   return (
     <div className="w-full">
       <p className="mb-3 text-[11px] text-slate-500">
-        분석 결과를 바탕으로 즉시 적용 가능한 매출 증대 실행안입니다.
+        운영 액션은 실행할 수 있으며, 세트·가격 조건은 원가 확인과 승인 후 검토합니다.
       </p>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">

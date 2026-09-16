@@ -100,7 +100,6 @@ const SOFT_DRINKS = [
   "쌕쌕 238ml",
 ];
 
-const roundTo0_5 = (num: number): number => Math.round(num * 2) / 2;
 const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
 
 const DailySalesPage: React.FC<Props> = ({
@@ -644,7 +643,6 @@ const DailySalesPage: React.FC<Props> = ({
     let staffUpsellTarget = getUnusedTargetItem(targetableStars) || getUnusedTargetItem(targetableCashCows);
     if (staffUpsellTarget) {
       usedItemIds.add(staffUpsellTarget.id);
-      const randomSoftDrink = SOFT_DRINKS[Math.floor(Math.random() * SOFT_DRINKS.length)];
       const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
         staffUpsellTarget.qty_month || 0,
         analyzedDatesCount,
@@ -653,12 +651,12 @@ const DailySalesPage: React.FC<Props> = ({
       plans.push({
         puzzleItemName: staffUpsellTarget.name,
         setName: `${staffUpsellTarget.name} 주문 시`,
-        setComposition: `${staffUpsellTarget.name} (혜택) + ${randomSoftDrink} 1개 무료`,
-        discount: "FREE DRINK",
+        setComposition: `${staffUpsellTarget.name} + 연관 음료/사이드 추가 추천`,
+        discount: "NO DISCOUNT",
         dailyTargetQty,
-        staffComment: `손님께 ${staffUpsellTarget.name} 추천 시 ${randomSoftDrink} 무료 제공 안내.`,
+        staffComment: `${staffUpsellTarget.name} 주문 고객에게 어울리는 음료나 사이드 메뉴를 함께 안내.`,
         type: "STAFF_UPSELL",
-        reason: `판매량 높은 메뉴에 무료 음료 제공으로 객단가↑/만족도↑. ${dailyTargetReason}`,
+        reason: `판매량 높은 메뉴에 유료 추가 주문을 안내해 객단가 개선을 검토합니다. ${dailyTargetReason}`,
       });
     }
 
@@ -666,51 +664,21 @@ const DailySalesPage: React.FC<Props> = ({
     if (setDiscountTarget) {
       const secondItem = getSecondItemForSetDiscount(setDiscountTarget);
       if (secondItem) {
-        const setPrice = Number(setDiscountTarget.price || 0) + Number(secondItem.price || 0);
-        const setUnitCost = Number(setDiscountTarget.unitCost || 0) + Number((secondItem as any).unitCost || 0);
-
-        if (setPrice > 0 && setUnitCost >= 0) {
-          const gp = (setPrice - setUnitCost) / setPrice;
-          const minGPAfter = 0.35;
-          const maxDiscountByMargin = Math.max(0, Math.floor(((gp - minGPAfter) * 100) / 5) * 5);
-
-          const popularity = Number(setDiscountTarget.qty_month || 0);
-          let base = 15;
-          if (popularity <= 3) base = 25;
-          else if (popularity <= 7) base = 20;
-          else if (popularity <= 12) base = 15;
-          else base = 10;
-
-          let discountPercentage = Math.min(base, 25, maxDiscountByMargin);
-          discountPercentage = Math.max(0, Math.min(25, discountPercentage));
-          if (discountPercentage < 10) discountPercentage = 0;
-
-          const finalDiscountAmount =
-            discountPercentage > 0 ? roundTo0_5(setPrice * (discountPercentage / 100)) : 0;
-
-          if (finalDiscountAmount > 0) {
-            const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
-              setDiscountTarget.qty_month || 0,
-              analyzedDatesCount,
-              "SET_DISCOUNT"
-            );
-
-            plans.push({
-              puzzleItemName: setDiscountTarget.name,
-              setName: `${setDiscountTarget.name} + ${secondItem.name} 할인 세트`,
-              setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
-              discount: `${discountPercentage}% OFF`,
-              dailyTargetQty,
-              staffComment: `세트 할인: ${setDiscountTarget.name} + ${secondItem.name} ${discountPercentage}% 적용 (할인 후 GP ${Math.round(
-                minGPAfter * 100
-              )}%+ 유지).`,
-              type: "SET_DISCOUNT",
-              reason: `마진(GP) + 판매량(인기도) 기반으로 ${discountPercentage}% 산정. 현재 GP ${(gp * 100).toFixed(
-                1
-              )}% → 할인 후 GP ${Math.round(minGPAfter * 100)}% 이상 유지. ${dailyTargetReason}`,
-            });
-          }
-        }
+        const { dailyTargetQty, dailyTargetReason } = calculateDailyTargetAndReason(
+          setDiscountTarget.qty_month || 0,
+          analyzedDatesCount,
+          "SET_DISCOUNT"
+        );
+        plans.push({
+          puzzleItemName: setDiscountTarget.name,
+          setName: `${setDiscountTarget.name} + ${secondItem.name} 세트 구성 검토`,
+          setComposition: `${setDiscountTarget.name} + ${secondItem.name}`,
+          discount: "조건 미확정",
+          dailyTargetQty,
+          staffComment: `세트 구성은 원가와 공헌이익을 확인하고 승인 후 테스트합니다.`,
+          type: "SET_DISCOUNT",
+          reason: `판매량과 공헌이익 관점에서 세트 구성을 검토할 가치가 있습니다. ${dailyTargetReason}`,
+        });
       }
     }
 
