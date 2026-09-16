@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { requireStoreUserAuthorization } from "./_serverAuth";
 
 function extractJsonBlock(text: string) {
   if (!text) return null;
@@ -113,20 +114,26 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY_OCR;
-    if (!apiKey) {
-      return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_OCR is not configured" });
-    }
-
     const {
       imageBase64,
       mimeType,
       images,
+      storeId,
       userEmail,
       country,
       brand,
       menuCandidates,
     } = req.body || {};
+
+    const authorization = await requireStoreUserAuthorization(req, storeId);
+    if (authorization.ok === false) {
+      return res.status(authorization.status).json({ ok: false, error: authorization.error });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY_OCR;
+    if (!apiKey) {
+      return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_OCR is not configured" });
+    }
 
     const receiptImages = Array.isArray(images) && images.length > 0
       ? images

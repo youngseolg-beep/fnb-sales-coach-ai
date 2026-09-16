@@ -1,3 +1,5 @@
+import { getAuthenticatedApiHeaders } from "./apiAuth";
+
 export type OcrMenuCandidate =
   | string
   | {
@@ -92,17 +94,20 @@ export async function callOcr(
   mimeType = "image/jpeg",
   options?: {
     userEmail?: string;
+    storeId?: number;
     country?: string;
     brand?: string;
     menuCandidates?: OcrMenuCandidate[];
   }
 ) {
+  const headers = await getAuthenticatedApiHeaders();
   const res = await fetch("/api/ocr", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       imageBase64,
       mimeType,
+      storeId: options?.storeId,
       userEmail: options?.userEmail || "",
       country: options?.country || "",
       brand: options?.brand || "",
@@ -128,16 +133,19 @@ export async function callOcrBatch(
   images: Array<{ imageBase64: string; mimeType: string; fileName?: string }>,
   options?: {
     userEmail?: string;
+    storeId?: number;
     country?: string;
     brand?: string;
     menuCandidates?: OcrMenuCandidate[];
   }
 ) {
+  const headers = await getAuthenticatedApiHeaders();
   const res = await fetch("/api/ocr", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       images,
+      storeId: options?.storeId,
       userEmail: options?.userEmail || "",
       country: options?.country || "",
       brand: options?.brand || "",

@@ -1,3 +1,5 @@
+import { getAuthenticatedApiHeaders } from "./apiAuth";
+
 export type AiBoostPlan = {
   summary: string;
   target: { objective: string; targetGrowthPercent: number | null; timeHorizon: string };
@@ -59,9 +61,10 @@ const parsePlan = (value: unknown): AiBoostPlan | null => {
 };
 
 export const generateAiBoostPlan = async (context: AiBoostPlanContext): Promise<AiBoostPlan> => {
+  const headers = await getAuthenticatedApiHeaders();
   const response = await fetch("/api/boost-plan", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ context }),
   });
   const body = await response.text();

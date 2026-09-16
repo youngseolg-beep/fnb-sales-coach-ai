@@ -1,3 +1,5 @@
+import { getAuthenticatedApiHeaders } from "./apiAuth";
+
 export type AiMenuPriority = {
   menuId: string;
   menuName: string;
@@ -75,9 +77,10 @@ const parseResult = (value: unknown): AiMenuEngineeringResult | null => {
 export const generateAiMenuEngineering = async (
   context: AiMenuEngineeringContext
 ): Promise<AiMenuEngineeringResult> => {
+  const headers = await getAuthenticatedApiHeaders();
   const response = await fetch("/api/menu-engineering", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ context }),
   });
   const body = await response.text();

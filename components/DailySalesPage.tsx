@@ -887,7 +887,7 @@ const DailySalesPage: React.FC<Props> = ({
       if (!saved) return;
 
       const coachOnlyMenuEngineering = null;
-      const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering);
+      const result = await generateCoachingReport(data, results, coachOnlyMenuEngineering, { storeId });
 
       setReport(result);
       setReportGenerated(true);
@@ -923,6 +923,7 @@ const DailySalesPage: React.FC<Props> = ({
             loading={loading}
             datesWithData={[...datesWithData]}
             onMonthChange={onMonthChange}
+            storeId={storeId}
             storeName={storeName}
             homeLandingTarget={homeLandingTarget}
             onHomeLandingHandled={onHomeLandingHandled}

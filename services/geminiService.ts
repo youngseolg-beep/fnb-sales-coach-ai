@@ -1,4 +1,5 @@
 import { SalesReportData, CalculationResult, MenuEngineeringResult } from "../types";
+import { getAuthenticatedApiHeaders } from "./apiAuth";
 
 export type CoachingReportContext = {
   storeId?: number;
@@ -14,6 +15,7 @@ export type CoachingReportContext = {
 
 export type CoachingReportOptions = {
   context?: CoachingReportContext;
+  storeId?: number;
   throwOnError?: boolean;
 };
 
@@ -460,11 +462,13 @@ ${periodContext}
 
   try {
     const modelName = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.5-flash";
+    const storeId = context?.storeId ?? options.storeId;
+    const headers = await getAuthenticatedApiHeaders();
 
     const res = await fetch("/api/coach", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, modelName, country, brand, currency }),
+      headers,
+      body: JSON.stringify({ prompt, modelName, country, brand, currency, storeId }),
     });
 
     const body = await res.text();

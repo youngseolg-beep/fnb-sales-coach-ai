@@ -12,6 +12,7 @@ interface DataInputProps {
   loading: boolean;
   datesWithData?: string[];
   onMonthChange?: (month: Date) => void;
+  storeId: number;
   storeName?: string;
   homeLandingTarget?: "sales:manual" | "sales:ocr" | null;
   onHomeLandingHandled?: () => void;
@@ -571,6 +572,7 @@ const DataInput: React.FC<DataInputProps> = ({
   loading,
   datesWithData,
   onMonthChange,
+  storeId,
   storeName = "",
   homeLandingTarget = null,
   onHomeLandingHandled,
@@ -927,6 +929,7 @@ const DataInput: React.FC<DataInputProps> = ({
   fileNames: string[],
   options?: {
     userEmail?: string;
+    storeId?: number;
     country?: string;
     brand?: string;
     menuCandidates?: { name: string; jp_name?: string | null }[];
@@ -939,6 +942,7 @@ const DataInput: React.FC<DataInputProps> = ({
     try {
       return await callOcrBatch(images, {
         userEmail: options?.userEmail || "",
+        storeId: options?.storeId,
         country: options?.country || "",
         brand: options?.brand || "",
         menuCandidates: options?.menuCandidates || [],
@@ -974,7 +978,7 @@ const callOcrWithRetry = async (
   imageBase64: string,
   mimeType: string,
   _fileName: string,
-  options?: { userEmail?: string; country?: string; brand?: string; menuCandidates?: { name: string; jp_name?: string | null }[] }
+  options?: { userEmail?: string; storeId?: number; country?: string; brand?: string; menuCandidates?: { name: string; jp_name?: string | null }[] }
 ) => callOcr(imageBase64, mimeType, options);
 
   const appendFiles = (files: File[]) => {
@@ -1070,6 +1074,7 @@ const callOcrWithRetry = async (
 
       const ocrResult = await callOcrWithRetry(base64, mimeType, currentFile.name, {
         userEmail: currentUserEmail,
+        storeId,
         country: ocrCountry,
         brand: ocrBrand,
         menuCandidates,
@@ -1198,6 +1203,7 @@ const callOcrWithRetry = async (
     setOcrOptimizing(false);
     const ocrResult = await callOcrBatchWithRetry(images, filesToProcess.map((file) => file.name), {
       userEmail: currentUserEmail,
+      storeId,
       country: ocrCountry,
       brand: ocrBrand,
       menuCandidates,

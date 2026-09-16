@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { requireStoreUserAuthorization } from "./_serverAuth";
 
 const extractJsonObject = (text: string): unknown => {
   const trimmed = text.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
@@ -32,10 +33,15 @@ export default async function handler(req: any, res: any) {
   try {
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
+    const context = req.body?.context;
+    const authorization = await requireStoreUserAuthorization(req, context?.store?.storeId);
+    if (authorization.ok === false) {
+      return res.status(authorization.status).json({ ok: false, error: authorization.error });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY_COACH;
     if (!apiKey) return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_COACH is not configured" });
 
-    const context = req.body?.context;
     if (!context || !Array.isArray(context.menus) || context.menus.length === 0) {
       return res.status(400).json({ ok: false, error: "A non-empty Menu Engineering context is required" });
     }

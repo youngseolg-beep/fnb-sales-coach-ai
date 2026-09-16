@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { requireStoreUserAuthorization } from "./_serverAuth";
 
 export default async function handler(req: any, res: any) {
   try {
@@ -6,12 +7,16 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
+    const { prompt, country, storeId } = req.body || {};
+    const authorization = await requireStoreUserAuthorization(req, storeId);
+    if (authorization.ok === false) {
+      return res.status(authorization.status).json({ ok: false, error: authorization.error });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY_COACH;
     if (!apiKey) {
       return res.status(500).json({ error: "GEMINI_API_KEY_COACH is not configured" });
     }
-
-    const { prompt, country } = req.body || {};
 
     if (!prompt) {
       return res.status(400).json({ error: "prompt is required" });
