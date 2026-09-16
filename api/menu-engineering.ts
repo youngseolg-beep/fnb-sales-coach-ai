@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { requireStoreUserAuthorization } from "./_serverAuth";
+import { requireStoreUserAuthorization } from "./_serverAuth.js";
 
 const extractJsonObject = (text: string): unknown => {
   const trimmed = text.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();

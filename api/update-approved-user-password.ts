@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireMasterAuthorization } from "./_serverAuth";
+import { requireMasterAuthorization } from "./_serverAuth.js";
 
 function json(res: VercelResponse, status: number, body: Record<string, any>) {
   return res.status(status).json(body);

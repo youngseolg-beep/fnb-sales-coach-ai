@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { requireStoreUserAuthorization } from "./_serverAuth";
+import { requireStoreUserAuthorization } from "./_serverAuth.js";
 
 export default async function handler(req: any, res: any) {
   try {

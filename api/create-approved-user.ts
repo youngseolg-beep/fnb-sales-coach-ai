@@ -1,4 +1,4 @@
-import { requireMasterAuthorization } from "./_serverAuth";
+import { requireMasterAuthorization } from "./_serverAuth.js";
 
 type ApproveRequestBody = {
   requestId: number;
