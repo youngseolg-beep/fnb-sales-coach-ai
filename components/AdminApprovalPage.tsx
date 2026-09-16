@@ -60,12 +60,12 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [passwordUpdatingId, setPasswordUpdatingId] = useState<number | null>(null);
+  const [passwordDrafts, setPasswordDrafts] = useState<Record<number, string>>({});
   const [activeTab, setActiveTab] = useState<StatusTab>(initialTab);
   const [editForm, setEditForm] = useState({
     owner_name: "",
     phone: "",
     email: "",
-    requested_password: "",
     country: "",
     brand: "",
     store_name: "",
@@ -115,7 +115,6 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       owner_name: item.owner_name || "",
       phone: item.phone || "",
       email: item.email || "",
-      requested_password: item.requested_password || "",
       country: item.country || "",
       brand: item.brand || "",
       store_name: item.store_name || "",
@@ -128,7 +127,6 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       owner_name: "",
       phone: "",
       email: "",
-      requested_password: "",
       country: "",
       brand: "",
       store_name: "",
@@ -136,13 +134,19 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
   };
 
   const handleEditChange = (key: string, value: string) => {
-    if (key === "requested_password") {
-      const onlyNumbers = value.replace(/\D/g, "").slice(0, 6);
-      setEditForm((prev) => ({ ...prev, requested_password: onlyNumbers }));
-      return;
-    }
-
     setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePasswordDraftChange = (requestId: number, value: string) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 6);
+    setPasswordDrafts((previous) => ({ ...previous, [requestId]: digitsOnly }));
+  };
+
+  const clearPasswordDraft = (requestId: number) => {
+    setPasswordDrafts((previous) => {
+      const { [requestId]: _discarded, ...remaining } = previous;
+      return remaining;
+    });
   };
 
   const handleSaveEdit = async (requestId: number) => {
@@ -150,17 +154,11 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       !editForm.owner_name.trim() ||
       !editForm.phone.trim() ||
       !editForm.email.trim() ||
-      !editForm.requested_password.trim() ||
       !editForm.country ||
       !editForm.brand ||
       !editForm.store_name.trim()
     ) {
       alert("모든 항목을 입력해주세요.");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(editForm.requested_password)) {
-      alert("희망 비밀번호는 숫자 6자리여야 합니다.");
       return;
     }
 
@@ -173,7 +171,6 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
           owner_name: editForm.owner_name.trim(),
           phone: editForm.phone.trim(),
           email: editForm.email.trim().toLowerCase(),
-          requested_password: editForm.requested_password.trim(),
           country: editForm.country,
           brand: editForm.brand,
           store_name: editForm.store_name.trim(),
@@ -219,6 +216,13 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
   };
 
   const handleApprove = async (item: any) => {
+    const initialPassword = String(passwordDrafts[item.id] || "").trim();
+
+    if (!/^\d{6}$/.test(initialPassword)) {
+      alert("초기 비밀번호는 숫자 6자리여야 합니다.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -229,6 +233,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         headers,
         body: JSON.stringify({
           requestId: item.id,
+          initialPassword,
         }),
       });
 
@@ -239,6 +244,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       }
 
       alert("승인 완료");
+      clearPasswordDraft(item.id);
       await loadRequests();
       setActiveTab("approved");
     } catch (err: any) {
@@ -251,7 +257,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
 
   const handleApplyApprovedPassword = async (item: any) => {
     const email = String(item?.email || "").trim().toLowerCase();
-    const newPassword = String(item?.requested_password || "").trim();
+    const newPassword = String(passwordDrafts[item.id] || "").trim();
 
     if (!email) {
       alert("이메일이 없습니다.");
@@ -263,9 +269,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       return;
     }
 
-    const ok = window.confirm(
-      `${email} 계정의 실제 로그인 비밀번호를 ${newPassword}(으)로 변경하시겠습니까?`
-    );
+    const ok = window.confirm(`${email} 계정의 실제 로그인 비밀번호를 변경하시겠습니까?`);
     if (!ok) return;
 
     try {
@@ -289,6 +293,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       }
 
       alert("실제 로그인 비밀번호 반영 완료");
+      clearPasswordDraft(item.id);
       await loadRequests();
     } catch (err: any) {
       console.error(err);
@@ -419,15 +424,6 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
                     />
 
-                    <input
-                      value={editForm.requested_password}
-                      onChange={(e) =>
-                        handleEditChange("requested_password", e.target.value)
-                      }
-                      placeholder="희망 비밀번호 6자리"
-                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none"
-                    />
-
                     <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2">
                       <select
                         value={editForm.country}
@@ -511,12 +507,6 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-500">희망 비밀번호</span>
-                          <span className="ml-2 text-slate-200">
-                            {item.requested_password || "-"}
-                          </span>
-                        </div>
-                        <div>
                           <span className="text-slate-500">상태</span>
                           <span className="ml-2 text-slate-200">{item.status || "-"}</span>
                         </div>
@@ -524,6 +514,21 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                     </div>
 
                     <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
+                      {item.status === "pending" && (
+                        <label className="w-full text-xs font-semibold text-slate-400 md:w-auto">
+                          초기 비밀번호
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={passwordDrafts[item.id] || ""}
+                            onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
+                            placeholder="숫자 6자리"
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none md:w-36"
+                          />
+                        </label>
+                      )}
+
                       {item.status === "pending" && (
                         <button
                           onClick={() => handleApprove(item)}
@@ -545,12 +550,27 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                       )}
 
                       {item.status === "approved" && (
+                        <label className="w-full text-xs font-semibold text-slate-400 md:w-auto">
+                          새 비밀번호
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={passwordDrafts[item.id] || ""}
+                            onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
+                            placeholder="숫자 6자리"
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none md:w-36"
+                          />
+                        </label>
+                      )}
+
+                      {item.status === "approved" && (
                         <button
                           onClick={() => handleApplyApprovedPassword(item)}
                           disabled={loading || isPasswordUpdating}
                           className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 sm:px-4 sm:text-sm"
                         >
-                          {isPasswordUpdating ? "반영 중..." : "실제 비밀번호 반영"}
+                          {isPasswordUpdating ? "변경 중..." : "비밀번호 변경"}
                         </button>
                       )}
 

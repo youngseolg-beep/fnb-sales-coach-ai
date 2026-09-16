@@ -35,7 +35,6 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     name: "",
     phone: "",
     email: "",
-    requestedPassword: "",
     country: "",
     brand: "",
     storeName: "",
@@ -46,17 +45,11 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleRequestedPasswordChange = (value: string) => {
-    const numbersOnly = value.replace(/\D/g, "").slice(0, 6);
-    setForm((prev) => ({ ...prev, requestedPassword: numbersOnly }));
-  };
-
   const resetForm = () => {
     setForm({
       name: "",
       phone: "",
       email: "",
-      requestedPassword: "",
       country: "",
       brand: "",
       storeName: "",
@@ -68,17 +61,11 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
       !form.name.trim() ||
       !form.phone.trim() ||
       !form.email.trim() ||
-      !form.requestedPassword.trim() ||
       !form.country ||
       !form.brand ||
       !form.storeName.trim()
     ) {
       alert("모든 항목을 입력해주세요.");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(form.requestedPassword)) {
-      alert("희망 비밀번호는 숫자 6자리로 입력해주세요.");
       return;
     }
 
@@ -90,7 +77,6 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
           owner_name: form.name.trim(),
           phone: form.phone.trim(),
           email: form.email.trim().toLowerCase(),
-          requested_password: form.requestedPassword,
           country: form.country,
           brand: form.brand,
           store_name: form.storeName.trim(),
@@ -163,24 +149,6 @@ const AdminCreateUserPage: React.FC<Props> = ({ onBack }) => {
             onChange={(e) => handleChange("email", e.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
           />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-            희망 비밀번호
-          </label>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="숫자 6자리"
-            value={form.requestedPassword}
-            onChange={(e) => handleRequestedPasswordChange(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
-          />
-          <p className="mt-2 text-[11px] font-medium text-slate-400">
-            숫자 6자리만 입력 가능합니다.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

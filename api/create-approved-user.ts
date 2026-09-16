@@ -2,6 +2,7 @@ import { requireMasterAuthorization } from "./_serverAuth.js";
 
 type ApproveRequestBody = {
   requestId: number;
+  initialPassword: string;
 };
 
 type MenuSeedItem = {
@@ -104,9 +105,16 @@ export default async function handler(req: any, res: any) {
       typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
     const requestId = Number(body?.requestId);
+    const initialPassword = String(body?.initialPassword || "").trim();
 
     if (!requestId) {
       return res.status(400).json({ error: "requestId is required" });
+    }
+
+    if (!/^\d{6}$/.test(initialPassword)) {
+      return res.status(400).json({
+        error: "Initial password must be exactly 6 digits",
+      });
     }
 
     const { data: requestRow, error: requestError } = await admin
@@ -121,14 +129,6 @@ export default async function handler(req: any, res: any) {
 
     if (requestRow.status === "approved") {
       return res.status(400).json({ error: "Already approved" });
-    }
-
-    const requestedPassword = String(requestRow.requested_password || "").trim();
-
-    if (!/^\d{6}$/.test(requestedPassword)) {
-      return res.status(400).json({
-        error: "Requested password must be exactly 6 digits",
-      });
     }
 
     const normalizedEmail = String(requestRow.email || "").trim().toLowerCase();
@@ -157,7 +157,7 @@ export default async function handler(req: any, res: any) {
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: normalizedEmail,
-      password: requestedPassword,
+      password: initialPassword,
       email_confirm: true,
     });
 
