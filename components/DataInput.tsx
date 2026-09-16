@@ -64,6 +64,7 @@ export type SalesV4InputModel = {
   receiptCurrencyFileValidations: ReceiptCurrencyFileValidation[];
   ocrPriceMismatches: Array<{ name: string; ocrPrice: number; menuPrice: number }>;
   isOcrApplyBlocked: boolean;
+  ocrApplyBlockReason: string | null;
   isJapanPilot: boolean;
   scanTotal: number;
   receiptSubtotal: number | null;
@@ -488,6 +489,10 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
       .replace(/\s+/g, " ")
       .trim();
 
+  const parseReceiptAmount = (value: string) =>
+    Number(value.replace(/USD|\$|,|\s/gi, ""));
+  const amount = "((?:USD\\s*|\\$\\s*)?\\d[\\d,]*(?:\\.\\d+)?)";
+
   for (const line of lines) {
     const up = line.toUpperCase();
 
@@ -496,6 +501,25 @@ function extractMenuItemsFromRawText(rawText: string): { name: string; price: nu
     if (line.length < 2) continue;
 
     let m: RegExpMatchArray | null = null;
+
+    // 메뉴명 + 수량 + 단가 + 합계 (기존 가격 + 수량 + 합계도 유지)
+    // 예: 짬뽕 2 10.00 20.00 / 공기밥 2 $1.50 $3.00
+    m = line.match(new RegExp(`^(.+?)\\s+(\\d+)\\s+${amount}\\s+${amount}$`, "i"));
+    if (m) {
+      const name = cleanMenuName(m[1]);
+      const firstValue = parseInt(m[2] || "0", 10) || 0;
+      const secondValue = parseReceiptAmount(m[3] || "0");
+      // Three bare numeric columns are ambiguous. Prefer the receipt layout above
+      // for a typical small quantity, while retaining the legacy price + qty layout
+      // for rows such as "고추짜장 9 2 18".
+      const qtyFirst = firstValue <= 5 || /USD|\$|\./i.test(m[3] || "");
+      const qty = qtyFirst ? firstValue : secondValue;
+      const price = qtyFirst ? secondValue : firstValue;
+      if (name && qty > 0 && Number.isFinite(price)) {
+        items.push({ name, price, qty });
+        continue;
+      }
+    }
 
     // 한글/일문 메뉴명 + "/" + 가격 + 수량 + 합계
     // 예: 짜장면 / 7 1 7
@@ -810,7 +834,6 @@ const DataInput: React.FC<DataInputProps> = ({
       .toLowerCase()
       .replace(/\s+/g, "")
       .replace(/[^\wㄱ-ㅎ가-힣0-9]/g, "")
-      .replace(/\(.*\)/g, "")
       .replace(/[0-9]+(원|usd|\$)/g, "")
       .trim();
   };
@@ -853,6 +876,18 @@ const DataInput: React.FC<DataInputProps> = ({
     return flattened;
   }, [data.categories]);
 
+  const getRankedCandidates = (receiptName: string) => {
+    const normalizedReceiptName = normalizeName(receiptName);
+    return allMenus
+      .map((menu) => ({
+        ...menu,
+        score: getSimilarity(normalizedReceiptName, menu.normalizedName),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(({ name, id, score }) => ({ name, id, score }));
+  };
+
   const autoCorrectItem = (ocrItem: { name: string; price: number; qty: number }): CorrectedItem => {
     const originalName = ocrItem.name;
     const normalizedOcrName = normalizeName(originalName);
@@ -885,42 +920,20 @@ const DataInput: React.FC<DataInputProps> = ({
       };
     }
 
-    const scores = allMenus
-      .map((m) => ({
-        ...m,
-        score: getSimilarity(normalizedOcrName, m.normalizedName),
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const bestMatch = scores[0];
-    const secondMatch = scores[1];
-
-    let confidence = bestMatch?.score ?? 0;
-    let needsReview = true;
-
-    if (bestMatch && bestMatch.score >= 0.88) {
-      const scoreGap = secondMatch ? bestMatch.score - secondMatch.score : bestMatch.score;
-      if (scoreGap >= 0.08) needsReview = false;
-    }
-
-    const usedPrice = ocrItem.price || bestMatch?.price || 0;
-    if (!needsReview && usedPrice > 0 && bestMatch?.price) {
-      const priceDiff = Math.abs(bestMatch.price - usedPrice);
-      const ratio = bestMatch.price > 0 ? priceDiff / bestMatch.price : 0;
-      if (ratio > 0.2) needsReview = true;
-    }
-
-    if (ocrItem.qty <= 0) needsReview = true;
+    const candidates = getRankedCandidates(originalName);
+    const bestMatch = candidates[0];
+    const confidence = bestMatch?.score ?? 0;
+    const usedPrice = ocrItem.price || allMenus.find((menu) => menu.id === bestMatch?.id)?.price || 0;
 
     return {
-      matched_id: needsReview ? undefined : bestMatch?.id,
+      matched_id: undefined,
       item_original: originalName,
       item_corrected: bestMatch?.name || originalName,
       unit_price: usedPrice,
       qty: ocrItem.qty,
       confidence,
-      needs_review: needsReview,
-      candidates: scores.slice(0, 3).map((s) => ({ name: s.name, id: s.id, score: s.score })),
+      needs_review: true,
+      candidates,
     };
   };
 
@@ -1132,7 +1145,7 @@ const callOcrWithRetry = async (
             const dineInQty = isTakeout ? 0 : qty;
             const takeoutQty = isTakeout ? qty : 0;
 
-            const needsReview = Boolean(item?.needs_review ?? !matchedMenu);
+            const needsReview = Boolean(item?.needs_review) || !matchedMenu;
 
             return {
               matched_id: matchedMenu?.id,
@@ -1146,11 +1159,7 @@ const callOcrWithRetry = async (
               confidence,
               needs_review: needsReview,
               candidates: needsReview
-                ? allMenus.slice(0, 5).map((m) => ({
-                    name: m.name,
-                    id: m.id,
-                    score: m.name === matchedName ? 1 : 0,
-                  }))
+                ? getRankedCandidates(receiptName || matchedName)
                 : undefined,
             } as CorrectedItem;
           })
@@ -1240,7 +1249,7 @@ const callOcrWithRetry = async (
             takeout_qty: isTakeout ? qty : 0,
             confidence,
             needs_review: needsReview,
-            candidates: needsReview ? allMenus.slice(0, 5).map((menu) => ({ name: menu.name, id: menu.id, score: menu.name === matchedName ? 1 : 0 })) : undefined,
+            candidates: needsReview ? getRankedCandidates(receiptName || matchedName) : undefined,
           } as CorrectedItem;
         }).filter((item) => item.item_original && Number(item.qty || 0) > 0)
       : extractMenuItemsFromRawText(extractedText).map((item) => autoCorrectItem(item));
@@ -1284,7 +1293,11 @@ const callOcrWithRetry = async (
   };
 
   const applyOcr = () => {
-    if (ocrItemsAccumulated.length === 0) return;
+    if (
+      ocrItemsAccumulated.length === 0 ||
+      ocrItemsAccumulated.some((item) => item.needs_review) ||
+      receiptCurrencyValidation.status === "BLOCK"
+    ) return;
 
     const newCategories = data.categories.map((cat) => ({
       ...cat,
@@ -1507,7 +1520,16 @@ const callOcrWithRetry = async (
   }, [scanTotal, receiptSubtotal]);
   const isOcrApplyBlocked =
     ocrItemsAccumulated.length === 0 ||
+    needsReviewItems.length > 0 ||
     receiptCurrencyValidation.status === "BLOCK";
+  const ocrApplyBlockReason =
+    needsReviewItems.length > 0
+      ? "확인 필요 메뉴를 모두 선택해 주세요."
+      : receiptCurrencyValidation.status === "BLOCK"
+      ? "영수증 통화를 확인해 주세요."
+      : ocrItemsAccumulated.length === 0
+      ? "인식된 메뉴가 없습니다."
+      : null;
 
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
@@ -1586,6 +1608,7 @@ const callOcrWithRetry = async (
       receiptCurrencyFileValidations,
       ocrPriceMismatches,
       isOcrApplyBlocked,
+      ocrApplyBlockReason,
       isJapanPilot,
       scanTotal,
       receiptSubtotal,
@@ -2057,6 +2080,7 @@ const callOcrWithRetry = async (
                     onClick={applyOcr}
                     disabled={
                       ocrItemsAccumulated.length === 0 ||
+                      needsReviewItems.length > 0 ||
                       receiptDateValidation.status === "BLOCK" ||
                       receiptStoreValidation.status === "BLOCK" ||
                       receiptCurrencyValidation.status === "BLOCK"
@@ -2064,7 +2088,7 @@ const callOcrWithRetry = async (
                     className="flex items-center gap-2 rounded-xl bg-[#8b6f5b] px-6 py-3 text-sm font-semibold text-white shadow-[0_7px_16px_rgba(111,64,39,0.16)] transition hover:bg-[#745846] active:scale-95 disabled:bg-[#d8d1cb]"
                   >
                     <i className="fa-solid fa-check"></i>
-                    ✅ 데이터 입력창에 적용하기
+                    ✅ {needsReviewItems.length > 0 ? "확인 필요 메뉴를 모두 선택해 주세요." : "데이터 입력창에 적용하기"}
                   </button>
 
                   <button
