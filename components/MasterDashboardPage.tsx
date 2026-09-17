@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  getMasterComparisonLabel,
   getMasterDateRange,
   loadMasterDashboard,
   type MasterDashboardResult,
@@ -36,17 +37,6 @@ function getPresetLabel(preset: MasterDatePreset) {
   if (preset === "thisMonth") return "This Month";
   if (preset === "last30Days") return "Last 30 Days";
   return "Custom";
-}
-
-function getComparisonLabel(range: MasterDateRange) {
-  if (range.preset === "today") return "전일 대비";
-  if (range.preset === "thisWeek") return "이전 주 대비";
-  if (range.preset === "thisMonth") return "이전 달 대비";
-
-  const start = new Date(range.startDate);
-  const end = new Date(range.endDate);
-  const dayCount = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
-  return `이전 ${dayCount}일 대비`;
 }
 
 function growthClass(rate: number | null | undefined) {
@@ -219,12 +209,12 @@ export default function MasterDashboardPage() {
       return "비교 가능한 이전 기간 데이터가 충분하지 않습니다.";
     }
     if (salesGrowth <= -10) {
-      return `${getComparisonLabel(range)} 매출이 ${Math.abs(salesGrowth).toFixed(1)}% 감소했습니다. 주요 매장의 변화를 먼저 확인해 보세요.`;
+      return `${getMasterComparisonLabel(range)} 매출이 ${Math.abs(salesGrowth).toFixed(1)}% 감소했습니다. 주요 매장의 변화를 먼저 확인해 보세요.`;
     }
     if (salesGrowth >= 10) {
-      return `${getComparisonLabel(range)} 매출이 ${salesGrowth.toFixed(1)}% 증가했습니다. 성장한 매장의 운영 포인트를 확인해 보세요.`;
+      return `${getMasterComparisonLabel(range)} 매출이 ${salesGrowth.toFixed(1)}% 증가했습니다. 성장한 매장의 운영 포인트를 확인해 보세요.`;
     }
-    return `${getComparisonLabel(range)} 매출 변동은 ${salesGrowth.toFixed(1)}%입니다. 큰 변동 없이 유지되고 있습니다.`;
+    return `${getMasterComparisonLabel(range)} 매출 변동은 ${salesGrowth.toFixed(1)}%입니다. 큰 변동 없이 유지되고 있습니다.`;
   }, [range, salesGrowth, visibleSummary]);
 
   const handleCustomDateChange = (key: "startDate" | "endDate", value: string) => {
@@ -394,7 +384,7 @@ export default function MasterDashboardPage() {
                   </div>
                   <div className="mt-2 text-[20px] font-bold leading-none tracking-[-0.035em] sm:mt-3 sm:text-2xl">{formatCurrency(visibleSummary.totalSales)}</div>
                   <div className={`mt-1.5 text-[11px] font-semibold sm:mt-2 sm:text-xs ${growthClass(salesGrowth)}`}>{growthText(salesGrowth)}</div>
-                  <div className="mt-1 text-[10px] text-[#9C948E] sm:text-[11px]">{getComparisonLabel(range)}</div>
+                  <div className="mt-1 text-[10px] text-[#9C948E] sm:text-[11px]">{getMasterComparisonLabel(range)}</div>
                 </div>
 
                 <div className="border-b border-[#F1ECE8] p-3 sm:p-5 lg:border-b-0 lg:border-r lg:p-6">

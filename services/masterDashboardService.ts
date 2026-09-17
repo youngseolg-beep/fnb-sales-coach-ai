@@ -202,29 +202,25 @@ function startOfWeek(date: Date) {
   return d;
 }
 
-function endOfWeek(date: Date) {
-  const d = startOfWeek(date);
-  d.setDate(d.getDate() + 6);
-  return d;
-}
-
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function endOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+function parseLocalDate(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function diffDaysInclusive(startDate: string, endDate: string) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
   const diff = end.getTime() - start.getTime();
   return Math.floor(diff / 86400000) + 1;
 }
 
 function addDays(dateString: string, days: number) {
-  const d = new Date(dateString);
+  const d = parseLocalDate(dateString);
   d.setDate(d.getDate() + days);
   return toLocalDateString(d);
 }
@@ -244,7 +240,7 @@ export function getMasterDateRange(preset: MasterDatePreset): MasterDateRange {
   if (preset === "thisWeek") {
     return {
       startDate: toLocalDateString(startOfWeek(today)),
-      endDate: toLocalDateString(endOfWeek(today)),
+      endDate: todayStr,
       preset,
     };
   }
@@ -252,7 +248,7 @@ export function getMasterDateRange(preset: MasterDatePreset): MasterDateRange {
   if (preset === "thisMonth") {
     return {
       startDate: toLocalDateString(startOfMonth(today)),
-      endDate: toLocalDateString(endOfMonth(today)),
+      endDate: todayStr,
       preset,
     };
   }
@@ -293,9 +289,11 @@ export function getPreviousRange(range: MasterDateRange): MasterDateRange {
   }
 
   if (range.preset === "thisMonth") {
-    const start = new Date(range.startDate);
+    const start = parseLocalDate(range.startDate);
+    const end = parseLocalDate(range.endDate);
     const prevMonthStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
-    const prevMonthEnd = new Date(start.getFullYear(), start.getMonth(), 0);
+    const prevMonthLastDay = new Date(start.getFullYear(), start.getMonth(), 0).getDate();
+    const prevMonthEnd = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), Math.min(end.getDate(), prevMonthLastDay));
 
     return {
       startDate: toLocalDateString(prevMonthStart),
@@ -598,6 +596,14 @@ async function fetchSalesRows(startDate: string, endDate: string) {
   }
 
   return (data || []) as SalesDailyRow[];
+}
+
+export function getMasterComparisonLabel(range: MasterDateRange) {
+  if (range.preset === "today") return "전일 대비";
+  if (range.preset === "thisWeek") return "전주 동일 기간 대비";
+  if (range.preset === "thisMonth") return "전월 동일 기간 대비";
+  if (range.preset === "last30Days") return "이전 30일 대비";
+  return "이전 동일 기간 대비";
 }
 
 async function fetchStoreSalesRows(storeId: number, startDate: string, endDate: string) {
