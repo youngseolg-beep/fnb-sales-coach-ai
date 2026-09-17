@@ -1,5 +1,16 @@
 import { getAuthenticatedApiHeaders } from "./apiAuth";
 
+export const OCR_REQUEST_TIMEOUT_MS = 45_000;
+export const OCR_MAX_IMAGES = 8;
+export const OCR_MAX_ORIGINAL_IMAGE_BYTES = 12 * 1024 * 1024;
+export const OCR_MAX_PROCESSED_IMAGE_BYTES = 4 * 1024 * 1024;
+export const OCR_MAX_TOTAL_IMAGE_BYTES = 16 * 1024 * 1024;
+export const OCR_ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+const OCR_TIMEOUT_MESSAGE = "영수증 분석 시간이 초과되었습니다. 다시 시도해 주세요.";
+const OCR_NETWORK_ERROR_MESSAGE = "영수증 분석 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.";
+const OCR_SERVER_ERROR_MESSAGE = "영수증 분석 서버 응답을 처리하지 못했습니다. 다시 시도해 주세요.";
+
 export type OcrMenuCandidate =
   | string
   | {
@@ -89,6 +100,99 @@ function normalizeOcrResponse(value: unknown): OcrResponse {
   };
 }
 
+type OcrImagePayload = { imageBase64: string; mimeType: string; fileName?: string };
+
+function normalizeBase64Payload(value: string): string | null {
+  const raw = value.trim();
+  const dataUrl = raw.match(/^data:[^;,]+;base64,([\s\S]+)$/i);
+  const base64 = (dataUrl?.[1] ?? raw).replace(/\s+/g, "");
+  if (!base64 || base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) return null;
+  const firstPadding = base64.indexOf("=");
+  if (firstPadding !== -1 && firstPadding < base64.length - (base64.endsWith("==") ? 2 : 1)) return null;
+  return base64;
+}
+
+export function estimateBase64DecodedBytes(value: string): number | null {
+  const base64 = normalizeBase64Payload(value);
+  if (!base64) return null;
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return (base64.length / 4) * 3 - padding;
+}
+
+function validateClientImages(images: OcrImagePayload[]) {
+  if (images.length === 0) throw new Error("영수증 이미지를 선택해 주세요.");
+  if (images.length > OCR_MAX_IMAGES) {
+    throw new Error("영수증 이미지는 한 번에 최대 8장까지 업로드할 수 있습니다.");
+  }
+
+  let totalBytes = 0;
+  for (const image of images) {
+    const mimeType = image.mimeType.trim().toLowerCase();
+    if (!OCR_ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as typeof OCR_ALLOWED_IMAGE_MIME_TYPES[number])) {
+      throw new Error("지원하지 않는 이미지 형식입니다. JPEG, PNG 또는 WebP 이미지를 사용해 주세요.");
+    }
+    const bytes = estimateBase64DecodedBytes(image.imageBase64);
+    if (bytes === null) throw new Error("이미지 데이터가 올바르지 않습니다. 다른 이미지를 사용해 주세요.");
+    if (bytes > OCR_MAX_PROCESSED_IMAGE_BYTES) {
+      throw new Error("이미지 최적화 후에도 용량이 너무 큽니다. 다른 이미지를 사용해 주세요.");
+    }
+    totalBytes += bytes;
+  }
+
+  if (totalBytes > OCR_MAX_TOTAL_IMAGE_BYTES) {
+    throw new Error("영수증 이미지 전체 용량이 너무 큽니다. 다른 이미지를 사용해 주세요.");
+  }
+}
+
+async function parseOcrResponse(res: Response): Promise<OcrResponse> {
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    throw new Error(OCR_SERVER_ERROR_MESSAGE);
+  }
+
+  if (!res.ok || !isRecord(json) || !json.ok) {
+    throw new Error(
+      isRecord(json) && typeof json.message === "string"
+        ? json.message
+        : res.status === 413
+          ? "업로드한 이미지 용량이 제한을 초과했습니다. 다른 이미지를 사용해 주세요."
+          : isRecord(json) && typeof json.error === "string"
+            ? json.error
+            : "OCR server error"
+    );
+  }
+
+  return normalizeOcrResponse(json);
+}
+
+async function fetchOcr(body: Record<string, unknown>): Promise<OcrResponse> {
+  const headers = await getAuthenticatedApiHeaders();
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, OCR_REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch("/api/ocr", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    return await parseOcrResponse(res);
+  } catch (error) {
+    if (timedOut) throw new Error(OCR_TIMEOUT_MESSAGE);
+    if (error instanceof TypeError) throw new Error(OCR_NETWORK_ERROR_MESSAGE);
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function callOcr(
   imageBase64: string,
   mimeType = "image/jpeg",
@@ -100,33 +204,16 @@ export async function callOcr(
     menuCandidates?: OcrMenuCandidate[];
   }
 ) {
-  const headers = await getAuthenticatedApiHeaders();
-  const res = await fetch("/api/ocr", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      imageBase64,
-      mimeType,
-      storeId: options?.storeId,
-      userEmail: options?.userEmail || "",
-      country: options?.country || "",
-      brand: options?.brand || "",
-      menuCandidates: options?.menuCandidates || [],
-    }),
+  validateClientImages([{ imageBase64, mimeType }]);
+  return fetchOcr({
+    imageBase64,
+    mimeType,
+    storeId: options?.storeId,
+    userEmail: options?.userEmail || "",
+    country: options?.country || "",
+    brand: options?.brand || "",
+    menuCandidates: options?.menuCandidates || [],
   });
-
-  const json: unknown = await res.json();
-  if (!res.ok || !isRecord(json) || !json.ok) {
-    throw new Error(
-      isRecord(json) && typeof json.message === "string"
-        ? json.message
-        : isRecord(json) && typeof json.error === "string"
-        ? json.error
-        : "OCR server error"
-    );
-  }
-
-  return normalizeOcrResponse(json);
 }
 
 export async function callOcrBatch(
@@ -139,30 +226,13 @@ export async function callOcrBatch(
     menuCandidates?: OcrMenuCandidate[];
   }
 ) {
-  const headers = await getAuthenticatedApiHeaders();
-  const res = await fetch("/api/ocr", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      images,
-      storeId: options?.storeId,
-      userEmail: options?.userEmail || "",
-      country: options?.country || "",
-      brand: options?.brand || "",
-      menuCandidates: options?.menuCandidates || [],
-    }),
+  validateClientImages(images);
+  return fetchOcr({
+    images,
+    storeId: options?.storeId,
+    userEmail: options?.userEmail || "",
+    country: options?.country || "",
+    brand: options?.brand || "",
+    menuCandidates: options?.menuCandidates || [],
   });
-
-  const json: unknown = await res.json();
-  if (!res.ok || !isRecord(json) || !json.ok) {
-    throw new Error(
-      isRecord(json) && typeof json.message === "string"
-        ? json.message
-        : isRecord(json) && typeof json.error === "string"
-        ? json.error
-        : "OCR server error"
-    );
-  }
-
-  return normalizeOcrResponse(json);
 }

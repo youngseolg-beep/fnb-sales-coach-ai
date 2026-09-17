@@ -1,7 +1,14 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { SalesReportData, CorrectedItem } from "../types";
 import { DayPicker } from "react-day-picker";
-import { callOcr, callOcrBatch } from "../services/ocrService";
+import {
+  callOcr,
+  callOcrBatch,
+  OCR_ALLOWED_IMAGE_MIME_TYPES,
+  OCR_MAX_IMAGES,
+  OCR_MAX_ORIGINAL_IMAGE_BYTES,
+  OCR_MAX_PROCESSED_IMAGE_BYTES,
+} from "../services/ocrService";
 import { formatLocalDate, parseLocalDate } from "../utils2/date";
 import { getCurrencyByCountry, formatCurrencyValue } from "../utils2/currency";
 import { supabase } from "../services/supabaseClient";
@@ -1057,8 +1064,42 @@ const callOcrWithRetry = async (
   options?: { userEmail?: string; storeId?: number; country?: string; brand?: string; menuCandidates?: { name: string; jp_name?: string | null }[] }
 ) => callOcr(imageBase64, mimeType, options);
 
+  const showOcrPreflightError = (message: string) => {
+    setOcrError(message);
+    setOcrErrorDetail("");
+    setOcrProgress(null);
+  };
+
+  const validateOcrFiles = (files: File[]) => {
+    if (files.length > OCR_MAX_IMAGES) {
+      showOcrPreflightError("영수증 이미지는 한 번에 최대 8장까지 업로드할 수 있습니다.");
+      return false;
+    }
+    if (files.some((file) => !OCR_ALLOWED_IMAGE_MIME_TYPES.includes(file.type.trim().toLowerCase() as typeof OCR_ALLOWED_IMAGE_MIME_TYPES[number]))) {
+      showOcrPreflightError("지원하지 않는 이미지 형식입니다. JPEG, PNG 또는 WebP 이미지를 사용해 주세요.");
+      return false;
+    }
+    if (files.some((file) => file.size > OCR_MAX_ORIGINAL_IMAGE_BYTES)) {
+      showOcrPreflightError("이미지 용량이 너무 큽니다. 12MB 이하의 이미지를 사용해 주세요.");
+      return false;
+    }
+    return true;
+  };
+
+  const prepareOcrImage = async (file: File) => {
+    const optimizedFile = await compressForOcr(file, 1024, 0.6);
+    if (optimizedFile.size > OCR_MAX_PROCESSED_IMAGE_BYTES) {
+      throw new Error("이미지 최적화 후에도 용량이 너무 큽니다. 다른 이미지를 사용해 주세요.");
+    }
+    return fileToBase64(optimizedFile);
+  };
+
   const appendFiles = (files: File[]) => {
     if (!files || files.length === 0) return;
+
+    const existingKeys = new Set(ocrFiles.map((file) => fileKey(file)));
+    const nextFiles = [...ocrFiles, ...files.filter((file) => !existingKeys.has(fileKey(file)))];
+    if (!validateOcrFiles(nextFiles)) return;
 
     setOcrFiles((prev) => {
       const prevKeys = new Set(prev.map((f) => fileKey(f)));
@@ -1083,6 +1124,8 @@ const callOcrWithRetry = async (
   };
 
   const replaceAllFiles = (files: File[]) => {
+    if (!validateOcrFiles(files)) return;
+
     setOcrFiles(files);
     const nextStatus: Record<string, FileStatus> = {};
     files.forEach((f) => (nextStatus[f.name] = { status: "pending" }));
@@ -1100,6 +1143,7 @@ const callOcrWithRetry = async (
   const handleOcr = async (_filesToProcessOverride?: File[]) => {
   const filesToProcess = ocrFiles;
   if (filesToProcess.length === 0) return;
+  if (!validateOcrFiles(filesToProcess)) return;
 
   setOcrLoading(true);
   setOcrError("");
@@ -1143,8 +1187,7 @@ const callOcrWithRetry = async (
     try {
       setOcrOptimizing(true);
 
-      const optimizedFile = await compressForOcr(currentFile, 1024, 0.6);
-      const { base64, mimeType } = await fileToBase64(optimizedFile);
+      const { base64, mimeType } = await prepareOcrImage(currentFile);
 
       setOcrOptimizing(false);
 
@@ -1264,8 +1307,7 @@ const callOcrWithRetry = async (
     }));
     setOcrOptimizing(true);
     const images = await Promise.all(filesToProcess.map(async (file) => {
-      const optimizedFile = await compressForOcr(file, 1024, 0.6);
-      const { base64, mimeType } = await fileToBase64(optimizedFile);
+      const { base64, mimeType } = await prepareOcrImage(file);
       return { imageBase64: base64, mimeType, fileName: file.name };
     }));
     setOcrOptimizing(false);
@@ -1327,14 +1369,13 @@ const callOcrWithRetry = async (
       ...prev,
       ...Object.fromEntries(filesToProcess.map((file) => [file.name, { status: "failed", error: err?.message || "OCR processing failed" }])),
     }));
-    setOcrError("영수증 묶음 인식에 실패했습니다.");
+    setOcrError(err?.message || "영수증 묶음 인식에 실패했습니다.");
     setOcrErrorDetail(errorDetail);
   } finally {
     setOcrOptimizing(false);
+    setOcrLoading(false);
+    setOcrProgress(null);
   }
-
-  setOcrLoading(false);
-  setOcrProgress(null);
 };
 
   const handleRetryFailed = () => {

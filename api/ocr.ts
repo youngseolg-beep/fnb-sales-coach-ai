@@ -1,6 +1,76 @@
 import { GoogleGenAI } from "@google/genai";
 import { requireStoreUserAuthorization } from "./_serverAuth.js";
 
+const MAX_OCR_IMAGES = 8;
+const MAX_OCR_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_OCR_TOTAL_BYTES = 16 * 1024 * 1024;
+const ALLOWED_OCR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+type ReceiptImage = { data: string; mimeType: string };
+
+function normalizeBase64Payload(value: string, mimeType: string): string | null {
+  const raw = value.trim();
+  const dataUrl = raw.match(/^data:([^;,]+);base64,([\s\S]+)$/i);
+  if (dataUrl && dataUrl[1].toLowerCase() !== mimeType) return null;
+
+  const base64 = (dataUrl?.[2] ?? raw).replace(/\s+/g, "");
+  if (!base64 || base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) return null;
+  const firstPadding = base64.indexOf("=");
+  if (firstPadding !== -1 && firstPadding < base64.length - (base64.endsWith("==") ? 2 : 1)) return null;
+  return base64;
+}
+
+function estimateDecodedBytes(base64: string) {
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return (base64.length / 4) * 3 - padding;
+}
+
+function validateReceiptImages(body: any):
+  | { ok: true; images: ReceiptImage[] }
+  | { ok: false; status: 400 | 413; error: string; message: string } {
+  const rawImages = Array.isArray(body?.images)
+    ? body.images
+    : body?.imageBase64 !== undefined
+      ? [{ imageBase64: body.imageBase64, mimeType: body.mimeType }]
+      : null;
+
+  if (!rawImages || rawImages.length === 0) {
+    return { ok: false, status: 400, error: "INVALID_IMAGE_INPUT", message: "영수증 이미지를 선택해 주세요." };
+  }
+  if (rawImages.length > MAX_OCR_IMAGES) {
+    return { ok: false, status: 413, error: "TOO_MANY_IMAGES", message: "영수증 이미지는 한 번에 최대 8장까지 업로드할 수 있습니다." };
+  }
+
+  let totalBytes = 0;
+  const images: ReceiptImage[] = [];
+  for (const image of rawImages) {
+    const mimeType = typeof image?.mimeType === "string" ? image.mimeType.trim().toLowerCase() : "";
+    if (!ALLOWED_OCR_MIME_TYPES.has(mimeType)) {
+      return { ok: false, status: 400, error: "UNSUPPORTED_IMAGE_TYPE", message: "지원하지 않는 이미지 형식입니다." };
+    }
+    if (typeof image?.imageBase64 !== "string" || !image.imageBase64.trim()) {
+      return { ok: false, status: 400, error: "INVALID_IMAGE_INPUT", message: "이미지 데이터가 올바르지 않습니다." };
+    }
+
+    const data = normalizeBase64Payload(image.imageBase64, mimeType);
+    if (!data) {
+      return { ok: false, status: 400, error: "MALFORMED_IMAGE_DATA", message: "이미지 데이터가 올바르지 않습니다." };
+    }
+
+    const imageBytes = estimateDecodedBytes(data);
+    if (imageBytes > MAX_OCR_IMAGE_BYTES) {
+      return { ok: false, status: 413, error: "IMAGE_TOO_LARGE", message: "이미지 최적화 후에도 용량이 너무 큽니다. 다른 이미지를 사용해 주세요." };
+    }
+    totalBytes += imageBytes;
+    if (totalBytes > MAX_OCR_TOTAL_BYTES) {
+      return { ok: false, status: 413, error: "TOTAL_IMAGES_TOO_LARGE", message: "영수증 이미지 전체 용량이 너무 큽니다. 다른 이미지를 사용해 주세요." };
+    }
+    images.push({ data, mimeType });
+  }
+
+  return { ok: true, images };
+}
+
 function extractJsonBlock(text: string) {
   if (!text) return null;
 
@@ -114,6 +184,13 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
+    let body: any;
+    try {
+      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    } catch {
+      return res.status(400).json({ ok: false, error: "INVALID_REQUEST", message: "OCR 요청 형식이 올바르지 않습니다." });
+    }
+
     const {
       imageBase64,
       mimeType,
@@ -123,7 +200,7 @@ export default async function handler(req: any, res: any) {
       country,
       brand,
       menuCandidates,
-    } = req.body || {};
+    } = body || {};
 
     const authorization = await requireStoreUserAuthorization(req, storeId);
     if (authorization.ok === false) {
@@ -135,20 +212,15 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_OCR is not configured" });
     }
 
-    const receiptImages = Array.isArray(images) && images.length > 0
-      ? images
-          .filter((image: any) => typeof image?.imageBase64 === "string" && image.imageBase64.trim())
-          .map((image: any) => ({
-            data: image.imageBase64,
-            mimeType: typeof image.mimeType === "string" && image.mimeType ? image.mimeType : "image/jpeg",
-          }))
-      : typeof imageBase64 === "string" && imageBase64
-        ? [{ data: imageBase64, mimeType: mimeType || "image/jpeg" }]
-        : [];
-
-    if (receiptImages.length === 0) {
-      return res.status(400).json({ ok: false, error: "At least one receipt image is required" });
+    const imageValidation = validateReceiptImages({ imageBase64, mimeType, images });
+    if (imageValidation.ok === false) {
+      return res.status(imageValidation.status).json({
+        ok: false,
+        error: imageValidation.error,
+        message: imageValidation.message,
+      });
     }
+    const receiptImages = imageValidation.images;
 
     const ai = new GoogleGenAI({ apiKey });
 
@@ -418,10 +490,11 @@ Return JSON only in this shape:
       receipt_currency: receiptCurrency,
     });
   } catch (error: any) {
+    console.error("OCR request failed:", error);
     return res.status(500).json({
       ok: false,
       error: "SERVER_ERROR",
-      message: error?.message || String(error),
+      message: "영수증 분석 중 오류가 발생했습니다. 다시 시도해 주세요.",
     });
   }
 }
