@@ -11,14 +11,14 @@ const extractJsonObject = (text: string): unknown => {
   }
 };
 
-const boostPlanInvalidFields = (value: unknown): string[] => {
+const boostPlanInvalidFields = (value: unknown, expectedActionCount?: number): string[] => {
   if (!value || typeof value !== "object") return ["root"];
   const invalid: string[] = [];
   const plan = value as { summary?: unknown; target?: unknown; actions?: unknown; watchouts?: unknown; successMetrics?: unknown };
   const target = plan.target as Record<string, unknown> | undefined;
   if (typeof plan.summary !== "string") invalid.push("summary");
   if (!target || typeof target.objective !== "string" || (typeof target.targetGrowthPercent !== "number" && target.targetGrowthPercent !== null) || typeof target.timeHorizon !== "string") invalid.push("target");
-  if (!Array.isArray(plan.actions) || plan.actions.length > 3) invalid.push("actions");
+  if (!Array.isArray(plan.actions) || plan.actions.length > 3 || (expectedActionCount !== undefined && plan.actions.length !== expectedActionCount)) invalid.push("actions");
   else plan.actions.forEach((action, index) => {
     const item = action as Record<string, unknown> | null;
     if (!item || typeof item !== "object" || !Number.isInteger(item.priority) || typeof item.title !== "string" || !["MENU_EXPOSURE", "UPSELL", "SET_PROMOTION", "PRICE", "OPERATIONS", "OTHER"].includes(String(item.type)) || !Array.isArray(item.targetMenuIds) || !item.targetMenuIds.every((id) => typeof id === "string") || !Array.isArray(item.targetMenuNames) || !item.targetMenuNames.every((name) => typeof name === "string") || typeof item.rationale !== "string" || !Array.isArray(item.executionSteps) || !item.executionSteps.every((step) => typeof step === "string") || typeof item.owner !== "string" || typeof item.timing !== "string" || typeof item.expectedEffect !== "string" || typeof item.guardrail !== "string") invalid.push(`actions[${index}]`);
@@ -28,7 +28,12 @@ const boostPlanInvalidFields = (value: unknown): string[] => {
   return invalid;
 };
 
-const isStructuredBoostPlan = (value: unknown) => boostPlanInvalidFields(value).length === 0;
+const isStructuredBoostPlan = (value: unknown, expectedActionCount: number) => boostPlanInvalidFields(value, expectedActionCount).length === 0;
+
+const receivedActionCount = (value: unknown) => {
+  const actions = value && typeof value === "object" ? (value as { actions?: unknown }).actions : null;
+  return Array.isArray(actions) ? actions.length : null;
+};
 
 const commercialTextValues = (value: unknown): string[] => {
   if (typeof value === "string") return [value];
@@ -139,6 +144,8 @@ export default async function handler(req: any, res: any) {
     if (!apiKey) return res.status(500).json({ ok: false, error: "CONFIG_ERROR", message: "AI 서비스 설정을 확인할 수 없습니다." });
 
     if (!context?.store || !context?.period?.current || !Array.isArray(context?.deterministicCandidates)) return res.status(400).json({ ok: false, error: "NO_MENU_DATA", message: "분석할 메뉴 판매 데이터가 없습니다." });
+    const expectedActionCount = Math.min(3, context.deterministicCandidates.length);
+    if (expectedActionCount === 0) return res.status(400).json({ ok: false, error: "NO_MENU_DATA", message: "분석할 메뉴 판매 데이터가 없습니다." });
 
     const prompt = `You are an F&B operating coach creating a concrete next-action Boost Plan. Use the deterministic candidate and margin guardrails supplied in the input. Do not invent menu economics or recommend loss-making discounts. AI Menu Engineering may be absent; do not require it. Expected effects must be estimates, never guarantees.
 
@@ -172,7 +179,7 @@ Return exactly one JSON object and no markdown:
   "successMetrics": ["string"]
 }
 
-Use at most three actions. Write all response text in Korean. Do not create actions that contradict the deterministic candidates or their margin constraints.
+Create exactly ${expectedActionCount} actions, one for each supplied deterministic candidate. Do not omit a valid candidate and do not invent additional candidates. Preserve candidate order where practical. Each action must correspond to one supplied candidate; do not merge multiple candidates into one action. Do not create an action without deterministic support. Write all response text in Korean. Do not create actions that contradict the deterministic candidates or their margin constraints.
 
 INPUT:
 ${JSON.stringify(context)}`;
@@ -181,14 +188,16 @@ ${JSON.stringify(context)}`;
     const generate = (text: string) => ai.models.generateContent({ model: process.env.GEMINI_MODEL_COACH || "gemini-2.5-flash", contents: [{ role: "user", parts: [{ text }] }], config: { responseMimeType: "application/json", responseJsonSchema: boostPlanSchema } });
     let response = await generate(prompt);
     let result = extractJsonObject(response?.text || "");
-    let violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
+    let violation = isStructuredBoostPlan(result, expectedActionCount) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
     if (violation) {
-      if (violation === "INVALID_MODEL_RESPONSE") console.error("Boost Plan invalid structured response", { attempt: 1, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result) });
-      response = await generate(`${prompt}\n\nREPAIR: The previous response was invalid (${violation}). Return only the required JSON object. Do not invent discount percentages, amounts, coupon values, giveaways, BOGO, bundle prices, or final promotional conditions. PRICE/SET_PROMOTION must first verify cost, contribution margin, or margin. Prefer MENU_EXPOSURE, UPSELL, or OPERATIONS.`);
+      const receivedCount = receivedActionCount(result);
+      if (violation === "INVALID_MODEL_RESPONSE") console.error("Boost Plan invalid structured response", { attempt: 1, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result, expectedActionCount), deterministicCandidateCount: context.deterministicCandidates.length, expectedActionCount, receivedActionCount: receivedCount });
+      const actionCountRepair = receivedCount === expectedActionCount ? "" : ` Expected exactly ${expectedActionCount} actions but received ${receivedCount ?? "an invalid actions field"}. Return exactly ${expectedActionCount} actions: one action per deterministic candidate, with no extra invented actions and no candidate omission.`;
+      response = await generate(`${prompt}\n\nREPAIR: The previous response was invalid (${violation}).${actionCountRepair} Return only the required JSON object. Do not invent discount percentages, amounts, coupon values, giveaways, BOGO, bundle prices, or final promotional conditions. PRICE/SET_PROMOTION must first verify cost, contribution margin, or margin. Prefer MENU_EXPOSURE, UPSELL, or OPERATIONS.`);
       result = extractJsonObject(response?.text || "");
-      violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
+      violation = isStructuredBoostPlan(result, expectedActionCount) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
     }
-    if (violation === "INVALID_MODEL_RESPONSE") { console.error("Boost Plan invalid structured response", { attempt: 2, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result) }); return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." }); }
+    if (violation === "INVALID_MODEL_RESPONSE") { console.error("Boost Plan invalid structured response", { attempt: 2, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result, expectedActionCount), deterministicCandidateCount: context.deterministicCandidates.length, expectedActionCount, receivedActionCount: receivedActionCount(result) }); return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." }); }
     if (violation) return res.status(502).json({ ok: false, error: "UNSAFE_COMMERCIAL_TERM", message: "안전 기준을 충족하는 실행안을 만들지 못했습니다. 다시 시도해 주세요." });
     return res.status(200).json({ ok: true, result });
   } catch (error: any) {
