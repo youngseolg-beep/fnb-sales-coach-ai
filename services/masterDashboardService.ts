@@ -87,6 +87,44 @@ export type MasterDashboardResult = {
   storeGrowth: Record<number, { current: number; previous: number; rate: number | null }>;
 };
 
+export type StoreDetailDailyRow = {
+  date: string;
+  totalSales: number;
+  orders: number;
+  visitCount: number;
+  aov: number;
+  conversionRate: number;
+  posSales: number;
+  deliverySales: number;
+};
+
+export type StoreDetailResult = {
+  storeId: number;
+  storeName: string;
+  brandName: string;
+  summary: {
+    totalSales: number;
+    totalOrders: number;
+    visitCount: number;
+    averageAov: number;
+    conversionRate: number;
+    growth: {
+      sales: GrowthMetric;
+      orders: GrowthMetric;
+      aov: GrowthMetric;
+      conversionRate: GrowthMetric;
+    };
+  };
+  daily: StoreDetailDailyRow[];
+  channel: {
+    hasData: boolean;
+    posSales: number;
+    deliverySales: number;
+    otherSales: number;
+  };
+  topMenus: TopMenuRow[];
+};
+
 type SalesDailyRow = {
   date?: string | null;
   store_id: number | null;
@@ -525,6 +563,19 @@ async function fetchSalesRows(startDate: string, endDate: string) {
   return (data || []) as SalesDailyRow[];
 }
 
+async function fetchStoreSalesRows(storeId: number, startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("sales_daily")
+    .select("date,store_id,total_sales,orders,visit_count,payload")
+    .eq("store_id", storeId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as SalesDailyRow[];
+}
+
 async function fetchStores() {
   const { data, error } = await supabase
     .from("stores")
@@ -535,6 +586,17 @@ async function fetchStores() {
   }
 
   return (data || []) as StoreRow[];
+}
+
+async function fetchStore(storeId: number) {
+  const { data, error } = await supabase
+    .from("stores")
+    .select("id, store_name, brands(brand_name)")
+    .eq("id", storeId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as StoreRow | null;
 }
 
 function buildTopMenus(rows: SalesDailyRow[]) {
@@ -604,6 +666,89 @@ export async function loadAllStoresRange(startDate: string, endDate: string): Pr
     visit_count: safeNumber(row.visit_count),
     payload: row.payload || null,
   }));
+}
+
+function summarizeStoreRows(rows: SalesDailyRow[]) {
+  const totalSales = rows.reduce((sum, row) => sum + extractSales(row), 0);
+  const totalOrders = rows.reduce((sum, row) => sum + extractOrders(row), 0);
+  const visitCount = rows.reduce((sum, row) => sum + extractVisitCount(row), 0);
+  const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const conversionRate = visitCount > 0 ? (totalOrders / visitCount) * 100 : 0;
+
+  return { totalSales, totalOrders, visitCount, averageAov, conversionRate };
+}
+
+function buildDailyStoreRows(rows: SalesDailyRow[]): StoreDetailDailyRow[] {
+  const byDate = new Map<string, Omit<StoreDetailDailyRow, "aov" | "conversionRate">>();
+
+  for (const row of rows) {
+    const date = row.date || "";
+    if (!date) continue;
+    const previous = byDate.get(date) || {
+      date,
+      totalSales: 0,
+      orders: 0,
+      visitCount: 0,
+      posSales: 0,
+      deliverySales: 0,
+    };
+    previous.totalSales += extractSales(row);
+    previous.orders += extractOrders(row);
+    previous.visitCount += extractVisitCount(row);
+    previous.posSales += safeNumber(row.payload?.posSales);
+    previous.deliverySales += safeNumber(row.payload?.deliverySales);
+    byDate.set(date, previous);
+  }
+
+  return Array.from(byDate.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((row) => ({
+      ...row,
+      aov: row.orders > 0 ? row.totalSales / row.orders : 0,
+      conversionRate: row.visitCount > 0 ? (row.orders / row.visitCount) * 100 : 0,
+    }));
+}
+
+function hasChannelPayload(row: SalesDailyRow) {
+  return row.payload?.posSales != null || row.payload?.deliverySales != null;
+}
+
+export async function loadMasterStoreDetail(storeId: number, range: MasterDateRange): Promise<StoreDetailResult> {
+  const previousRange = getPreviousRange(range);
+  const [store, currentRows, previousRows] = await Promise.all([
+    fetchStore(storeId),
+    fetchStoreSalesRows(storeId, range.startDate, range.endDate),
+    fetchStoreSalesRows(storeId, previousRange.startDate, previousRange.endDate),
+  ]);
+
+  const current = summarizeStoreRows(currentRows);
+  const previous = summarizeStoreRows(previousRows);
+  const hasData = currentRows.some(hasChannelPayload);
+  const posSales = currentRows.reduce((sum, row) => sum + safeNumber(row.payload?.posSales), 0);
+  const deliverySales = currentRows.reduce((sum, row) => sum + safeNumber(row.payload?.deliverySales), 0);
+
+  return {
+    storeId,
+    storeName: store?.store_name || `Store ${storeId}`,
+    brandName: store?.brands?.brand_name || "Unknown",
+    summary: {
+      ...current,
+      growth: {
+        sales: { current: current.totalSales, previous: previous.totalSales, rate: calcRate(current.totalSales, previous.totalSales) },
+        orders: { current: current.totalOrders, previous: previous.totalOrders, rate: calcRate(current.totalOrders, previous.totalOrders) },
+        aov: { current: current.averageAov, previous: previous.averageAov, rate: calcRate(current.averageAov, previous.averageAov) },
+        conversionRate: { current: current.conversionRate, previous: previous.conversionRate, rate: calcRate(current.conversionRate, previous.conversionRate) },
+      },
+    },
+    daily: buildDailyStoreRows(currentRows),
+    channel: {
+      hasData,
+      posSales,
+      deliverySales,
+      otherSales: Math.max(current.totalSales - posSales - deliverySales, 0),
+    },
+    topMenus: buildTopMenus(currentRows).slice(0, 5),
+  };
 }
 
 export async function loadMasterDashboard(range: MasterDateRange): Promise<MasterDashboardResult> {

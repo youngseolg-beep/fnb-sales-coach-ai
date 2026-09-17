@@ -8,6 +8,7 @@ import {
   type StoreKpiRow,
 } from "../services/masterDashboardService";
 import AdminApprovalPage from "./AdminApprovalPage";
+import MasterStoreDetailPage from "./MasterStoreDetailPage";
 
 function formatCurrency(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "-";
@@ -124,6 +125,7 @@ export default function MasterDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showApprovalPage, setShowApprovalPage] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string>(() => {
     if (typeof window === "undefined") return "ALL";
     return localStorage.getItem("masterDashboardSelectedBrand") || "ALL";
@@ -252,6 +254,17 @@ export default function MasterDashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (selectedStoreId !== null) {
+    return <MasterStoreDetailPage
+      storeId={selectedStoreId}
+      range={range}
+      preset={preset}
+      onPresetChange={setPreset}
+      onCustomDateChange={handleCustomDateChange}
+      onBack={() => setSelectedStoreId(null)}
+    />;
   }
 
   return (
@@ -451,19 +464,26 @@ export default function MasterDashboardPage() {
                   {topStores.map((store, index) => {
                     const rate = result?.storeGrowth?.[store.storeId]?.rate ?? null;
                     return (
-                      <div key={store.storeId} className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:grid-cols-[36px_minmax(0,1fr)_auto] sm:gap-3 sm:px-6 sm:py-4">
+                      <button
+                        key={store.storeId}
+                        type="button"
+                        onClick={() => setSelectedStoreId(store.storeId)}
+                        className="grid w-full grid-cols-[28px_minmax(0,1fr)_auto_12px] items-center gap-2 px-3 py-2.5 text-left transition hover:bg-[#FDF9F5] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#A8866B] sm:grid-cols-[36px_minmax(0,1fr)_auto_14px] sm:gap-3 sm:px-6 sm:py-4"
+                        aria-label={`${store.storeName} 매장 성과 보기`}
+                      >
                         <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold sm:h-8 sm:w-8 sm:text-xs ${index === 0 ? "bg-[#F3E4CB] text-[#7A593E]" : "bg-[#F4F1EE] text-[#706A66]"}`}>
                           {index + 1}
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-[13px] font-semibold text-[#1F1F1F] sm:text-sm">{store.storeName}</p>
-                          <p className="mt-0.5 text-[10.5px] text-[#9C948E] sm:mt-1 sm:text-xs">{store.brandName || "브랜드 정보 없음"}</p>
+                          {store.brandName && store.brandName !== "Unknown" ? <p className="mt-0.5 text-[10.5px] text-[#9C948E] sm:mt-1 sm:text-xs">{store.brandName}</p> : null}
                         </div>
                         <div className="text-right">
                           <p className="text-[13px] font-semibold text-[#1F1F1F] sm:text-sm">{formatCurrency(store.totalSales)}</p>
                           <p className={`mt-0.5 text-[11px] font-semibold sm:mt-1 sm:text-xs ${growthClass(rate)}`}>{growthText(rate)}</p>
                         </div>
-                      </div>
+                        <i className="fa-solid fa-chevron-right text-[10px] text-[#B5ACA5]" aria-hidden="true" />
+                      </button>
                     );
                   })}
                 </div>
