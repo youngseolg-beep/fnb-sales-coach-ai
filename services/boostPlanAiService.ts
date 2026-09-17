@@ -1,4 +1,5 @@
 import { getAuthenticatedApiHeaders } from "./apiAuth";
+import { AiFeatureError, type AiFeatureErrorCode } from "./aiFeatureError";
 
 export type AiBoostPlan = {
   summary: string;
@@ -74,9 +75,10 @@ export const generateAiBoostPlan = async (context: AiBoostPlanContext): Promise<
   }
   const envelope = payload as { ok?: boolean; result?: unknown; message?: unknown; error?: unknown } | null;
   if (!response.ok || !envelope?.ok) {
-    throw new Error(`Boost Plan API ${response.status}: ${String(envelope?.message || envelope?.error || body || "request failed")}`);
+    const code = String(envelope?.error || "MODEL_REQUEST_FAILED") as AiFeatureErrorCode;
+    throw new AiFeatureError("boost_plan", code, response.status, String(envelope?.message || "AI 서비스 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."), body);
   }
   const plan = parsePlan(envelope.result);
-  if (!plan) throw new Error("Boost Plan API returned an invalid structured plan");
+  if (!plan) throw new AiFeatureError("boost_plan", "INVALID_MODEL_RESPONSE", response.status);
   return plan;
 };

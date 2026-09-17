@@ -29,6 +29,16 @@ const isStructuredStrategy = (value: unknown) => {
   );
 };
 
+const strategySchema = {
+  type: "object",
+  required: ["summary", "priorities", "categoryStrategies"],
+  properties: {
+    summary: { type: "string" },
+    priorities: { type: "array", maxItems: 5, items: { type: "object" } },
+    categoryStrategies: { type: "object", required: ["stars", "cashCows", "puzzles", "dogs"], properties: { stars: { type: "string" }, cashCows: { type: "string" }, puzzles: { type: "string" }, dogs: { type: "string" } } },
+  },
+};
+
 export default async function handler(req: any, res: any) {
   try {
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -36,14 +46,14 @@ export default async function handler(req: any, res: any) {
     const context = req.body?.context;
     const authorization = await requireStoreUserAuthorization(req, context?.store?.storeId);
     if (authorization.ok === false) {
-      return res.status(authorization.status).json({ ok: false, error: authorization.error });
+      return res.status(authorization.status).json({ ok: false, error: "AUTH_ERROR", message: "로그인 권한을 다시 확인해 주세요." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY_COACH;
-    if (!apiKey) return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_COACH is not configured" });
+    if (!apiKey) return res.status(500).json({ ok: false, error: "CONFIG_ERROR", message: "AI 서비스 설정을 확인할 수 없습니다." });
 
     if (!context || !Array.isArray(context.menus) || context.menus.length === 0) {
-      return res.status(400).json({ ok: false, error: "A non-empty Menu Engineering context is required" });
+      return res.status(400).json({ ok: false, error: "NO_MENU_DATA", message: "분석할 메뉴 판매 데이터가 없습니다." });
     }
 
     const model = process.env.GEMINI_MODEL_COACH || "gemini-2.5-flash";
@@ -77,17 +87,24 @@ INPUT:
 ${JSON.stringify(context)}`;
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+    const generate = (text: string) => ai.models.generateContent({
       model,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: [{ text }] }],
+      config: { responseMimeType: "application/json", responseJsonSchema: strategySchema },
     });
-    const result = extractJsonObject(response?.text || "");
+    let response = await generate(prompt);
+    let result = extractJsonObject(response?.text || "");
     if (!isStructuredStrategy(result)) {
-      return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "Gemini returned an invalid Menu Engineering strategy response" });
+      response = await generate(`${prompt}\n\nREPAIR: The previous response did not match the required JSON schema. Return only the exact required JSON object, no markdown. Do not recalculate deterministic classifications; use only supplied menu IDs and names.`);
+      result = extractJsonObject(response?.text || "");
+    }
+    if (!isStructuredStrategy(result)) {
+      return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." });
     }
 
     return res.status(200).json({ ok: true, result });
   } catch (error: any) {
-    return res.status(500).json({ ok: false, error: "SERVER_ERROR", message: error?.message || String(error) });
+    console.error("Menu Engineering generation failed", error);
+    return res.status(502).json({ ok: false, error: "MODEL_REQUEST_FAILED", message: "AI 서비스 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." });
   }
 }

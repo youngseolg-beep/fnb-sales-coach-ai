@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState, useRef, useEffect, type ReactNode } from "
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { formatCurrencyValue } from "../utils2/currency";
+import { formatLocalDate } from "../utils2/date";
 
 export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu" | "more";
 
@@ -66,13 +67,6 @@ const parseLocalDate = (dateStr: string) => {
   return new Date(y, (m || 1) - 1, d || 1);
 };
 
-const formatLocalDate = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
 const addDaysLocal = (date: Date, amount: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + amount);
@@ -112,9 +106,22 @@ export default function StoreOwnerShell({
   const [visibleStartDate, setVisibleStartDate] = useState<Date>(() =>
     addDaysLocal(parseLocalDate(selectedDate), -4)
   );
+  const [localToday, setLocalToday] = useState(() => formatLocalDate(new Date()));
 
   const calendarButtonRef = useRef<HTMLButtonElement>(null);
   const calendarLayerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let timer: number;
+    const updateAtMidnight = () => {
+      setLocalToday(formatLocalDate(new Date()));
+      const next = new Date();
+      next.setHours(24, 0, 1, 0);
+      timer = window.setTimeout(updateAtMidnight, next.getTime() - Date.now());
+    };
+    updateAtMidnight();
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const activeMenu = useMemo(() => {
     return MENU_ITEMS.find((item) => item.key === currentPage) ?? MENU_ITEMS[0];
@@ -427,6 +434,7 @@ export default function StoreOwnerShell({
       )}
 
       <main className={`mx-auto ${currentPage === "summary" ? "max-w-[430px] px-5 py-5 sm:px-5 lg:max-w-[1240px] lg:px-8 lg:py-8" : "max-w-7xl px-3 py-5 sm:px-6 sm:py-7 lg:max-w-[1280px] lg:px-8 lg:py-8"}`}>
+        <div className="mb-2 text-[10px] font-medium text-[#81766d]">현지 오늘 · {localToday.replace(/-/g, ".")}</div>
         {children}
       </main>
 

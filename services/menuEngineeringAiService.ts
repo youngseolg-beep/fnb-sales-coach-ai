@@ -1,4 +1,5 @@
 import { getAuthenticatedApiHeaders } from "./apiAuth";
+import { AiFeatureError, type AiFeatureErrorCode } from "./aiFeatureError";
 
 export type AiMenuPriority = {
   menuId: string;
@@ -95,11 +96,11 @@ export const generateAiMenuEngineering = async (
 
   const envelope = payload as { ok?: boolean; result?: unknown; message?: unknown; error?: unknown } | null;
   if (!response.ok || !envelope?.ok) {
-    const message = String(envelope?.message || envelope?.error || body || "Menu Engineering API request failed");
-    throw new Error(`Menu Engineering API ${response.status}: ${message}`);
+    const code = String(envelope?.error || "MODEL_REQUEST_FAILED") as AiFeatureErrorCode;
+    throw new AiFeatureError("menu_engineering", code, response.status, String(envelope?.message || "AI 서비스 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."), body);
   }
 
   const result = parseResult(envelope.result);
-  if (!result) throw new Error("Menu Engineering API returned an invalid strategy response");
+  if (!result) throw new AiFeatureError("menu_engineering", "INVALID_MODEL_RESPONSE", response.status);
   return result;
 };

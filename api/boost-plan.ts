@@ -95,20 +95,28 @@ const hasUnsafeCommercialTerm = (text: string) => {
 const hasImplementationFirstStep = (text: string) =>
   /(?:가격\s*변경\s*(?:적용|실행|시작)|프로모션\s*적용(?!\s*여부)|즉시\s*적용|실행\s*시작|판매\s*시작|할인\s*적용)/.test(text);
 
-const passesCommercialSafety = (value: unknown) => {
-  if (!value || typeof value !== "object") return false;
-  if (hasNumericCommercialField(value)) return false;
-  if (commercialTextValues(value).some(hasUnsafeCommercialTerm)) return false;
+const commercialSafetyViolation = (value: unknown): string | null => {
+  if (!value || typeof value !== "object") return "INVALID_PLAN";
+  if (hasNumericCommercialField(value)) return "NUMERIC_COMMERCIAL_TERM";
+  if (commercialTextValues(value).some(hasUnsafeCommercialTerm)) return "FINALIZED_COMMERCIAL_TERM";
   const actions = (value as { actions?: unknown }).actions;
-  if (!Array.isArray(actions)) return false;
-  return actions.every((action) => {
-    if (!action || typeof action !== "object") return false;
+  if (!Array.isArray(actions)) return "INVALID_ACTIONS";
+  for (const action of actions) {
+    if (!action || typeof action !== "object") return "INVALID_ACTIONS";
     const item = action as { type?: unknown; guardrail?: unknown; executionSteps?: unknown };
-    if (item.type !== "PRICE" && item.type !== "SET_PROMOTION") return true;
+    if (item.type !== "PRICE" && item.type !== "SET_PROMOTION") continue;
     const steps = Array.isArray(item.executionSteps) ? item.executionSteps : [];
-    return hasEconomicValidation(item.guardrail) && steps.length > 0 &&
-      hasEconomicValidation(steps[0]) && !hasImplementationFirstStep(String(steps[0] || ""));
-  });
+    if (!hasEconomicValidation(item.guardrail) || steps.length === 0 || !hasEconomicValidation(steps[0]) || hasImplementationFirstStep(String(steps[0] || ""))) return "MISSING_ECONOMIC_VALIDATION";
+  }
+  return null;
+};
+
+const passesCommercialSafety = (value: unknown) => commercialSafetyViolation(value) === null;
+
+const boostPlanSchema = {
+  type: "object",
+  required: ["summary", "target", "actions", "watchouts", "successMetrics"],
+  properties: { summary: { type: "string" }, target: { type: "object" }, actions: { type: "array", maxItems: 3, items: { type: "object" } }, watchouts: { type: "array", items: { type: "string" } }, successMetrics: { type: "array", items: { type: "string" } } },
 };
 
 export default async function handler(req: any, res: any) {
@@ -116,16 +124,12 @@ export default async function handler(req: any, res: any) {
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
     const context = req.body?.context;
     const authorization = await requireStoreUserAuthorization(req, context?.store?.storeId);
-    if (authorization.ok === false) {
-      return res.status(authorization.status).json({ ok: false, error: authorization.error });
-    }
+    if (authorization.ok === false) return res.status(authorization.status).json({ ok: false, error: "AUTH_ERROR", message: "로그인 권한을 다시 확인해 주세요." });
 
     const apiKey = process.env.GEMINI_API_KEY_COACH;
-    if (!apiKey) return res.status(500).json({ ok: false, error: "GEMINI_API_KEY_COACH is not configured" });
+    if (!apiKey) return res.status(500).json({ ok: false, error: "CONFIG_ERROR", message: "AI 서비스 설정을 확인할 수 없습니다." });
 
-    if (!context?.store || !context?.period?.current || !Array.isArray(context?.deterministicCandidates)) {
-      return res.status(400).json({ ok: false, error: "A structured Boost Plan context is required" });
-    }
+    if (!context?.store || !context?.period?.current || !Array.isArray(context?.deterministicCandidates)) return res.status(400).json({ ok: false, error: "NO_MENU_DATA", message: "분석할 메뉴 판매 데이터가 없습니다." });
 
     const prompt = `You are an F&B operating coach creating a concrete next-action Boost Plan. Use the deterministic candidate and margin guardrails supplied in the input. Do not invent menu economics or recommend loss-making discounts. AI Menu Engineering may be absent; do not require it. Expected effects must be estimates, never guarantees.
 
@@ -165,19 +169,20 @@ INPUT:
 ${JSON.stringify(context)}`;
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL_COACH || "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
-    const result = extractJsonObject(response?.text || "");
-    if (!isStructuredBoostPlan(result)) {
-      return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "Gemini returned an invalid Boost Plan response" });
+    const generate = (text: string) => ai.models.generateContent({ model: process.env.GEMINI_MODEL_COACH || "gemini-2.5-flash", contents: [{ role: "user", parts: [{ text }] }], config: { responseMimeType: "application/json", responseJsonSchema: boostPlanSchema } });
+    let response = await generate(prompt);
+    let result = extractJsonObject(response?.text || "");
+    let violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
+    if (violation) {
+      response = await generate(`${prompt}\n\nREPAIR: The previous response was invalid (${violation}). Return only the required JSON object. Do not invent discount percentages, amounts, coupon values, giveaways, BOGO, bundle prices, or final promotional conditions. PRICE/SET_PROMOTION must first verify cost, contribution margin, or margin. Prefer MENU_EXPOSURE, UPSELL, or OPERATIONS.`);
+      result = extractJsonObject(response?.text || "");
+      violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
     }
-    if (!passesCommercialSafety(result)) {
-      return res.status(502).json({ ok: false, error: "UNSAFE_COMMERCIAL_TERM", message: "Gemini returned an unsupported commercial condition" });
-    }
+    if (violation === "INVALID_MODEL_RESPONSE") return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." });
+    if (violation) return res.status(502).json({ ok: false, error: "UNSAFE_COMMERCIAL_TERM", message: "안전 기준을 충족하는 실행안을 만들지 못했습니다. 다시 시도해 주세요." });
     return res.status(200).json({ ok: true, result });
   } catch (error: any) {
-    return res.status(500).json({ ok: false, error: "SERVER_ERROR", message: error?.message || String(error) });
+    console.error("Boost Plan generation failed", error);
+    return res.status(502).json({ ok: false, error: "MODEL_REQUEST_FAILED", message: "AI 서비스 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." });
   }
 }
