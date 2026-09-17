@@ -45,6 +45,16 @@ type SummaryCompareStats = {
 
 type HomeLandingTarget = "sales:manual" | "sales:ocr" | "coach:insight" | "coach:report" | null;
 
+type ResolvedApplicationProfile = {
+  role: "master" | "store_user";
+  storeId: number | null;
+  storeCountry: string;
+};
+
+type ProfileResolution =
+  | { ok: true; profile: ResolvedApplicationProfile }
+  | { ok: false; message: string };
+
 const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -178,6 +188,84 @@ const App: React.FC = () => {
     return selectedDate.substring(0, 7);
   }, [selectedDate]);
 
+  const resetFailedAuthentication = useCallback((message: string) => {
+    setIsLoggedIn(false);
+    setUserRole(null);
+    setStoreId(null);
+    setStoreCountry("KH");
+    setAuthScreen("login");
+    setMenuMasterCategories([]);
+    setMenuMasterLoading(false);
+    setMenuMasterError(null);
+    monthlyStatsRequestRef.current = "";
+    demoContinuityRequestRef.current = "";
+    setAuthError(message);
+  }, []);
+
+  const failAuthenticatedProfile = useCallback(async (message: string) => {
+    try {
+      await supabase?.auth.signOut({ scope: "local" });
+    } catch (error) {
+      console.error("Failed to clear invalid Supabase session:", error);
+    } finally {
+      resetFailedAuthentication(message);
+    }
+  }, [resetFailedAuthentication]);
+
+  const resolveAuthenticatedProfile = useCallback(async (userId: string): Promise<ProfileResolution> => {
+    if (!supabase) {
+      return { ok: false, message: "계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요." };
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role, store_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (userError) {
+      return { ok: false, message: "계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요." };
+    }
+
+    if (!userData) {
+      return { ok: false, message: "계정 권한 정보가 설정되지 않았습니다. 관리자에게 문의해 주세요." };
+    }
+
+    if (userData.role === "master") {
+      return { ok: true, profile: { role: "master", storeId: null, storeCountry: "KH" } };
+    }
+
+    const resolvedStoreId = Number(userData.store_id);
+    if (userData.role !== "store_user" || !Number.isInteger(resolvedStoreId) || resolvedStoreId <= 0) {
+      return { ok: false, message: "계정 권한 정보가 설정되지 않았습니다. 관리자에게 문의해 주세요." };
+    }
+
+    const { data: storeData } = await supabase
+      .from("stores")
+      .select("country")
+      .eq("id", resolvedStoreId)
+      .maybeSingle();
+
+    return {
+      ok: true,
+      profile: {
+        role: "store_user",
+        storeId: resolvedStoreId,
+        storeCountry: storeData?.country || "KH",
+      },
+    };
+  }, []);
+
+  const applyAuthenticatedProfile = useCallback((profile: ResolvedApplicationProfile) => {
+    setUserRole(profile.role);
+    setStoreId(profile.storeId);
+    setStoreCountry(profile.storeCountry);
+    setMenuMasterCategories([]);
+    setMenuMasterError(null);
+    setMenuMasterLoading(profile.role === "store_user");
+    setIsLoggedIn(true);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -200,35 +288,23 @@ const App: React.FC = () => {
       return;
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      await failAuthenticatedProfile("계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
+      return;
+    }
 
-    if (!sessionData.session) return;
-
-    setIsLoggedIn(true);
-
-    const userId = sessionData.session.user.id;
-
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("role, store_id")
-      .eq("id", userId)
-      .single();
-
-    if (!userError && userData) {
-      setUserRole(userData.role);
-      setStoreId(userData.store_id);
-
-      if (userData.store_id != null) {
-        const { data: storeData } = await supabase
-          .from("stores")
-          .select("country")
-          .eq("id", userData.store_id)
-          .single();
-
-        setStoreCountry(storeData?.country || "KH");
-      } else {
-        setStoreCountry("KH");
+    try {
+      const resolution = await resolveAuthenticatedProfile(sessionData.session.user.id);
+      if (!resolution.ok) {
+        await failAuthenticatedProfile(resolution.message);
+        return;
       }
+
+      applyAuthenticatedProfile(resolution.profile);
+    } catch (profileError) {
+      console.error("Authenticated profile resolution failed:", profileError);
+      await failAuthenticatedProfile("계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
     }
   };
 
@@ -409,51 +485,37 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      if (!supabase) {
-        setSessionChecked(true);
-        return;
-      }
+      try {
+        if (!supabase) return;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-
-      if (sessionData.session) {
-        setIsLoggedIn(true);
-
-        const userId = sessionData.session.user.id;
-
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select("role, store_id")
-          .eq("id", userId)
-          .single();
-
-        if (!error && userData) {
-          setUserRole(userData.role);
-          setStoreId(userData.store_id);
-
-          if (userData.store_id != null) {
-            const { data: storeData } = await supabase
-              .from("stores")
-              .select("country")
-              .eq("id", userData.store_id)
-              .single();
-
-            setStoreCountry(storeData?.country || "KH");
-          } else {
-            setStoreCountry("KH");
-          }
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          await failAuthenticatedProfile("계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
+          return;
         }
-      }
 
-      setSessionChecked(true);
+        if (!sessionData.session) return;
+
+        const resolution = await resolveAuthenticatedProfile(sessionData.session.user.id);
+        if (!resolution.ok) {
+          await failAuthenticatedProfile(resolution.message);
+          return;
+        }
+
+        applyAuthenticatedProfile(resolution.profile);
+      } catch (error) {
+        console.error("Session bootstrap failed:", error);
+        await failAuthenticatedProfile("계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
+      } finally {
+        setSessionChecked(true);
+      }
     };
 
     void checkSession();
-  }, []);
+  }, [applyAuthenticatedProfile, failAuthenticatedProfile, resolveAuthenticatedProfile]);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-    if (storeId == null) return;
+    if (!isLoggedIn || userRole !== "store_user" || storeId == null) return;
 
     let isMounted = true;
 
@@ -493,7 +555,7 @@ const App: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isLoggedIn, storeId]);
+  }, [isLoggedIn, storeId, userRole]);
 
   useEffect(() => {
     if (!isLoggedIn || storeId !== 5 || data.country !== "DEMO" || data.brand !== "DEMO") return;
@@ -725,7 +787,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (userRole !== "master" && menuMasterLoading) {
+  if (isLoggedIn && userRole === "store_user" && menuMasterLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
