@@ -24,6 +24,15 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
   ];
   const failedFileCount = model.ocrFiles.filter((file) => model.ocrFileStatuses[file.name]?.status === "failed").length;
   const validationStatus = model.salesGap === 0 ? "PASS" : "WARNING";
+  const totalMenuQty = model.data.categories.reduce(
+    (categoryTotal, category) =>
+      categoryTotal +
+      category.items.reduce((itemTotal, item) => {
+        const qty = Number(item.qty || 0);
+        return itemTotal + (Number.isFinite(qty) && qty >= 0 ? qty : 0);
+      }, 0),
+    0
+  );
 
   useEffect(() => {
     if (!saveFeedback) return;
@@ -69,7 +78,7 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
 
       <section className={`rounded-[14px] border bg-white p-3.5 ${validationStatus === "PASS" ? "border-[#d6eadb]" : "border-[#eadfcf]"}`}><h2 className="mb-2.5 text-[13px] font-semibold">매출 맞춤 확인</h2><div className="grid grid-cols-3 divide-x divide-[#e5e0dc]"><ValidationCell label="입력 매출 합계" value={formatCurrencyValue(model.enteredSalesTotal, country)} /><ValidationCell label="메뉴 매출 합계" value={formatCurrencyValue(model.menuSalesTotal, country)} /><ValidationCell label="차이" value={formatCurrencyValue(model.salesGap, country)} green={validationStatus === "PASS"} /></div><p className={`mt-2.5 text-[10px] font-semibold ${validationStatus === "PASS" ? "text-[#22a55b]" : "text-[#a66a2c]"}`}><i className={`fa-solid ${validationStatus === "PASS" ? "fa-circle-check" : "fa-circle-exclamation"} mr-1`} />{validationStatus === "PASS" ? "정상 범위입니다." : "입력 매출과 메뉴 매출의 차이를 확인해 주세요."}</p></section>
 
-      <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="text-[9px] text-[#776b63]">{model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
+      <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="whitespace-nowrap text-[9px] text-[#776b63]">총 판매수량 {totalMenuQty}개 · {model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
 
       <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur lg:sticky lg:bottom-4 lg:rounded-xl lg:border"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[11px] border border-[#e8e1db] bg-white p-1.5 shadow-[0_3px_12px_rgba(70,54,42,0.05)] lg:max-w-[1180px]"><button type="button" onClick={onReset} className="h-9 rounded-[7px] border border-[#b99983] text-[11px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={() => void handleSaveClick()} className="h-9 rounded-[7px] bg-[#8b5e3c] text-[11px] font-semibold text-white">저장하기</button></div></div>
     </main>
