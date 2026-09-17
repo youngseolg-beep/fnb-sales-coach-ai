@@ -243,14 +243,12 @@ export default function MasterDashboardPage() {
             <button
               type="button"
               onClick={() => setShowApprovalPage(false)}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE]"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] sm:w-auto"
             >
               대시보드로 돌아가기
             </button>
           </div>
-          <div className="overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white p-2">
-            <AdminApprovalPage />
-          </div>
+          <AdminApprovalPage />
         </div>
       </div>
     );
