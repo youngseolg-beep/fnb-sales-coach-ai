@@ -233,17 +233,17 @@ export default function MasterDashboardPage() {
   if (showApprovalPage) {
     return (
       <div className="min-h-screen bg-[#FAF8F6] text-[#1F1F1F]">
-        <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-          <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+          <div className="mb-3 flex flex-col gap-1.5 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
-              <p className="text-[11px] font-medium text-[#9C948E] sm:text-sm">Sales Coach AI</p>
-              <h1 className="mt-0.5 text-[20px] font-bold leading-[1.25] tracking-[-0.03em] sm:mt-1 sm:text-2xl sm:leading-tight">가입 승인 관리</h1>
-              <p className="mt-1 text-[12px] leading-[1.45] text-[#706A66] sm:mt-2 sm:text-sm">계정 생성 신청 내역을 검토하고 승인합니다.</p>
+              <p className="text-[10px] font-medium text-[#9C948E] sm:text-sm">Sales Coach AI</p>
+              <h1 className="mt-0.5 text-[18px] font-bold leading-[1.2] tracking-[-0.03em] sm:mt-1 sm:text-2xl sm:leading-tight">가입 승인 관리</h1>
+              <p className="mt-0.5 text-[11px] leading-[1.4] text-[#706A66] sm:mt-2 sm:text-sm">계정 생성 신청 내역을 검토하고 승인합니다.</p>
             </div>
             <button
               type="button"
               onClick={() => setShowApprovalPage(false)}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-[13px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] sm:w-auto sm:text-sm"
+              className="inline-flex h-10 w-full items-center justify-center rounded-[11px] border border-[#ECE7E1] bg-white px-3 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] sm:h-11 sm:w-auto sm:rounded-xl sm:px-4 sm:text-sm"
             >
               대시보드로 돌아가기
             </button>
