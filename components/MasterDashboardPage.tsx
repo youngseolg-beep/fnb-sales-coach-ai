@@ -2,55 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   getMasterDateRange,
   loadMasterDashboard,
+  type MasterDashboardResult,
   type MasterDatePreset,
   type MasterDateRange,
-  type RiskCard,
   type StoreKpiRow,
-  type TopMenuRow,
 } from "../services/masterDashboardService";
 import AdminApprovalPage from "./AdminApprovalPage";
-type GrowthValue = {
-  current: number;
-  previous: number;
-  rate: number | null;
-};
-
-type MasterDashboardViewData = {
-  summary: {
-    totalSales: number;
-    totalOrders: number;
-    averageSales: number;
-    averageAov: number;
-    overallConversionRate: number;
-    topStoreName: string;
-    topStoreSales: number;
-    totalVisitCount: number;
-    growth: {
-      sales: GrowthValue;
-      orders: GrowthValue;
-      aov: GrowthValue;
-    };
-  };
-  ranking: StoreKpiRow[];
-  risks: RiskCard[];
-  topMenus: TopMenuRow[];
-  topMenusByBrand: Record<string, TopMenuRow[]>;
-  topMenusByStore: Record<number, TopMenuRow[]>;
-  brandGrowth?: Record<string, { current: number; previous: number; rate: number | null }>;
-  storeGrowth?: Record<number, { current: number; previous: number; rate: number | null }>;
-};
-
-type ActionCard = {
-  title: string;
-  storeName: string;
-  description: string;
-  priority: "high" | "medium";
-};
 
 function formatCurrency(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "-";
-  }
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -60,87 +20,13 @@ function formatCurrency(value: number | null | undefined) {
 }
 
 function formatNumber(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "-";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(value);
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 }
 
 function formatPercent(value: number | null | undefined, digits = 1) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "-";
-  }
-
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${value.toFixed(digits)}%`;
-}
-
-function formatGrowth(rate: number | null | undefined) {
-  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
-    return "No previous data";
-  }
-
-  const sign = rate > 0 ? "+" : "";
-  return `${sign}${rate.toFixed(1)}%`;
-}
-
-function growthTone(rate: number | null | undefined) {
-  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
-    return "text-slate-400";
-  }
-
-  if (rate >= 5) return "text-emerald-400 font-semibold";
-  if (rate > 0) return "text-emerald-300";
-  if (rate === 0) return "text-slate-300";
-  if (rate > -5) return "text-rose-300";
-  return "text-rose-400 font-semibold";
-}
-function formatCompactGrowth(rate: number | null | undefined) {
-  if (rate === null || rate === undefined || !Number.isFinite(rate)) {
-    return "No previous data";
-  }
-
-  const sign = rate > 0 ? "+" : "";
-  return `${sign}${rate.toFixed(1)}%`;
-}
-
-function aovTone(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "text-slate-400";
-  }
-
-  if (value >= 18) return "text-emerald-400 font-semibold";
-  if (value >= 14) return "text-slate-200";
-  return "text-rose-400 font-semibold";
-}
-
-function conversionTone(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "text-slate-400";
-  }
-
-  if (value >= 18) return "text-emerald-400 font-semibold";
-  if (value >= 12) return "text-slate-200";
-  return "text-rose-400 font-semibold";
-}
-
-function riskTone(level: RiskCard["level"]) {
-  if (level === "danger") {
-    return "border-rose-500/30 bg-rose-500/10 text-rose-200";
-  }
-  if (level === "warning") {
-    return "border-amber-500/30 bg-amber-500/10 text-amber-200";
-  }
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-}
-
-function actionTone(priority: ActionCard["priority"]) {
-  if (priority === "high") {
-    return "border-rose-500/25 bg-rose-500/10";
-  }
-  return "border-amber-500/25 bg-amber-500/10";
 }
 
 function getPresetLabel(preset: MasterDatePreset) {
@@ -151,1119 +37,448 @@ function getPresetLabel(preset: MasterDatePreset) {
   return "Custom";
 }
 
-function getRangeLabel(range: MasterDateRange) {
-  return `${range.startDate} ~ ${range.endDate}`;
-}
 function getComparisonLabel(range: MasterDateRange) {
-  if (range.preset === "today") return "Compare: Previous day";
-  if (range.preset === "thisWeek") return "Compare: Previous week";
-  if (range.preset === "thisMonth") return "Compare: Previous month";
+  if (range.preset === "today") return "전일 대비";
+  if (range.preset === "thisWeek") return "이전 주 대비";
+  if (range.preset === "thisMonth") return "이전 달 대비";
 
   const start = new Date(range.startDate);
   const end = new Date(range.endDate);
-  const diff = end.getTime() - start.getTime();
-  const dayCount = Math.floor(diff / 86400000) + 1;
-
-  return `Compare: Previous ${dayCount} day${dayCount > 1 ? "s" : ""}`;
-}
-function getComparisonShortLabel(range: MasterDateRange) {
-  if (range.preset === "today") return "Previous day";
-  if (range.preset === "thisWeek") return "Previous week";
-  if (range.preset === "thisMonth") return "Previous month";
-
-  const start = new Date(range.startDate);
-  const end = new Date(range.endDate);
-  const diff = end.getTime() - start.getTime();
-  const dayCount = Math.floor(diff / 86400000) + 1;
-
-  return `Previous ${dayCount} day${dayCount > 1 ? "s" : ""}`;
+  const dayCount = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  return `이전 ${dayCount}일 대비`;
 }
 
-function buildDetailRiskText(row: StoreKpiRow) {
-  const items: string[] = [];
-
-  if (row.totalSales < 1000) items.push("매출 위험");
-  else if (row.totalSales < 3000) items.push("매출 주의");
-
-  if (row.aov < 12) items.push("객단가 위험");
-  else if (row.aov < 16) items.push("객단가 주의");
-
-  if (row.conversionRate < 10) items.push("전환율 위험");
-  else if (row.conversionRate < 15) items.push("전환율 주의");
-
-  return items.length > 0 ? items.join(" / ") : "정상";
+function growthClass(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || !Number.isFinite(rate)) return "text-[#9C948E]";
+  if (rate > 0) return "text-emerald-600";
+  if (rate < 0) return "text-rose-500";
+  return "text-[#706A66]";
 }
 
-function buildActionCards(risks: RiskCard[], topMenus: TopMenuRow[]) {
-  const bestSeller = topMenus[0]?.name || "대표 메뉴";
-  const seen = new Set<string>();
-  const actions: ActionCard[] = [];
+function growthText(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || !Number.isFinite(rate)) return "비교 데이터 없음";
+  const arrow = rate > 0 ? "↑" : rate < 0 ? "↓" : "→";
+  return `${arrow} ${Math.abs(rate).toFixed(1)}%`;
+}
 
-  for (const risk of risks) {
-    const key = `${risk.storeId}-${risk.type}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+function summarizeRows(rows: StoreKpiRow[]) {
+  const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
+  const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+  const totalVisitCount = rows.reduce((sum, row) => sum + row.visitCount, 0);
+  const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const overallConversionRate = totalVisitCount > 0 ? (totalOrders / totalVisitCount) * 100 : 0;
 
-    if (risk.type === "sales") {
-      actions.push({
-        title: "매출 회복 액션",
-        storeName: risk.storeName,
-        description: `${bestSeller} 중심 노출을 강화하고, 입구/카운터/배달앱 대표 메뉴 구성을 재정렬하세요.`,
-        priority: risk.level === "danger" ? "high" : "medium",
-      });
-      continue;
-    }
-
-    if (risk.type === "aov") {
-      actions.push({
-        title: "객단가 개선 액션",
-        storeName: risk.storeName,
-        description: `${bestSeller}와 함께 팔기 쉬운 사이드 또는 음료 묶음 제안을 추가해 업셀 비중을 높이세요.`,
-        priority: risk.level === "danger" ? "high" : "medium",
-      });
-      continue;
-    }
-
-    if (risk.type === "conversion") {
-      actions.push({
-        title: "전환율 개선 액션",
-        storeName: risk.storeName,
-        description: `주문 전환이 낮습니다. 베스트 메뉴 1~2개를 전면 배치하고 직원 추천 멘트를 고정해 첫 선택을 빠르게 유도하세요.`,
-        priority: risk.level === "danger" ? "high" : "medium",
-      });
-    }
-  }
-
-  return actions.slice(0, 6);
+  return {
+    totalSales,
+    totalOrders,
+    averageAov,
+    overallConversionRate,
+    totalVisitCount,
+  };
 }
 
 export default function MasterDashboardPage() {
-const [preset, setPreset] = useState<MasterDatePreset>(() => {
-  if (typeof window === "undefined") return "today";
-  const saved = localStorage.getItem("masterDashboardPreset");
-  if (
-    saved === "today" ||
-    saved === "thisWeek" ||
-    saved === "thisMonth" ||
-    saved === "last30Days" ||
-    saved === "custom"
-  ) {
-    return saved;
-  }
-  return "today";
-});
-
-const [range, setRange] = useState<MasterDateRange>(() => {
-  if (typeof window === "undefined") return getMasterDateRange("today");
-
-  const savedPreset = localStorage.getItem("masterDashboardPreset");
-  const savedStartDate = localStorage.getItem("masterDashboardStartDate");
-  const savedEndDate = localStorage.getItem("masterDashboardEndDate");
-
-  if (
-    savedPreset === "custom" &&
-    savedStartDate &&
-    savedEndDate
-  ) {
-    return {
-      startDate: savedStartDate,
-      endDate: savedEndDate,
-      preset: "custom",
-    };
-  }
-
-  if (
-    savedPreset === "today" ||
-    savedPreset === "thisWeek" ||
-    savedPreset === "thisMonth" ||
-    savedPreset === "last30Days"
-  ) {
-    return getMasterDateRange(savedPreset);
-  }
-
-  return getMasterDateRange("today");
-});
-
-const [result, setResult] = useState<MasterDashboardViewData | null>(null);
-const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-
-const [selectedBrand, setSelectedBrand] = useState<string>(() => {
-  if (typeof window === "undefined") return "ALL";
-  return localStorage.getItem("masterDashboardSelectedBrand") || "ALL";
-});
-
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
-const [showApprovalPage, setShowApprovalPage] = useState(false);
-  
-  useEffect(() => {
-    if (preset !== "custom") {
-      setRange(getMasterDateRange(preset));
+  const [preset, setPreset] = useState<MasterDatePreset>(() => {
+    if (typeof window === "undefined") return "today";
+    const saved = localStorage.getItem("masterDashboardPreset");
+    if (
+      saved === "today" ||
+      saved === "thisWeek" ||
+      saved === "thisMonth" ||
+      saved === "last30Days" ||
+      saved === "custom"
+    ) {
+      return saved;
     }
+    return "today";
+  });
+
+  const [range, setRange] = useState<MasterDateRange>(() => {
+    if (typeof window === "undefined") return getMasterDateRange("today");
+
+    const savedPreset = localStorage.getItem("masterDashboardPreset");
+    const savedStartDate = localStorage.getItem("masterDashboardStartDate");
+    const savedEndDate = localStorage.getItem("masterDashboardEndDate");
+
+    if (savedPreset === "custom" && savedStartDate && savedEndDate) {
+      return {
+        startDate: savedStartDate,
+        endDate: savedEndDate,
+        preset: "custom",
+      };
+    }
+
+    if (
+      savedPreset === "today" ||
+      savedPreset === "thisWeek" ||
+      savedPreset === "thisMonth" ||
+      savedPreset === "last30Days"
+    ) {
+      return getMasterDateRange(savedPreset);
+    }
+
+    return getMasterDateRange("today");
+  });
+
+  const [result, setResult] = useState<MasterDashboardResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showApprovalPage, setShowApprovalPage] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<string>(() => {
+    if (typeof window === "undefined") return "ALL";
+    return localStorage.getItem("masterDashboardSelectedBrand") || "ALL";
+  });
+
+  useEffect(() => {
+    if (preset !== "custom") setRange(getMasterDateRange(preset));
   }, [preset]);
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("masterDashboardPreset", preset);
-}, [preset]);
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("masterDashboardSelectedBrand", selectedBrand);
-}, [selectedBrand]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("masterDashboardPreset", preset);
+  }, [preset]);
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("masterDashboardStartDate", range.startDate);
-  localStorage.setItem("masterDashboardEndDate", range.endDate);
-}, [range.startDate, range.endDate]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("masterDashboardSelectedBrand", selectedBrand);
+  }, [selectedBrand]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("masterDashboardStartDate", range.startDate);
+    localStorage.setItem("masterDashboardEndDate", range.endDate);
+  }, [range.startDate, range.endDate]);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function run() {
+    const run = async () => {
       try {
         setLoading(true);
         setError("");
-        const data = (await loadMasterDashboard(range)) as MasterDashboardViewData;
-
-        if (cancelled) return;
-
-        setResult(data);
-
-        if (!data.ranking.length) {
-          setSelectedStoreId(null);
-        } else if (!data.ranking.some((row) => row.storeId === selectedStoreId)) {
-          setSelectedStoreId(data.ranking[0].storeId);
-        }
+        const data = await loadMasterDashboard(range);
+        if (!cancelled) setResult(data);
       } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "마스터 대시보드 데이터를 불러오지 못했습니다.");
-      } finally {
         if (!cancelled) {
-          setLoading(false);
+          setError(err instanceof Error ? err.message : "마스터 데이터를 불러오지 못했습니다.");
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
+    };
 
-    run();
-
+    void run();
     return () => {
       cancelled = true;
     };
   }, [range.startDate, range.endDate]);
 
-  const summary = result?.summary;
-  const ranking = result?.ranking || [];
-  const risks = result?.risks || [];
-  const topMenus = result?.topMenus || [];
-const topMenusByBrand = result?.topMenusByBrand || {};
-const topMenusByStore = result?.topMenusByStore || {};
-
-  const groupedByBrand = useMemo(() => {
-    const map: Record<string, StoreKpiRow[]> = {};
-
-    for (const row of ranking) {
-      const brand = row.brandName || "Unknown";
-      if (!map[brand]) {
-        map[brand] = [];
-      }
-      map[brand].push(row);
-    }
-
-    return map;
-  }, [ranking]);
-
   const brandList = useMemo(() => {
-    return ["ALL", ...Object.keys(groupedByBrand)];
-  }, [groupedByBrand]);
-
-  const brandSummaryCards = useMemo(() => {
-    return Object.entries<StoreKpiRow[]>(groupedByBrand).map(([brandName, rows]) => {
-      const storeCount = rows.length;
-      const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
-      const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-      const averageAov = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-      const growth = result?.brandGrowth?.[brandName];
-
-      return {
-        brandName,
-        storeCount,
-        totalSales,
-        averageAov,
-        growthRate: growth?.rate ?? null,
-      };
-    });
-  }, [groupedByBrand, result]);
-
-  const selectedBrandRows = useMemo(() => {
-    if (selectedBrand === "ALL") return ranking;
-    return groupedByBrand[selectedBrand] || [];
-  }, [selectedBrand, ranking, groupedByBrand]);
+    const brands = Array.from(
+      new Set((result?.ranking || []).map((row) => row.brandName).filter(Boolean))
+    );
+    return ["ALL", ...brands];
+  }, [result?.ranking]);
 
   useEffect(() => {
-    if (!selectedBrandRows.length) {
-      setSelectedStoreId(null);
-      return;
-    }
+    if (!brandList.includes(selectedBrand)) setSelectedBrand("ALL");
+  }, [brandList, selectedBrand]);
 
-    const exists = selectedBrandRows.some((row) => row.storeId === selectedStoreId);
+  const visibleRanking = useMemo(() => {
+    const rows = result?.ranking || [];
+    if (selectedBrand === "ALL") return rows;
+    return rows.filter((row) => row.brandName === selectedBrand);
+  }, [result?.ranking, selectedBrand]);
 
-    if (!exists) {
-      setSelectedStoreId(selectedBrandRows[0].storeId);
-    }
-  }, [selectedBrandRows, selectedStoreId]);
+  const visibleSummary = useMemo(() => {
+    if (!result) return null;
+    if (selectedBrand === "ALL") return result.summary;
 
-  const selectedBrandStoreIds = useMemo(() => {
-    return new Set(selectedBrandRows.map((row) => row.storeId));
-  }, [selectedBrandRows]);
-
-  const filteredRisks = useMemo(() => {
-  if (selectedStoreId) {
-    return risks.filter((risk) => risk.storeId === selectedStoreId);
-  }
-
-  if (selectedBrand === "ALL") return risks;
-  return risks.filter((risk) => selectedBrandStoreIds.has(risk.storeId));
-}, [selectedStoreId, selectedBrand, risks, selectedBrandStoreIds]);
-
-  const filteredTopMenus = useMemo(() => {
-  if (selectedStoreId && topMenusByStore[selectedStoreId]) {
-    return topMenusByStore[selectedStoreId];
-  }
-
-  if (selectedBrand !== "ALL") {
-    return topMenusByBrand[selectedBrand] || [];
-  }
-
-  return topMenus;
-}, [selectedStoreId, selectedBrand, topMenus, topMenusByBrand, topMenusByStore]);
-
-  const filteredActionCards = useMemo(() => {
-    return buildActionCards(filteredRisks, filteredTopMenus);
-  }, [filteredRisks, filteredTopMenus]);
-
-  const selectedBrandData = useMemo(() => {
-    if (selectedBrand === "ALL") return null;
-
-    const rows = groupedByBrand[selectedBrand] || [];
-    if (!rows.length) return null;
-
-    const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
-    const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
-    const totalVisit = rows.reduce((sum, row) => sum + row.visitCount, 0);
-    const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
-    const conversion = totalVisit > 0 ? (totalOrders / totalVisit) * 100 : 0;
-    const topStore = [...rows].sort((a, b) => b.totalSales - a.totalSales)[0] || null;
-
+    const filtered = summarizeRows(visibleRanking);
     return {
-      totalSales,
-      totalOrders,
-      aov,
-      conversion,
-      topStore,
+      ...result.summary,
+      ...filtered,
+      topStoreName: visibleRanking[0]?.storeName || "-",
+      topStoreSales: visibleRanking[0]?.totalSales || 0,
     };
-  }, [selectedBrand, groupedByBrand]);
+  }, [result, selectedBrand, visibleRanking]);
 
-  const selectedStore = useMemo(() => {
-    return ranking.find((row) => row.storeId === selectedStoreId) || null;
-  }, [ranking, selectedStoreId]);
+  const salesGrowth = useMemo(() => {
+    if (!result) return null;
+    if (selectedBrand === "ALL") return result.summary.growth.sales.rate;
+    return result.brandGrowth?.[selectedBrand]?.rate ?? null;
+  }, [result, selectedBrand]);
 
-  const handlePresetChange = (nextPreset: MasterDatePreset) => {
-    setPreset(nextPreset);
-  };
+  const topStores = visibleRanking.slice(0, 5);
+
+  const insightText = useMemo(() => {
+    if (!visibleSummary) return "현재 기간 데이터를 확인하고 있어요.";
+    if (salesGrowth === null || !Number.isFinite(salesGrowth)) {
+      return "비교 가능한 이전 기간 데이터가 충분하지 않습니다.";
+    }
+    if (salesGrowth <= -10) {
+      return `${getComparisonLabel(range)} 매출이 ${Math.abs(salesGrowth).toFixed(1)}% 감소했습니다. 주요 매장의 변화를 먼저 확인해 보세요.`;
+    }
+    if (salesGrowth >= 10) {
+      return `${getComparisonLabel(range)} 매출이 ${salesGrowth.toFixed(1)}% 증가했습니다. 성장한 매장의 운영 포인트를 확인해 보세요.`;
+    }
+    return `${getComparisonLabel(range)} 매출 변동은 ${salesGrowth.toFixed(1)}%입니다. 큰 변동 없이 유지되고 있습니다.`;
+  }, [range, salesGrowth, visibleSummary]);
 
   const handleCustomDateChange = (key: "startDate" | "endDate", value: string) => {
     setPreset("custom");
-    setRange((prev) => ({
-      ...prev,
-      preset: "custom",
-      [key]: value,
-    }));
+    setRange((prev) => ({ ...prev, preset: "custom", [key]: value }));
   };
-if (showApprovalPage) {
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-8 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur">
-          <div>
-            <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
-              가입 승인 관리
-            </h1>
-            <div className="mt-2 text-sm text-slate-400">
-              계정 생성 신청 내역을 검토하고 승인합니다.
+
+  if (showApprovalPage) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F6] text-[#1F1F1F]">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#9C948E]">Sales Coach AI</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em]">가입 승인 관리</h1>
+              <p className="mt-2 text-sm text-[#706A66]">계정 생성 신청 내역을 검토하고 승인합니다.</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowApprovalPage(false)}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE]"
+            >
+              대시보드로 돌아가기
+            </button>
+          </div>
+          <div className="overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white p-2">
+            <AdminApprovalPage />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#FAF8F6] text-[#1F1F1F]">
+      <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
+        <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#8B6F5B]">Master Workspace</p>
+            <h1 className="mt-2 text-[30px] font-bold leading-tight tracking-[-0.045em] sm:text-[34px]">
+              안녕하세요, Master님!
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[#706A66] sm:text-base">
+              필요한 지표만 빠르게 확인하고, 변화가 큰 매장부터 살펴보세요.
+            </p>
           </div>
 
           <button
             type="button"
-            onClick={() => setShowApprovalPage(false)}
-            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/15"
+            onClick={() => setShowApprovalPage(true)}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-[#8B6F5B] px-5 text-sm font-semibold text-white transition hover:bg-[#765C49] active:scale-[0.99]"
           >
-            대시보드로 돌아가기
+            <i className="fa-solid fa-user-check text-xs" />
+            가입 승인 관리
           </button>
-        </div>
+        </section>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-2 shadow-2xl backdrop-blur">
-          <AdminApprovalPage />
-        </div>
-      </div>
-    </div>
-  );
-}
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 md:px-6 lg:px-8">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur md:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="text-sm font-medium text-slate-400">Sales Coach AI</div>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-2xl">Master Dashboard</h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-    {selectedBrand === "ALL" ? "Viewing: ALL Brands" : `Viewing: ${selectedBrand}`}
-  </span>
+        <section className="mt-7 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {(["today", "thisWeek", "thisMonth", "last30Days", "custom"] as MasterDatePreset[]).map(
+              (item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setPreset(item)}
+                  className={`h-10 rounded-xl border px-4 text-sm font-semibold transition ${
+                    preset === item
+                      ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
+                      : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
+                  }`}
+                >
+                  {getPresetLabel(item)}
+                </button>
+              )
+            )}
 
-  <span className="text-slate-500">·</span>
-
-  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-    {getPresetLabel(preset)}
-  </span>
-
-  <span className="text-slate-500">·</span>
-
-  <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
-    {getRangeLabel(range)}
-  </span>
-
-  <span className="text-slate-500">·</span>
-
-  <span className="rounded-full border border-blue-300/30 bg-blue-500/10 px-3 py-1 text-blue-200 font-medium tracking-wide">
-  {getComparisonLabel(range)}
-</span>
-</div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-end">
-  <button
-    type="button"
-    onClick={() => setShowApprovalPage(true)}
-    className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
-  >
-    가입 승인 관리
-  </button>
-</div>
-              <div className="flex flex-wrap gap-2">
-                {(["today", "thisWeek", "thisMonth", "last30Days", "custom"] as MasterDatePreset[]).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => handlePresetChange(item)}
-                    className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
-                      preset === item
-                        ? "bg-blue-500 text-white"
-                        : "bg-white/5 text-slate-300 hover:bg-white/10"
-                    }`}
-                  >
-                    {getPresetLabel(item)}
-                  </button>
+            {brandList.length > 2 ? (
+              <select
+                value={selectedBrand}
+                onChange={(event) => setSelectedBrand(event.target.value)}
+                className="h-10 rounded-xl border border-[#ECE7E1] bg-white px-3 text-sm font-semibold text-[#706A66] outline-none"
+                aria-label="브랜드 선택"
+              >
+                {brandList.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand === "ALL" ? "전체 브랜드" : brand}
+                  </option>
                 ))}
-              </div>
-
-              {preset === "custom" && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="date"
-                    value={range.startDate}
-                    onChange={(e) => handleCustomDateChange("startDate", e.target.value)}
-                    className="rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
-                  />
-                  <span className="text-slate-400">~</span>
-                  <input
-                    type="date"
-                    value={range.endDate}
-                    onChange={(e) => handleCustomDateChange("endDate", e.target.value)}
-                    className="rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
-                  />
-                </div>
-              )}
-            </div>
+              </select>
+            ) : null}
           </div>
-        </div>
+
+          {preset === "custom" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={range.startDate}
+                onChange={(event) => handleCustomDateChange("startDate", event.target.value)}
+                className="h-11 rounded-xl border border-[#ECE7E1] bg-white px-3 text-sm text-[#1F1F1F]"
+              />
+              <span className="text-sm text-[#9C948E]">~</span>
+              <input
+                type="date"
+                value={range.endDate}
+                onChange={(event) => handleCustomDateChange("endDate", event.target.value)}
+                className="h-11 rounded-xl border border-[#ECE7E1] bg-white px-3 text-sm text-[#1F1F1F]"
+              />
+            </div>
+          ) : null}
+        </section>
 
         {error ? (
-          <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-            {error}
-          </div>
+          <section className="mt-7 rounded-[18px] border border-rose-200 bg-rose-50 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <i className="fa-solid fa-circle-exclamation mt-0.5 text-rose-500" />
+              <div>
+                <p className="text-sm font-semibold text-rose-700">데이터를 불러오지 못했어요.</p>
+                <p className="mt-1 text-sm text-rose-600">{error}</p>
+              </div>
+            </div>
+          </section>
         ) : null}
 
         {loading ? (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
-            데이터 불러오는 중...
-          </div>
+          <section className="mt-7 rounded-[20px] border border-[#ECE7E1] bg-white p-6">
+            <div className="h-4 w-28 animate-pulse rounded bg-[#F0EAE5]" />
+            <div className="mt-6 grid grid-cols-2 gap-6 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="h-3 w-20 animate-pulse rounded bg-[#F0EAE5]" />
+                  <div className="h-8 w-28 animate-pulse rounded bg-[#F0EAE5]" />
+                </div>
+              ))}
+            </div>
+          </section>
         ) : null}
 
-        {!loading && summary && (
+        {!loading && visibleSummary ? (
           <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-   <div className="text-xs text-slate-400">
-  전체 매출
-  <span className="ml-1 text-[10px] text-slate-500">
-    ({getComparisonShortLabel(range)})
-  </span>
-</div>
-    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
-      {formatCurrency(summary.totalSales)}
-    </div>
-    <div className={`mt-2 text-sm ${growthTone(summary.growth.sales.rate)}`}>
-      {formatGrowth(summary.growth.sales.rate)}
-    </div>
-  </div>
-
-  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-    <div className="text-xs text-slate-400">전체 주문 수</div>
-    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
-      {formatNumber(summary.totalOrders)}
-    </div>
-    <div className={`mt-2 text-sm ${growthTone(summary.growth.orders.rate)}`}>
-      {formatGrowth(summary.growth.orders.rate)}
-    </div>
-  </div>
-
-  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-    <div className="text-xs text-slate-400">평균 매출</div>
-    <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
-      {formatCurrency(summary.averageSales)}
-    </div>
-    <div className="mt-2 text-xs text-slate-500">매장당 평균</div>
-  </div>
-
-  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-    <div className="text-xs text-slate-400">전체 평균 AOV</div>
-    <div className={`mt-2 text-3xl font-semibold tracking-tight ${aovTone(summary.averageAov)}`}>
-      {formatCurrency(summary.averageAov)}
-    </div>
-    <div className={`mt-2 text-sm ${growthTone(summary.growth.aov.rate)}`}>
-      {formatGrowth(summary.growth.aov.rate)}
-    </div>
-  </div>
-
-  <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:border-white/20 hover:bg-white/10 hover:shadow-xl">
-    <div className="text-xs text-slate-400">전체 전환율</div>
-    <div className={`mt-2 text-3xl font-semibold tracking-tight ${conversionTone(summary.overallConversionRate)}`}>
-      {formatPercent(summary.overallConversionRate)}
-    </div>
-    <div className="mt-2 text-xs text-slate-500">
-      방문 {formatNumber(summary.totalVisitCount)} / 주문 {formatNumber(summary.totalOrders)}
-    </div>
-  </div>
-</div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-  <div className="text-xs text-slate-400">{`Top Store vs ${getComparisonShortLabel(range)}`}</div>
-  <div className="mt-2 text-2xl font-semibold">{summary.topStoreName || "-"}</div>
-  <div className="mt-2 text-sm text-slate-300">{formatCurrency(summary.topStoreSales)}</div>
-
-  <div className={`mt-2 text-sm font-medium ${growthTone(result?.storeGrowth?.[ranking[0]?.storeId]?.rate ?? null)}`}>
-    {formatCompactGrowth(result?.storeGrowth?.[ranking[0]?.storeId]?.rate ?? null)}
-  </div>
-</div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">{`Sales Growth vs ${getComparisonShortLabel(range)}`}</div>
-                <div className={`mt-2 text-2xl font-semibold ${growthTone(summary.growth.sales.rate)}`}>
-                  {formatGrowth(summary.growth.sales.rate)}
-                </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  현재 {formatCurrency(summary.growth.sales.current)} / 이전 {formatCurrency(summary.growth.sales.previous)}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="text-xs text-slate-400">{`Orders / AOV vs ${getComparisonShortLabel(range)}`}</div>
-                <div className="mt-2 flex items-center gap-4">
-                  <div>
-                    <div className="text-xs text-slate-500">Orders</div>
-                    <div className={`text-base font-semibold tracking-tight ${growthTone(summary.growth.orders.rate)}`}>
-                      {formatGrowth(summary.growth.orders.rate)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">AOV</div>
-                    <div className={`text-base font-semibold tracking-tight ${growthTone(summary.growth.aov.rate)}`}>
-                      {formatGrowth(summary.growth.aov.rate)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-  {brandSummaryCards.length > 0 ? (
-    brandSummaryCards.map((card) => {
-      const isSelected = selectedBrand === card.brandName;
-
-      return (
-        <button
-          key={card.brandName}
-          type="button"
-          onClick={() => setSelectedBrand((prev) => (prev === card.brandName ? "ALL" : card.brandName))}
-          className={`relative overflow-hidden rounded-3xl border p-5 text-left transition-all duration-200 ${
-            isSelected
-              ? "border-blue-300/70 bg-blue-500/15 shadow-[0_0_0_1px_rgba(147,197,253,0.35),0_20px_50px_rgba(30,41,59,0.45)]"
-              : "border-white/10 bg-white/5 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_16px_40px_rgba(15,23,42,0.35)]"
-          }`}
-        >
-          <div
-            className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${
-              isSelected ? "bg-blue-300/90" : "bg-white/10"
-            }`}
-          />
-
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                Brand Overview
-              </div>
-              <div className="mt-2 text-xl font-semibold tracking-tight text-slate-100">
-                {card.brandName}
-              </div>
-              <div className={`mt-2 text-sm ${growthTone(card.growthRate)}`}>
-                {formatGrowth(card.growthRate)}
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              {isSelected ? (
-                <div className="rounded-full border border-blue-200/30 bg-blue-300/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-100">
-                  Selected
-                </div>
-              ) : null}
-              <div className="rounded-full border border-white/10 bg-slate-900/70 px-2.5 py-1 text-[11px] text-slate-400">
-                {formatNumber(card.storeCount)} stores
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-              <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales</div>
-              <div className="mt-2 text-lg font-semibold tracking-tight text-white">
-                {formatCurrency(card.totalSales)}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-              <div className="text-[11px] uppercase tracking-wide text-slate-500">Avg AOV</div>
-              <div className={`mt-2 text-lg font-semibold tracking-tight ${aovTone(card.averageAov)}`}>
-                {formatCurrency(card.averageAov)}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-              <div className="text-[11px] uppercase tracking-wide text-slate-500">Growth</div>
-              <div className={`mt-2 text-lg font-semibold tracking-tight ${growthTone(card.growthRate)}`}>
-                {formatCompactGrowth(card.growthRate)}
-              </div>
-            </div>
-          </div>
-        </button>
-      );
-    })
-  ) : (
-    <div className="md:col-span-2 xl:col-span-3 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-500">
-      등록된 브랜드 데이터가 없습니다.
-    </div>
-  )}
-</div>
-
-            {selectedBrand !== "ALL" && (
-              <>
-                {selectedBrandData ? (
-                  <div className="rounded-3xl border border-blue-400/30 bg-blue-500/10 p-6">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm text-blue-200">Selected Brand</div>
-                        <div className="text-xl font-semibold text-white">{selectedBrand}</div>
-                      </div>
-                      <div className="text-sm text-blue-200">{formatNumber(selectedBrandRows.length)} stores</div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">Sales</div>
-                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
-                          {formatCurrency(selectedBrandData.totalSales)}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">Orders</div>
-                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
-                          {formatNumber(selectedBrandData.totalOrders)}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">AOV</div>
-                        <div className={`mt-1 text-lg ${aovTone(selectedBrandData.aov)}`}>
-                          {formatCurrency(selectedBrandData.aov)}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">Conversion</div>
-                        <div className={`mt-1 text-lg ${conversionTone(selectedBrandData.conversion)}`}>
-                          {formatPercent(selectedBrandData.conversion)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {selectedBrandData.topStore && (
-                      <div className="mt-6 rounded-2xl bg-slate-900/70 p-4">
-                        <div className="text-xs text-slate-400">{`Top Store vs ${getComparisonShortLabel(range)}`}</div>
-                        <div className="mt-1 text-base font-semibold tracking-tight text-white">
-                          {selectedBrandData.topStore.storeName || "-"}
-                        </div>
-                        <div className="text-sm text-slate-300">
-                          {formatCurrency(selectedBrandData.topStore.totalSales)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-3xl border border-dashed border-blue-400/20 bg-blue-500/5 p-6 text-center text-sm text-blue-200">
-                    선택한 브랜드에 해당 기간 데이터가 없습니다.
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="mb-4 flex items-center justify-between">
+            <section className="mt-7 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white">
+              <div className="flex flex-col gap-2 border-b border-[#F1ECE8] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div>
-                  <div className="text-xs text-slate-400">
-  {selectedStore?.storeName
-    ? `${selectedStore.storeName} 액션 제안`
-    : selectedBrand === "ALL"
-    ? "문제 매장 액션 제안"
-    : `${selectedBrand} 액션 제안`}
-</div>
-                  <div className="mt-1 text-base font-semibold tracking-tight">Recommended Actions</div>
+                  <h2 className="text-[17px] font-bold tracking-[-0.025em]">
+                    {getPresetLabel(preset)} 주요 지표
+                  </h2>
+                  <p className="mt-1 text-xs text-[#9C948E]">{range.startDate} ~ {range.endDate}</p>
                 </div>
-                <div className="text-sm text-slate-500">{filteredActionCards.length} actions</div>
+                {selectedBrand !== "ALL" ? (
+                  <span className="text-xs font-semibold text-[#8B6F5B]">{selectedBrand}</span>
+                ) : null}
               </div>
 
-              {filteredActionCards.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-                  {filteredActionCards.map((card, index) => (
-                    <div
-                      key={`${card.storeName}-${card.title}-${index}`}
-                      className={`rounded-2xl border p-4 ${actionTone(card.priority)}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-slate-100">{card.title}</div>
-                        <div className="rounded-full bg-black/20 px-2 py-1 text-[11px] text-slate-200">
-                          {card.priority === "high" ? "HIGH" : "MEDIUM"}
+              <div className="grid grid-cols-2 lg:grid-cols-4">
+                <div className="border-b border-r border-[#F1ECE8] p-5 lg:border-b-0 lg:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-coins" /></span>
+                    전체 매출
+                  </div>
+                  <div className="mt-3 text-2xl font-bold tracking-[-0.035em]">{formatCurrency(visibleSummary.totalSales)}</div>
+                  <div className={`mt-2 text-xs font-semibold ${growthClass(salesGrowth)}`}>{growthText(salesGrowth)}</div>
+                  <div className="mt-1 text-[11px] text-[#9C948E]">{getComparisonLabel(range)}</div>
+                </div>
+
+                <div className="border-b border-[#F1ECE8] p-5 lg:border-b-0 lg:border-r lg:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-receipt" /></span>
+                    전체 주문 수
+                  </div>
+                  <div className="mt-3 text-2xl font-bold tracking-[-0.035em]">{formatNumber(visibleSummary.totalOrders)}</div>
+                  {selectedBrand === "ALL" ? (
+                    <div className={`mt-2 text-xs font-semibold ${growthClass(result?.summary.growth.orders.rate)}`}>
+                      {growthText(result?.summary.growth.orders.rate)}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-xs text-[#9C948E]">선택 브랜드 기준</div>
+                  )}
+                </div>
+
+                <div className="border-r border-[#F1ECE8] p-5 lg:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-tag" /></span>
+                    평균 AOV
+                  </div>
+                  <div className="mt-3 text-2xl font-bold tracking-[-0.035em]">{formatCurrency(visibleSummary.averageAov)}</div>
+                  {selectedBrand === "ALL" ? (
+                    <div className={`mt-2 text-xs font-semibold ${growthClass(result?.summary.growth.aov.rate)}`}>
+                      {growthText(result?.summary.growth.aov.rate)}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-xs text-[#9C948E]">선택 브랜드 기준</div>
+                  )}
+                </div>
+
+                <div className="p-5 lg:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-user-check" /></span>
+                    전체 전환율
+                  </div>
+                  <div className="mt-3 text-2xl font-bold tracking-[-0.035em] text-emerald-600">{formatPercent(visibleSummary.overallConversionRate)}</div>
+                  <div className="mt-2 text-xs text-[#706A66]">방문 {formatNumber(visibleSummary.totalVisitCount)} / 주문 {formatNumber(visibleSummary.totalOrders)}</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-5 rounded-[20px] border border-[#DCD7FF] bg-[#FBFAFF] px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#F0EEFF] text-[#7C6CF6]">
+                  <i className="fa-solid fa-wand-magic-sparkles" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#7C6CF6]">AI Coach에서 확인할 포인트</p>
+                  <p className="mt-1.5 text-base font-semibold leading-6 text-[#1F1F1F] sm:text-[17px]">{insightText}</p>
+                  <p className="mt-1.5 text-sm leading-5 text-[#706A66]">이 영역은 현재 지표를 요약한 안내이며, 상세 AI 분석 결과를 새로 생성하지 않습니다.</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-5 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white">
+              <div className="flex items-center justify-between border-b border-[#F1ECE8] px-5 py-4 sm:px-6">
+                <div>
+                  <h2 className="text-[17px] font-bold tracking-[-0.025em]">주요 매장</h2>
+                  <p className="mt-1 text-xs text-[#9C948E]">매출 기준 상위 {Math.min(topStores.length, 5)}개 매장</p>
+                </div>
+              </div>
+
+              {topStores.length > 0 ? (
+                <div className="divide-y divide-[#F1ECE8]">
+                  {topStores.map((store, index) => {
+                    const rate = result?.storeGrowth?.[store.storeId]?.rate ?? null;
+                    return (
+                      <div key={store.storeId} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-4 sm:px-6">
+                        <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${index === 0 ? "bg-[#F3E4CB] text-[#7A593E]" : "bg-[#F4F1EE] text-[#706A66]"}`}>
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#1F1F1F]">{store.storeName}</p>
+                          <p className="mt-1 text-xs text-[#9C948E]">{store.brandName || "브랜드 정보 없음"}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-[#1F1F1F]">{formatCurrency(store.totalSales)}</p>
+                          <p className={`mt-1 text-xs font-semibold ${growthClass(rate)}`}>{growthText(rate)}</p>
                         </div>
                       </div>
-                      <div className="mt-2 text-sm text-slate-300">{card.storeName}</div>
-                      <div className="mt-3 text-sm leading-6 text-slate-200">{card.description}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                  {selectedBrand === "ALL"
-                    ? "현재 추천 액션이 없습니다."
-                    : `${selectedBrand}에 대한 추천 액션이 없습니다.`}
+                <div className="px-5 py-10 text-center sm:px-6">
+                  <p className="text-sm font-semibold text-[#706A66]">표시할 매장 데이터가 없습니다.</p>
+                  <p className="mt-1 text-xs text-[#9C948E]">선택한 기간이나 브랜드를 다시 확인해 주세요.</p>
                 </div>
               )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="text-xs text-slate-400">매장별 매출 순위</div>
-                    <div className="mt-1 text-base font-semibold tracking-tight">Store Ranking</div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-400">Brand</span>
-                    <select
-                      value={selectedBrand}
-                      onChange={(e) => setSelectedBrand(e.target.value)}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none"
-                    >
-                      {brandList.map((brand) => (
-                        <option key={brand} value={brand}>
-                          {brand}
-                        </option>
-                      ))}
-                    </select>
-
-                    {selectedBrand !== "ALL" ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBrand("ALL")}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-
-                    <div className="text-sm text-slate-500">{selectedBrandRows.length} stores</div>
-                  </div>
-                </div>
-
-                {selectedBrandRows.length > 0 ? (
-                  <div className="overflow-x-auto">
-  <table className="min-w-full border-separate border-spacing-y-2 text-sm">
-    <thead>
-      <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-slate-500">
-        <th className="px-3 py-2">#</th>
-        <th className="px-3 py-2">Store</th>
-        <th className="px-3 py-2">Sales</th>
-        <th className="px-3 py-2">Orders</th>
-        <th className="px-3 py-2">AOV</th>
-        <th className="px-3 py-2">Conversion</th>
-        <th className="px-3 py-2">Growth</th>
-      </tr>
-    </thead>
-    <tbody>
-      {Object.entries<StoreKpiRow[]>(groupedByBrand)
-        .filter(([brand]) => selectedBrand === "ALL" || brand === selectedBrand)
-        .map(([brand, rows]) => (
-          <React.Fragment key={brand}>
-            <tr>
-              <td colSpan={7} className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-300">
-                {brand}
-              </td>
-            </tr>
-
-            {rows.map((row, index) => {
-              const isSelected = row.storeId === selectedStoreId;
-              const storeGrowthRate = result?.storeGrowth?.[row.storeId]?.rate ?? null;
-
-              return (
-                <tr
-                  key={row.storeId}
-                  onClick={() => setSelectedStoreId(row.storeId)}
-                  className={`cursor-pointer transition ${
-                    isSelected ? "scale-[1.01]" : "hover:scale-[1.005]"
-                  }`}
-                >
-                  <td
-                    className={`rounded-l-2xl border border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15 text-blue-100"
-                        : "border-white/10 bg-slate-900/55 text-slate-300"
-                    }`}
-                  >
-                    <div className="font-semibold">{index + 1}</div>
-                  </td>
-
-                  <td
-                    className={`border border-l-0 border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15 text-slate-100"
-                        : "border-white/10 bg-slate-900/55 text-slate-100"
-                    }`}
-                  >
-                    <div className="font-medium">{row.storeName}</div>
-                    <div className="mt-1 text-xs text-slate-400">{brand}</div>
-                  </td>
-
-                  <td
-                    className={`border border-l-0 border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15 text-white"
-                        : "border-white/10 bg-slate-900/55 text-white"
-                    }`}
-                  >
-                    <div className="font-semibold">{formatCurrency(row.totalSales)}</div>
-                  </td>
-
-                  <td
-                    className={`border border-l-0 border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15 text-slate-200"
-                        : "border-white/10 bg-slate-900/55 text-slate-200"
-                    }`}
-                  >
-                    {formatNumber(row.orders)}
-                  </td>
-
-                  <td
-                    className={`border border-l-0 border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15"
-                        : "border-white/10 bg-slate-900/55"
-                    } ${aovTone(row.aov)}`}
-                  >
-                    <div className="font-medium">{formatCurrency(row.aov)}</div>
-                  </td>
-
-                  <td
-                    className={`border border-l-0 border-r-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15"
-                        : "border-white/10 bg-slate-900/55"
-                    } ${conversionTone(row.conversionRate)}`}
-                  >
-                    <div className="font-medium">{formatPercent(row.conversionRate)}</div>
-                  </td>
-
-                  <td
-                    className={`rounded-r-2xl border border-l-0 px-3 py-4 ${
-                      isSelected
-                        ? "border-blue-400/30 bg-blue-500/15"
-                        : "border-white/10 bg-slate-900/55"
-                    } ${growthTone(storeGrowthRate)}`}
-                  >
-                    <div className="font-medium">{formatCompactGrowth(storeGrowthRate)}</div>
-                  </td>
-                </tr>
-              );
-            })}
-          </React.Fragment>
-        ))}
-    </tbody>
-  </table>
-</div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-                    {selectedBrand === "ALL"
-                      ? "해당 기간 데이터가 없습니다."
-                      : `${selectedBrand} 브랜드에 해당 기간 데이터가 없습니다.`}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-  <div className="flex items-start justify-between gap-3">
-    <div>
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Selected Store</div>
-      <div className="mt-2 text-lg font-semibold tracking-tight text-white">{selectedStore?.storeName || "-"}</div>
-      <div className="mt-1 text-xs text-slate-400">
-        {selectedStore?.brandName || (selectedBrand === "ALL" ? "Select a store from ranking" : selectedBrand)}
-      </div>
-    </div>
-
-    {selectedStore && selectedBrandStoreIds.has(selectedStore.storeId) ? (
-      <div className="rounded-full border border-blue-200/20 bg-blue-400/10 px-3 py-1 text-[11px] font-medium text-blue-100">
-        Live Detail
-      </div>
-    ) : null}
-  </div>
-
-  {selectedStore && selectedBrandStoreIds.has(selectedStore.storeId) ? (
-    <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales</div>
-        <div className="mt-2 text-lg font-semibold tracking-tight text-white">
-          {formatCurrency(selectedStore.totalSales)}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Orders</div>
-        <div className="mt-2 text-lg font-semibold tracking-tight text-white">
-          {formatNumber(selectedStore.orders)}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Visits</div>
-        <div className="mt-2 text-lg font-semibold tracking-tight text-white">
-          {formatNumber(selectedStore.visitCount)}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">AOV</div>
-        <div className={`mt-2 text-lg font-semibold tracking-tight ${aovTone(selectedStore.aov)}`}>
-          {formatCurrency(selectedStore.aov)}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Conversion</div>
-        <div className={`mt-2 text-lg font-semibold tracking-tight ${conversionTone(selectedStore.conversionRate)}`}>
-          {formatPercent(selectedStore.conversionRate)}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales Growth</div>
-        <div className={`mt-2 text-lg font-semibold tracking-tight ${growthTone(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}`}>
-          {formatCompactGrowth(result?.storeGrowth?.[selectedStore.storeId]?.rate ?? null)}
-        </div>
-      </div>
-
-      <div className="col-span-2 rounded-2xl border border-white/8 bg-slate-900/75 p-4">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500">Risk Check</div>
-        <div className="mt-2 text-sm font-medium leading-6 text-slate-200">
-          {buildDetailRiskText(selectedStore)}
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-slate-900/35 p-6 text-sm text-slate-500">
-      {selectedBrandRows.length === 0
-        ? "선택한 조건에 표시할 매장 데이터가 없습니다."
-        : "순위표에서 매장을 선택하세요."}
-    </div>
-  )}
-</div>
-
-               <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-  <div className="flex items-start justify-between gap-3">
-    <div>
-     <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-  {selectedStore?.storeName
-    ? `${selectedStore.storeName} Risk Monitor`
-    : selectedBrand === "ALL"
-    ? "Risk Monitor"
-    : `${selectedBrand} Risk Monitor`}
-</div>
-      <div className="mt-2 text-base font-semibold tracking-tight text-white">Risk Cards</div>
-    </div>
-
-    <div className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-400">
-      {filteredRisks.length} items
-    </div>
-  </div>
-
-  <div className="mt-5 flex flex-col gap-3">
-    {filteredRisks.length > 0 ? (
-      filteredRisks.map((risk, index) => {
-        const toneClass =
-          risk.level === "danger"
-            ? "border-rose-400/30 bg-rose-500/12"
-            : risk.level === "warning"
-            ? "border-amber-400/30 bg-amber-500/12"
-            : "border-emerald-400/30 bg-emerald-500/12";
-
-        const badgeClass =
-          risk.level === "danger"
-            ? "border-rose-300/30 bg-rose-400/15 text-rose-200"
-            : risk.level === "warning"
-            ? "border-amber-300/30 bg-amber-400/15 text-amber-200"
-            : "border-emerald-300/30 bg-emerald-400/15 text-emerald-200";
-
-        return (
-          <div
-            key={`${risk.storeId}-${risk.type}-${index}`}
-            className={`rounded-2xl border p-4 ${toneClass}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-white">{risk.label}</div>
-                <div className="mt-1 text-sm text-slate-300">{risk.storeName}</div>
-              </div>
-
-              <div className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${badgeClass}`}>
-                {risk.level}
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-end justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-slate-500">Current Value</div>
-                <div className="mt-1 text-base font-semibold text-white">
-                  {risk.type === "sales" && formatCurrency(risk.value)}
-                  {risk.type === "aov" && formatCurrency(risk.value)}
-                  {risk.type === "conversion" && formatPercent(risk.value)}
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-400">
-                {risk.type === "sales" && "Sales Risk"}
-                {risk.type === "aov" && "AOV Risk"}
-                {risk.type === "conversion" && "Conversion Risk"}
-              </div>
-            </div>
-          </div>
-        );
-      })
-    ) : (
-      <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/35 p-6 text-sm text-slate-500">
-        {selectedBrand === "ALL"
-          ? "현재 위험 카드가 없습니다."
-          : `${selectedBrand}에 표시할 위험 카드가 없습니다.`}
-      </div>
-    )}
- </div>
-</div>
-</div>
-</div>
-
-           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-  <div className="mb-4 flex items-center justify-between">
-    <div>
-     <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-  {selectedStore?.storeName
-    ? `${selectedStore.storeName} Top Menu Snapshot`
-    : selectedBrand === "ALL"
-    ? "Top Menu Snapshot"
-    : `${selectedBrand} Top Menu Snapshot`}
-</div>
-      <div className="mt-2 text-base font-semibold tracking-tight text-white">Top 10 Menus</div>
-    </div>
-    <div className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-400">
-      {filteredTopMenus.length} items
-    </div>
-  </div>
-
-  {filteredTopMenus.length > 0 ? (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-      {filteredTopMenus.map((menu, index) => (
-        <div
-          key={`${menu.name}-${index}`}
-          className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-slate-900/90"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="rounded-full border border-blue-300/20 bg-blue-400/10 px-2.5 py-1 text-[11px] font-semibold text-blue-100">
-              #{index + 1}
-            </div>
-            <div className="text-[11px] uppercase tracking-wide text-slate-500">Menu</div>
-          </div>
-
-          <div className="mt-3 line-clamp-2 min-h-[44px] text-sm font-semibold leading-6 text-slate-100">
-            {menu.name}
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-white/8 bg-slate-950/60 p-3">
-            <div className="text-[11px] uppercase tracking-wide text-slate-500">Sales</div>
-            <div className="mt-1 text-lg font-semibold tracking-tight text-white">
-              {formatCurrency(menu.sales)}
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between text-xs">
-            <span className="text-slate-500">판매수량</span>
-            <span className="font-semibold text-slate-200">{formatNumber(menu.qty)}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/35 p-8 text-center text-slate-500">
-      {selectedBrand === "ALL"
-        ? "해당 기간 Top 메뉴 데이터가 없습니다."
-        : `${selectedBrand}에 해당 기간 Top 메뉴 데이터가 없습니다.`}
-    </div>
-  )}
-</div>
+            </section>
           </>
-        )}
+        ) : null}
       </div>
-    </div>
+    </main>
   );
 }

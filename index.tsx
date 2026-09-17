@@ -72,19 +72,18 @@ function MasterWorkspaceBar() {
   if (!isMaster) return null;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[9999] border-b border-white/10 bg-slate-950/95 text-slate-100 shadow-[0_8px_24px_rgba(2,6,23,0.22)] backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="fixed inset-x-0 top-0 z-[9999] border-b border-[#ECE7E1] bg-white/95 text-[#1F1F1F] backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-sm text-slate-100">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#8B6F5B] text-sm text-white">
             <i className="fa-solid fa-chart-simple" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold tracking-tight text-white">
+            <div className="truncate text-sm font-bold tracking-[-0.02em] text-[#1F1F1F]">
               Sales Coach AI
             </div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>Master Workspace</span>
+            <div className="mt-0.5 text-[11px] font-medium text-[#9C948E]">
+              Master Workspace
             </div>
           </div>
         </div>
@@ -93,7 +92,7 @@ function MasterWorkspaceBar() {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ECE7E1] bg-white px-3.5 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
         >
           <i className={`fa-solid ${loggingOut ? 'fa-spinner fa-spin' : 'fa-right-from-bracket'} text-xs`} />
           <span>{loggingOut ? '로그아웃 중' : '로그아웃'}</span>
