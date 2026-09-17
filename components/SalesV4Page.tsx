@@ -56,6 +56,12 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
           <SummaryCell label="방문객" value={`${model.data.visitCount || 0}명`} />
           <div className="min-w-0 px-2 last:pr-0"><p className="whitespace-nowrap text-[9px] text-[#766c66]">입력 진행률</p><b className="mt-1.5 block text-[14px] leading-none">{progress}%</b><div className="mt-2.5 h-1.5 w-full rounded-full bg-[#e9e4e0]"><div className="h-full rounded-full bg-[#8b5e3c]" style={{ width: `${progress}%` }} /></div></div>
         </div>
+        <div className="mt-3 grid grid-cols-3 divide-x divide-[#e7e1dd] border-t border-[#eee8e3] pt-3">
+          <ValidationCell label="입력 매출 합계" value={formatCurrencyValue(model.enteredSalesTotal, country)} />
+          <ValidationCell label="메뉴 매출 합계" value={formatCurrencyValue(model.menuSalesTotal, country)} />
+          <ValidationCell label="차이" value={formatCurrencyValue(model.salesGap, country)} green={validationStatus === "PASS"} />
+        </div>
+        <p className={`mt-2 text-[10px] font-semibold ${validationStatus === "PASS" ? "text-[#22a55b]" : "text-[#a66a2c]"}`}><i className={`fa-solid ${validationStatus === "PASS" ? "fa-circle-check" : "fa-circle-exclamation"} mr-1`} />{validationStatus === "PASS" ? "정상 범위입니다." : "입력 매출과 메뉴 매출의 차이를 확인해 주세요."}</p>
       </section>
 
       <div ref={model.manualSalesRef}>
@@ -75,8 +81,6 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
         {model.showOcr && <CompactOcrReview model={model} failedFileCount={failedFileCount} country={country} />}
         </section>
       </div>
-
-      <section className={`rounded-[14px] border bg-white p-3.5 ${validationStatus === "PASS" ? "border-[#d6eadb]" : "border-[#eadfcf]"}`}><h2 className="mb-2.5 text-[13px] font-semibold">매출 맞춤 확인</h2><div className="grid grid-cols-3 divide-x divide-[#e5e0dc]"><ValidationCell label="입력 매출 합계" value={formatCurrencyValue(model.enteredSalesTotal, country)} /><ValidationCell label="메뉴 매출 합계" value={formatCurrencyValue(model.menuSalesTotal, country)} /><ValidationCell label="차이" value={formatCurrencyValue(model.salesGap, country)} green={validationStatus === "PASS"} /></div><p className={`mt-2.5 text-[10px] font-semibold ${validationStatus === "PASS" ? "text-[#22a55b]" : "text-[#a66a2c]"}`}><i className={`fa-solid ${validationStatus === "PASS" ? "fa-circle-check" : "fa-circle-exclamation"} mr-1`} />{validationStatus === "PASS" ? "정상 범위입니다." : "입력 매출과 메뉴 매출의 차이를 확인해 주세요."}</p></section>
 
       <section className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="whitespace-nowrap text-[9px] text-[#776b63]">총 판매수량 {totalMenuQty}개 · {model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
 
