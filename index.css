@@ -67,6 +67,37 @@ textarea:focus-visible {
   }
 }
 
+/* Master dashboard: keep the desktop workspace dense before Tailwind's xl breakpoint.
+   This prevents the 5 KPI cards from breaking into 2 + 2 + 1 and keeps summary cards
+   on one row at common 1024-1279px laptop widths. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .bg-slate-950 > .max-w-7xl {
+    gap: 1.5rem !important;
+  }
+
+  .bg-slate-950 .xl\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  .bg-slate-950 .xl\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .bg-slate-950 .xl\:grid-cols-5 > .group {
+    padding: 1rem !important;
+  }
+
+  .bg-slate-950 .xl\:grid-cols-5 .text-3xl {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+
+  .bg-slate-950 > .max-w-7xl > .rounded-2xl:first-child .flex.flex-wrap.gap-2 > button {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
 /* calendar dot indicator */
 .rdp-day {
   position: relative;
