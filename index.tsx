@@ -73,16 +73,16 @@ function MasterWorkspaceBar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-[9999] border-b border-[#ECE7E1] bg-white/95 text-[#1F1F1F] backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#8B6F5B] text-sm text-white">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#8B6F5B] text-[13px] text-white sm:h-9 sm:w-9 sm:text-sm">
             <i className="fa-solid fa-chart-simple" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold tracking-[-0.02em] text-[#1F1F1F]">
+            <div className="truncate text-[13px] font-bold tracking-[-0.02em] text-[#1F1F1F] sm:text-sm">
               Sales Coach AI
             </div>
-            <div className="mt-0.5 text-[11px] font-medium text-[#9C948E]">
+            <div className="mt-0.5 text-[10px] font-medium text-[#9C948E] sm:text-[11px]">
               Master Workspace
             </div>
           </div>
@@ -92,9 +92,9 @@ function MasterWorkspaceBar() {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ECE7E1] bg-white px-3.5 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-4"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#ECE7E1] bg-white px-3 text-[13px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:h-10 sm:px-4 sm:text-sm"
         >
-          <i className={`fa-solid ${loggingOut ? 'fa-spinner fa-spin' : 'fa-right-from-bracket'} text-xs`} />
+          <i className={`fa-solid ${loggingOut ? 'fa-spinner fa-spin' : 'fa-right-from-bracket'} text-[11px] sm:text-xs`} />
           <span>{loggingOut ? '로그아웃 중' : '로그아웃'}</span>
         </button>
       </div>

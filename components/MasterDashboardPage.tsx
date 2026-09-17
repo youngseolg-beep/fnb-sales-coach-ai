@@ -233,17 +233,17 @@ export default function MasterDashboardPage() {
   if (showApprovalPage) {
     return (
       <div className="min-h-screen bg-[#FAF8F6] text-[#1F1F1F]">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
-              <p className="text-xs font-medium text-[#9C948E] sm:text-sm">Sales Coach AI</p>
-              <h1 className="mt-0.5 text-2xl font-bold leading-tight tracking-[-0.03em] sm:mt-1">가입 승인 관리</h1>
-              <p className="mt-1.5 text-[13px] leading-5 text-[#706A66] sm:mt-2 sm:text-sm">계정 생성 신청 내역을 검토하고 승인합니다.</p>
+              <p className="text-[11px] font-medium text-[#9C948E] sm:text-sm">Sales Coach AI</p>
+              <h1 className="mt-0.5 text-[20px] font-bold leading-[1.25] tracking-[-0.03em] sm:mt-1 sm:text-2xl sm:leading-tight">가입 승인 관리</h1>
+              <p className="mt-1 text-[12px] leading-[1.45] text-[#706A66] sm:mt-2 sm:text-sm">계정 생성 신청 내역을 검토하고 승인합니다.</p>
             </div>
             <button
               type="button"
               onClick={() => setShowApprovalPage(false)}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] sm:w-auto"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#ECE7E1] bg-white px-4 text-[13px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] sm:w-auto sm:text-sm"
             >
               대시보드로 돌아가기
             </button>
@@ -256,14 +256,14 @@ export default function MasterDashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#FAF8F6] text-[#1F1F1F]">
-      <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
-        <section className="flex flex-col gap-5 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
+        <section className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold text-[#8B6F5B] sm:text-sm">Master Workspace</p>
-            <h1 className="mt-1 text-[26px] font-bold leading-[1.25] tracking-[-0.045em] sm:mt-2 sm:text-[34px] sm:leading-tight">
+            <p className="text-[11px] font-semibold text-[#8B6F5B] sm:text-sm">Master Workspace</p>
+            <h1 className="mt-1 text-[22px] font-bold leading-[1.2] tracking-[-0.045em] sm:mt-2 sm:text-[34px] sm:leading-tight">
               안녕하세요, Master님!
             </h1>
-            <p className="mt-1.5 text-[13px] leading-5 text-[#706A66] sm:mt-2 sm:text-base sm:leading-6">
+            <p className="mt-1 text-[12px] leading-[1.45] text-[#706A66] sm:mt-2 sm:text-base sm:leading-6">
               필요한 지표만 빠르게 확인하고, 변화가 큰 매장부터 살펴보세요.
             </p>
           </div>
@@ -271,22 +271,22 @@ export default function MasterDashboardPage() {
           <button
             type="button"
             onClick={() => setShowApprovalPage(true)}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-[#8B6F5B] px-5 text-sm font-semibold text-white transition hover:bg-[#765C49] active:scale-[0.99]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#8B6F5B] px-4 text-[13px] font-semibold text-white transition hover:bg-[#765C49] active:scale-[0.99] sm:h-12 sm:px-5 sm:text-sm"
           >
             <i className="fa-solid fa-user-check text-xs" />
             가입 승인 관리
           </button>
         </section>
 
-        <section className="mt-6 flex flex-col gap-3 sm:mt-7">
-          <div className="flex flex-wrap items-center gap-2">
+        <section className="mt-5 flex flex-col gap-2 sm:mt-7 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {(["today", "thisWeek", "thisMonth", "last30Days", "custom"] as MasterDatePreset[]).map(
               (item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setPreset(item)}
-                  className={`h-10 rounded-xl border px-3 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
+                  className={`h-10 rounded-xl border px-2.5 text-[12px] font-semibold transition sm:px-4 sm:text-sm ${
                     preset === item
                       ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
                       : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -301,7 +301,7 @@ export default function MasterDashboardPage() {
               <select
                 value={selectedBrand}
                 onChange={(event) => setSelectedBrand(event.target.value)}
-                className="h-10 rounded-xl border border-[#ECE7E1] bg-white px-3 text-[13px] font-semibold text-[#706A66] outline-none sm:text-sm"
+                className="h-10 rounded-xl border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] outline-none sm:px-3 sm:text-sm"
                 aria-label="브랜드 선택"
               >
                 {brandList.map((brand) => (
@@ -314,19 +314,19 @@ export default function MasterDashboardPage() {
           </div>
 
           {preset === "custom" ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <input
                 type="date"
                 value={range.startDate}
                 onChange={(event) => handleCustomDateChange("startDate", event.target.value)}
-                className="h-11 rounded-xl border border-[#ECE7E1] bg-white px-3 text-sm text-[#1F1F1F]"
+                className="h-10 rounded-xl border border-[#ECE7E1] bg-white px-2.5 text-[12px] text-[#1F1F1F] sm:h-11 sm:px-3 sm:text-sm"
               />
-              <span className="text-sm text-[#9C948E]">~</span>
+              <span className="text-[12px] text-[#9C948E] sm:text-sm">~</span>
               <input
                 type="date"
                 value={range.endDate}
                 onChange={(event) => handleCustomDateChange("endDate", event.target.value)}
-                className="h-11 rounded-xl border border-[#ECE7E1] bg-white px-3 text-sm text-[#1F1F1F]"
+                className="h-10 rounded-xl border border-[#ECE7E1] bg-white px-2.5 text-[12px] text-[#1F1F1F] sm:h-11 sm:px-3 sm:text-sm"
               />
             </div>
           ) : null}
@@ -360,89 +360,89 @@ export default function MasterDashboardPage() {
 
         {!loading && visibleSummary ? (
           <>
-            <section className="mt-6 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white sm:mt-7">
+            <section className="mt-5 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white sm:mt-7">
               <div className="flex flex-col gap-2 border-b border-[#F1ECE8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
                 <div>
-                  <h2 className="text-[17px] font-bold tracking-[-0.025em]">
+                  <h2 className="text-[15px] font-bold tracking-[-0.025em] sm:text-[17px]">
                     {getPresetLabel(preset)} 주요 지표
                   </h2>
-                  <p className="mt-1 text-xs text-[#9C948E]">{range.startDate} ~ {range.endDate}</p>
+                  <p className="mt-1 text-[10.5px] text-[#9C948E] sm:text-xs">{range.startDate} ~ {range.endDate}</p>
                 </div>
                 {selectedBrand !== "ALL" ? (
-                  <span className="text-xs font-semibold text-[#8B6F5B]">{selectedBrand}</span>
+                  <span className="text-[10.5px] font-semibold text-[#8B6F5B] sm:text-xs">{selectedBrand}</span>
                 ) : null}
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4">
-                <div className="border-b border-r border-[#F1ECE8] p-4 sm:p-5 lg:border-b-0 lg:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-coins" /></span>
+                <div className="border-b border-r border-[#F1ECE8] p-3 sm:p-5 lg:border-b-0 lg:p-6">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#706A66] sm:gap-2 sm:text-xs">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F7F2EE] text-[11px] text-[#8B6F5B] sm:h-8 sm:w-8"><i className="fa-solid fa-coins" /></span>
                     전체 매출
                   </div>
-                  <div className="mt-2.5 text-2xl font-bold tracking-[-0.035em] sm:mt-3">{formatCurrency(visibleSummary.totalSales)}</div>
-                  <div className={`mt-2 text-xs font-semibold ${growthClass(salesGrowth)}`}>{growthText(salesGrowth)}</div>
-                  <div className="mt-1 text-[11px] text-[#9C948E]">{getComparisonLabel(range)}</div>
+                  <div className="mt-2 text-[20px] font-bold leading-none tracking-[-0.035em] sm:mt-3 sm:text-2xl">{formatCurrency(visibleSummary.totalSales)}</div>
+                  <div className={`mt-1.5 text-[11px] font-semibold sm:mt-2 sm:text-xs ${growthClass(salesGrowth)}`}>{growthText(salesGrowth)}</div>
+                  <div className="mt-1 text-[10px] text-[#9C948E] sm:text-[11px]">{getComparisonLabel(range)}</div>
                 </div>
 
-                <div className="border-b border-[#F1ECE8] p-4 sm:p-5 lg:border-b-0 lg:border-r lg:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-receipt" /></span>
+                <div className="border-b border-[#F1ECE8] p-3 sm:p-5 lg:border-b-0 lg:border-r lg:p-6">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#706A66] sm:gap-2 sm:text-xs">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F7F2EE] text-[11px] text-[#8B6F5B] sm:h-8 sm:w-8"><i className="fa-solid fa-receipt" /></span>
                     전체 주문 수
                   </div>
-                  <div className="mt-2.5 text-2xl font-bold tracking-[-0.035em] sm:mt-3">{formatNumber(visibleSummary.totalOrders)}</div>
+                  <div className="mt-2 text-[20px] font-bold leading-none tracking-[-0.035em] sm:mt-3 sm:text-2xl">{formatNumber(visibleSummary.totalOrders)}</div>
                   {selectedBrand === "ALL" ? (
-                    <div className={`mt-2 text-xs font-semibold ${growthClass(result?.summary.growth.orders.rate)}`}>
+                    <div className={`mt-1.5 text-[11px] font-semibold sm:mt-2 sm:text-xs ${growthClass(result?.summary.growth.orders.rate)}`}>
                       {growthText(result?.summary.growth.orders.rate)}
                     </div>
                   ) : (
-                    <div className="mt-2 text-xs text-[#9C948E]">선택 브랜드 기준</div>
+                    <div className="mt-1.5 text-[10px] text-[#9C948E] sm:mt-2 sm:text-xs">선택 브랜드 기준</div>
                   )}
                 </div>
 
-                <div className="border-r border-[#F1ECE8] p-4 sm:p-5 lg:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-tag" /></span>
+                <div className="border-r border-[#F1ECE8] p-3 sm:p-5 lg:p-6">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#706A66] sm:gap-2 sm:text-xs">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F7F2EE] text-[11px] text-[#8B6F5B] sm:h-8 sm:w-8"><i className="fa-solid fa-tag" /></span>
                     평균 AOV
                   </div>
-                  <div className="mt-2.5 text-2xl font-bold tracking-[-0.035em] sm:mt-3">{formatCurrency(visibleSummary.averageAov)}</div>
+                  <div className="mt-2 text-[20px] font-bold leading-none tracking-[-0.035em] sm:mt-3 sm:text-2xl">{formatCurrency(visibleSummary.averageAov)}</div>
                   {selectedBrand === "ALL" ? (
-                    <div className={`mt-2 text-xs font-semibold ${growthClass(result?.summary.growth.aov.rate)}`}>
+                    <div className={`mt-1.5 text-[11px] font-semibold sm:mt-2 sm:text-xs ${growthClass(result?.summary.growth.aov.rate)}`}>
                       {growthText(result?.summary.growth.aov.rate)}
                     </div>
                   ) : (
-                    <div className="mt-2 text-xs text-[#9C948E]">선택 브랜드 기준</div>
+                    <div className="mt-1.5 text-[10px] text-[#9C948E] sm:mt-2 sm:text-xs">선택 브랜드 기준</div>
                   )}
                 </div>
 
-                <div className="p-4 sm:p-5 lg:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#706A66]">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F2EE] text-[#8B6F5B]"><i className="fa-solid fa-user-check" /></span>
+                <div className="p-3 sm:p-5 lg:p-6">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#706A66] sm:gap-2 sm:text-xs">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F7F2EE] text-[11px] text-[#8B6F5B] sm:h-8 sm:w-8"><i className="fa-solid fa-user-check" /></span>
                     전체 전환율
                   </div>
-                  <div className="mt-2.5 text-2xl font-bold tracking-[-0.035em] text-emerald-600 sm:mt-3">{formatPercent(visibleSummary.overallConversionRate)}</div>
-                  <div className="mt-2 text-xs text-[#706A66]">방문 {formatNumber(visibleSummary.totalVisitCount)} / 주문 {formatNumber(visibleSummary.totalOrders)}</div>
+                  <div className="mt-2 text-[20px] font-bold leading-none tracking-[-0.035em] text-emerald-600 sm:mt-3 sm:text-2xl">{formatPercent(visibleSummary.overallConversionRate)}</div>
+                  <div className="mt-1.5 text-[10px] text-[#706A66] sm:mt-2 sm:text-xs">방문 {formatNumber(visibleSummary.totalVisitCount)} / 주문 {formatNumber(visibleSummary.totalOrders)}</div>
                 </div>
               </div>
             </section>
 
-            <section className="mt-5 rounded-[20px] border border-[#DCD7FF] bg-[#FBFAFF] px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-[#F0EEFF] text-[#7C6CF6] sm:h-11 sm:w-11 sm:rounded-[14px]">
+            <section className="mt-4 rounded-[20px] border border-[#DCD7FF] bg-[#FBFAFF] px-3.5 py-3.5 sm:mt-5 sm:px-6 sm:py-5">
+              <div className="flex items-start gap-2 sm:gap-4">
+                <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-[#F0EEFF] text-[12px] text-[#7C6CF6] sm:h-11 sm:w-11 sm:rounded-[14px]">
                   <i className="fa-solid fa-wand-magic-sparkles" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#7C6CF6]">AI Coach에서 확인할 포인트</p>
-                  <p className="mt-1.5 text-[15px] font-semibold leading-[1.4] text-[#1F1F1F] sm:text-[17px] sm:leading-6">{insightText}</p>
-                  <p className="mt-1.5 text-[13px] leading-5 text-[#706A66] sm:text-sm">이 영역은 현재 지표를 요약한 안내이며, 상세 AI 분석 결과를 새로 생성하지 않습니다.</p>
+                  <p className="text-[11px] font-bold text-[#7C6CF6] sm:text-xs">AI Coach에서 확인할 포인트</p>
+                  <p className="mt-1 text-[14px] font-semibold leading-[1.4] text-[#1F1F1F] sm:mt-1.5 sm:text-[17px] sm:leading-6">{insightText}</p>
+                  <p className="mt-1 text-[12px] leading-[1.5] text-[#706A66] sm:mt-1.5 sm:text-sm">이 영역은 현재 지표를 요약한 안내이며, 상세 AI 분석 결과를 새로 생성하지 않습니다.</p>
                 </div>
               </div>
             </section>
 
-            <section className="mt-5 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white">
+            <section className="mt-4 overflow-hidden rounded-[20px] border border-[#ECE7E1] bg-white sm:mt-5">
               <div className="flex items-center justify-between border-b border-[#F1ECE8] px-4 py-3 sm:px-6 sm:py-4">
                 <div>
-                  <h2 className="text-[17px] font-bold tracking-[-0.025em]">주요 매장</h2>
-                  <p className="mt-1 text-xs text-[#9C948E]">매출 기준 상위 {Math.min(topStores.length, 5)}개 매장</p>
+                  <h2 className="text-[15px] font-bold tracking-[-0.025em] sm:text-[17px]">주요 매장</h2>
+                  <p className="mt-1 text-[10.5px] text-[#9C948E] sm:text-xs">매출 기준 상위 {Math.min(topStores.length, 5)}개 매장</p>
                 </div>
               </div>
 
@@ -451,26 +451,26 @@ export default function MasterDashboardPage() {
                   {topStores.map((store, index) => {
                     const rate = result?.storeGrowth?.[store.storeId]?.rate ?? null;
                     return (
-                      <div key={store.storeId} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
-                        <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${index === 0 ? "bg-[#F3E4CB] text-[#7A593E]" : "bg-[#F4F1EE] text-[#706A66]"}`}>
+                      <div key={store.storeId} className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:grid-cols-[36px_minmax(0,1fr)_auto] sm:gap-3 sm:px-6 sm:py-4">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold sm:h-8 sm:w-8 sm:text-xs ${index === 0 ? "bg-[#F3E4CB] text-[#7A593E]" : "bg-[#F4F1EE] text-[#706A66]"}`}>
                           {index + 1}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[#1F1F1F]">{store.storeName}</p>
-                          <p className="mt-1 text-xs text-[#9C948E]">{store.brandName || "브랜드 정보 없음"}</p>
+                          <p className="truncate text-[13px] font-semibold text-[#1F1F1F] sm:text-sm">{store.storeName}</p>
+                          <p className="mt-0.5 text-[10.5px] text-[#9C948E] sm:mt-1 sm:text-xs">{store.brandName || "브랜드 정보 없음"}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-[#1F1F1F]">{formatCurrency(store.totalSales)}</p>
-                          <p className={`mt-1 text-xs font-semibold ${growthClass(rate)}`}>{growthText(rate)}</p>
+                          <p className="text-[13px] font-semibold text-[#1F1F1F] sm:text-sm">{formatCurrency(store.totalSales)}</p>
+                          <p className={`mt-0.5 text-[11px] font-semibold sm:mt-1 sm:text-xs ${growthClass(rate)}`}>{growthText(rate)}</p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="px-5 py-10 text-center sm:px-6">
-                  <p className="text-sm font-semibold text-[#706A66]">표시할 매장 데이터가 없습니다.</p>
-                  <p className="mt-1 text-xs text-[#9C948E]">선택한 기간이나 브랜드를 다시 확인해 주세요.</p>
+                <div className="px-4 py-7 text-center sm:px-6 sm:py-10">
+                  <p className="text-[12px] font-semibold text-[#706A66] sm:text-sm">표시할 매장 데이터가 없습니다.</p>
+                  <p className="mt-1 text-[10.5px] text-[#9C948E] sm:text-xs">선택한 기간이나 브랜드를 다시 확인해 주세요.</p>
                 </div>
               )}
             </section>
