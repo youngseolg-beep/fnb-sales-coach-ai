@@ -345,11 +345,11 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
 
   return (
     <div className="w-full pb-4">
-      <div className="mb-5 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+      <div className="mb-4 grid grid-cols-3 gap-1.5 sm:mb-5 sm:flex sm:flex-wrap sm:gap-2">
         <button
           type="button"
           onClick={() => setActiveTab("pending")}
-          className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+          className={`min-h-11 whitespace-nowrap rounded-xl border px-1 py-2 text-[12.5px] font-semibold leading-none transition sm:px-4 sm:text-sm ${
             activeTab === "pending"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -361,7 +361,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         <button
           type="button"
           onClick={() => setActiveTab("approved")}
-          className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+          className={`min-h-11 whitespace-nowrap rounded-xl border px-1 py-2 text-[12.5px] font-semibold leading-none transition sm:px-4 sm:text-sm ${
             activeTab === "approved"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -373,7 +373,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         <button
           type="button"
           onClick={() => setActiveTab("rejected")}
-          className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+          className={`min-h-11 whitespace-nowrap rounded-xl border px-1 py-2 text-[12.5px] font-semibold leading-none transition sm:px-4 sm:text-sm ${
             activeTab === "rejected"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -490,36 +490,36 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                   </div>
                 ) : (
                   <div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0">
                         <h3 className="break-words text-base font-bold text-[#1F1F1F] sm:text-lg">{item.store_name}</h3>
-                        <p className="mt-1 text-sm text-[#706A66]">{getBrandLabel(item.brand)}</p>
+                        <p className="mt-1 text-[13px] text-[#706A66] sm:text-sm">{getBrandLabel(item.brand)}</p>
                       </div>
-                      <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_STYLES[status] || "bg-[#F4F1EE] text-[#706A66]"}`}>
+                      <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold sm:text-xs ${STATUS_STYLES[status] || "bg-[#F4F1EE] text-[#706A66]"}`}>
                         {STATUS_LABELS[status] || item.status || "-"}
                       </span>
                     </div>
 
-                    <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:mt-5 sm:grid-cols-2 sm:gap-y-4 lg:grid-cols-4">
                       <div className="min-w-0">
-                        <dt className="text-xs font-semibold text-[#9C948E]">점주</dt>
+                        <dt className="text-[11px] font-semibold text-[#9C948E] sm:text-xs">점주</dt>
                         <dd className="mt-1 break-words font-medium text-[#1F1F1F]">{item.owner_name || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs font-semibold text-[#9C948E]">연락처</dt>
+                        <dt className="text-[11px] font-semibold text-[#9C948E] sm:text-xs">연락처</dt>
                         <dd className="mt-1 break-words font-medium text-[#1F1F1F]">{item.phone || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs font-semibold text-[#9C948E]">이메일</dt>
+                        <dt className="text-[11px] font-semibold text-[#9C948E] sm:text-xs">이메일</dt>
                         <dd className="mt-1 break-all font-medium text-[#1F1F1F]">{item.email || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs font-semibold text-[#9C948E]">국가</dt>
+                        <dt className="text-[11px] font-semibold text-[#9C948E] sm:text-xs">국가</dt>
                         <dd className="mt-1 break-words font-medium text-[#1F1F1F]">{getCountryLabel(item.country)}</dd>
                       </div>
                     </dl>
 
-                    <div className="mt-5 border-t border-[#ECE7E1] pt-5">
+                    <div className="mt-4 border-t border-[#ECE7E1] pt-4 sm:mt-5 sm:pt-5">
                       {status === "pending" && (
                         <div className="max-w-md space-y-3">
                           <label className="block text-xs font-semibold text-[#706A66]">
@@ -531,13 +531,13 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                               value={passwordDrafts[item.id] || ""}
                               onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
                               placeholder="숫자 6자리"
-                              className="mt-1.5 h-12 w-full rounded-[14px] border border-[#ECE7E1] bg-[#FFFDFC] px-3 text-sm text-[#1F1F1F] outline-none focus:border-[#A8866B]"
+                              className="mt-1.5 h-[46px] w-full rounded-[14px] border border-[#ECE7E1] bg-[#FFFDFC] px-3 text-sm text-[#1F1F1F] outline-none placeholder:text-[13px] focus:border-[#A8866B] sm:h-12"
                             />
                           </label>
                           <button
                             onClick={() => handleApprove(item)}
                             disabled={loading}
-                            className="min-h-11 w-full rounded-xl bg-[#8B6F5B] px-4 text-sm font-bold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-[46px] w-full rounded-xl bg-[#8B6F5B] px-4 text-sm font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11"
                           >
                             승인
                           </button>
@@ -578,13 +578,13 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                               value={passwordDrafts[item.id] || ""}
                               onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
                               placeholder="숫자 6자리"
-                              className="mt-1.5 h-12 w-full rounded-[14px] border border-[#ECE7E1] bg-[#FFFDFC] px-3 text-sm text-[#1F1F1F] outline-none focus:border-[#A8866B]"
+                              className="mt-1.5 h-[46px] w-full rounded-[14px] border border-[#ECE7E1] bg-[#FFFDFC] px-3 text-sm text-[#1F1F1F] outline-none placeholder:text-[13px] focus:border-[#A8866B] sm:h-12"
                             />
                           </label>
                           <button
                             onClick={() => handleApplyApprovedPassword(item)}
                             disabled={loading || isPasswordUpdating}
-                            className="min-h-11 w-full rounded-xl bg-[#8B6F5B] px-4 text-sm font-bold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-[46px] w-full rounded-xl bg-[#8B6F5B] px-4 text-sm font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11"
                           >
                             {isPasswordUpdating ? "변경 중..." : "비밀번호 변경"}
                           </button>

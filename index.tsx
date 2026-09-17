@@ -92,7 +92,7 @@ function MasterWorkspaceBar() {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ECE7E1] bg-white px-3.5 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ECE7E1] bg-white px-3.5 text-sm font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-4"
         >
           <i className={`fa-solid ${loggingOut ? 'fa-spinner fa-spin' : 'fa-right-from-bracket'} text-xs`} />
           <span>{loggingOut ? '로그아웃 중' : '로그아웃'}</span>
