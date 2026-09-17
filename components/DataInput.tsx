@@ -97,7 +97,7 @@ type ReceiptDateCandidate = {
 };
 
 export type ReceiptStoreValidation = {
-  status: "PASS" | "WARNING" | "BLOCK";
+  status: "PASS" | "WARNING";
   message: string;
 };
 
@@ -387,7 +387,7 @@ function validateReceiptStore(
     return { status: "WARNING", message: "영수증 매장명이 현재 선택된 매장과 유사합니다. 확인 후 적용해 주세요." };
   }
 
-  return { status: "BLOCK", message: "영수증 매장이 현재 선택된 매장과 다릅니다." };
+  return { status: "WARNING", message: "영수증 매장명이 현재 매장과 다릅니다. 확인 후 적용해 주세요." };
 }
 
 function validateReceiptCurrency(
@@ -1574,9 +1574,6 @@ const callOcrWithRetry = async (
     [ocrFiles, ocrFileStatuses, ocrReceiptStoresByFile, storeName]
   );
   const receiptStoreValidation = useMemo<ReceiptStoreValidation>(() => {
-    if (receiptStoreFileValidations.some((validation) => validation.status === "BLOCK")) {
-      return { status: "BLOCK", message: "현재 선택된 매장과 다른 영수증이 있습니다." };
-    }
     if (receiptStoreFileValidations.some((validation) => validation.status === "WARNING")) {
       return { status: "WARNING", message: "영수증 매장명을 확인한 후 적용해 주세요." };
     }
@@ -1625,8 +1622,6 @@ const callOcrWithRetry = async (
       ? "확인 필요 메뉴를 모두 선택해 주세요."
       : receiptDateValidation.status === "BLOCK"
       ? "영수증 날짜를 확인해 주세요."
-      : receiptStoreValidation.status === "BLOCK"
-      ? "현재 매장과 다른 영수증입니다."
       : receiptCurrencyValidation.status === "BLOCK"
       ? "영수증 통화를 확인해 주세요."
       : receiptSubtotal !== null && isTotalMatched === false
@@ -1983,16 +1978,12 @@ const callOcrWithRetry = async (
                     className={`mt-3 rounded-lg border px-3 py-2 text-[10px] font-medium ${
                       receiptStoreValidation.status === "PASS"
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : receiptStoreValidation.status === "BLOCK"
-                        ? "border-rose-200 bg-rose-50 text-rose-700"
                         : "border-amber-200 bg-amber-50 text-amber-700"
                     }`}
                   >
                     <span className="font-black">
                       영수증 매장 검증: {receiptStoreValidation.status === "PASS"
                         ? "정상"
-                        : receiptStoreValidation.status === "BLOCK"
-                        ? "차단"
                         : "경고"}
                     </span>
                     <span className="ml-2">현재 매장: {storeName || "미확인"}</span>
@@ -2006,8 +1997,6 @@ const callOcrWithRetry = async (
                         <span className="ml-2">
                           {validation.status === "PASS"
                             ? "정상"
-                            : validation.status === "BLOCK"
-                            ? "차단"
                             : "경고"}
                         </span>
                         <span className="ml-2">{validation.message}</span>
@@ -2187,7 +2176,6 @@ const callOcrWithRetry = async (
                       ocrItemsAccumulated.length === 0 ||
                       needsReviewItems.length > 0 ||
                       receiptDateValidation.status === "BLOCK" ||
-                      receiptStoreValidation.status === "BLOCK" ||
                       receiptCurrencyValidation.status === "BLOCK"
                     }
                     className="flex items-center gap-2 rounded-xl bg-[#8b6f5b] px-6 py-3 text-sm font-semibold text-white shadow-[0_7px_16px_rgba(111,64,39,0.16)] transition hover:bg-[#745846] active:scale-95 disabled:bg-[#d8d1cb]"
