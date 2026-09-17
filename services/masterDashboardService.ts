@@ -52,6 +52,13 @@ export type GrowthMetric = {
   rate: number | null;
 };
 
+export type StoreChangeDrivers = {
+  sales: GrowthMetric;
+  orders: GrowthMetric;
+  aov: GrowthMetric;
+  conversionRate: GrowthMetric;
+};
+
 export type DashboardGrowth = {
   sales: GrowthMetric;
   orders: GrowthMetric;
@@ -98,6 +105,33 @@ export type StoreDetailDailyRow = {
   deliverySales: number;
 };
 
+export type WeekdayPerformanceRow = {
+  weekday: number;
+  label: string;
+  observedDays: number;
+  averageSales: number;
+  averageOrders: number;
+  averageAov: number;
+  averageConversionRate: number;
+};
+
+export type MenuMovementRow = {
+  name: string;
+  currentQty: number;
+  previousQty: number;
+  currentSales: number;
+  previousSales: number;
+  salesDelta: number;
+  salesRate: number | null;
+};
+
+export type MenuMovements = {
+  hasCurrentData: boolean;
+  hasPreviousData: boolean;
+  gainers: MenuMovementRow[];
+  decliners: MenuMovementRow[];
+};
+
 export type StoreDetailResult = {
   storeId: number;
   storeName: string;
@@ -108,12 +142,7 @@ export type StoreDetailResult = {
     visitCount: number;
     averageAov: number;
     conversionRate: number;
-    growth: {
-      sales: GrowthMetric;
-      orders: GrowthMetric;
-      aov: GrowthMetric;
-      conversionRate: GrowthMetric;
-    };
+    growth: StoreChangeDrivers;
   };
   daily: StoreDetailDailyRow[];
   channel: {
@@ -123,6 +152,14 @@ export type StoreDetailResult = {
     otherSales: number;
   };
   topMenus: TopMenuRow[];
+  changeDrivers: StoreChangeDrivers;
+  weekdayPerformance: {
+    hasEnoughData: boolean;
+    rows: WeekdayPerformanceRow[];
+    strongestWeekday: number | null;
+    weakestWeekday: number | null;
+  };
+  menuMovements: MenuMovements;
 };
 
 type SalesDailyRow = {
@@ -599,7 +636,7 @@ async function fetchStore(storeId: number) {
   return data as StoreRow | null;
 }
 
-function buildTopMenus(rows: SalesDailyRow[]) {
+function aggregateMenuRows(rows: SalesDailyRow[]) {
   const menuMap = new Map<string, TopMenuRow>();
 
   for (const row of rows) {
@@ -621,7 +658,11 @@ function buildTopMenus(rows: SalesDailyRow[]) {
     }
   }
 
-  return Array.from(menuMap.values())
+  return menuMap;
+}
+
+function buildTopMenus(rows: SalesDailyRow[]) {
+  return Array.from(aggregateMenuRows(rows).values())
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 10);
 }
@@ -713,6 +754,89 @@ function hasChannelPayload(row: SalesDailyRow) {
   return row.payload?.posSales != null || row.payload?.deliverySales != null;
 }
 
+function hasMenuPayload(rows: SalesDailyRow[]) {
+  return rows.some((row) => Array.isArray(row.payload?.categories));
+}
+
+function buildWeekdayPerformance(daily: StoreDetailDailyRow[]) {
+  const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
+  const labels = ["일", "월", "화", "수", "목", "금", "토"];
+  const byWeekday = new Map<number, StoreDetailDailyRow[]>();
+
+  for (const row of daily) {
+    const [year, month, day] = row.date.split("-").map(Number);
+    if (!year || !month || !day) continue;
+    const weekday = new Date(year, month - 1, day).getDay();
+    const rows = byWeekday.get(weekday) || [];
+    rows.push(row);
+    byWeekday.set(weekday, rows);
+  }
+
+  const rows = weekdayOrder.flatMap((weekday) => {
+    const observed = byWeekday.get(weekday) || [];
+    if (!observed.length) return [];
+    const totalSales = observed.reduce((sum, row) => sum + row.totalSales, 0);
+    const totalOrders = observed.reduce((sum, row) => sum + row.orders, 0);
+    const totalVisits = observed.reduce((sum, row) => sum + row.visitCount, 0);
+    const count = observed.length;
+
+    return [{
+      weekday,
+      label: labels[weekday],
+      observedDays: count,
+      averageSales: totalSales / count,
+      averageOrders: totalOrders / count,
+      averageAov: totalOrders > 0 ? totalSales / totalOrders : 0,
+      averageConversionRate: totalVisits > 0 ? (totalOrders / totalVisits) * 100 : 0,
+    }];
+  });
+
+  const hasEnoughData = daily.length >= 7;
+  const ranked = [...rows].sort((a, b) => b.averageSales - a.averageSales);
+
+  return {
+    hasEnoughData,
+    rows,
+    strongestWeekday: hasEnoughData && ranked.length >= 2 ? ranked[0].weekday : null,
+    weakestWeekday: hasEnoughData && ranked.length >= 2 ? ranked[ranked.length - 1].weekday : null,
+  };
+}
+
+function buildMenuMovements(currentRows: SalesDailyRow[], previousRows: SalesDailyRow[]): MenuMovements {
+  const hasCurrentData = hasMenuPayload(currentRows);
+  const hasPreviousData = hasMenuPayload(previousRows);
+
+  if (!hasCurrentData || !hasPreviousData) {
+    return { hasCurrentData, hasPreviousData, gainers: [], decliners: [] };
+  }
+
+  const currentMenus = aggregateMenuRows(currentRows);
+  const previousMenus = aggregateMenuRows(previousRows);
+  const names = new Set([...currentMenus.keys(), ...previousMenus.keys()]);
+  const movements = Array.from(names, (name) => {
+    const current = currentMenus.get(name) || { name, qty: 0, sales: 0 };
+    const previous = previousMenus.get(name) || { name, qty: 0, sales: 0 };
+    const salesDelta = current.sales - previous.sales;
+
+    return {
+      name,
+      currentQty: current.qty,
+      previousQty: previous.qty,
+      currentSales: current.sales,
+      previousSales: previous.sales,
+      salesDelta,
+      salesRate: calcRate(current.sales, previous.sales),
+    };
+  });
+
+  return {
+    hasCurrentData,
+    hasPreviousData,
+    gainers: movements.filter((menu) => menu.salesDelta > 0).sort((a, b) => b.salesDelta - a.salesDelta).slice(0, 3),
+    decliners: movements.filter((menu) => menu.salesDelta < 0).sort((a, b) => a.salesDelta - b.salesDelta).slice(0, 3),
+  };
+}
+
 export async function loadMasterStoreDetail(storeId: number, range: MasterDateRange): Promise<StoreDetailResult> {
   const previousRange = getPreviousRange(range);
   const [store, currentRows, previousRows] = await Promise.all([
@@ -726,6 +850,13 @@ export async function loadMasterStoreDetail(storeId: number, range: MasterDateRa
   const hasData = currentRows.some(hasChannelPayload);
   const posSales = currentRows.reduce((sum, row) => sum + safeNumber(row.payload?.posSales), 0);
   const deliverySales = currentRows.reduce((sum, row) => sum + safeNumber(row.payload?.deliverySales), 0);
+  const growth: StoreChangeDrivers = {
+    sales: { current: current.totalSales, previous: previous.totalSales, rate: calcRate(current.totalSales, previous.totalSales) },
+    orders: { current: current.totalOrders, previous: previous.totalOrders, rate: calcRate(current.totalOrders, previous.totalOrders) },
+    aov: { current: current.averageAov, previous: previous.averageAov, rate: calcRate(current.averageAov, previous.averageAov) },
+    conversionRate: { current: current.conversionRate, previous: previous.conversionRate, rate: calcRate(current.conversionRate, previous.conversionRate) },
+  };
+  const daily = buildDailyStoreRows(currentRows);
 
   return {
     storeId,
@@ -733,14 +864,9 @@ export async function loadMasterStoreDetail(storeId: number, range: MasterDateRa
     brandName: store?.brands?.brand_name || "Unknown",
     summary: {
       ...current,
-      growth: {
-        sales: { current: current.totalSales, previous: previous.totalSales, rate: calcRate(current.totalSales, previous.totalSales) },
-        orders: { current: current.totalOrders, previous: previous.totalOrders, rate: calcRate(current.totalOrders, previous.totalOrders) },
-        aov: { current: current.averageAov, previous: previous.averageAov, rate: calcRate(current.averageAov, previous.averageAov) },
-        conversionRate: { current: current.conversionRate, previous: previous.conversionRate, rate: calcRate(current.conversionRate, previous.conversionRate) },
-      },
+      growth,
     },
-    daily: buildDailyStoreRows(currentRows),
+    daily,
     channel: {
       hasData,
       posSales,
@@ -748,6 +874,9 @@ export async function loadMasterStoreDetail(storeId: number, range: MasterDateRa
       otherSales: Math.max(current.totalSales - posSales - deliverySales, 0),
     },
     topMenus: buildTopMenus(currentRows).slice(0, 5),
+    changeDrivers: growth,
+    weekdayPerformance: buildWeekdayPerformance(daily),
+    menuMovements: buildMenuMovements(currentRows, previousRows),
   };
 }
 
