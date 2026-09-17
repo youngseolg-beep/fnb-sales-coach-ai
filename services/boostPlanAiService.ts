@@ -39,7 +39,7 @@ const parsePlan = (value: unknown): AiBoostPlan | null => {
   const plan = value as Partial<AiBoostPlan>;
   if (
     typeof plan.summary !== "string" ||
-    !plan.target || typeof plan.target.objective !== "string" || typeof plan.target.timeHorizon !== "string" ||
+    !plan.target || typeof plan.target.objective !== "string" || (typeof plan.target.targetGrowthPercent !== "number" && plan.target.targetGrowthPercent !== null) || typeof plan.target.timeHorizon !== "string" ||
     !Array.isArray(plan.actions) || plan.actions.length > 3 ||
     !Array.isArray(plan.watchouts) || !Array.isArray(plan.successMetrics)
   ) return null;
@@ -51,14 +51,14 @@ const parsePlan = (value: unknown): AiBoostPlan | null => {
       Number.isInteger(item.priority) &&
       typeof item.title === "string" &&
       ["MENU_EXPOSURE", "UPSELL", "SET_PROMOTION", "PRICE", "OPERATIONS", "OTHER"].includes(item.type) &&
-      Array.isArray(item.targetMenuIds) && Array.isArray(item.targetMenuNames) &&
-      typeof item.rationale === "string" && Array.isArray(item.executionSteps) &&
+      Array.isArray(item.targetMenuIds) && item.targetMenuIds.every((id) => typeof id === "string") && Array.isArray(item.targetMenuNames) && item.targetMenuNames.every((name) => typeof name === "string") &&
+      typeof item.rationale === "string" && Array.isArray(item.executionSteps) && item.executionSteps.every((step) => typeof step === "string") &&
       typeof item.owner === "string" && typeof item.timing === "string" &&
       typeof item.expectedEffect === "string" && typeof item.guardrail === "string"
     );
   });
 
-  return valid ? plan as AiBoostPlan : null;
+  return valid && plan.watchouts.every((item) => typeof item === "string") && plan.successMetrics.every((item) => typeof item === "string") ? plan as AiBoostPlan : null;
 };
 
 export const generateAiBoostPlan = async (context: AiBoostPlanContext): Promise<AiBoostPlan> => {

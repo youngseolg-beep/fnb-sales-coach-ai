@@ -17,25 +17,31 @@ const extractJsonObject = (text: string): unknown => {
   }
 };
 
-const isStructuredStrategy = (value: unknown) => {
-  if (!value || typeof value !== "object") return false;
+const strategyInvalidFields = (value: unknown): string[] => {
+  const invalid: string[] = [];
+  if (!value || typeof value !== "object") return ["root"];
   const result = value as { summary?: unknown; priorities?: unknown; categoryStrategies?: unknown };
   const strategies = result.categoryStrategies as Record<string, unknown> | undefined;
-  return (
-    typeof result.summary === "string" &&
-    Array.isArray(result.priorities) &&
-    !!strategies &&
-    ["stars", "cashCows", "puzzles", "dogs"].every((key) => typeof strategies[key] === "string")
-  );
+  if (typeof result.summary !== "string") invalid.push("summary");
+  if (!Array.isArray(result.priorities) || result.priorities.length > 5) invalid.push("priorities");
+  else result.priorities.forEach((item, index) => {
+    const priority = item as Record<string, unknown> | null;
+    if (!priority || typeof priority !== "object" || typeof priority.menuId !== "string" || typeof priority.menuName !== "string" || !["STAR", "CASH_COW", "PUZZLE", "DOG"].includes(String(priority.classification)) || typeof priority.diagnosis !== "string" || typeof priority.recommendedAction !== "string" || typeof priority.rationale !== "string" || !["HIGH", "MEDIUM", "LOW"].includes(String(priority.priority))) invalid.push(`priorities[${index}]`);
+  });
+  if (!strategies || ["stars", "cashCows", "puzzles", "dogs"].some((key) => typeof strategies[key] !== "string")) invalid.push("categoryStrategies");
+  return invalid;
 };
+
+const isStructuredStrategy = (value: unknown) => strategyInvalidFields(value).length === 0;
 
 const strategySchema = {
   type: "object",
+  additionalProperties: false,
   required: ["summary", "priorities", "categoryStrategies"],
   properties: {
     summary: { type: "string" },
-    priorities: { type: "array", maxItems: 5, items: { type: "object" } },
-    categoryStrategies: { type: "object", required: ["stars", "cashCows", "puzzles", "dogs"], properties: { stars: { type: "string" }, cashCows: { type: "string" }, puzzles: { type: "string" }, dogs: { type: "string" } } },
+    priorities: { type: "array", maxItems: 5, items: { type: "object", additionalProperties: false, required: ["menuId", "menuName", "classification", "diagnosis", "recommendedAction", "rationale", "priority"], properties: { menuId: { type: "string" }, menuName: { type: "string" }, classification: { type: "string", enum: ["STAR", "CASH_COW", "PUZZLE", "DOG"] }, diagnosis: { type: "string" }, recommendedAction: { type: "string" }, rationale: { type: "string" }, priority: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] } } } },
+    categoryStrategies: { type: "object", additionalProperties: false, required: ["stars", "cashCows", "puzzles", "dogs"], properties: { stars: { type: "string" }, cashCows: { type: "string" }, puzzles: { type: "string" }, dogs: { type: "string" } } },
   },
 };
 
@@ -95,10 +101,12 @@ ${JSON.stringify(context)}`;
     let response = await generate(prompt);
     let result = extractJsonObject(response?.text || "");
     if (!isStructuredStrategy(result)) {
+      console.error("Menu Engineering invalid structured response", { attempt: 1, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: strategyInvalidFields(result) });
       response = await generate(`${prompt}\n\nREPAIR: The previous response did not match the required JSON schema. Return only the exact required JSON object, no markdown. Do not recalculate deterministic classifications; use only supplied menu IDs and names.`);
       result = extractJsonObject(response?.text || "");
     }
     if (!isStructuredStrategy(result)) {
+      console.error("Menu Engineering invalid structured response", { attempt: 2, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: strategyInvalidFields(result) });
       return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." });
     }
 

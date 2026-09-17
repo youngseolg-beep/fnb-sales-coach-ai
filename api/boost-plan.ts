@@ -11,16 +11,24 @@ const extractJsonObject = (text: string): unknown => {
   }
 };
 
-const isStructuredBoostPlan = (value: unknown) => {
-  if (!value || typeof value !== "object") return false;
+const boostPlanInvalidFields = (value: unknown): string[] => {
+  if (!value || typeof value !== "object") return ["root"];
+  const invalid: string[] = [];
   const plan = value as { summary?: unknown; target?: unknown; actions?: unknown; watchouts?: unknown; successMetrics?: unknown };
   const target = plan.target as Record<string, unknown> | undefined;
-  return (
-    typeof plan.summary === "string" && !!target && typeof target.objective === "string" &&
-    typeof target.timeHorizon === "string" && Array.isArray(plan.actions) && plan.actions.length <= 3 &&
-    Array.isArray(plan.watchouts) && Array.isArray(plan.successMetrics)
-  );
+  if (typeof plan.summary !== "string") invalid.push("summary");
+  if (!target || typeof target.objective !== "string" || (typeof target.targetGrowthPercent !== "number" && target.targetGrowthPercent !== null) || typeof target.timeHorizon !== "string") invalid.push("target");
+  if (!Array.isArray(plan.actions) || plan.actions.length > 3) invalid.push("actions");
+  else plan.actions.forEach((action, index) => {
+    const item = action as Record<string, unknown> | null;
+    if (!item || typeof item !== "object" || !Number.isInteger(item.priority) || typeof item.title !== "string" || !["MENU_EXPOSURE", "UPSELL", "SET_PROMOTION", "PRICE", "OPERATIONS", "OTHER"].includes(String(item.type)) || !Array.isArray(item.targetMenuIds) || !item.targetMenuIds.every((id) => typeof id === "string") || !Array.isArray(item.targetMenuNames) || !item.targetMenuNames.every((name) => typeof name === "string") || typeof item.rationale !== "string" || !Array.isArray(item.executionSteps) || !item.executionSteps.every((step) => typeof step === "string") || typeof item.owner !== "string" || typeof item.timing !== "string" || typeof item.expectedEffect !== "string" || typeof item.guardrail !== "string") invalid.push(`actions[${index}]`);
+  });
+  if (!Array.isArray(plan.watchouts) || !plan.watchouts.every((item) => typeof item === "string")) invalid.push("watchouts");
+  if (!Array.isArray(plan.successMetrics) || !plan.successMetrics.every((item) => typeof item === "string")) invalid.push("successMetrics");
+  return invalid;
 };
+
+const isStructuredBoostPlan = (value: unknown) => boostPlanInvalidFields(value).length === 0;
 
 const commercialTextValues = (value: unknown): string[] => {
   if (typeof value === "string") return [value];
@@ -116,7 +124,8 @@ const passesCommercialSafety = (value: unknown) => commercialSafetyViolation(val
 const boostPlanSchema = {
   type: "object",
   required: ["summary", "target", "actions", "watchouts", "successMetrics"],
-  properties: { summary: { type: "string" }, target: { type: "object" }, actions: { type: "array", maxItems: 3, items: { type: "object" } }, watchouts: { type: "array", items: { type: "string" } }, successMetrics: { type: "array", items: { type: "string" } } },
+  additionalProperties: false,
+  properties: { summary: { type: "string" }, target: { type: "object", additionalProperties: false, required: ["objective", "targetGrowthPercent", "timeHorizon"], properties: { objective: { type: "string" }, targetGrowthPercent: { anyOf: [{ type: "number" }, { type: "null" }] }, timeHorizon: { type: "string" } } }, actions: { type: "array", maxItems: 3, items: { type: "object", additionalProperties: false, required: ["priority", "title", "type", "targetMenuIds", "targetMenuNames", "rationale", "executionSteps", "owner", "timing", "expectedEffect", "guardrail"], properties: { priority: { type: "integer" }, title: { type: "string" }, type: { type: "string", enum: ["MENU_EXPOSURE", "UPSELL", "SET_PROMOTION", "PRICE", "OPERATIONS", "OTHER"] }, targetMenuIds: { type: "array", items: { type: "string" } }, targetMenuNames: { type: "array", items: { type: "string" } }, rationale: { type: "string" }, executionSteps: { type: "array", items: { type: "string" } }, owner: { type: "string" }, timing: { type: "string" }, expectedEffect: { type: "string" }, guardrail: { type: "string" } } } }, watchouts: { type: "array", items: { type: "string" } }, successMetrics: { type: "array", items: { type: "string" } } },
 };
 
 export default async function handler(req: any, res: any) {
@@ -174,11 +183,12 @@ ${JSON.stringify(context)}`;
     let result = extractJsonObject(response?.text || "");
     let violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
     if (violation) {
+      if (violation === "INVALID_MODEL_RESPONSE") console.error("Boost Plan invalid structured response", { attempt: 1, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result) });
       response = await generate(`${prompt}\n\nREPAIR: The previous response was invalid (${violation}). Return only the required JSON object. Do not invent discount percentages, amounts, coupon values, giveaways, BOGO, bundle prices, or final promotional conditions. PRICE/SET_PROMOTION must first verify cost, contribution margin, or margin. Prefer MENU_EXPOSURE, UPSELL, or OPERATIONS.`);
       result = extractJsonObject(response?.text || "");
       violation = isStructuredBoostPlan(result) ? commercialSafetyViolation(result) : "INVALID_MODEL_RESPONSE";
     }
-    if (violation === "INVALID_MODEL_RESPONSE") return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." });
+    if (violation === "INVALID_MODEL_RESPONSE") { console.error("Boost Plan invalid structured response", { attempt: 2, responseLength: (response?.text || "").length, parsedKeys: result && typeof result === "object" ? Object.keys(result as object) : [], invalidFields: boostPlanInvalidFields(result) }); return res.status(502).json({ ok: false, error: "INVALID_MODEL_RESPONSE", message: "AI 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요." }); }
     if (violation) return res.status(502).json({ ok: false, error: "UNSAFE_COMMERCIAL_TERM", message: "안전 기준을 충족하는 실행안을 만들지 못했습니다. 다시 시도해 주세요." });
     return res.status(200).json({ ok: true, result });
   } catch (error: any) {
