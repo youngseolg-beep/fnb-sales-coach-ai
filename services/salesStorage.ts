@@ -22,6 +22,34 @@ const toNumber = (value: any, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+const isValidNonNegativeNumber = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
+
+const validateDailyPayload = (payload: DailyPayload) => {
+  const baseValues = [
+    payload.posSales,
+    payload.deliverySales ?? 0,
+    payload.orders,
+    payload.visitCount,
+    payload.toppingQty ?? 0,
+  ];
+  if (!baseValues.every(isValidNonNegativeNumber)) {
+    return "매출, 주문 수, 방문객 수량에는 0 이상의 숫자만 입력할 수 있습니다.";
+  }
+
+  if (payload.totalSales !== undefined && !isValidNonNegativeNumber(payload.totalSales)) {
+    return "총매출에는 0 이상의 숫자만 입력할 수 있습니다.";
+  }
+
+  if (Array.isArray(payload.categories) && payload.categories.some((category) =>
+    category.items.some((item) => !isValidNonNegativeNumber(item.qty))
+  )) {
+    return "메뉴 판매 수량에는 0 이상의 숫자만 입력할 수 있습니다.";
+  }
+
+  return null;
+};
+
 const normalizeCategories = (raw: any): MenuCategory[] => {
   if (!Array.isArray(raw) || raw.length === 0) return [];
 
@@ -130,6 +158,11 @@ const mapRowToDaily = (row: any) => {
 };
 
 export async function saveDaily(payload: DailyPayload, storeId: number) {
+  const validationError = validateDailyPayload(payload);
+  if (validationError) {
+    return { ok: false, success: false, error: new Error(validationError) };
+  }
+
   const row = buildDbRow(payload, storeId);
   const key = buildStorageKey(storeId, row.date);
 
@@ -225,6 +258,11 @@ export async function saveDailyData(payload: DailyPayload, storeId: number) {
 // Insert-only path for deterministic Demo continuity. It deliberately never
 // falls back to saveDaily, which would update an existing manual/seeded row.
 export async function insertDailyIfMissing(payload: DailyPayload, storeId: number) {
+  const validationError = validateDailyPayload(payload);
+  if (validationError) {
+    return { ok: false, inserted: false, error: new Error(validationError) };
+  }
+
   if (!supabase) {
     return { ok: false, inserted: false, error: new Error("Supabase is unavailable") };
   }

@@ -609,14 +609,21 @@ const DataInput: React.FC<DataInputProps> = ({
   const currency = getCurrencyByCountry((data as any).country);
 
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
+    if (["posSales", "deliverySales", "orders", "visitCount", "toppingQty"].includes(field)) {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue) || numericValue < 0) return;
+      onChange({ ...data, [field]: numericValue });
+      return;
+    }
     onChange({ ...data, [field]: value });
   };
 
   const updateQty = (catIdx: number, itemIdx: number, qty: number) => {
+    if (!Number.isFinite(Number(qty)) || Number(qty) < 0) return;
     const newCategories = data.categories.map((cat, cIdx) => ({
       ...cat,
       items: cat.items.map((item, iIdx) =>
-        cIdx === catIdx && iIdx === itemIdx ? { ...item, qty } : { ...item }
+        cIdx === catIdx && iIdx === itemIdx ? { ...item, qty: Number(qty) } : { ...item }
       ),
     }));
     onChange({ ...data, categories: newCategories });
@@ -626,7 +633,8 @@ const DataInput: React.FC<DataInputProps> = ({
   const getTakeoutQty = (item: any) => Number(item?.takeout_qty ?? 0);
 
   const updateChannelQty = (catIdx: number, itemIdx: number, channel: "DINE_IN" | "TAKEOUT", value: number) => {
-    const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+    const safeValue = Number(value);
+    if (!Number.isFinite(safeValue) || safeValue < 0) return;
     const newCategories = data.categories.map((cat, cIdx) => ({
       ...cat,
       items: cat.items.map((item, iIdx) => {
@@ -1347,11 +1355,10 @@ const callOcrWithRetry = async (
   };
 
   const applyOcr = () => {
-    if (
-      ocrItemsAccumulated.length === 0 ||
-      ocrItemsAccumulated.some((item) => item.needs_review) ||
-      receiptCurrencyValidation.status === "BLOCK"
-    ) return;
+    if (isOcrApplyBlocked) {
+      alert(ocrApplyBlockReason || "OCR 결과를 적용할 수 없습니다.");
+      return;
+    }
 
     const newCategories = data.categories.map((cat) => ({
       ...cat,
@@ -1572,18 +1579,21 @@ const callOcrWithRetry = async (
     const tolerance = Math.max(receiptSubtotal * 0.01, 1);
     return diff <= tolerance;
   }, [scanTotal, receiptSubtotal]);
-  const isOcrApplyBlocked =
-    ocrItemsAccumulated.length === 0 ||
-    needsReviewItems.length > 0 ||
-    receiptCurrencyValidation.status === "BLOCK";
   const ocrApplyBlockReason =
     needsReviewItems.length > 0
       ? "확인 필요 메뉴를 모두 선택해 주세요."
+      : receiptDateValidation.status === "BLOCK"
+      ? "영수증 날짜를 확인해 주세요."
+      : receiptStoreValidation.status === "BLOCK"
+      ? "현재 매장과 다른 영수증입니다."
       : receiptCurrencyValidation.status === "BLOCK"
       ? "영수증 통화를 확인해 주세요."
+      : receiptSubtotal !== null && isTotalMatched === false
+      ? "영수증 소계와 메뉴 합계가 일치하지 않습니다."
       : ocrItemsAccumulated.length === 0
       ? "인식된 메뉴가 없습니다."
       : null;
+  const isOcrApplyBlocked = ocrApplyBlockReason !== null;
 
   const statusBadge = (s?: FileStatus) => {
     const st = s?.status;
@@ -2174,6 +2184,8 @@ const callOcrWithRetry = async (
                 data-base-input="true"
                 data-base-key="posSales"
                 type="number"
+                min="0"
+                step="0.01"
                 value={data.posSales || ""}
                 onChange={(e) => updateBaseField("posSales", Number(e.target.value))}
                 onFocus={(e) => e.target.select()}
@@ -2199,6 +2211,8 @@ const callOcrWithRetry = async (
                 data-base-input="true"
                 data-base-key="deliverySales"
                 type="number"
+                min="0"
+                step="0.01"
                 value={(data as any).deliverySales || ""}
                 onChange={(e) =>
                   updateBaseField("deliverySales" as any, Number(e.target.value))
@@ -2226,6 +2240,8 @@ const callOcrWithRetry = async (
                 data-base-input="true"
                 data-base-key="visitCount"
                 type="number"
+                min="0"
+                step="any"
                 value={data.visitCount || ""}
                 onChange={(e) => updateBaseField("visitCount", Number(e.target.value))}
                 onFocus={(e) => e.target.select()}
@@ -2251,6 +2267,8 @@ const callOcrWithRetry = async (
                 data-base-input="true"
                 data-base-key="orders"
                 type="number"
+                min="0"
+                step="any"
                 value={data.orders || ""}
                 onChange={(e) => updateBaseField("orders", Number(e.target.value))}
                 onFocus={(e) => e.target.select()}

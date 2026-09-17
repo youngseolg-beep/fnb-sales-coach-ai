@@ -102,6 +102,9 @@ const SOFT_DRINKS = [
 
 const DETAIL_REPORT_STORAGE_KEY = "sales-coach-detail-report-by-date";
 
+const isValidNonNegativeNumber = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
+
 const DailySalesPage: React.FC<Props> = ({
   data,
   setData,
@@ -797,6 +800,27 @@ const DailySalesPage: React.FC<Props> = ({
   const handleSave = async (silent = false) => {
     try {
       if (!silent) setSaveStatus("데이터 저장 중...");
+
+      const baseValues = [
+        data.posSales,
+        data.deliverySales ?? 0,
+        data.orders,
+        data.visitCount,
+        data.toppingQty,
+      ];
+      if (!baseValues.every(isValidNonNegativeNumber)) {
+        const message = "매출, 주문 수, 방문객 수량에는 0 이상의 숫자만 입력할 수 있습니다.";
+        setSaveStatus(message);
+        if (!silent) showToast(message);
+        return false;
+      }
+
+      if (data.categories.some((category) => category.items.some((item) => !isValidNonNegativeNumber(item.qty)))) {
+        const message = "메뉴 판매 수량에는 0 이상의 숫자만 입력할 수 있습니다.";
+        setSaveStatus(message);
+        if (!silent) showToast(message);
+        return false;
+      }
 
       let calcSales = 0;
       data.categories.forEach((cat) => {
