@@ -349,7 +349,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         <button
           type="button"
           onClick={() => setActiveTab("pending")}
-          className={`h-10 whitespace-nowrap rounded-[10px] border px-0.5 text-[10.5px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
+          className={`h-[34px] whitespace-nowrap rounded-[9px] border px-0.5 text-[10px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
             activeTab === "pending"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -361,7 +361,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         <button
           type="button"
           onClick={() => setActiveTab("approved")}
-          className={`h-10 whitespace-nowrap rounded-[10px] border px-0.5 text-[10.5px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
+          className={`h-[34px] whitespace-nowrap rounded-[9px] border px-0.5 text-[10px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
             activeTab === "approved"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -373,7 +373,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
         <button
           type="button"
           onClick={() => setActiveTab("rejected")}
-          className={`h-10 whitespace-nowrap rounded-[10px] border px-0.5 text-[10.5px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
+          className={`h-[34px] whitespace-nowrap rounded-[9px] border px-0.5 text-[10px] font-semibold leading-none transition sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm ${
             activeTab === "rejected"
               ? "border-[#8B6F5B] bg-[#8B6F5B] text-white"
               : "border-[#ECE7E1] bg-white text-[#706A66] hover:bg-[#F7F2EE]"
@@ -385,7 +385,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
 
       <div className="space-y-4">
         {filteredList.length === 0 ? (
-          <div className="rounded-[20px] border border-[#ECE7E1] bg-white px-4 py-5 text-center text-[11px] text-[#9C948E] sm:py-10 sm:text-sm">
+          <div className="rounded-[20px] border border-[#ECE7E1] bg-white px-3 py-4 text-center text-[10px] text-[#9C948E] sm:px-4 sm:py-10 sm:text-sm">
             {activeTab === "pending" && "대기 계정이 없습니다."}
             {activeTab === "approved" && "생성 완료 계정이 없습니다."}
             {activeTab === "rejected" && "거절 계정이 없습니다."}
@@ -399,45 +399,45 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
             return (
               <div
                 key={item.id}
-                className="rounded-[20px] border border-[#ECE7E1] bg-white p-3.5 sm:p-6"
+                className="rounded-[20px] border border-[#ECE7E1] bg-white p-3 sm:p-6"
               >
                 {isEditing ? (
-                  <div className="space-y-3 sm:space-y-5">
+                  <div className="space-y-2 sm:space-y-5">
                     <div>
-                      <p className="text-[12px] font-bold text-[#1F1F1F] sm:text-sm">신청 정보 수정</p>
-                      <p className="mt-0.5 text-[10px] text-[#9C948E] sm:mt-1 sm:text-xs">변경한 신청 정보는 저장 후 반영됩니다.</p>
+                      <p className="text-[11px] font-bold text-[#1F1F1F] sm:text-sm">신청 정보 수정</p>
+                      <p className="mt-0.5 text-[9px] text-[#9C948E] sm:mt-1 sm:text-xs">변경한 신청 정보는 저장 후 반영됩니다.</p>
                     </div>
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4">
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                         점주 성함
                         <input
                           value={editForm.owner_name}
                           onChange={(e) => handleEditChange("owner_name", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         />
                       </label>
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                         연락처
                         <input
                           value={editForm.phone}
                           onChange={(e) => handleEditChange("phone", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         />
                       </label>
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:col-span-2 sm:text-xs">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:col-span-2 sm:text-xs">
                         이메일
                         <input
                           value={editForm.email}
                           onChange={(e) => handleEditChange("email", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         />
                       </label>
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                         국가
                         <select
                           value={editForm.country}
                           onChange={(e) => handleEditChange("country", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         >
                         <option value="">국가 선택</option>
                         {COUNTRY_OPTIONS.map((c) => (
@@ -447,12 +447,12 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                         ))}
                         </select>
                       </label>
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                         브랜드
                         <select
                           value={editForm.brand}
                           onChange={(e) => handleEditChange("brand", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         >
                         <option value="">브랜드 선택</option>
                         {BRAND_OPTIONS.map((b) => (
@@ -462,12 +462,12 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                         ))}
                         </select>
                       </label>
-                      <label className="text-[10.5px] font-semibold text-[#706A66] sm:col-span-2 sm:text-xs">
+                      <label className="text-[9.5px] font-semibold text-[#706A66] sm:col-span-2 sm:text-xs">
                         매장명
                         <input
                           value={editForm.store_name}
                           onChange={(e) => handleEditChange("store_name", e.target.value)}
-                          className="mt-1 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
+                          className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm"
                         />
                       </label>
                     </div>
@@ -475,14 +475,14 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                       <button
                         onClick={() => handleSaveEdit(item.id)}
                         disabled={loading}
-                        className="h-10 rounded-[11px] bg-[#8B6F5B] px-2.5 text-[12px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-5 sm:text-sm sm:font-bold"
+                        className="h-9 rounded-[9px] bg-[#8B6F5B] px-2.5 text-[11px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-5 sm:text-sm sm:font-bold"
                       >
                         저장
                       </button>
                       <button
                         onClick={cancelEdit}
                         disabled={loading}
-                        className="h-10 rounded-[11px] border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-5 sm:text-sm sm:font-bold"
+                        className="h-9 rounded-[9px] border border-[#ECE7E1] bg-white px-2.5 text-[11px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-5 sm:text-sm sm:font-bold"
                       >
                         취소
                       </button>
@@ -492,29 +492,29 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                   <div>
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0">
-                        <h3 className="break-words text-[14px] font-bold text-[#1F1F1F] sm:text-lg">{item.store_name}</h3>
-                        <p className="mt-0.5 text-[11px] text-[#706A66] sm:mt-1 sm:text-sm">{getBrandLabel(item.brand)}</p>
+                        <h3 className="break-words text-[13px] font-bold text-[#1F1F1F] sm:text-lg">{item.store_name}</h3>
+                        <p className="mt-0.5 text-[10px] text-[#706A66] sm:mt-1 sm:text-sm">{getBrandLabel(item.brand)}</p>
                       </div>
-                      <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[10px] font-bold sm:px-2.5 sm:py-1 sm:text-xs ${STATUS_STYLES[status] || "bg-[#F4F1EE] text-[#706A66]"}`}>
+                      <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold sm:px-2.5 sm:py-1 sm:text-xs ${STATUS_STYLES[status] || "bg-[#F4F1EE] text-[#706A66]"}`}>
                         {STATUS_LABELS[status] || item.status || "-"}
                       </span>
                     </div>
 
-                    <dl className="mt-2.5 grid grid-cols-1 gap-x-6 gap-y-1.5 text-[12px] sm:mt-5 sm:grid-cols-2 sm:gap-y-4 sm:text-sm lg:grid-cols-4">
+                    <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-[11px] sm:mt-5 sm:grid-cols-2 sm:gap-y-4 sm:text-sm lg:grid-cols-4">
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold text-[#9C948E] sm:text-xs">점주</dt>
+                        <dt className="text-[9px] font-semibold text-[#9C948E] sm:text-xs">점주</dt>
                         <dd className="mt-0.5 break-words font-medium text-[#1F1F1F] sm:mt-1">{item.owner_name || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold text-[#9C948E] sm:text-xs">연락처</dt>
+                        <dt className="text-[9px] font-semibold text-[#9C948E] sm:text-xs">연락처</dt>
                         <dd className="mt-0.5 break-words font-medium text-[#1F1F1F] sm:mt-1">{item.phone || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold text-[#9C948E] sm:text-xs">이메일</dt>
+                        <dt className="text-[9px] font-semibold text-[#9C948E] sm:text-xs">이메일</dt>
                         <dd className="mt-0.5 break-all font-medium text-[#1F1F1F] sm:mt-1">{item.email || "-"}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold text-[#9C948E] sm:text-xs">국가</dt>
+                        <dt className="text-[9px] font-semibold text-[#9C948E] sm:text-xs">국가</dt>
                         <dd className="mt-0.5 break-words font-medium text-[#1F1F1F] sm:mt-1">{getCountryLabel(item.country)}</dd>
                       </div>
                     </dl>
@@ -522,7 +522,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                     <div className="mt-2.5 border-t border-[#ECE7E1] pt-2.5 sm:mt-5 sm:pt-5">
                       {status === "pending" && (
                         <div className="max-w-md space-y-1.5 sm:space-y-3">
-                          <label className="block text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                          <label className="block text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                             초기 비밀번호
                             <input
                               type="password"
@@ -531,13 +531,13 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                               value={passwordDrafts[item.id] || ""}
                               onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
                               placeholder="숫자 6자리"
-                              className="mt-0.5 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none placeholder:text-[11px] focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm sm:placeholder:text-[13px]"
+                              className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none placeholder:text-[10px] focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm sm:placeholder:text-[13px]"
                             />
                           </label>
                           <button
                             onClick={() => handleApprove(item)}
                             disabled={loading}
-                            className="h-10 w-full rounded-[11px] bg-[#8B6F5B] px-2.5 text-[12px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:rounded-xl sm:px-4 sm:text-sm"
+                            className="h-9 w-full rounded-[9px] bg-[#8B6F5B] px-2.5 text-[11px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:rounded-xl sm:px-4 sm:text-sm"
                           >
                             승인
                           </button>
@@ -545,14 +545,14 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                             <button
                               onClick={() => startEdit(item)}
                               disabled={loading || isPasswordUpdating}
-                              className="h-10 rounded-[11px] border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
+                              className="h-9 rounded-[9px] border border-[#ECE7E1] bg-white px-2.5 text-[11px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
                             >
                               수정
                             </button>
                             <button
                               onClick={() => handleReject(item)}
                               disabled={loading}
-                              className="h-10 rounded-[11px] bg-[#F9EEEE] px-2.5 text-[12px] font-semibold text-[#9A5F5F] transition hover:bg-[#F4E2E2] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
+                              className="h-9 rounded-[9px] bg-[#F9EEEE] px-2.5 text-[11px] font-semibold text-[#9A5F5F] transition hover:bg-[#F4E2E2] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
                             >
                               거절
                             </button>
@@ -560,7 +560,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                           <button
                             onClick={() => handleDelete(item)}
                             disabled={loading || isPasswordUpdating}
-                            className="h-10 w-full rounded-[11px] px-2.5 text-[12px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
+                            className="h-9 w-full rounded-[9px] px-2.5 text-[11px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
                           >
                             삭제
                           </button>
@@ -569,7 +569,7 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
 
                       {status === "approved" && (
                         <div className="max-w-md space-y-1.5 sm:space-y-3">
-                          <label className="block text-[10.5px] font-semibold text-[#706A66] sm:text-xs">
+                          <label className="block text-[9.5px] font-semibold text-[#706A66] sm:text-xs">
                             새 비밀번호
                             <input
                               type="password"
@@ -578,13 +578,13 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                               value={passwordDrafts[item.id] || ""}
                               onChange={(event) => handlePasswordDraftChange(item.id, event.target.value)}
                               placeholder="숫자 6자리"
-                              className="mt-0.5 h-10 w-full rounded-[11px] border border-[#ECE7E1] bg-[#FFFDFC] px-2.5 text-[12px] text-[#1F1F1F] outline-none placeholder:text-[11px] focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm sm:placeholder:text-[13px]"
+                              className="mt-0.5 h-9 w-full rounded-[9px] border border-[#ECE7E1] bg-[#FFFDFC] px-[9px] text-[11px] text-[#1F1F1F] outline-none placeholder:text-[10px] focus:border-[#A8866B] sm:mt-1.5 sm:h-12 sm:rounded-[14px] sm:px-3 sm:text-sm sm:placeholder:text-[13px]"
                             />
                           </label>
                           <button
                             onClick={() => handleApplyApprovedPassword(item)}
                             disabled={loading || isPasswordUpdating}
-                            className="h-10 w-full rounded-[11px] bg-[#8B6F5B] px-2.5 text-[12px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:rounded-xl sm:px-4 sm:text-sm"
+                            className="h-9 w-full rounded-[9px] bg-[#8B6F5B] px-2.5 text-[11px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:rounded-xl sm:px-4 sm:text-sm"
                           >
                             {isPasswordUpdating ? "변경 중..." : "비밀번호 변경"}
                           </button>
@@ -592,14 +592,14 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                             <button
                               onClick={() => startEdit(item)}
                               disabled={loading || isPasswordUpdating}
-                              className="h-10 rounded-[11px] border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
+                              className="h-9 rounded-[9px] border border-[#ECE7E1] bg-white px-2.5 text-[11px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
                             >
                               수정
                             </button>
                             <button
                               onClick={() => handleDelete(item)}
                               disabled={loading || isPasswordUpdating}
-                              className="h-10 rounded-[11px] px-2.5 text-[12px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
+                              className="h-9 rounded-[9px] px-2.5 text-[11px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
                             >
                               삭제
                             </button>
@@ -612,14 +612,14 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
                           <button
                             onClick={() => startEdit(item)}
                             disabled={loading || isPasswordUpdating}
-                          className="h-10 rounded-[11px] border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
+                          className="h-9 rounded-[9px] border border-[#ECE7E1] bg-white px-2.5 text-[11px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm sm:font-bold"
                           >
                             수정
                           </button>
                           <button
                             onClick={() => handleDelete(item)}
                             disabled={loading || isPasswordUpdating}
-                          className="h-10 rounded-[11px] px-2.5 text-[12px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
+                          className="h-9 rounded-[9px] px-2.5 text-[11px] font-semibold text-[#9A5F5F] transition hover:bg-[#FCF5F5] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:h-auto sm:rounded-xl sm:px-4 sm:text-sm"
                           >
                             삭제
                           </button>

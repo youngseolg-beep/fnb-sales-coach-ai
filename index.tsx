@@ -75,11 +75,11 @@ function MasterWorkspaceBar() {
     <header className="fixed inset-x-0 top-0 z-[9999] border-b border-[#ECE7E1] bg-white/95 text-[#1F1F1F] backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#8B6F5B] text-[12px] text-white sm:h-9 sm:w-9 sm:text-sm">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#8B6F5B] text-[11px] text-white sm:h-9 sm:w-9 sm:text-sm">
             <i className="fa-solid fa-chart-simple" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[12px] font-bold tracking-[-0.02em] text-[#1F1F1F] sm:text-sm">
+            <div className="truncate text-[11px] font-bold tracking-[-0.02em] text-[#1F1F1F] sm:text-sm">
               Sales Coach AI
             </div>
             <div className="mt-0.5 text-[9px] font-medium text-[#9C948E] sm:text-[11px]">
@@ -92,7 +92,7 @@ function MasterWorkspaceBar() {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[11px] border border-[#ECE7E1] bg-white px-2.5 text-[12px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:h-10 sm:rounded-xl sm:px-4 sm:text-sm"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[9px] border border-[#ECE7E1] bg-white px-2.5 text-[11px] font-semibold text-[#706A66] transition hover:bg-[#F7F2EE] disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:h-10 sm:rounded-xl sm:px-4 sm:text-sm"
         >
           <i className={`fa-solid ${loggingOut ? 'fa-spinner fa-spin' : 'fa-right-from-bracket'} text-[10px] sm:text-xs`} />
           <span>{loggingOut ? '로그아웃 중' : '로그아웃'}</span>
