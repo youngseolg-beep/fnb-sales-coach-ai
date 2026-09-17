@@ -69,6 +69,8 @@ const getPrivilegedApiHeaders = async () => {
 
 const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) => {
   const [list, setList] = useState<any[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [passwordUpdatingId, setPasswordUpdatingId] = useState<number | null>(null);
@@ -88,13 +90,29 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
   }, [initialTab]);
 
   const loadRequests = async () => {
-    const { data, error } = await supabase
-      .from("signup_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+    setListLoading(true);
+    setListError(null);
 
-    if (!error && data) {
-      setList(data);
+    try {
+      if (!supabase) {
+        throw new Error("Supabase client is unavailable");
+      }
+
+      const { data, error } = await supabase
+        .from("signup_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setList(data || []);
+      return true;
+    } catch (error) {
+      console.error("Failed to load signup requests", error);
+      setListError("계정 신청 목록을 불러오지 못했습니다.");
+      return false;
+    } finally {
+      setListLoading(false);
     }
   };
 
@@ -384,7 +402,38 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
       </div>
 
       <div className="space-y-2.5 sm:space-y-4">
-        {filteredList.length === 0 ? (
+        {listLoading && filteredList.length === 0 ? (
+          <div className="rounded-[20px] border border-[#ECE7E1] bg-white px-3 py-4 text-center text-[10px] text-[#9C948E] sm:px-4 sm:py-10 sm:text-sm">
+            계정 신청 목록을 불러오는 중입니다.
+          </div>
+        ) : listError && filteredList.length === 0 ? (
+          <div className="rounded-[20px] border border-[#E8D9CC] bg-[#FFF9F4] px-3 py-4 text-center sm:px-4 sm:py-6">
+            <p className="text-[10px] font-medium text-[#8B6F5B] sm:text-sm">{listError}</p>
+            <button
+              type="button"
+              onClick={() => void loadRequests()}
+              disabled={listLoading}
+              className="mt-2 h-8 rounded-[8px] bg-[#8B6F5B] px-3 text-[10px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-3 sm:h-10 sm:rounded-xl sm:px-4 sm:text-sm"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : (
+          <>
+            {listError && (
+              <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[#E8D9CC] bg-[#FFF9F4] px-3 py-2 sm:rounded-[16px] sm:px-4 sm:py-3">
+                <p className="text-[10px] font-medium text-[#8B6F5B] sm:text-sm">{listError}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadRequests()}
+                  disabled={listLoading}
+                  className="h-7 shrink-0 rounded-[7px] bg-[#8B6F5B] px-2.5 text-[9.5px] font-semibold text-white transition hover:bg-[#765C49] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:rounded-lg sm:px-3 sm:text-xs"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+            {filteredList.length === 0 ? (
           <div className="rounded-[20px] border border-[#ECE7E1] bg-white px-3 py-4 text-center text-[10px] text-[#9C948E] sm:px-4 sm:py-10 sm:text-sm">
             {activeTab === "pending" && "대기 계정이 없습니다."}
             {activeTab === "approved" && "생성 완료 계정이 없습니다."}
@@ -631,6 +680,8 @@ const AdminApprovalPage = ({ initialTab = "pending" }: AdminApprovalPageProps) =
               </div>
             );
           })
+        )}
+          </>
         )}
       </div>
     </div>
