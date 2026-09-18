@@ -33,6 +33,7 @@ import { supabase } from "../services/supabaseClient";
 import {
   deriveSharedSideDishTotal,
   loadSharedSideDishConfigForDate,
+  loadSharedSideDishHistory,
   saveSharedSideDishConfig,
   type SharedSideDishConfig,
   type SharedSideDishItem,
@@ -344,6 +345,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const [sharedSideDishDraft, setSharedSideDishDraft] = useState<SharedSideDishItem[]>([]);
   const [sharedSideDishSaving, setSharedSideDishSaving] = useState(false);
   const [sharedSideDishSaveError, setSharedSideDishSaveError] = useState("");
+  const [sharedSideDishHistoryOpen, setSharedSideDishHistoryOpen] = useState(false);
+  const [sharedSideDishHistoryLoading, setSharedSideDishHistoryLoading] = useState(false);
+  const [sharedSideDishHistoryError, setSharedSideDishHistoryError] = useState("");
+  const [sharedSideDishHistory, setSharedSideDishHistory] = useState<SharedSideDishConfig[]>([]);
+  const [sharedSideDishHistoryExpandedId, setSharedSideDishHistoryExpandedId] = useState<number | null>(null);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [historyMenuName, setHistoryMenuName] = useState("");
@@ -608,6 +614,30 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     } finally {
       setSharedSideDishSaving(false);
     }
+  };
+
+  const loadCurrentSharedSideDishHistory = async () => {
+    setSharedSideDishHistoryLoading(true);
+    setSharedSideDishHistoryError("");
+    try {
+      setSharedSideDishHistory(await loadSharedSideDishHistory(storeId));
+    } catch (error) {
+      console.error("loadCurrentSharedSideDishHistory error:", error);
+      setSharedSideDishHistoryError("변경 이력을 불러오지 못했습니다.");
+    } finally {
+      setSharedSideDishHistoryLoading(false);
+    }
+  };
+
+  const openSharedSideDishHistory = () => {
+    setSharedSideDishHistoryOpen(true);
+    setSharedSideDishHistoryExpandedId(null);
+    void loadCurrentSharedSideDishHistory();
+  };
+
+  const closeSharedSideDishHistory = () => {
+    setSharedSideDishHistoryOpen(false);
+    setSharedSideDishHistoryExpandedId(null);
   };
 
   const closeEditMenu = () => {
@@ -937,13 +967,24 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <p className="mt-0.5 text-[9px] text-[#8c817a]">매장 기본 제공 찬 원가</p>
             </div>
             {!sharedSideDishLoading && !sharedSideDishError && (sharedSideDishConfig || sharedSideDishExpanded) && (
-              <button
-                type="button"
-                onClick={sharedSideDishExpanded ? closeSharedSideDishEditor : openSharedSideDishEditor}
-                className="text-[11px] font-semibold text-[#8b5e3c]"
-              >
-                {sharedSideDishExpanded ? "닫기" : "관리"}
-              </button>
+              <div className="flex items-center gap-3">
+                {sharedSideDishConfig && (
+                  <button
+                    type="button"
+                    onClick={openSharedSideDishHistory}
+                    className="text-[11px] font-semibold text-[#766c66]"
+                  >
+                    변경 이력
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={sharedSideDishExpanded ? closeSharedSideDishEditor : openSharedSideDishEditor}
+                  className="text-[11px] font-semibold text-[#8b5e3c]"
+                >
+                  {sharedSideDishExpanded ? "닫기" : "관리"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1540,6 +1581,96 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 className="rounded-xl bg-slate-900 px-5 py-2 font-bold text-white disabled:opacity-50"
               >
                 {saving || actionSaving ? "Saving..." : "저장 확정"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sharedSideDishHistoryOpen && (
+        <div
+          className="fixed inset-0 z-[10002] flex items-center justify-center overflow-y-auto bg-[#2b221d]/45 p-4"
+          onClick={closeSharedSideDishHistory}
+        >
+          <div
+            className="flex w-full max-w-lg max-h-[calc(100dvh-32px)] flex-col overflow-hidden rounded-[20px] border border-[#e8e1db] bg-white shadow-[0_18px_48px_rgba(58,40,28,0.22)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
+              <h3 className="text-[16px] font-semibold text-[#211c19]">기본 제공 찬 변경 이력</h3>
+              <p className="mt-1 text-[10px] text-[#8c817a]">저장일 기준 원가 구성 이력입니다.</p>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              {sharedSideDishHistoryLoading ? (
+                <p className="py-8 text-center text-[12px] text-[#766c66]">변경 이력을 불러오는 중...</p>
+              ) : sharedSideDishHistoryError ? (
+                <div className="py-8 text-center">
+                  <p className="text-[12px] text-[#a55345]">{sharedSideDishHistoryError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void loadCurrentSharedSideDishHistory()}
+                    className="mt-3 text-[11px] font-semibold text-[#8b5e3c]"
+                  >
+                    다시 시도
+                  </button>
+                </div>
+              ) : sharedSideDishHistory.length === 0 ? (
+                <p className="py-8 text-center text-[12px] text-[#766c66]">변경 이력이 없습니다.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {sharedSideDishHistory.map((snapshot) => {
+                    const expanded = sharedSideDishHistoryExpandedId === snapshot.id;
+                    const items = [...snapshot.items].sort((left, right) => left.displayOrder - right.displayOrder);
+                    return (
+                      <div key={snapshot.id} className="rounded-[12px] border border-[#e7ded7] bg-[#fdfbf9]">
+                        <button
+                          type="button"
+                          onClick={() => setSharedSideDishHistoryExpandedId(expanded ? null : snapshot.id)}
+                          className="w-full px-3.5 py-3 text-left"
+                          aria-expanded={expanded}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <strong className="text-[12px] text-[#302722]">{format(parseISO(snapshot.effectiveDate), "yyyy.MM.dd")}</strong>
+                                {snapshot.effectiveDate === sharedSideDishConfig?.effectiveDate && (
+                                  <span className="rounded-full bg-[#eee8e3] px-1.5 py-0.5 text-[8px] font-semibold text-[#756961]">현재 적용</span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-[10px] text-[#766c66]">
+                                1회 총 원가 {formatCurrencyValue(deriveSharedSideDishTotal(snapshot.items), country)} · 구성 항목 {snapshot.items.length}개
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[10px] font-semibold text-[#8b5e3c]">{expanded ? "닫기" : "보기"}</span>
+                          </div>
+                        </button>
+                        {expanded && (
+                          <div className="border-t border-[#eee7e1] px-3.5 py-2.5">
+                            <div className="space-y-1.5">
+                              {items.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between gap-3 text-[11px]">
+                                  <span className="min-w-0 truncate text-[#4b413b]">{item.name}</span>
+                                  <strong className="shrink-0 font-semibold text-[#302722]">{formatCurrencyValue(item.unitCost, country)}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex shrink-0 justify-end border-t border-[#eee8e3] bg-white px-5 py-3">
+              <button
+                type="button"
+                onClick={closeSharedSideDishHistory}
+                className="rounded-[9px] px-4 py-2 text-[12px] font-semibold text-[#766c66] hover:bg-[#f7f3ef]"
+              >
+                닫기
               </button>
             </div>
           </div>
