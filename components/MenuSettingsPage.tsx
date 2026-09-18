@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { addMonths, format, parseISO } from "date-fns";
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,9 @@ import {
   saveMenuPriceHistory,
 } from "../services/menuPriceService";
 import { supabase } from "../services/supabaseClient";
+import { deriveSharedSideDishTotal, loadSharedSideDishConfigForDate, type SharedSideDishConfig } from "../services/sharedSideDishService";
+import { formatCurrencyValue } from "../utils2/currency";
+import { formatLocalDate } from "../utils2/date";
 
 interface MenuSettingsPageProps {
   selectedDate: string;
@@ -299,12 +302,15 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   onReloadMenuMaster,
   saving,
   storeId,
-  country: _country,
+  country,
   onShowToast,
 }) => {
   const [draftCategories, setDraftCategories] = useState<MenuCategory[]>(() =>
     cloneCategories(categories)
   );
+  const [sharedSideDishConfig, setSharedSideDishConfig] = useState<SharedSideDishConfig | null>(null);
+  const [sharedSideDishLoading, setSharedSideDishLoading] = useState(true);
+  const [sharedSideDishError, setSharedSideDishError] = useState("");
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [historyMenuName, setHistoryMenuName] = useState("");
@@ -354,6 +360,8 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     })
   );
 
+  const loadCurrentSharedSideDishConfig = async () => { setSharedSideDishLoading(true); setSharedSideDishError(""); try { setSharedSideDishConfig(await loadSharedSideDishConfigForDate(storeId, formatLocalDate(new Date()))); } catch (error) { console.error("loadCurrentSharedSideDishConfig error:", error); setSharedSideDishConfig(null); setSharedSideDishError("기본 제공 찬 정보를 불러오지 못했습니다."); } finally { setSharedSideDishLoading(false); } };
+  useEffect(() => { void loadCurrentSharedSideDishConfig(); }, [storeId]);
   useEffect(() => {
     setDraftCategories(cloneCategories(categories));
     setDraftSourceDate(selectedDate);
@@ -768,6 +776,9 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     }
   };
 
+  const sharedSideDishTotal = sharedSideDishConfig ? deriveSharedSideDishTotal(sharedSideDishConfig.items) : 0;
+  const sharedSideDishReviewDate = sharedSideDishConfig ? addMonths(parseISO(sharedSideDishConfig.effectiveDate), 6) : null;
+  const sharedSideDishReviewOverdue = !!sharedSideDishReviewDate && formatLocalDate(new Date()) > format(sharedSideDishReviewDate, "yyyy-MM-dd");
   return (
     <>
       <section className="mx-auto max-w-[430px] space-y-3.5 pb-40 lg:max-w-[1180px] lg:pb-10">
@@ -800,6 +811,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           )}
         </div>
 
+        <div className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5"><h3 className="text-[13px] font-semibold text-[#302722]">기본 제공 찬</h3><p className="mt-0.5 text-[9px] text-[#8c817a]">매장 기본 제공 찬 원가</p>{sharedSideDishLoading ? <p className="mt-3 text-[11px] text-[#766c66]">기본 제공 찬 정보를 불러오는 중...</p> : sharedSideDishError ? <div className="mt-3 flex justify-between"><p className="text-[11px] text-[#a55345]">{sharedSideDishError}</p><button type="button" onClick={() => void loadCurrentSharedSideDishConfig()} className="text-[11px] font-semibold text-[#8b5e3c]">다시 시도</button></div> : sharedSideDishConfig ? <><div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><p>1회 총 원가<b className="block text-[13px]">{formatCurrencyValue(sharedSideDishTotal, country)}</b></p><p>구성 항목<b className="block text-[13px]">{sharedSideDishConfig.items.length}개</b></p><p>최근 원가 변경<b className="block">{format(parseISO(sharedSideDishConfig.effectiveDate), "yyyy.MM.dd")}</b></p><p>다음 점검 예정<b className="block">{format(sharedSideDishReviewDate!, "yyyy.MM.dd")}</b></p></div>{sharedSideDishReviewOverdue && <p className="mt-2 text-[10px] text-[#a66a2c]">원가 점검 시점이 지났습니다.</p>}</> : <><p className="mt-3 text-[12px]">아직 설정되지 않았습니다.</p><p className="mt-1 text-[10px] text-[#766c66]">기본 제공 찬 원가를 등록하면 실제 식재료 원가 분석에 활용할 수 있습니다.</p></>}</div>
         <label className="relative block">
           <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] text-[#8c7e75]" aria-hidden="true" />
           <input
