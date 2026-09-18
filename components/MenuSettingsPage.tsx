@@ -30,7 +30,13 @@ import {
   saveMenuPriceHistory,
 } from "../services/menuPriceService";
 import { supabase } from "../services/supabaseClient";
-import { deriveSharedSideDishTotal, loadSharedSideDishConfigForDate, type SharedSideDishConfig } from "../services/sharedSideDishService";
+import {
+  deriveSharedSideDishTotal,
+  loadSharedSideDishConfigForDate,
+  saveSharedSideDishConfig,
+  type SharedSideDishConfig,
+  type SharedSideDishItem,
+} from "../services/sharedSideDishService";
 import { formatCurrencyValue } from "../utils2/currency";
 import { formatLocalDate } from "../utils2/date";
 
@@ -143,6 +149,29 @@ const cloneCategories = (rows: MenuCategory[]) =>
     ...category,
     items: category.items.map((item) => ({ ...item })),
   }));
+
+const cloneSharedSideDishItems = (items: SharedSideDishItem[] = []) =>
+  items.map((item, index) => ({
+    ...item,
+    displayOrder: index + 1,
+  }));
+
+const areSharedSideDishItemsEqual = (
+  left: SharedSideDishItem[],
+  right: SharedSideDishItem[]
+) =>
+  left.length === right.length &&
+  left.every((item, index) => {
+    const comparison = right[index];
+    if (!comparison) return false;
+    return (
+      item.id === comparison.id &&
+      item.name.trim() === comparison.name.trim() &&
+      Number(item.unitCost) === Number(comparison.unitCost) &&
+      item.displayOrder === comparison.displayOrder &&
+      index === comparison.displayOrder - 1
+    );
+  });
 
 interface SortableMenuItemProps {
   item: any;
@@ -311,6 +340,10 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const [sharedSideDishConfig, setSharedSideDishConfig] = useState<SharedSideDishConfig | null>(null);
   const [sharedSideDishLoading, setSharedSideDishLoading] = useState(true);
   const [sharedSideDishError, setSharedSideDishError] = useState("");
+  const [sharedSideDishExpanded, setSharedSideDishExpanded] = useState(false);
+  const [sharedSideDishDraft, setSharedSideDishDraft] = useState<SharedSideDishItem[]>([]);
+  const [sharedSideDishSaving, setSharedSideDishSaving] = useState(false);
+  const [sharedSideDishSaveError, setSharedSideDishSaveError] = useState("");
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [historyMenuName, setHistoryMenuName] = useState("");
@@ -360,7 +393,23 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     })
   );
 
-  const loadCurrentSharedSideDishConfig = async () => { setSharedSideDishLoading(true); setSharedSideDishError(""); try { setSharedSideDishConfig(await loadSharedSideDishConfigForDate(storeId, formatLocalDate(new Date()))); } catch (error) { console.error("loadCurrentSharedSideDishConfig error:", error); setSharedSideDishConfig(null); setSharedSideDishError("기본 제공 찬 정보를 불러오지 못했습니다."); } finally { setSharedSideDishLoading(false); } };
+  const loadCurrentSharedSideDishConfig = async () => {
+    setSharedSideDishLoading(true);
+    setSharedSideDishError("");
+    setSharedSideDishSaveError("");
+    try {
+      const config = await loadSharedSideDishConfigForDate(storeId, formatLocalDate(new Date()));
+      setSharedSideDishConfig(config);
+      setSharedSideDishDraft(cloneSharedSideDishItems(config?.items));
+    } catch (error) {
+      console.error("loadCurrentSharedSideDishConfig error:", error);
+      setSharedSideDishConfig(null);
+      setSharedSideDishDraft([]);
+      setSharedSideDishError("기본 제공 찬 정보를 불러오지 못했습니다.");
+    } finally {
+      setSharedSideDishLoading(false);
+    }
+  };
   useEffect(() => { void loadCurrentSharedSideDishConfig(); }, [storeId]);
   useEffect(() => {
     setDraftCategories(cloneCategories(categories));
@@ -494,6 +543,71 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
     setEditMenuName(normalizeNameValue(item.name));
     setEditMenuPrice(String(normalizeNumber(item.price)));
     setEditMenuUnitCost(String(normalizeNumber(item.unitCost)));
+  };
+
+  const resetSharedSideDishDraft = () => {
+    setSharedSideDishDraft(cloneSharedSideDishItems(sharedSideDishConfig?.items));
+    setSharedSideDishSaveError("");
+  };
+
+  const openSharedSideDishEditor = () => {
+    resetSharedSideDishDraft();
+    setSharedSideDishExpanded(true);
+  };
+
+  const closeSharedSideDishEditor = () => {
+    resetSharedSideDishDraft();
+    setSharedSideDishExpanded(false);
+  };
+
+  const updateSharedSideDishDraftItem = (
+    itemId: string,
+    change: Partial<Pick<SharedSideDishItem, "name" | "unitCost">>
+  ) => {
+    setSharedSideDishDraft((items) =>
+      items.map((item) => (item.id === itemId ? { ...item, ...change } : item))
+    );
+  };
+
+  const removeSharedSideDishDraftItem = (itemId: string) => {
+    setSharedSideDishDraft((items) =>
+      cloneSharedSideDishItems(items.filter((item) => item.id !== itemId))
+    );
+  };
+
+  const addSharedSideDishDraftItem = () => {
+    setSharedSideDishDraft((items) => [
+      ...cloneSharedSideDishItems(items),
+      {
+        id: crypto.randomUUID(),
+        name: "",
+        unitCost: 0,
+        displayOrder: items.length + 1,
+      },
+    ]);
+  };
+
+  const saveCurrentSharedSideDishConfig = async () => {
+    const normalizedDraft = cloneSharedSideDishItems(sharedSideDishDraft);
+    setSharedSideDishSaving(true);
+    setSharedSideDishSaveError("");
+    try {
+      const config = await saveSharedSideDishConfig(storeId, normalizedDraft);
+      setSharedSideDishConfig(config);
+      setSharedSideDishDraft(cloneSharedSideDishItems(config.items));
+      setSharedSideDishError("");
+      setSharedSideDishExpanded(false);
+      notify("기본 제공 찬 원가가 저장되었습니다.");
+    } catch (error) {
+      console.error("saveCurrentSharedSideDishConfig error:", error);
+      const message = error instanceof Error && error.message
+        ? error.message
+        : "기본 제공 찬 원가를 저장하지 못했습니다.";
+      setSharedSideDishSaveError(message);
+      notify(message);
+    } finally {
+      setSharedSideDishSaving(false);
+    }
   };
 
   const closeEditMenu = () => {
@@ -779,6 +893,11 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   const sharedSideDishTotal = sharedSideDishConfig ? deriveSharedSideDishTotal(sharedSideDishConfig.items) : 0;
   const sharedSideDishReviewDate = sharedSideDishConfig ? addMonths(parseISO(sharedSideDishConfig.effectiveDate), 6) : null;
   const sharedSideDishReviewOverdue = !!sharedSideDishReviewDate && formatLocalDate(new Date()) > format(sharedSideDishReviewDate, "yyyy-MM-dd");
+  const sharedSideDishDraftTotal = deriveSharedSideDishTotal(sharedSideDishDraft);
+  const sharedSideDishDirty = !areSharedSideDishItemsEqual(
+    cloneSharedSideDishItems(sharedSideDishConfig?.items),
+    cloneSharedSideDishItems(sharedSideDishDraft)
+  );
   return (
     <>
       <section className="mx-auto max-w-[430px] space-y-3.5 pb-40 lg:max-w-[1180px] lg:pb-10">
@@ -811,7 +930,146 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           )}
         </div>
 
-        <div className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5"><h3 className="text-[13px] font-semibold text-[#302722]">기본 제공 찬</h3><p className="mt-0.5 text-[9px] text-[#8c817a]">매장 기본 제공 찬 원가</p>{sharedSideDishLoading ? <p className="mt-3 text-[11px] text-[#766c66]">기본 제공 찬 정보를 불러오는 중...</p> : sharedSideDishError ? <div className="mt-3 flex justify-between"><p className="text-[11px] text-[#a55345]">{sharedSideDishError}</p><button type="button" onClick={() => void loadCurrentSharedSideDishConfig()} className="text-[11px] font-semibold text-[#8b5e3c]">다시 시도</button></div> : sharedSideDishConfig ? <><div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><p>1회 총 원가<b className="block text-[13px]">{formatCurrencyValue(sharedSideDishTotal, country)}</b></p><p>구성 항목<b className="block text-[13px]">{sharedSideDishConfig.items.length}개</b></p><p>최근 원가 변경<b className="block">{format(parseISO(sharedSideDishConfig.effectiveDate), "yyyy.MM.dd")}</b></p><p>다음 점검 예정<b className="block">{format(sharedSideDishReviewDate!, "yyyy.MM.dd")}</b></p></div>{sharedSideDishReviewOverdue && <p className="mt-2 text-[10px] text-[#a66a2c]">원가 점검 시점이 지났습니다.</p>}</> : <><p className="mt-3 text-[12px]">아직 설정되지 않았습니다.</p><p className="mt-1 text-[10px] text-[#766c66]">기본 제공 찬 원가를 등록하면 실제 식재료 원가 분석에 활용할 수 있습니다.</p></>}</div>
+        <div className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[13px] font-semibold text-[#302722]">기본 제공 찬</h3>
+              <p className="mt-0.5 text-[9px] text-[#8c817a]">매장 기본 제공 찬 원가</p>
+            </div>
+            {!sharedSideDishLoading && !sharedSideDishError && (sharedSideDishConfig || sharedSideDishExpanded) && (
+              <button
+                type="button"
+                onClick={sharedSideDishExpanded ? closeSharedSideDishEditor : openSharedSideDishEditor}
+                className="text-[11px] font-semibold text-[#8b5e3c]"
+              >
+                {sharedSideDishExpanded ? "닫기" : "관리"}
+              </button>
+            )}
+          </div>
+
+          {sharedSideDishLoading ? (
+            <p className="mt-3 text-[11px] text-[#766c66]">기본 제공 찬 정보를 불러오는 중...</p>
+          ) : sharedSideDishError ? (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-[#a55345]">{sharedSideDishError}</p>
+              <button
+                type="button"
+                onClick={() => void loadCurrentSharedSideDishConfig()}
+                className="shrink-0 text-[11px] font-semibold text-[#8b5e3c]"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : (
+            <>
+              {sharedSideDishConfig ? (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                    <p>1회 총 원가<b className="block text-[13px]">{formatCurrencyValue(sharedSideDishTotal, country)}</b></p>
+                    <p>구성 항목<b className="block text-[13px]">{sharedSideDishConfig.items.length}개</b></p>
+                    <p>최근 원가 변경<b className="block">{format(parseISO(sharedSideDishConfig.effectiveDate), "yyyy.MM.dd")}</b></p>
+                    <p>다음 점검 예정<b className="block">{format(sharedSideDishReviewDate!, "yyyy.MM.dd")}</b></p>
+                  </div>
+                  {sharedSideDishReviewOverdue && (
+                    <p className="mt-2 text-[10px] text-[#a66a2c]">원가 점검 시점이 지났습니다.</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-[12px]">아직 설정되지 않았습니다.</p>
+                  <p className="mt-1 text-[10px] text-[#766c66]">기본 제공 찬 원가를 등록하면 실제 식재료 원가 분석에 활용할 수 있습니다.</p>
+                  {!sharedSideDishExpanded && (
+                    <button
+                      type="button"
+                      onClick={openSharedSideDishEditor}
+                      className="mt-3 text-[11px] font-semibold text-[#8b5e3c]"
+                    >
+                      설정하기
+                    </button>
+                  )}
+                </>
+              )}
+
+              {sharedSideDishExpanded && (
+                <div className="mt-3 border-t border-[#eee7e1] pt-3">
+                  <div className="space-y-3">
+                    {sharedSideDishDraft.map((item, index) => (
+                      <div key={item.id} className="rounded-[10px] border border-[#ece4de] bg-[#fdfbf9] p-3">
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_130px_auto] sm:items-end">
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-medium text-[#756961]">항목명</span>
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(event) => updateSharedSideDishDraftItem(item.id, { name: event.target.value })}
+                              className="h-10 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[12px] outline-none focus:border-[#8b5e3c]"
+                              placeholder="예: 김치"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-medium text-[#756961]">1회 기준 원가</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitCost}
+                              onChange={(event) => updateSharedSideDishDraftItem(item.id, { unitCost: Number(event.target.value) })}
+                              className="h-10 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[12px] outline-none focus:border-[#8b5e3c]"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeSharedSideDishDraftItem(item.id)}
+                            className="h-10 rounded-[8px] border border-[#efcfc9] px-3 text-[11px] font-semibold text-[#d83c35]"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                        <p className="mt-1.5 text-right text-[9px] text-[#9a8d85]">항목 {index + 1}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addSharedSideDishDraftItem}
+                    className="mt-3 text-[11px] font-semibold text-[#8b5e3c]"
+                  >
+                    + 항목 추가
+                  </button>
+
+                  <div className="mt-3 flex items-center justify-between rounded-[9px] bg-[#f8f4f0] px-3 py-2.5">
+                    <span className="text-[10px] font-medium text-[#756961]">1회 총 원가</span>
+                    <strong className="text-[13px] text-[#302722]">{formatCurrencyValue(sharedSideDishDraftTotal, country)}</strong>
+                  </div>
+
+                  {sharedSideDishSaveError && (
+                    <p className="mt-2 text-[10px] text-[#a55345]">{sharedSideDishSaveError}</p>
+                  )}
+
+                  <div className="mt-3 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closeSharedSideDishEditor}
+                      disabled={sharedSideDishSaving}
+                      className="h-10 rounded-[8px] px-3 text-[11px] font-semibold text-[#766c66] disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void saveCurrentSharedSideDishConfig()}
+                      disabled={!sharedSideDishDirty || sharedSideDishSaving}
+                      className="h-10 rounded-[8px] bg-[#8b5e3c] px-3 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {sharedSideDishSaving ? "저장 중..." : "기본 제공 찬 저장"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
         <label className="relative block">
           <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] text-[#8c7e75]" aria-hidden="true" />
           <input
