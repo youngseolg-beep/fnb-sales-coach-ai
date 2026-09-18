@@ -384,6 +384,11 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
         ...item,
         price: item.qty > 0 ? item.sales / item.qty : undefined,
       }));
+      const operationalNotes = (currentPeriodStats?.rawRows || [])
+        .map((row: any) => ({ date: String(row?.date || ""), note: String(row?.note || "").trim() }))
+        .filter((row: { date: string; note: string }) => row.date && row.note)
+        .sort((a: { date: string }, b: { date: string }) => a.date.localeCompare(b.date))
+        .slice(0, 60);
       const result = await generateCoachingReport(reportData, reportResults, menuEngineeringResult, {
         throwOnError: true,
         context: {
@@ -401,6 +406,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
             conversion: calcChangeRate(currentConversion, comparisonConversion),
           },
           topMenus,
+          operationalNotes,
         },
       });
       if (activeScopeRef.current === requestActiveScopeKey) {
@@ -412,7 +418,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       operatingCacheRef.current.set(requestActiveScopeKey, { report: result, status: "completed", error: "" });
       void saveCoachReport({
         ...requestScope, periodPreset: v4Period, status: "completed", result,
-        inputSnapshot: { current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors }, comparison: comparisonRange },
+        inputSnapshot: { current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors }, comparison: comparisonRange, operationalNotes },
       });
       showToast("코칭 리포트 생성 완료");
     } catch (error) {

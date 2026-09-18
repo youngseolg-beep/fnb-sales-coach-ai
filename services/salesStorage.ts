@@ -502,6 +502,7 @@ export async function loadDailyRange(
           sales: toNumber(row.total_sales ?? payload.totalSales, 0),
           orders: toNumber(payload.orders ?? row.orders, 0),
           visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+          note: String(payload.note ?? ""),
           categories: normalizeCategories(payload.categories ?? row.sold_items),
         };
       });
@@ -530,6 +531,7 @@ export async function loadDailyRange(
       sales: toNumber(row.total_sales ?? payload.totalSales, 0),
       orders: toNumber(payload.orders ?? row.orders, 0),
       visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+      note: String(payload.note ?? ""),
       categories: normalizeCategories(payload.categories ?? row.sold_items),
     };
   });

@@ -11,6 +11,7 @@ export type CoachingReportContext = {
   comparison: { sales: number; orders: number; visitors: number; aov: number; conversion: number } | null;
   changes: { sales: number; orders: number; visitors: number; aov: number; conversion: number };
   topMenus: Array<{ name: string; qty: number; sales: number; price?: number }>;
+  operationalNotes: Array<{ date: string; note: string }>;
 };
 
 export type CoachingReportOptions = {
@@ -333,8 +334,11 @@ export const generateCoachingReport = async (
 - Comparison KPI: ${context.comparison ? `sales ${currency} ${Math.round(context.comparison.sales)}, orders ${context.comparison.orders}, visitors ${context.comparison.visitors}, AOV ${currency} ${context.comparison.aov.toFixed(2)}, conversion ${context.comparison.conversion.toFixed(1)}%` : "not available"}
 - Change rates: sales ${context.changes.sales.toFixed(1)}%, orders ${context.changes.orders.toFixed(1)}%, visitors ${context.changes.visitors.toFixed(1)}%, AOV ${context.changes.aov.toFixed(1)}%, conversion ${context.changes.conversion.toFixed(1)}%
 - Top menus in current period: ${scopedTopMenus}
-- Use the supplied period KPI and top menus as authoritative. Do not use legacy daily categories, notes, POS/menu reconciliation, or monthly live-state values as facts.
+- Use the supplied period KPI and top menus as authoritative. Do not use legacy daily categories, POS/menu reconciliation, or monthly live-state values as facts. Operational notes explicitly supplied in this context are user-entered context, not verified causality: use conditional language, never recalculate KPI values from them, and never invent events.
 ` : "";
+  const operationalNotesText = context?.operationalNotes.length
+    ? `\n[운영 특이사항]\n${context.operationalNotes.map((item) => `${item.date} — ${item.note}`).join("\n")}\n`
+    : "";
   const legacyDailyContextAllowed = !context;
   const legacyMonthlyTargetContext = !context
     ? `- 월 목표 ${currency} ${Math.round(data.monthlyTarget)} / 누적 ${currency} ${Math.round(data.mtdSales)} / 잔여 ${currency} ${Math.round(
@@ -401,6 +405,7 @@ ${legacyMonthlyTargetContext}
 ${menuEngineeringSummary}
 
 ${periodContext}
+${operationalNotesText}
 
 [리포트 목적]
 - 점주가 바로 이해하고
