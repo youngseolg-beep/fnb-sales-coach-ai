@@ -82,12 +82,37 @@ const SalesV4Page: React.FC<Props> = ({ model, onReset, onSave }) => {
         </section>
       </div>
 
-      <section data-tour="sales-menu-qty" className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="whitespace-nowrap text-[9px] text-[#776b63]">총 판매수량 {totalMenuQty}개 · {model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}</section>
+      <section data-tour="sales-menu-qty" className="overflow-hidden rounded-[14px] border border-[#e8e1db] bg-white"><div className="flex justify-between border-b border-[#eee8e3] px-3.5 py-2.5"><h2 className="text-[13px] font-semibold">메뉴 판매량 입력</h2><span className="whitespace-nowrap text-[9px] text-[#776b63]">총 판매수량 {totalMenuQty}개 · {model.currency} 기준</span></div>{model.data.categories.map((category, categoryIndex) => { const isOpen = openCategories.includes(category.name); return <div key={category.name} className="border-b border-[#eee8e3] last:border-0"><button type="button" onClick={() => setOpenCategories((current) => isOpen ? current.filter((name) => name !== category.name) : [...current, category.name])} className="flex min-h-10 w-full items-center justify-between px-3.5 py-2 text-[12px] font-semibold"><span>{category.name} <small className="ml-1 font-normal text-[#9a9089]">{category.items.length}</small></span><i className={`fa-solid fa-chevron-${isOpen ? "up" : "down"} text-[9px] text-[#776b63]`} /></button>{isOpen && <div className="px-3.5 pb-1">{category.items.map((item, itemIndex) => <MenuQuantityRow key={item.id} item={item} categoryIndex={categoryIndex} itemIndex={itemIndex} model={model} country={country} />)}</div>}</div>; })}{model.sharedSideDishConfig && <SharedSideDishCountInput model={model} />}{!model.sharedSideDishConfigLoading && model.sharedSideDishConfigError && <p className="px-3.5 py-2.5 text-[10px] text-[#8a8079]">기본 제공 찬 설정을 확인하지 못했습니다.</p>}</section>
 
       <div data-tour="sales-save" className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/95 p-2 backdrop-blur lg:sticky lg:bottom-4 lg:rounded-xl lg:border"><div className="mx-auto grid max-w-[430px] grid-cols-2 gap-2 rounded-[11px] border border-[#e8e1db] bg-white p-1.5 shadow-[0_3px_12px_rgba(70,54,42,0.05)] lg:max-w-[1180px]"><button type="button" onClick={onReset} className="h-9 rounded-[7px] border border-[#b99983] text-[11px] font-semibold text-[#754c35]">초기화</button><button type="button" onClick={() => void handleSaveClick()} className="h-9 rounded-[7px] bg-[#8b5e3c] text-[11px] font-semibold text-white">저장하기</button></div></div>
     </main>
   );
 };
+
+const SharedSideDishCountInput: React.FC<{ model: SalesV4InputModel }> = ({ model }) => (
+  <div className="border-t border-[#eee8e3] bg-[#fdfbf9] px-3.5 py-3">
+    <div className="grid grid-cols-[1fr_116px] items-center gap-3">
+      <div>
+        <h3 className="text-[12px] font-semibold text-[#302722]">기본 제공 찬</h3>
+        <p className="mt-0.5 text-[9px] text-[#766c66]">해당 날짜의 기본 제공 찬 원가 설정이 적용됩니다.</p>
+      </div>
+      <label className="relative block">
+        <span className="sr-only">기본 제공 찬 제공 횟수</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min="0"
+          step="1"
+          value={Number(model.data.sharedSideDishCount) || ""}
+          onChange={(event) => model.updateBaseField("sharedSideDishCount", Number(event.target.value))}
+          className="h-9 w-full rounded-[8px] border border-[#dcd7d3] bg-white px-3 pr-7 text-right text-[12px] outline-none focus:border-[#8b5e3c]"
+          placeholder="0"
+        />
+        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-[#6f6258]">회</span>
+      </label>
+    </div>
+  </div>
+);
 
 const CompactOcrReview: React.FC<{ model: SalesV4InputModel; failedFileCount: number; country?: string }> = ({ model, failedFileCount, country }) => {
   const currencyStatus = model.receiptCurrencyValidation.status;

@@ -12,6 +12,10 @@ import {
 import { formatLocalDate, parseLocalDate } from "../utils2/date";
 import { getCurrencyByCountry, formatCurrencyValue } from "../utils2/currency";
 import { supabase } from "../services/supabaseClient";
+import {
+  loadSharedSideDishConfigForDate,
+  type SharedSideDishConfig,
+} from "../services/sharedSideDishService";
 
 interface DataInputProps {
   data: SalesReportData;
@@ -34,6 +38,9 @@ export type SalesV4InputModel = {
   enteredSalesTotal: number;
   menuSalesTotal: number;
   salesGap: number;
+  sharedSideDishConfig: SharedSideDishConfig | null;
+  sharedSideDishConfigLoading: boolean;
+  sharedSideDishConfigError: string;
   updateBaseField: (field: keyof SalesReportData, value: any) => void;
   updateQty: (categoryIndex: number, itemIndex: number, qty: number) => void;
   getDineInQty: (item: any) => number;
@@ -614,12 +621,42 @@ const DataInput: React.FC<DataInputProps> = ({
   renderV4,
 }) => {
   const currency = getCurrencyByCountry((data as any).country);
+  const [sharedSideDishConfig, setSharedSideDishConfig] = useState<SharedSideDishConfig | null>(null);
+  const [sharedSideDishConfigLoading, setSharedSideDishConfigLoading] = useState(false);
+  const [sharedSideDishConfigError, setSharedSideDishConfigError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setSharedSideDishConfigLoading(true);
+    setSharedSideDishConfigError("");
+    setSharedSideDishConfig(null);
+
+    void loadSharedSideDishConfigForDate(storeId, data.date)
+      .then((config) => {
+        if (!cancelled) setSharedSideDishConfig(config);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("loadSharedSideDishConfigForDate error:", error);
+        setSharedSideDishConfigError("기본 제공 찬 설정을 확인하지 못했습니다.");
+      })
+      .finally(() => {
+        if (!cancelled) setSharedSideDishConfigLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, data.date]);
 
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
-    if (["posSales", "deliverySales", "orders", "visitCount", "toppingQty"].includes(field)) {
+    if (["posSales", "deliverySales", "orders", "visitCount", "toppingQty", "sharedSideDishCount"].includes(field)) {
       const numericValue = Number(value);
       if (!Number.isFinite(numericValue) || numericValue < 0) return;
-      onChange({ ...data, [field]: numericValue });
+      onChange({
+        ...data,
+        [field]: field === "sharedSideDishCount" ? Math.max(0, Math.trunc(numericValue)) : numericValue,
+      });
       return;
     }
     onChange({ ...data, [field]: value });
@@ -1671,6 +1708,9 @@ const callOcrWithRetry = async (
       enteredSalesTotal,
       menuSalesTotal,
       salesGap,
+      sharedSideDishConfig,
+      sharedSideDishConfigLoading,
+      sharedSideDishConfigError,
       updateBaseField,
       updateQty,
       getDineInQty,
