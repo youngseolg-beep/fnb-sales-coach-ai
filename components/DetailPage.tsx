@@ -1,8 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subDays } from "date-fns";
 
-import ReportDisplay from "./ReportDisplay";
-import PeriodMenuAnalysisSection from "./PeriodMenuAnalysisSection";
 import CoachV4Page from "./CoachV4Page";
 import type { PeriodMenuRow } from "./PeriodTopMenuCompare";
 
@@ -57,14 +55,6 @@ const getPresetPeriodRange = (period: "yesterday" | "week" | "month") => {
     return { start: formatLocalDate(monday), end: yesterday };
   }
   return { start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: yesterday };
-};
-
-const getInclusiveDayCountFromStrings = (start: string, end: string) => {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  startDate.setHours(0, 0, 0, 0);
-  endDate.setHours(0, 0, 0, 0);
-  return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 };
 
 const aggregateMenusFromRows = (rows: any[]): PeriodMenuRow[] => {
@@ -571,13 +561,6 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     }
   };
 
-  const selectedPeriodDays = useMemo(() => {
-    if (!periodRange.start || !periodRange.end) return 0;
-    return getInclusiveDayCountFromStrings(periodRange.start, periodRange.end);
-  }, [periodRange.start, periodRange.end]);
-
-  const canRunPeriodAnalysis = selectedPeriodDays >= 7;
-
   useEffect(() => {
     void fetchPeriodStats();
   }, [periodRange.start, periodRange.end, comparisonRange?.start, comparisonRange?.end, storeId]);
@@ -596,9 +579,6 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     const list = periodStats?.comparisonList || [];
     return aggregateMenusFromRows(list);
   }, [periodStats]);
-
-  const currentPeriodDays = Number(currentPeriodStats?.rows || 0);
-  const comparisonPeriodDays = Number(comparisonStats?.rows || 0);
 
   const sortedMenuEngineering = useMemo(() => {
     if (!menuEngineeringResult) return null;
@@ -1151,161 +1131,6 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       }
       onPeriodChange={handleV4PeriodChange}
     />
-  );
-
-  return (
-    <div className="mx-auto max-w-[760px] space-y-5 pb-28 text-[#1f1f1f]">
-      {/* 1. 프리미엄 페이지 타이틀 섹션 */}
-      <section ref={insightSectionRef} className="flex flex-col gap-4 rounded-[20px] border border-[#e8e1db] bg-white px-5 py-5 shadow-[0_6px_18px_rgba(70,54,42,0.04)] md:flex-row md:items-center md:justify-between md:px-8 md:py-7">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-[#e7ddff] bg-[linear-gradient(135deg,#f1eeff_0%,#e2dcff_100%)] shadow-sm">
-            <span className="text-2xl">✨</span>
-          </div>
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c6cf6]">
-              Insight Detail
-            </div>
-            <h2 className="mt-1 text-[22px] font-bold tracking-[-0.04em] text-[#1f1f1f] md:text-[26px]">
-              매출 분석 & AI 코칭
-            </h2>
-            <p className="mt-1 text-[13px] font-medium text-slate-500">
-              오늘의 리포트와 기간별 성과를 심층 분석합니다.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. AI 코칭 리포트 패널 (비서 느낌의 UI) */}
-      <section id="coach-report" className="relative overflow-hidden rounded-[20px] border border-[#e5def7] bg-white shadow-[0_8px_22px_rgba(70,54,42,0.055)]">
-        {/* 패널 헤더 */}
-        <div className="border-b border-[#eee8fa] bg-[linear-gradient(110deg,#fbfaff_0%,#f4f1ff_100%)] px-5 py-5 md:px-8 md:py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-[#7c6cf6] text-white shadow-[0_5px_12px_rgba(124,108,246,0.24)]">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                {/* 반짝이는 점 */}
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500 border border-white"></span>
-                </span>
-              </span>
-              <div>
-                <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-500">
-                  AI Report
-                </div>
-                <div className="text-[16px] font-extrabold text-slate-900 md:text-[18px]">
-                  AI 운영 코칭 리포트
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-3 sm:items-end">
-              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm border border-slate-100 text-[11px] font-bold text-slate-500">
-                <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                기준일: <span className="text-slate-900">{selectedDate}</span>
-              </div>
-
-              <button
-                ref={reportActionRef}
-                type="button"
-                onClick={handleGenerateReport}
-                disabled={operatingLoading}
-                className="group relative inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#7c6cf6] px-6 text-[13px] font-semibold text-white shadow-[0_6px_14px_rgba(124,108,246,0.22)] transition hover:bg-[#6958db] disabled:bg-[#ccc6ec] sm:w-auto"
-              >
-                {operatingLoading ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>데이터 분석 및 리포트 작성 중...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>코칭 리포트 생성하기</span>
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 패널 본문 (리포트 또는 Empty State) */}
-        <div className="p-5 md:p-8">
-          {operatingLoading ? (
-            /* 스켈레톤 로딩 애니메이션 */
-            <div className="animate-pulse space-y-6 py-4">
-              <div className="h-4 w-1/4 rounded-full bg-slate-200"></div>
-              <div className="space-y-3">
-                <div className="h-3 w-3/4 rounded-full bg-slate-100"></div>
-                <div className="h-3 w-5/6 rounded-full bg-slate-100"></div>
-                <div className="h-3 w-2/3 rounded-full bg-slate-100"></div>
-              </div>
-              <div className="space-y-3 pt-4">
-                <div className="h-4 w-1/3 rounded-full bg-slate-200"></div>
-                <div className="h-24 w-full rounded-xl bg-slate-50"></div>
-              </div>
-            </div>
-          ) : isShowingCurrentDateReport ? (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <ReportDisplay
-                report={report}
-                loading={false}
-                menuEngineeringResult={null}
-                sortedMenuEngineering={null}
-                boostPlans={[]}
-              />
-            </div>
-          ) : (
-            /* 매력적인 Empty State */
-            <div className="flex flex-col items-center justify-center rounded-[18px] border border-dashed border-[#ddd5f6] bg-[#fbfaff] py-16 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-500 mb-4">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-              </div>
-              <h3 className="text-[16px] font-bold text-slate-800 md:text-[18px]">AI 코치가 데이터를 분석할 준비가 되었습니다</h3>
-              <p className="mt-2 max-w-sm text-[13px] font-medium text-slate-500 leading-relaxed">
-                해당 날짜의 판매 데이터를 바탕으로 원가 절감과 매출 증대를 위한 핵심 인사이트를 즉시 생성합니다.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 3. 하단 기간 분석 섹션 (기존 유지) */}
-      <PeriodMenuAnalysisSection
-        storeId={storeId}
-        periodRange={periodRange}
-        setPeriodRange={setPeriodRange}
-        comparisonMode={comparisonMode}
-        setComparisonMode={setComparisonMode}
-        comparisonRange={comparisonRange}
-        setComparisonRange={setComparisonRange}
-        canRunPeriodAnalysis={canRunPeriodAnalysis}
-        currentPeriodStats={currentPeriodStats}
-        comparisonStats={comparisonStats}
-        salesChangeRate={salesChangeRate}
-        ordersChangeRate={ordersChangeRate}
-        visitorsChangeRate={visitorsChangeRate}
-        aovChangeRate={aovChangeRate}
-        periodLoading={periodLoading}
-        selectedPeriodDays={selectedPeriodDays}
-        loadCurrentPeriodData={loadCurrentPeriodData}
-        loadComparisonData={loadComparisonData}
-        fetchPeriodStats={fetchPeriodStats}
-        calculateMenuEngineeringForRange={calculateMenuEngineeringForRange}
-        setMenuEngineeringResult={setMenuEngineeringResult}
-        data={data}
-        currentPeriodMenus={currentPeriodMenus}
-        comparisonPeriodMenus={comparisonPeriodMenus}
-        currentPeriodDays={currentPeriodDays}
-        comparisonPeriodDays={comparisonPeriodDays}
-        sortedMenuEngineering={sortedMenuEngineering}
-        boostPlans={boostPlans}
-        periodStats={periodStats}
-        showToast={showToast}
-      />
-    </div>
   );
 };
 
