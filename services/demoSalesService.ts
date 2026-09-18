@@ -129,6 +129,7 @@ const buildDemoPayload = (date: string, menus: DemoMenu[]): DailyPayload => {
     orders,
     visitCount,
     toppingQty: 0,
+    sharedSideDishCount: 0,
     note: "",
     categories,
     totalSales,

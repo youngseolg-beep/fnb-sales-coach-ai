@@ -241,6 +241,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
       orders: 0,
       visitCount: 0,
       toppingQty: 0,
+      sharedSideDishCount: 0,
       monthlyTarget: 0,
       menuSales: {},
       categories: cloneCategories(INITIAL_CATEGORIES),
@@ -401,6 +402,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         let nextDeliverySales = 0;
         let nextOrders = 0;
         let nextVisitCount = 0;
+        let nextSharedSideDishCount = 0;
         let nextNote = "";
 
         if (dbData) {
@@ -409,6 +411,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           nextDeliverySales = toSafeNumber((dbData as any).deliverySales, 0);
           nextOrders = toSafeNumber((dbData as any).orders, 0);
           nextVisitCount = toSafeNumber((dbData as any).visitCount, 0);
+          nextSharedSideDishCount = toSafeNumber((dbData as any).sharedSideDishCount, 0);
           nextNote = String((dbData as any).note ?? "");
         } else {
           nextCategories = createEmptyCategoriesFromBase(activeBaseCategories);
@@ -455,6 +458,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           deliverySales: nextDeliverySales,
           orders: nextOrders,
           visitCount: nextVisitCount,
+          sharedSideDishCount: nextSharedSideDishCount,
           note: nextNote,
           categories: cloneCategories(nextCategories),
         }));

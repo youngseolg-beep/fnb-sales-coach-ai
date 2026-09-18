@@ -11,6 +11,7 @@ export type DailyPayload = {
   orders: number;
   visitCount: number;
   toppingQty?: number;
+  sharedSideDishCount?: number;
   note?: string;
   monthlyTarget?: number | string;
   categories?: MenuCategory[];
@@ -39,6 +40,15 @@ const validateDailyPayload = (payload: DailyPayload) => {
 
   if (payload.totalSales !== undefined && !isValidNonNegativeNumber(payload.totalSales)) {
     return "총매출에는 0 이상의 숫자만 입력할 수 있습니다.";
+  }
+
+  if (
+    payload.sharedSideDishCount !== undefined &&
+    (!Number.isFinite(payload.sharedSideDishCount) ||
+      !Number.isInteger(payload.sharedSideDishCount) ||
+      payload.sharedSideDishCount < 0)
+  ) {
+    return "기본 제공 찬 제공 횟수에는 0 이상의 정수만 입력할 수 있습니다.";
   }
 
   if (Array.isArray(payload.categories) && payload.categories.some((category) =>
@@ -111,6 +121,7 @@ const buildDbRow = (payload: DailyPayload, storeId: number) => {
   const orders = toNumber(payload.orders, 0);
   const visitCount = toNumber(payload.visitCount, 0);
   const toppingQty = toNumber(payload.toppingQty, 0);
+  const sharedSideDishCount = toNumber(payload.sharedSideDishCount, 0);
   const note = String(payload.note ?? "");
   const totalSales =
     payload.totalSales !== undefined
@@ -132,6 +143,7 @@ const buildDbRow = (payload: DailyPayload, storeId: number) => {
       orders,
       visitCount,
       toppingQty,
+      sharedSideDishCount,
       note,
       categories: safeCategories,
       totalSales,
@@ -151,6 +163,7 @@ const mapRowToDaily = (row: any) => {
     orders: toNumber(payload?.orders ?? row?.orders, 0),
     visitCount: toNumber(payload?.visitCount ?? row?.visit_count, 0),
     toppingQty: toNumber(payload?.toppingQty, 0),
+    sharedSideDishCount: toNumber(payload?.sharedSideDishCount, 0),
     note: String(payload?.note ?? ""),
     categories: normalizeCategories(payload?.categories ?? row?.sold_items),
     menuSales: payload?.menuSales ?? {},
@@ -352,6 +365,7 @@ export async function listDatesInMonth(yearMonth: string, storeId: number) {
       toNumber(payload.orders, 0) > 0 ||
       toNumber(payload.visitCount, 0) > 0 ||
       toNumber(payload.toppingQty, 0) > 0 ||
+      toNumber(payload.sharedSideDishCount, 0) > 0 ||
       String(payload.note ?? "").trim().length > 0;
 
     const categories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -502,6 +516,7 @@ export async function loadDailyRange(
           sales: toNumber(row.total_sales ?? payload.totalSales, 0),
           orders: toNumber(payload.orders ?? row.orders, 0),
           visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+          sharedSideDishCount: toNumber(payload.sharedSideDishCount, 0),
           note: String(payload.note ?? ""),
           categories: normalizeCategories(payload.categories ?? row.sold_items),
         };
@@ -531,6 +546,7 @@ export async function loadDailyRange(
       sales: toNumber(row.total_sales ?? payload.totalSales, 0),
       orders: toNumber(payload.orders ?? row.orders, 0),
       visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
+      sharedSideDishCount: toNumber(payload.sharedSideDishCount, 0),
       note: String(payload.note ?? ""),
       categories: normalizeCategories(payload.categories ?? row.sold_items),
     };

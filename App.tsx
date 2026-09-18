@@ -468,6 +468,7 @@ const App: React.FC = () => {
         deliverySales: 0,
         orders: 0,
         visitCount: 0,
+        sharedSideDishCount: 0,
         note: "",
         categories: resetCats,
       }));

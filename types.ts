@@ -18,6 +18,7 @@ export interface SalesReportData {
   visitCount: number;
   deliverySales?: number;
   toppingQty: number;
+  sharedSideDishCount: number;
   note: string;
   monthlyTarget: number;
   mtdSales: number;

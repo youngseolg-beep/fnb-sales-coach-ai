@@ -161,6 +161,7 @@ const DailySalesPage: React.FC<Props> = ({
       Number(v.orders || 0) > 0 ||
       Number(v.visitCount || 0) > 0 ||
       Number(v.toppingQty || 0) > 0 ||
+      Number(v.sharedSideDishCount || 0) > 0 ||
       String(v.note || "").trim().length > 0;
 
     const hasMenu = v.categories.some((cat) => cat.items.some((item) => Number(item.qty || 0) > 0));
