@@ -346,7 +346,7 @@ export const generateCoachingReport = async (
 [원가 기준 수익성 - 확정 계산값]
 - 기간 매출: ${currency} ${Math.round(context.foodCost.periodSales).toLocaleString()}
 - 직접 메뉴 원가: ${currency} ${Math.round(context.foodCost.directMenuCost).toLocaleString()}
-- 공용 반찬 원가: ${currency} ${Math.round(context.foodCost.sharedSideDishCost).toLocaleString()}
+- 기본 제공 찬 원가: ${currency} ${Math.round(context.foodCost.sharedSideDishCost).toLocaleString()}
 - 총 식재료 원가: ${currency} ${Math.round(context.foodCost.totalFoodCost).toLocaleString()}
 - 식재료 원가율: ${context.foodCost.foodCostRate.toFixed(1)}%
 - 원가 기준 이익: ${currency} ${Math.round(context.foodCost.grossProfitBeforeOtherExpenses).toLocaleString()}
@@ -356,7 +356,7 @@ export const generateCoachingReport = async (
 - 원가 기준 이익은 매출에서 식재료 원가만 차감한 값이다. "순이익", "영업이익", net profit, operating profit, EBITDA로 표현하지 않는다.
 - 인건비, 임차료, 카드·결제·배달 수수료, 세금, 공과금 및 기타 운영비는 포함되지 않았으며, 차감되었다고 암시하거나 추정하지 않는다.
 - 별도 목표나 벤치마크가 제공되지 않았으므로 식재료 원가율을 높음·낮음 또는 업계·목표 대비로 단정하지 않는다.
-- 공용 반찬 원가는 매장·기간 단위 비용이다. 구성 일관성, 낭비, 준비, 제공량, 반찬 관리 검토는 제안할 수 있으나 특정 판매 메뉴에 배분하거나 특정 메뉴가 원인이라고 단정하지 않으며 낭비율·수량을 발명하지 않는다.
+- 기본 제공 찬 원가는 매장·기간 단위 비용이다. 구성 일관성, 낭비, 준비, 제공량, 반찬 관리 검토는 제안할 수 있으나 특정 판매 메뉴에 배분하거나 특정 메뉴가 원인이라고 단정하지 않으며 낭비율·수량을 발명하지 않는다.
 `
     : "";
   const legacyDailyContextAllowed = !context;
