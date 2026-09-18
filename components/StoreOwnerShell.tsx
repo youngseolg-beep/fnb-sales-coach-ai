@@ -3,6 +3,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { formatCurrencyValue } from "../utils2/currency";
 import { formatLocalDate } from "../utils2/date";
+import { GuidedTourProvider, useGuidedTour } from "./GuidedTour";
 
 export type StoreOwnerPageKey = "summary" | "sales" | "detail" | "menu" | "more";
 
@@ -82,6 +83,11 @@ const formatMonthTitle = (date: Date) => {
 
 const formatWeekdayShort = (date: Date) => {
   return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+};
+
+const ContextualHelpButton = () => {
+  const { startCurrentTour } = useGuidedTour();
+  return <button type="button" onClick={startCurrentTour} className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#e4d8cf] bg-white px-2.5 text-[10px] font-semibold text-[#76503c] shadow-[0_2px_6px_rgba(70,54,42,0.03)] hover:bg-[#fffaf7]"><i className="fa-regular fa-circle-question text-[11px]" /> 화면 가이드</button>;
 };
 
 export default function StoreOwnerShell({
@@ -242,10 +248,11 @@ export default function StoreOwnerShell({
   }, [selectedDate, visibleStartDate]);
 
   return (
+    <GuidedTourProvider currentPage={currentPage} onChangePage={onChangePage}>
     <div className="min-h-screen bg-[#faf8f6] pb-[calc(env(safe-area-inset-bottom)+96px)] text-[#1f1f1f] sm:pb-[calc(env(safe-area-inset-bottom)+100px)] lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:pb-0">
       <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-[#e8e1db] lg:bg-white lg:p-5">
         <div className="mb-8"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8b5e3c]">Sales Coach AI</p><h1 className="mt-2 text-xl font-bold text-[#302a26]">Store Owner</h1></div>
-        <nav className="space-y-1.5">{MENU_ITEMS.map((item) => <button key={item.key} type="button" onClick={() => onChangePage(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors ${item.key === currentPage ? "bg-[#f4ede8] text-[#7b513a]" : "text-[#675d57] hover:bg-[#faf7f4]"}`}><i className={`${item.icon} w-4 text-center`} /><span>{item.label}</span></button>)}</nav>
+        <nav className="space-y-1.5">{MENU_ITEMS.map((item) => <button key={item.key} type="button" data-tour={item.key === "sales" ? "nav-sales" : item.key === "detail" ? "nav-coach" : undefined} onClick={() => onChangePage(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors ${item.key === currentPage ? "bg-[#f4ede8] text-[#7b513a]" : "text-[#675d57] hover:bg-[#faf7f4]"}`}><i className={`${item.icon} w-4 text-center`} /><span>{item.label}</span></button>)}</nav>
         <button type="button" onClick={onLogout} className="mt-auto flex items-center gap-3 rounded-xl border border-[#e7ddd6] px-3 py-3 text-left text-sm font-semibold text-[#76503c] hover:bg-[#fffaf7]"><i className="fa-solid fa-right-from-bracket w-4 text-center" /><span>Logout</span></button>
       </aside>
       <div className="min-w-0">
@@ -254,7 +261,7 @@ export default function StoreOwnerShell({
           {currentPage === "sales" ? (
             <div className="flex h-14 items-center justify-between border-b border-[#eee8e3] bg-white px-2 sm:px-4">
               <div className="flex items-center gap-3"><i className="fa-solid fa-arrow-left text-[15px] text-[#2e2824]" /><span className="text-[18px] font-bold tracking-[-0.05em] text-[#1f1f1f]">매출 입력</span></div>
-              <button ref={calendarButtonRef} type="button" onClick={toggleCalendar} className="relative z-[10000] inline-flex h-9 items-center gap-2 rounded-[9px] border border-[#e3d9d2] bg-white px-3 text-[11px] font-semibold text-[#3d342f]">
+              <button ref={calendarButtonRef} type="button" data-tour="sales-date" onClick={toggleCalendar} className="relative z-[10000] inline-flex h-9 items-center gap-2 rounded-[9px] border border-[#e3d9d2] bg-white px-3 text-[11px] font-semibold text-[#3d342f]">
                 <span>{selectedDate}</span><i className="fa-regular fa-calendar text-[12px] text-[#5d4b3e]" />
               </button>
             </div>
@@ -434,7 +441,7 @@ export default function StoreOwnerShell({
       )}
 
       <main className={`mx-auto ${currentPage === "summary" ? "max-w-[430px] px-5 py-5 sm:px-5 lg:max-w-[1240px] lg:px-8 lg:py-8" : "max-w-7xl px-3 py-5 sm:px-6 sm:py-7 lg:max-w-[1280px] lg:px-8 lg:py-8"}`}>
-        <div className="mb-2 text-[10px] font-medium text-[#81766d]">현지 오늘 · {localToday.replace(/-/g, ".")}</div>
+        <div className="mb-2 flex items-center justify-between gap-2"><div className="text-[10px] font-medium text-[#81766d]">현지 오늘 · {localToday.replace(/-/g, ".")}</div><ContextualHelpButton /></div>
         {children}
       </main>
 
@@ -448,6 +455,7 @@ export default function StoreOwnerShell({
               <button
                 key={item.key}
                 type="button"
+                data-tour={item.key === "sales" ? "nav-sales" : item.key === "detail" ? "nav-coach" : undefined}
                 onClick={() => onChangePage(item.key)}
                 className={[
                   "flex h-11 flex-col items-center justify-center rounded-xl text-[#796f68] transition-colors",
@@ -471,5 +479,6 @@ export default function StoreOwnerShell({
       </nav>
       </div>
     </div>
+    </GuidedTourProvider>
   );
 }

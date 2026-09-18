@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useGuidedTour } from "./GuidedTour";
 
 type Props = {
   onLogout: () => void;
@@ -33,12 +34,13 @@ const StoreDetail = ({ label, value }: { label: string; value?: string | null })
 
 export default function MorePage({ onLogout, storeName, brand, country, currency }: Props) {
   const [openGuide, setOpenGuide] = useState<string | null>(null);
+  const { startCurrentTour, startWorkflowTour } = useGuidedTour();
 
   return (
     <div className="mx-auto max-w-[430px] space-y-7 pb-28 pt-3 lg:max-w-[680px] lg:pb-8">
       <section className="px-2">
         <h1 className="text-[28px] font-bold tracking-[-0.055em] text-[#1f1f1f]">More</h1>
-        <div className="mt-4 rounded-[20px] border border-[#e9e1da] bg-white p-4 shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
+        <div data-tour="more-store-info" className="mt-4 rounded-[20px] border border-[#e9e1da] bg-white p-4 shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#ead6bd_0%,#9d7254_100%)] text-white"><i className="fa-solid fa-store text-base" /></span>
             <div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b6f5b]">Store Owner</p><p className="mt-0.5 truncate text-[18px] font-semibold tracking-[-0.03em] text-[#27211e]">{storeName || "-"}</p></div>
@@ -48,8 +50,9 @@ export default function MorePage({ onLogout, storeName, brand, country, currency
       </section>
 
       <section>
-        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">사용 가이드</h2>
-        <div className="mt-3 divide-y divide-[#f0ebe6] overflow-hidden rounded-[18px] border border-[#ece7e1] bg-white shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
+        <div data-tour="more-onboarding" className="rounded-[18px] border border-[#e9e1da] bg-white px-4 py-3.5 shadow-[0_5px_16px_rgba(70,54,42,0.035)]"><p className="text-[14px] font-semibold text-[#3d3028]">Sales Coach AI 둘러보기</p><p className="mt-1 text-[11px] leading-4 text-[#786e67]">처음 사용한다면 주요 화면과 업무 흐름을 따라가며 확인해 보세요.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={startCurrentTour} className="h-8 rounded-lg border border-[#d9c6b8] bg-[#fffdfb] px-3 text-[10px] font-semibold text-[#76503c]">현재 화면 가이드</button><button type="button" onClick={startWorkflowTour} className="h-8 rounded-lg bg-[#8b5e3c] px-3 text-[10px] font-semibold text-white">처음부터 둘러보기</button></div></div>
+        <h2 className="mt-7 px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">빠른 도움말</h2>
+        <div data-tour="more-quick-help" className="mt-3 divide-y divide-[#f0ebe6] overflow-hidden rounded-[18px] border border-[#ece7e1] bg-white shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
           {guideItems.map((item) => {
             const isOpen = openGuide === item.title;
             return <div key={item.title}>
@@ -66,7 +69,7 @@ export default function MorePage({ onLogout, storeName, brand, country, currency
 
       <section>
         <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">AI 분석 안내</h2>
-        <div className="mt-3 rounded-[18px] border border-[#e8e0f4] bg-[#fcfaff] px-4 py-3.5 text-[12px] leading-5 text-[#625b70]"><div className="flex gap-2.5"><i className="fa-solid fa-wand-magic-sparkles mt-1 text-[#8067a8]" /><div><p>AI 분석은 입력된 매출·메뉴 데이터를 기반으로 운영 참고안을 제공합니다. 데이터가 부족하거나 AI 응답을 확인할 수 없는 경우 분석이 제한될 수 있으며, 화면에 사유가 표시됩니다.</p><p className="mt-2 font-medium text-[#51475e]">최종 가격·프로모션 결정은 매장의 실제 원가와 운영 상황을 확인한 뒤 진행해 주세요.</p></div></div></div>
+        <div data-tour="more-ai-notice" className="mt-3 rounded-[18px] border border-[#e8e0f4] bg-[#fcfaff] px-4 py-3.5 text-[12px] leading-5 text-[#625b70]"><div className="flex gap-2.5"><i className="fa-solid fa-wand-magic-sparkles mt-1 text-[#8067a8]" /><div><p>AI 분석은 입력된 매출·메뉴 데이터를 기반으로 운영 참고안을 제공합니다. 데이터가 부족하거나 AI 응답을 확인할 수 없는 경우 분석이 제한될 수 있으며, 화면에 사유가 표시됩니다.</p><p className="mt-2 font-medium text-[#51475e]">최종 가격·프로모션 결정은 매장의 실제 원가와 운영 상황을 확인한 뒤 진행해 주세요.</p></div></div></div>
       </section>
 
       <section>
@@ -74,7 +77,7 @@ export default function MorePage({ onLogout, storeName, brand, country, currency
         <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-[#ece7e1] bg-white px-4 py-3.5 shadow-[0_5px_16px_rgba(70,54,42,0.035)]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#a8866b_0%,#6f4027_100%)] text-white"><i className="fa-solid fa-chart-simple" /></span><span className="min-w-0"><span className="block text-[14px] font-semibold text-[#28221e]">Sales Coach AI</span><span className="mt-0.5 block text-[11px] leading-4 text-[#857970]">Store Owner Pilot · 매출 입력부터 메뉴 분석과 실행 플랜까지 연결하는 매장 운영 지원 도구</span></span></div>
       </section>
 
-      <button type="button" onClick={onLogout} className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[#f1d8d3] bg-white text-[15px] font-semibold text-[#d83a32] transition hover:bg-[#fff7f5]"><i className="fa-solid fa-right-from-bracket" /> 로그아웃</button>
+      <button type="button" data-tour="more-logout" onClick={onLogout} className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[#f1d8d3] bg-white text-[15px] font-semibold text-[#d83a32] transition hover:bg-[#fff7f5]"><i className="fa-solid fa-right-from-bracket" /> 로그아웃</button>
     </div>
   );
 }

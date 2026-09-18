@@ -829,7 +829,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           })}
         </div>
 
-        <div className="space-y-3">
+        <div data-tour="menu-list" className="space-y-3">
           {filteredCategories.map(({ category, categoryIndex, items }) => (
             <div key={category.name}>
               <div className="mb-2 flex items-center justify-between px-0.5">
@@ -845,7 +845,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 onDragCancel={handleCategoryDragCancel}
               >
                 <SortableContext items={category.items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
+                  <div data-tour="menu-price-cost" className="space-y-2">
                   {items.map(({ item, itemIndex }) => {
                     const originalItem = originalItemMap.get(item.id);
                     const changed =
@@ -886,7 +886,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
           )}
         </div>
 
-        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-0 right-0 z-[10000] mx-auto w-full max-w-[430px] px-3 lg:bottom-6 lg:max-w-[1180px]">
+        <div data-tour="menu-save" className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-0 right-0 z-[10000] mx-auto w-full max-w-[430px] px-3 lg:bottom-6 lg:max-w-[1180px]">
           <div className="rounded-[14px] border border-[#e2d8d0] bg-white/96 p-2 shadow-[0_8px_20px_rgba(70,54,42,0.11)] backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
