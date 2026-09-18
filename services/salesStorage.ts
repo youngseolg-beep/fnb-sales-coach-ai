@@ -1,4 +1,5 @@
 import type { MenuCategory } from "../types";
+import { loadSharedSideDishConfigForDate } from "./sharedSideDishService";
 import { supabase } from "./supabaseClient";
 
 const TABLE = "sales_daily";
@@ -191,6 +192,26 @@ export async function saveDaily(payload: DailyPayload, storeId: number) {
       ok: true,
       success: true,
       data: row,
+    };
+  }
+
+  try {
+    const sharedSideDishConfig = await loadSharedSideDishConfigForDate(storeId, payload.date);
+    if (sharedSideDishConfig) {
+      const sales = Number(payload.posSales || 0) + Number(payload.deliverySales || 0);
+      const orders = Number(payload.orders || 0);
+      const count = Number(payload.sharedSideDishCount || 0);
+
+      if ((sales > 0 || orders > 0) && (!Number.isInteger(count) || count < 1)) {
+        return { ok: false, success: false, error: new Error("기본 제공 찬 제공 횟수를 입력해주세요.") };
+      }
+    }
+  } catch (error) {
+    console.error("SHARED SIDE DISH CONFIG CHECK ERROR:", error);
+    return {
+      ok: false,
+      success: false,
+      error: new Error("기본 제공 찬 설정을 확인하지 못했습니다. 다시 시도해주세요."),
     };
   }
 

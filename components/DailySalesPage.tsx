@@ -168,6 +168,16 @@ const DailySalesPage: React.FC<Props> = ({
     return hasBase || hasMenu;
   };
 
+  const getSharedSideDishSaveMessage = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return [
+      "기본 제공 찬 제공 횟수를 입력해주세요.",
+      "기본 제공 찬 설정을 확인하지 못했습니다. 다시 시도해주세요.",
+    ].includes(message)
+      ? message
+      : null;
+  };
+
   useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
 
@@ -708,6 +718,7 @@ const DailySalesPage: React.FC<Props> = ({
             Number(newData.orders || 0) !== Number(currentData.orders || 0) ||
             Number(newData.visitCount || 0) !== Number(currentData.visitCount || 0) ||
             Number(newData.toppingQty || 0) !== Number(currentData.toppingQty || 0) ||
+            Number(newData.sharedSideDishCount || 0) !== Number(currentData.sharedSideDishCount || 0) ||
             String(newData.note || "") !== String(currentData.note || "") ||
             JSON.stringify(newData.categories) !== JSON.stringify(currentData.categories);
 
@@ -761,7 +772,7 @@ const DailySalesPage: React.FC<Props> = ({
         } catch (error: any) {
           console.error("Auto save before date change failed:", error);
           setSaveStatus(`날짜 변경 전 자동 저장 실패: ${error?.message || "알 수 없는 오류"}`);
-          showToast("날짜 변경 전 자동 저장에 실패했습니다.");
+          showToast(getSharedSideDishSaveMessage(error) || "날짜 변경 전 자동 저장에 실패했습니다.");
         }
       };
 
@@ -778,6 +789,7 @@ const DailySalesPage: React.FC<Props> = ({
       Number(newData.orders || 0) !== Number(data.orders || 0) ||
       Number(newData.visitCount || 0) !== Number(data.visitCount || 0) ||
       Number(newData.toppingQty || 0) !== Number(data.toppingQty || 0) ||
+      Number(newData.sharedSideDishCount || 0) !== Number(data.sharedSideDishCount || 0) ||
       String(newData.note || "") !== String(data.note || "");
 
     const monthlyTargetChanged =
@@ -868,7 +880,7 @@ const DailySalesPage: React.FC<Props> = ({
     } catch (error: any) {
       console.error("Save Error:", error);
       setSaveStatus(`저장 중 오류: ${error?.message || "알 수 없는 오류"}`);
-      if (!silent) showToast("저장 중 오류가 발생했습니다.");
+      if (!silent) showToast(getSharedSideDishSaveMessage(error) || "저장 중 오류가 발생했습니다.");
       return false;
     }
   };

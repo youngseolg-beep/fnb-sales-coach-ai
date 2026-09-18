@@ -624,16 +624,22 @@ const DataInput: React.FC<DataInputProps> = ({
   const [sharedSideDishConfig, setSharedSideDishConfig] = useState<SharedSideDishConfig | null>(null);
   const [sharedSideDishConfigLoading, setSharedSideDishConfigLoading] = useState(false);
   const [sharedSideDishConfigError, setSharedSideDishConfigError] = useState("");
+  const [sharedSideDishCountManuallyEdited, setSharedSideDishCountManuallyEdited] = useState(false);
+  const sharedSideDishConfigDateRef = useRef("");
 
   useEffect(() => {
     let cancelled = false;
     setSharedSideDishConfigLoading(true);
     setSharedSideDishConfigError("");
     setSharedSideDishConfig(null);
+    sharedSideDishConfigDateRef.current = "";
 
     void loadSharedSideDishConfigForDate(storeId, data.date)
       .then((config) => {
-        if (!cancelled) setSharedSideDishConfig(config);
+        if (!cancelled) {
+          sharedSideDishConfigDateRef.current = data.date;
+          setSharedSideDishConfig(config);
+        }
       })
       .catch((error) => {
         if (cancelled) return;
@@ -649,10 +655,43 @@ const DataInput: React.FC<DataInputProps> = ({
     };
   }, [storeId, data.date]);
 
+  useEffect(() => {
+    setSharedSideDishCountManuallyEdited(false);
+  }, [data.date]);
+
+  const selectedDateAlreadySaved = datesWithData?.includes(data.date) ?? false;
+
+  useEffect(() => {
+    if (
+      !sharedSideDishConfig ||
+      sharedSideDishConfigLoading ||
+      sharedSideDishConfigError ||
+      sharedSideDishConfigDateRef.current !== data.date ||
+      selectedDateAlreadySaved ||
+      sharedSideDishCountManuallyEdited
+    ) {
+      return;
+    }
+
+    const orders = Math.max(0, Math.trunc(Number(data.orders || 0)));
+    if (orders <= 0 || Number(data.sharedSideDishCount || 0) === orders) return;
+
+    onChange({ ...data, sharedSideDishCount: orders });
+  }, [
+    data,
+    onChange,
+    selectedDateAlreadySaved,
+    sharedSideDishConfig,
+    sharedSideDishConfigError,
+    sharedSideDishConfigLoading,
+    sharedSideDishCountManuallyEdited,
+  ]);
+
   const updateBaseField = (field: keyof SalesReportData, value: any) => {
     if (["posSales", "deliverySales", "orders", "visitCount", "toppingQty", "sharedSideDishCount"].includes(field)) {
       const numericValue = Number(value);
       if (!Number.isFinite(numericValue) || numericValue < 0) return;
+      if (field === "sharedSideDishCount") setSharedSideDishCountManuallyEdited(true);
       onChange({
         ...data,
         [field]: field === "sharedSideDishCount" ? Math.max(0, Math.trunc(numericValue)) : numericValue,
