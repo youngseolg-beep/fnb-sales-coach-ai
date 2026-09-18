@@ -109,11 +109,6 @@ const SOFT_DRINKS = [
 
 
 const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, userEmail, homeLandingTarget, onHomeLandingHandled }) => {
-  useEffect(() => {
-    console.log("BRAND:", data.brand);
-    console.log("COUNTRY:", data.country);
-  }, [data.brand, data.country]);
-  
   const [report, setReport] = useState("");
   const [reportDate, setReportDate] = useState("");
   const [reportScopeKey, setReportScopeKey] = useState("");

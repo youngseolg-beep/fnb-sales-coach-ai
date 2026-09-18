@@ -45,8 +45,8 @@ const makeCategories = (sourceCategories: MenuCategory[], date: Date): MenuCateg
 };
 
 /**
- * Development-only, deterministic data for Coach. It never writes to Supabase
- * or localStorage and is used only when the Coach range has no saved rows.
+ * Deterministic Coach fixture data gated by the JP_PN pilot email. It never
+ * writes to Supabase or localStorage and is used only when the Coach range has no saved rows.
  */
 export const getCoachDemoRows = (start: string, end: string, sourceCategories: MenuCategory[]): CoachDemoDailyRow[] => {
   const startDate = new Date(`${start}T00:00:00`);

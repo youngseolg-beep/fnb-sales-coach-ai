@@ -952,36 +952,6 @@ const DailySalesPage: React.FC<Props> = ({
             </div>
           )}
 
-      {false && <div className="fixed bottom-[76px] left-0 right-0 z-[9997] border-t border-[#eee8e3] bg-[#faf8f6]/96 px-3 py-2 backdrop-blur sm:px-4 md:bottom-[96px] md:px-6">
-        <div className="mx-auto w-full max-w-md md:max-w-7xl">
-          <div className="rounded-[14px] border border-[#e8e1db] bg-white p-2 shadow-[0_5px_16px_rgba(70,54,42,0.08)] md:rounded-[16px] md:p-3">
-            <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
-              <button
-                type="button"
-                onClick={() => setShowResetModal(true)}
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[9px] border border-[#b99983] bg-white px-2.5 text-[12px] font-semibold text-[#6f4932] transition hover:bg-[#faf5f1] active:scale-[0.98] md:h-12 md:min-w-[180px] md:px-5 md:text-sm"
-              >
-                <i className="fa-solid fa-trash-can text-[10px] md:text-xs"></i>
-                일 데이터 리셋
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSave(false)}
-                className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-[9px] border px-2.5 text-[12px] font-semibold transition-all active:scale-[0.98] md:h-12 md:min-w-[220px] md:px-6 md:text-sm ${
-                  ocrApplied && !dataSaved
-                    ? "border-[#9c7b64] bg-[#9c7b64] text-white hover:bg-[#855f47]"
-                    : "border-[#8b5e3c] bg-[#8b5e3c] text-white hover:bg-[#745846]"
-                }`}
-              >
-                <i className="fa-solid fa-floppy-disk text-[10px] md:text-xs"></i>
-                매출 데이터 저장
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>}
-
       {showResetModal && (
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"

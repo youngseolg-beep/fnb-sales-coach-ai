@@ -109,7 +109,6 @@ export async function updateMenuOrder(
     );
   }
 
-  console.log("updateMenuOrder success:", data[0]);
 }
 
 export async function deactivateMenu(id: string, storeId: number) {
