@@ -5,6 +5,7 @@ import PeriodTopMenuCompare from "./PeriodTopMenuCompare";
 import ReportDisplay from "./ReportDisplay";
 import { formatCurrencyValue } from "../utils2/currency";
 import { formatLocalDate } from "../utils2/date";
+import type { FoodCostSummary } from "../services/foodCostService";
 
 type PeriodKey = "yesterday" | "week" | "month" | "custom";
 
@@ -34,6 +35,10 @@ type Props = {
   periodRange: { start: string; end: string };
   comparisonRange: { start: string; end: string } | null;
   periodStats: { sales: number; orders: number; visitors: number } | null;
+  foodCostSummary: FoodCostSummary | null;
+  foodCostLoading: boolean;
+  foodCostError: string;
+  onRetryFoodCost: () => void;
   canGenerateReport: boolean;
   onGenerateReport: () => Promise<void>;
   insightRef: RefObject<HTMLElement | null>;
@@ -49,7 +54,7 @@ type Props = {
 
 const CoachV4Page: React.FC<Props> = ({
   data, storeId, selectedDate, loading, reportStatus, report, reportScopeKey, reportError, salesChangeRate, ordersChangeRate, visitorsChangeRate, aovChangeRate,
-  starCount, activePeriod, periodRange, comparisonRange, periodStats, insightRef,
+  starCount, activePeriod, periodRange, comparisonRange, periodStats, foodCostSummary, foodCostLoading, foodCostError, onRetryFoodCost, insightRef,
   currentPeriodMenus, comparisonPeriodMenus, trendRows, engineeringContent, boostContent,
   canGenerateReport, onGenerateReport, reportActionRef, onPeriodChange, onCustomRangeChange,
 }) => {
@@ -98,8 +103,41 @@ const CoachV4Page: React.FC<Props> = ({
       ["fa-chart-pie", "전환율", visitors > 0 ? `${conversion.toFixed(1)}%` : "-", 0, "bg-[#e3f8f6] text-[#47afa9]"],
     ].map(([icon, label, value, delta, color]) => <KpiCard key={String(label)} icon={String(icon)} label={String(label)} value={String(value)} delta={Number(delta)} color={String(color)} />)}</div></section>
 
+    <FoodCostProfitability
+      summary={foodCostSummary}
+      loading={foodCostLoading}
+      error={foodCostError}
+      country={country}
+      onRetry={onRetryFoodCost}
+    />
+
     <section className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">{rows.map((row) => <React.Fragment key={row.key}><div data-tour={row.key === "analysis" ? "coach-analysis" : row.key === "report" ? "coach-ai-errors" : row.key === "engineering" ? "coach-menu-engineering" : row.key === "boost" ? "coach-boost-plan" : undefined} className="flex w-full items-center gap-3 rounded-[13px] border border-[#eee8e3] bg-white p-3 text-left shadow-[0_2px_8px_rgba(70,54,42,0.03)]"><button ref={row.key === "report" ? reportActionRef : undefined} type="button" onClick={() => setOpenPanel((current) => current === row.key ? null : row.key)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#faf7ff] ${row.color}`}><i className={`fa-solid ${row.icon}`} /></span><span className="min-w-0 flex-1"><b className="block text-[13px]">{row.title}</b><small className="mt-0.5 block truncate text-[10px] text-[#736a63]">{row.copy}</small></span></button><span className="shrink-0 rounded-[8px] border border-[#ede7df] px-2 py-1 text-[10px] font-semibold text-[#7a604c]">{loading && row.key === "report" ? "분석 중" : row.badge}</span><i className="fa-solid fa-chevron-right shrink-0 text-[10px] text-[#7f746d]" /></div>{openPanel === row.key && <div className="overflow-hidden rounded-[13px] border border-[#eee8e3] bg-white p-3 lg:col-span-2">{row.key === "analysis" ? <PeriodAnalysis periodRange={periodRange} comparisonRange={comparisonRange} salesChangeRate={salesChangeRate} ordersChangeRate={ordersChangeRate} visitorsChangeRate={visitorsChangeRate} aovChangeRate={aovChangeRate} conversion={conversion} trendRows={trendRows} currentMenus={currentPeriodMenus} comparisonMenus={comparisonPeriodMenus} country={country} /> : row.key === "report" ? <V4Report report={report} reportMatchesScope={reportMatchesScope} loading={loading} persistedStatus={reportStatus} error={reportError} canGenerateReport={canGenerateReport} onRetry={onGenerateReport} /> : row.key === "engineering" ? engineeringContent : boostContent}</div>}</React.Fragment>)}</section>
   </main>;
+};
+
+const FoodCostProfitability: React.FC<{
+  summary: FoodCostSummary | null;
+  loading: boolean;
+  error: string;
+  country?: string;
+  onRetry: () => void;
+}> = ({ summary, loading, error, country, onRetry }) => {
+  const title = <><h2 className="text-[14px] font-bold text-[#3d322b]">원가 기준 수익성</h2><p className="mt-0.5 text-[10px] text-[#766c66]">식재료 원가만 반영한 지표입니다.</p></>;
+
+  if (loading) return <section className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">{title}<p className="mt-3 text-[11px] text-[#766c66]">원가 정보를 계산하는 중...</p></section>;
+  if (error) return <section className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">{title}<div className="mt-3 flex items-center justify-between gap-3"><p className="text-[11px] text-[#8a6252]">원가 정보를 불러오지 못했습니다.</p><button type="button" onClick={onRetry} className="shrink-0 text-[11px] font-semibold text-[#7b4e38]">다시 시도</button></div></section>;
+  if (!summary || summary.analyzedDays === 0) return <section className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">{title}<p className="mt-3 text-[11px] text-[#766c66]">선택한 기간에 저장된 매출 데이터가 없습니다.</p></section>;
+
+  const metrics = [
+    ["매출", formatCurrencyValue(summary.periodSales, country)],
+    ["메뉴 원가", formatCurrencyValue(summary.directMenuCost, country)],
+    ["기본 제공 찬 원가", formatCurrencyValue(summary.sharedSideDishCost, country)],
+    ["총 식재료 원가", formatCurrencyValue(summary.totalFoodCost, country)],
+    ["실질 원가율", `${summary.foodCostRate.toFixed(1)}%`],
+    ["원가 기준 이익", formatCurrencyValue(summary.grossProfitBeforeOtherExpenses, country)],
+  ];
+
+  return <section className="rounded-[14px] border border-[#e7ded7] bg-white p-3.5 shadow-[0_2px_8px_rgba(70,54,42,0.025)]">{title}<div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5">{metrics.map(([label, value]) => <div key={label} className="min-w-0 rounded-[9px] bg-[#faf7f4] px-2.5 py-2"><p className="text-[9px] text-[#766c66]">{label}</p><b className="mt-1 block truncate text-[12px] text-[#3d322b]">{value}</b></div>)}</div><p className="mt-3 border-t border-[#eee8e3] pt-2.5 text-[9px] leading-4 text-[#857a72]">인건비, 임차료, 카드·배달 수수료, 세금 등 기타 비용은 포함하지 않습니다. 원가 기준 이익은 순이익이 아닙니다.</p></section>;
 };
 
 const AnalysisConfidenceInfo: React.FC = () => {

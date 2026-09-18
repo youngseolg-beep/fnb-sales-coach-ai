@@ -10,6 +10,7 @@ import { calculateMenuEngineeringForRange } from "../services/menuEngineeringSer
 import { generateAiMenuEngineering, type AiMenuEngineeringResult } from "../services/menuEngineeringAiService";
 import { generateAiBoostPlan, type AiBoostPlan } from "../services/boostPlanAiService";
 import { loadDailyRange } from "../services/salesStorage";
+import { calculateFoodCostForRange, type FoodCostSummary } from "../services/foodCostService";
 import { getCoachDemoRows, isCoachDemoFixtureEnabled, type CoachDemoDailyRow } from "../services/coachDemoData";
 import { getCurrencyByCountry } from "../utils2/currency";
 import { loadCoachReport, saveCoachReport } from "../services/coachReportStorage";
@@ -128,10 +129,14 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const [comparisonStats, setComparisonStats] = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [periodStats, setPeriodStats] = useState<any>(null);
+  const [foodCostSummary, setFoodCostSummary] = useState<FoodCostSummary | null>(null);
+  const [foodCostLoading, setFoodCostLoading] = useState(false);
+  const [foodCostError, setFoodCostError] = useState("");
 
   const currentRangeRequestRef = useRef("");
   const comparisonRangeRequestRef = useRef("");
   const periodStatsRequestRef = useRef("");
+  const foodCostRequestRef = useRef("");
   const activeAiRequestKeysRef = useRef(new Set<string>());
   const [, setActiveAiRequestVersion] = useState(0);
   const operatingCacheRef = useRef(new Map<string, { report: string; status: "generating" | "completed" | "failed" | null; error: string }>());
@@ -496,6 +501,33 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   useEffect(() => {
     void loadCurrentPeriodData();
+  }, [periodRange.start, periodRange.end, storeId]);
+
+  const loadFoodCostSummary = async () => {
+    if (!periodRange.start || !periodRange.end) return;
+
+    const requestKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
+    foodCostRequestRef.current = requestKey;
+    setFoodCostLoading(true);
+    setFoodCostError("");
+    setFoodCostSummary(null);
+
+    try {
+      const summary = await calculateFoodCostForRange(periodRange.start, periodRange.end, storeId);
+      if (foodCostRequestRef.current !== requestKey) return;
+      setFoodCostSummary(summary);
+    } catch (error) {
+      if (foodCostRequestRef.current !== requestKey) return;
+      console.error("loadFoodCostSummary error:", error);
+      setFoodCostSummary(null);
+      setFoodCostError("원가 정보를 불러오지 못했습니다.");
+    } finally {
+      if (foodCostRequestRef.current === requestKey) setFoodCostLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadFoodCostSummary();
   }, [periodRange.start, periodRange.end, storeId]);
 
   const fetchPeriodStats = async (force = false) => {
@@ -1076,6 +1108,10 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       periodRange={periodRange}
       comparisonRange={comparisonRange}
       periodStats={currentPeriodStats ? { sales: Number(currentPeriodStats.sales || 0), orders: Number(currentPeriodStats.orders || 0), visitors: Number(currentPeriodStats.visitors || 0) } : null}
+      foodCostSummary={foodCostSummary}
+      foodCostLoading={foodCostLoading}
+      foodCostError={foodCostError}
+      onRetryFoodCost={() => void loadFoodCostSummary()}
       canGenerateReport={canGenerateV4Report}
       onGenerateReport={handleGenerateReport}
       insightRef={insightSectionRef}
