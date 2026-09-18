@@ -16,6 +16,7 @@ import {
 import { loadMenuMaster } from "./services/menuMasterService";
 import { ensureDemoSalesContinuity } from "./services/demoSalesService";
 import { formatLocalDate } from "./utils2/date";
+import { getCurrencyByCountry } from "./utils2/currency";
 
 import type { MenuCategory } from "./types";
 
@@ -894,7 +895,13 @@ const salesPage = (
     />
   );
 
-  const morePage = <MorePage onLogout={handleLogout} />;
+  const morePage = <MorePage
+    onLogout={handleLogout}
+    storeName={storeName}
+    brand={data.brand}
+    country={data.country || storeCountry}
+    currency={getCurrencyByCountry(data.country || storeCountry)}
+  />;
 
   if (storeOwnerPage === "admin_create") {
     return <AdminCreateUserPage />;

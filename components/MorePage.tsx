@@ -1,77 +1,80 @@
-import React from "react";
+import { useState } from "react";
 
 type Props = {
   onLogout: () => void;
+  storeName?: string | null;
+  brand?: string | null;
+  country?: string | null;
+  currency?: string | null;
 };
 
-const supportItems = [
-  { title: "시작하기", description: "Sales Coach AI 사용 흐름을 확인하세요.", icon: "fa-book-open" },
-  { title: "매출 입력 방법", description: "일일 매출과 메뉴 판매량 입력 안내", icon: "fa-pen-to-square" },
-  { title: "영수증 스캔 방법", description: "OCR 결과를 검토하고 적용하는 방법", icon: "fa-camera" },
-  { title: "AI Coach 사용 방법", description: "분석 결과와 추천을 읽는 방법", icon: "fa-sparkles" },
-  { title: "메뉴 관리 방법", description: "가격과 원가를 최신 상태로 유지하세요.", icon: "fa-utensils" },
-  { title: "FAQ", description: "자주 묻는 질문", icon: "fa-circle-question" },
+type GuideItem = {
+  title: string;
+  description: string;
+  icon: string;
+  details: string[];
+};
+
+const guideItems: GuideItem[] = [
+  { title: "매출 입력", description: "일일 매출과 메뉴 판매량을 기록합니다.", icon: "fa-pen-to-square", details: ["POS 매출, 배달 매출, 주문 수, 방문객을 입력합니다.", "메뉴별 판매 수량을 입력합니다.", "입력 매출과 메뉴 매출 차이를 확인한 뒤 저장합니다.", "과거 날짜도 캘린더에서 선택해 입력할 수 있습니다."] },
+  { title: "영수증 OCR", description: "영수증 이미지에서 메뉴와 수량을 인식합니다.", icon: "fa-camera", details: ["영수증 이미지를 업로드하면 메뉴와 수량을 자동 인식합니다.", "인식 결과와 메뉴 매칭을 확인한 뒤 입력창에 적용합니다.", "매장명 차이는 경고만 표시됩니다.", "메뉴 미확정, 통화 불일치, 미래 날짜, 합계 불일치는 적용이 제한될 수 있습니다.", "OCR 실패 시에도 수동 입력은 계속 사용할 수 있습니다."] },
+  { title: "AI Coach", description: "선택 기간의 흐름과 운영 인사이트를 확인합니다.", icon: "fa-sparkles", details: ["선택 기간의 매출, 주문, 방문객, 객단가 흐름을 분석합니다.", "기간 비교와 운영 인사이트를 확인할 수 있습니다.", "AI 분석이 실패해도 기본 데이터 분석은 계속 볼 수 있습니다."] },
+  { title: "메뉴 엔지니어링", description: "메뉴별 판매량과 수익성을 분석합니다.", icon: "fa-chart-pie", details: ["메뉴 판매량과 수익성을 기준으로 메뉴 상태를 분석합니다.", "STAR / CASH_COW / PUZZLE / DOG 분류를 제공합니다.", "AI 전략은 이 계산 결과를 기반으로 실행 우선순위를 설명합니다.", "충분한 기간과 메뉴 데이터가 필요할 수 있습니다."] },
+  { title: "AI 부스트 플랜", description: "분석 후보를 실행 가능한 운영안으로 정리합니다.", icon: "fa-rocket", details: ["실제 분석 후보를 기반으로 최대 3개의 실행안을 만듭니다.", "유효 후보가 2개면 2개, 1개면 1개만 표시될 수 있습니다.", "할인율, 쿠폰, 증정, 세트 가격 등은 근거 없이 자동 확정하지 않습니다.", "가격 또는 세트 관련 제안은 원가와 공헌이익 확인을 우선합니다.", "AI가 실행안을 만들지 못하면 화면에 실패 사유가 표시됩니다."] },
+  { title: "메뉴 관리", description: "판매가와 원가를 최신 상태로 관리합니다.", icon: "fa-utensils", details: ["메뉴 판매가와 원가를 관리합니다.", "변경된 가격과 원가는 이후 분석에 반영됩니다.", "정확한 수익성 분석을 위해 원가를 최신 상태로 유지하는 것이 좋습니다."] },
 ];
 
-const StaticRow = ({ title, description, icon }: { title: string; description: string; icon: string }) => (
-  <div className="flex items-center gap-3 px-4 py-3.5">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f6eee8] text-[#765039]">
-      <i className={`fa-solid ${icon} text-sm`} />
-    </span>
-    <span className="min-w-0 flex-1">
-      <span className="block text-[14px] font-semibold text-[#28221e]">{title}</span>
-      <span className="mt-0.5 block text-[11px] leading-4 text-[#857970]">{description}</span>
-    </span>
+const StoreDetail = ({ label, value }: { label: string; value?: string | null }) => (
+  <div className="min-w-0 rounded-xl bg-[#faf7f4] px-3 py-2.5">
+    <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b8d82]">{label}</dt>
+    <dd className="mt-1 truncate text-[13px] font-semibold text-[#3d332d]">{value || "-"}</dd>
   </div>
 );
 
-export default function MorePage({ onLogout }: Props) {
+export default function MorePage({ onLogout, storeName, brand, country, currency }: Props) {
+  const [openGuide, setOpenGuide] = useState<string | null>(null);
+
   return (
-    <div className="mx-auto max-w-[430px] space-y-7 pb-28 pt-3 lg:max-w-[980px] lg:pb-8">
+    <div className="mx-auto max-w-[430px] space-y-7 pb-28 pt-3 lg:max-w-[680px] lg:pb-8">
       <section className="px-2">
         <h1 className="text-[28px] font-bold tracking-[-0.055em] text-[#1f1f1f]">More</h1>
-        <div className="mt-6 flex items-center gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#ead6bd_0%,#9d7254_100%)] text-white shadow-[0_5px_13px_rgba(119,75,47,0.16)]">
-            <i className="fa-solid fa-user text-2xl" />
-          </span>
-          <div>
-            <p className="text-[18px] font-semibold tracking-[-0.03em] text-[#27211e]">Sales Coach AI</p>
-            <p className="mt-1 text-[13px] text-[#746b64]">Sales Coach AI</p>
+        <div className="mt-4 rounded-[20px] border border-[#e9e1da] bg-white p-4 shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#ead6bd_0%,#9d7254_100%)] text-white"><i className="fa-solid fa-store text-base" /></span>
+            <div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8b6f5b]">Store Owner</p><p className="mt-0.5 truncate text-[18px] font-semibold tracking-[-0.03em] text-[#27211e]">{storeName || "-"}</p></div>
           </div>
+          <dl className="mt-4 grid grid-cols-3 gap-2"><StoreDetail label="브랜드" value={brand} /><StoreDetail label="국가" value={country} /><StoreDetail label="통화" value={currency} /></dl>
         </div>
       </section>
 
       <section>
-        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">환경 설정</h2>
-        <div className="mt-3 overflow-hidden rounded-[18px] border border-[#ece7e1] bg-white shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
-          <StaticRow title="언어" description="현재 설정 기능은 준비 중입니다." icon="fa-globe" />
-          <div className="mx-4 border-t border-[#f0ebe6]" />
-          <StaticRow title="화면 표시" description="현재 설정 기능은 준비 중입니다." icon="fa-display" />
-        </div>
-      </section>
-
-      <section>
-        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">도움말</h2>
+        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">사용 가이드</h2>
         <div className="mt-3 divide-y divide-[#f0ebe6] overflow-hidden rounded-[18px] border border-[#ece7e1] bg-white shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
-          {supportItems.map((item) => (
-            <div key={item.title}>
-              <StaticRow {...item} />
-            </div>
-          ))}
+          {guideItems.map((item) => {
+            const isOpen = openGuide === item.title;
+            return <div key={item.title}>
+              <button type="button" aria-expanded={isOpen} onClick={() => setOpenGuide((current) => current === item.title ? null : item.title)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#fffaf7]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f6eee8] text-[#765039]"><i className={`fa-solid ${item.icon} text-sm`} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-[#28221e]">{item.title}</span><span className="mt-0.5 block text-[11px] leading-4 text-[#857970]">{item.description}</span></span>
+                <i className={`fa-solid fa-chevron-down shrink-0 text-[11px] text-[#9a8b81] transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+              </button>
+              {isOpen ? <div className="border-t border-[#f4efeb] bg-[#fdfaf8] px-4 py-3.5 pl-16"><ul className="space-y-1.5 text-[12px] leading-5 text-[#665c55]">{item.details.map((detail) => <li key={detail} className="relative pl-3 before:absolute before:left-0 before:top-[0.5rem] before:h-1 before:w-1 before:rounded-full before:bg-[#a8795c]">{detail}</li>)}</ul></div> : null}
+            </div>;
+          })}
         </div>
+      </section>
+
+      <section>
+        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">AI 분석 안내</h2>
+        <div className="mt-3 rounded-[18px] border border-[#e8e0f4] bg-[#fcfaff] px-4 py-3.5 text-[12px] leading-5 text-[#625b70]"><div className="flex gap-2.5"><i className="fa-solid fa-wand-magic-sparkles mt-1 text-[#8067a8]" /><div><p>AI 분석은 입력된 매출·메뉴 데이터를 기반으로 운영 참고안을 제공합니다. 데이터가 부족하거나 AI 응답을 확인할 수 없는 경우 분석이 제한될 수 있으며, 화면에 사유가 표시됩니다.</p><p className="mt-2 font-medium text-[#51475e]">최종 가격·프로모션 결정은 매장의 실제 원가와 운영 상황을 확인한 뒤 진행해 주세요.</p></div></div></div>
       </section>
 
       <section>
         <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">앱 정보</h2>
-        <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-[#ece7e1] bg-white px-4 py-3.5 shadow-[0_5px_16px_rgba(70,54,42,0.035)]">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#a8866b_0%,#6f4027_100%)] text-white"><i className="fa-solid fa-chart-simple" /></span>
-          <span><span className="block text-[14px] font-semibold text-[#28221e]">Sales Coach AI</span><span className="mt-0.5 block text-[11px] text-[#857970]">앱 정보는 업데이트 예정입니다.</span></span>
-        </div>
+        <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-[#ece7e1] bg-white px-4 py-3.5 shadow-[0_5px_16px_rgba(70,54,42,0.035)]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#a8866b_0%,#6f4027_100%)] text-white"><i className="fa-solid fa-chart-simple" /></span><span className="min-w-0"><span className="block text-[14px] font-semibold text-[#28221e]">Sales Coach AI</span><span className="mt-0.5 block text-[11px] leading-4 text-[#857970]">Store Owner Pilot · 매출 입력부터 메뉴 분석과 실행 플랜까지 연결하는 매장 운영 지원 도구</span></span></div>
       </section>
 
-      <button type="button" onClick={onLogout} className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[#f1d8d3] bg-white text-[15px] font-semibold text-[#d83a32] transition hover:bg-[#fff7f5]">
-        <i className="fa-solid fa-right-from-bracket" /> 로그아웃
-      </button>
+      <button type="button" onClick={onLogout} className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[#f1d8d3] bg-white text-[15px] font-semibold text-[#d83a32] transition hover:bg-[#fff7f5]"><i className="fa-solid fa-right-from-bracket" /> 로그아웃</button>
     </div>
   );
 }
