@@ -394,6 +394,22 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
         .filter((row: { date: string; note: string }) => row.date && row.note)
         .sort((a: { date: string }, b: { date: string }) => a.date.localeCompare(b.date))
         .slice(0, 60);
+      const foodCostScopeKey = `${requestScope.storeId}:${requestScope.periodStart}:${requestScope.periodEnd}`;
+      let foodCostForReport: FoodCostSummary | null = null;
+
+      if (!foodCostLoading && !foodCostError && foodCostSummary && foodCostRequestRef.current === foodCostScopeKey) {
+        foodCostForReport = foodCostSummary;
+      } else {
+        try {
+          foodCostForReport = await calculateFoodCostForRange(
+            requestScope.periodStart,
+            requestScope.periodEnd,
+            requestScope.storeId
+          );
+        } catch (error) {
+          console.warn("Coach report food-cost context unavailable:", error);
+        }
+      }
       const result = await generateCoachingReport(reportData, reportResults, menuEngineeringResult, {
         throwOnError: true,
         context: {
@@ -412,6 +428,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
           },
           topMenus,
           operationalNotes,
+          foodCost: foodCostForReport && foodCostForReport.analyzedDays > 0 ? foodCostForReport : null,
         },
       });
       if (activeScopeRef.current === requestActiveScopeKey) {
@@ -423,7 +440,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       operatingCacheRef.current.set(requestActiveScopeKey, { report: result, status: "completed", error: "" });
       void saveCoachReport({
         ...requestScope, periodPreset: v4Period, status: "completed", result,
-        inputSnapshot: { current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors }, comparison: comparisonRange, operationalNotes },
+        inputSnapshot: { current: { sales: currentSales, orders: currentOrders, visitors: currentVisitors }, comparison: comparisonRange, operationalNotes, foodCost: foodCostForReport },
       });
       showToast("코칭 리포트 생성 완료");
     } catch (error) {
