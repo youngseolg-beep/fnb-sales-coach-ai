@@ -535,6 +535,8 @@ export async function loadDailyRange(
         return {
           date: String(row.date),
           sales: toNumber(row.total_sales ?? payload.totalSales, 0),
+          posSales: toNumber(payload.posSales, 0),
+          deliverySales: toNumber(payload.deliverySales, 0),
           orders: toNumber(payload.orders ?? row.orders, 0),
           visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
           sharedSideDishCount: toNumber(payload.sharedSideDishCount, 0),
@@ -565,6 +567,8 @@ export async function loadDailyRange(
     return {
       date: String(row.date),
       sales: toNumber(row.total_sales ?? payload.totalSales, 0),
+      posSales: toNumber(payload.posSales, 0),
+      deliverySales: toNumber(payload.deliverySales, 0),
       orders: toNumber(payload.orders ?? row.orders, 0),
       visitors: toNumber(payload.visitCount ?? row.visit_count, 0),
       sharedSideDishCount: toNumber(payload.sharedSideDishCount, 0),
