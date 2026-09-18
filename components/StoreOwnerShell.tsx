@@ -258,14 +258,6 @@ export default function StoreOwnerShell({
       <div className="min-w-0">
       {currentPage !== "summary" && <header className="sticky top-0 z-40 border-b border-[#eee7e1] bg-[#faf8f6]/95 backdrop-blur">
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-3">
-          {currentPage === "sales" ? (
-            <div className="flex h-14 items-center justify-between border-b border-[#eee8e3] bg-white px-2 sm:px-4">
-              <div className="flex items-center gap-3"><i className="fa-solid fa-arrow-left text-[15px] text-[#2e2824]" /><span className="text-[18px] font-bold tracking-[-0.05em] text-[#1f1f1f]">매출 입력</span></div>
-              <button ref={calendarButtonRef} type="button" data-tour="sales-date" onClick={toggleCalendar} className="relative z-[10000] inline-flex h-9 items-center gap-2 rounded-[9px] border border-[#e3d9d2] bg-white px-3 text-[11px] font-semibold text-[#3d342f]">
-                <span>{selectedDate}</span><i className="fa-regular fa-calendar text-[12px] text-[#5d4b3e]" />
-              </button>
-            </div>
-          ) : <>
           <div className="rounded-[16px] border border-[#ece5df] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(79,60,45,0.035)] sm:rounded-[18px] sm:px-5 sm:py-3">
             <div className="flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0">
@@ -322,6 +314,7 @@ export default function StoreOwnerShell({
               <button
                 ref={calendarButtonRef}
                 type="button"
+                data-tour={currentPage === "sales" ? "sales-date" : undefined}
                 onClick={toggleCalendar}
                 className="relative z-[10000] inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-[#e7ddd5] bg-white px-2.5 text-[12px] font-semibold text-[#302a26] shadow-[0_4px_12px_rgba(79,60,45,0.05)] transition-colors hover:bg-[#fdfaf8] sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
               >
@@ -375,7 +368,6 @@ export default function StoreOwnerShell({
               </div>
             </div>
           </div>
-          </>}
         </div>
       </header>}
 
@@ -449,7 +441,6 @@ export default function StoreOwnerShell({
         <div className="mx-auto grid h-[64px] max-w-[430px] grid-cols-5 items-end rounded-[18px] border border-[#eee8e3] bg-white px-2 py-2 shadow-[0_6px_20px_rgba(70,54,42,0.09)] sm:max-w-2xl">
           {MENU_ITEMS.map((item) => {
             const active = item.key === currentPage;
-            const isHome = item.key === "summary";
 
             return (
               <button
@@ -459,17 +450,11 @@ export default function StoreOwnerShell({
                 onClick={() => onChangePage(item.key)}
                 className={[
                   "flex h-11 flex-col items-center justify-center rounded-xl text-[#796f68] transition-colors",
-                  isHome
-                    ? active
-                      ? "-mt-4 h-[54px] rounded-[15px] bg-[#9b765c] text-white shadow-[0_6px_14px_rgba(126,92,67,0.18)] hover:bg-[#855f47]"
-                      : "-mt-4 h-[54px] rounded-[15px] border border-[#e6ddd6] bg-[#f8f4f0] text-[#785e4d] shadow-[0_4px_10px_rgba(79,60,45,0.07)] hover:bg-[#f2ebe5]"
-                    : active
-                    ? "bg-[#f8f4f0] text-[#8b6f5b]"
-                    : "hover:bg-[#faf7f4]",
+                  active ? "border border-[#e6ddd6] bg-[#f8f4f0] text-[#8b6f5b]" : "hover:bg-[#faf7f4]",
                 ].join(" ")}
               >
-                <i className={`${item.icon} ${isHome ? "text-[15px]" : "text-[14px]"}`}></i>
-                <span className={`mt-0.5 font-semibold ${isHome ? "text-[10px]" : "text-[10px]"}`}>
+                <i className={`${item.icon} text-[14px]`}></i>
+                <span className="mt-0.5 text-[10px] font-semibold">
                   {item.label}
                 </span>
               </button>
