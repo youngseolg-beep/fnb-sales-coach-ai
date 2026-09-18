@@ -40,6 +40,7 @@ interface MenuSettingsPageProps {
   onReloadMenuMaster: () => Promise<void>;
   saving: boolean;
   storeId: number;
+  country: string;
   onShowToast?: (msg: string) => void;
 }
 
@@ -298,6 +299,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
   onReloadMenuMaster,
   saving,
   storeId,
+  country: _country,
   onShowToast,
 }) => {
   const [draftCategories, setDraftCategories] = useState<MenuCategory[]>(() =>

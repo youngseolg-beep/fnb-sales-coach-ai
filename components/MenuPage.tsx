@@ -11,6 +11,7 @@ type Props = {
   onReloadMenuMaster: () => Promise<void>;
   saving: boolean;
   storeId: number;
+  country: string;
   onShowToast: (msg: string) => void;
 };
 
@@ -23,6 +24,7 @@ const MenuPage: React.FC<Props> = ({
   onReloadMenuMaster,
   saving,
   storeId,
+  country,
   onShowToast,
 }) => {
   return (
@@ -35,6 +37,7 @@ const MenuPage: React.FC<Props> = ({
       onReloadMenuMaster={onReloadMenuMaster}
       saving={saving}
       storeId={storeId}
+      country={country}
       onShowToast={onShowToast}
     />
   );

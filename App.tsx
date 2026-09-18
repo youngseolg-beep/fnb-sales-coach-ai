@@ -891,6 +891,7 @@ const salesPage = (
       onReloadMenuMaster={reloadMenuMaster}
       saving={priceSaving}
       storeId={storeId!}
+      country={data.country || storeCountry}
       onShowToast={showToast}
     />
   );
