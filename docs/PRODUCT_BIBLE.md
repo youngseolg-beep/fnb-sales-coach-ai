@@ -1,16 +1,67 @@
 SALES COACH AI
 PRODUCT BIBLE
-VERSION 4.3 — CODEX / PRODUCT MASTER
+VERSION 4.4 — CODEX / PRODUCT MASTER
 
 Product Type: Mobile-First Store Operating Coach
-Status: V4.3 Pilot Ready / Pilot Readiness Closed
+Status: V4.4 Pilot Ready / Pilot Readiness Closed
 Primary Platform: Responsive Web (Mobile First)
 Primary User: Restaurant Store Owner / Store Operator
 Secondary User: HQ / Brand Operations via active Master workspace
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: INPUT → ANALYSIS → ACTION
 UI Reference: 11 Approved V4 UI/UX Reference Images
-Companion Document: Sales Coach AI UI/UX Guideline V4.3
+Companion Document: Sales Coach AI UI/UX Guideline V4.4
+
+==============================================================================
+2026-09-21 AUTHORITATIVE PRODUCT UPDATE — V4.4
+==============================================================================
+
+This is the newest authoritative Product Bible state. It supersedes conflicting V4.3 and older statements; historical sections remain records of their respective dates.
+
+CURRENT PILOT STATUS
+- Indonesia pilot account exists: account code `ID_SAE`, login `id_sae@tbk.com`, storeId `1789955524607`, country `ID`, currency `IDR`, brand `SAEMAEUL`.
+- Current placeholder store name: `SAEMAEUL INDONESIA PILOT`. The final real production store name is still TBD; this is not a final production-store identity.
+- Pilot inputs are current test/operating inputs derived from supplied source data: 32 active sellable menus (BBQ 9, DISH 3, MEAL 13, SIDE 7), supplied selling prices and unit costs, and menu price/cost history baseline effective 2026-09-21.
+- 기본 제공 찬 has 11 configured component items and current 1회 총 원가 IDR 27,759.13. Effective snapshots exist for pilot testing across seeded Food Cost history.
+
+SYNTHETIC PILOT SALES CONTINUITY
+- Only exact profiles are eligible: Demo `storeId 5 / DEMO / DEMO`; Indonesia pilot `storeId 1789955524607 / ID / SAEMAEUL`.
+- Indonesia pilot retains a rolling 60-day deterministic synthetic Sales dataset for end-to-end testing. Synthetic rows are TEST/PILOT data, not claimed real historical store sales.
+- Existing rows are authoritative. Continuity uses `insertDailyIfMissing` only and never updates, upserts, or deletes existing Sales rows.
+- Generated total Sales equals menu price × generated quantity; POS + Delivery equals total Sales; generated rows include sharedSideDishCount and deliberately varied demand/menu mix for period comparisons.
+- The app checks browser-local date rollover about every 60 seconds. A new local day runs continuity after midnight while open; reopening/login backfills missed dates.
+
+COACH REFERENCE-DATE AND KPI CONTRACT
+- App-header `selectedDate` is Coach reference “today”; completed analysis ends at `selectedDate - 1` calendar day. It is not always browser-local yesterday.
+- With selectedDate 2026-09-17: 어제 = 2026-09-16 vs 2026-09-15; 이번 주 = 2026-09-14~2026-09-16 vs 2026-09-07~2026-09-09; 이번 달 = 2026-09-01~2026-09-16 vs 2026-08-01~2026-08-16. 선택 기간 compares its immediately preceding equal-length inclusive range.
+- Labels: 전일 비교, 전주 동일 기간, 전월 동일 기간, 직전 동일 기간. Monday disables 이번 주; the first day of month disables 이번 달; custom end max is selectedDate - 1.
+- Comparison mode is derived from active v4Period: yesterday/custom → MANUAL, week → WOW, month → MOM. No independent stale comparison-mode state exists.
+- KPI Sales prefers stored total Sales, then POS + Delivery, never POS-only when Delivery exists. Orders and Visitors are period sums; AOV = total Sales / Orders; Conversion = Orders / Visitors × 100.
+- Conversion footer is fixed explanatory text `주문수/방문객` with no comparison delta. Other KPI cards retain comparison deltas.
+
+PERIOD SCOPE / TENANT SAFETY
+- The same periodRange/comparisonRange drives the visible Analysis Period card, KPI deltas, Period Analysis, daily trend, Top 5 menu comparison, Food Cost, AI Operating Coaching, Menu Engineering, and Boost Plan.
+- Coach current-period, comparison-period, and period-analysis request keys include storeId. Same date range plus a different store is always a different request.
+- On active-store change, current KPI, comparison KPI, and period-analysis state clear; request refs invalidate; stale old-store responses cannot overwrite the new-store state.
+
+FOOD COST / SALES / MENU
+- Official terms remain: 매출, 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, 원가 기준 이익. No fees or operating expenses are deducted. 기본 제공 찬 remains store/period-level only and is never allocated to individual menu items.
+- POS, Delivery, Orders, Visitors, Note, menu quantities, and sharedSideDishCount persist. sharedSideDishCount is payload-only; saved/manual rows are authoritative and synthetic continuity never overwrites them. Save/reload were manually verified with ID_SAE.
+- 기본 제공 찬 management uses one compact table-like editor: one shared header, compact one-line editable rows, no repeated item cards/labels. Existing save/history behavior is unchanged and history is read-only.
+
+HOME / MORE
+- Home reflects selected-date Sales, same-store previous-day comparison, and same-store current-month cumulative Sales. Greeting uses the accessing browser/device JavaScript local clock, not store country/timezone metadata; this is acceptable for the current pilot's local-device use.
+- More is a lightweight support/account-context surface: Store information; Sales Coach AI 둘러보기 (현재 화면 가이드, 처음부터 둘러보기); 빠른 도움말 (매출 입력, 영수증 OCR, AI Coach, 메뉴 엔지니어링, AI 부스트 플랜, 메뉴 관리); and Logout. AI 분석 안내 and 앱 정보 are removed. AI Coach quick-help uses `fa-robot`.
+
+FINAL E2E / STATUS
+- ID_SAE manual smoke test completed 2026-09-21: Home daily/previous-day/month cumulative; Sales display, Note save, date move/return reload; Menu 32 items, prices/costs and 기본 제공 찬 configuration; Coach selectedDate anchoring, all period modes/ranges, total-Sales KPI, conversion, Food Cost, and period switching; More context/tour/help/simplified structure.
+- This does not claim unperformed OCR smoke testing or browser/device matrix testing.
+- Final integration audit completed. The major Coach tenant request-key issue was fixed in `da98ee8ed02c7ea85ee957768f786fbc6dc6719f`; no blocking issue remains from this integration round. TypeScript, production build, and git diff --check passed; final production deployment succeeded.
+- Optional non-blocking work: bundle splitting, broader automated regression tests, observability, and legacy cleanup.
+
+==============================================================================
+END 2026-09-21 AUTHORITATIVE PRODUCT UPDATE — V4.4
+==============================================================================
 
 ==============================================================================
 2026-09-21 AUTHORITATIVE PRODUCT UPDATE — V4.3

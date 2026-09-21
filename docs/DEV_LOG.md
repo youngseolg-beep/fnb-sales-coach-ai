@@ -2,13 +2,56 @@
 
 # Complete Development Handover / Extended Context Prompt
 
-# Version V2.3.0
+# Version V2.4.0
 
 # Date: 2026-09-21
 
 ---
 
-# 2026-09-21 LATEST AUTHORITATIVE STATE — V2.3.0
+# 2026-09-21 LATEST AUTHORITATIVE STATE — V2.4.0
+
+> **IMPORTANT — READ THIS SECTION FIRST**
+>
+> This V2.4.0 section supersedes conflicting V2.3.0 and older historical records. Current verified code remains the final source of truth.
+
+## A. Final Indonesia Pilot integration state
+
+- Indonesia pilot now exists: `ID_SAE` / `id_sae@tbk.com` / storeId `1789955524607` / `ID` / `IDR` / `SAEMAEUL`.
+- `SAEMAEUL INDONESIA PILOT` is a current placeholder store name; final real production-store identity remains TBD.
+- Pilot test inputs: 32 active sellable menus (BBQ 9, DISH 3, MEAL 13, SIDE 7), supplied selling prices and unit costs, history baseline effective 2026-09-21, 11 기본 제공 찬 components, and IDR 27,759.13 current 1회 총 원가. Effective snapshots support historical Food Cost testing.
+
+## B. Synthetic Sales continuity finalized
+
+- Exact eligible profiles only: Demo `5 / DEMO / DEMO`; Indonesia `1789955524607 / ID / SAEMAEUL`.
+- Indonesia has a rolling 60-day deterministic TEST/PILOT Sales dataset. Generated total Sales is menu price × quantity; POS + Delivery reconciles; sharedSideDishCount is generated; historical demand/menu mix varies for comparison UI.
+- Existing rows are authoritative. Continuity uses `insertDailyIfMissing` only: no update, upsert, or delete.
+- Browser-local rollover is checked about every 60 seconds; midnight generates a new day while open, and reopening/login backfills missing dates.
+
+## C. Coach final reference-date, KPI, and tenant contract
+
+- selectedDate is Coach reference “today”; completed data ends at selectedDate - 1. This supersedes the old browser-local-yesterday preset wording.
+- Yesterday/custom use MANUAL comparison; week uses WOW; month uses MOM. Monday week and first-of-month month remain unavailable; custom end max is selectedDate - 1.
+- Sales KPI uses stored total Sales first, then POS + Delivery; Orders/Visitors are period sums; AOV is Sales/Orders; Conversion is Orders/Visitors × 100 with `주문수/방문객` footer and no delta.
+- One shared periodRange/comparisonRange drives card display, KPI deltas, Period Analysis, daily trend, Top 5, Food Cost, AI Coaching, Menu Engineering, and Boost Plan.
+- Final integration audit found a major request-key scope issue. Fixed in `da98ee8ed02c7ea85ee957768f786fbc6dc6719f`: current/comparison/period-analysis request keys include storeId; store changes clear derived state and invalidate refs; stale old-store responses cannot overwrite new-store state.
+
+## D. Final UI / smoke verification
+
+- 기본 제공 찬 management editor is now a compact table-like list; save and read-only history behavior are unchanged.
+- More is the lightweight support/account context surface. AI 분석 안내 and 앱 정보 are removed; AI Coach quick help uses `fa-robot`.
+- Manual ID_SAE smoke test completed 2026-09-21: Home daily, prior-day, and monthly links; Sales saved data, Note save, date return/reload; Menu 32 menus/prices/costs/기본 제공 찬; Coach all completed-day period modes, comparisons, KPI, conversion, Food Cost, and switching; More context/tour/help structure.
+- OCR was not newly claimed as manually smoke-tested, and no browser/device matrix claim is made.
+
+## E. Final verification / status
+
+- TypeScript, production build, and git diff --check passed.
+- Final production deployment succeeded.
+- No remaining blocking issue from this integration round.
+- Optional non-blocking work: bundle splitting, broader automated regression tests, observability, and legacy cleanup.
+
+---
+
+# 2026-09-21 PREVIOUS AUTHORITATIVE STATE — V2.3.0
 
 > **IMPORTANT — READ THIS SECTION FIRST**
 >

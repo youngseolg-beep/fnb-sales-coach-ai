@@ -2,15 +2,46 @@
 https://drive.google.com/drive/folders/1fXlcQqT8SQvA1GUKSr6-WuywbFvrxWOo?usp=drive_link
 SALES COACH AI
 DESIGN LANGUAGE & UI/UX GUIDELINE
-VERSION 4.3 — CODEX IMPLEMENTATION MASTER
+VERSION 4.4 — CODEX IMPLEMENTATION MASTER
 Document Type: Product Design Language / UIUX Specification / Implementation Guide
 Primary Platform: Mobile-first Responsive Web
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: Input → Analysis → Action
 Visual Reference Set: 11 approved UI/UX reference images
 Implementation Target: Existing Sales Coach AI codebase
-Document Status: Official V4.3 UI/UX Master — Pilot Implementation Integrated
+Document Status: Official V4.4 UI/UX Master — Pilot Implementation Integrated
 Last Updated: 2026-09-21
+==============================================================================
+CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.4
+==============================================================================
+
+This section supersedes conflicting V4.3 and older UI/UX statements. Historical sections remain unchanged records.
+
+INDONESIA PILOT CONTEXT
+- Active pilot context is ID_SAE / `id_sae@tbk.com` / storeId 1789955524607 / ID / IDR / SAEMAEUL. The displayed `SAEMAEUL INDONESIA PILOT` name is a placeholder, not the final real-store identity.
+- Menu currently presents 32 active sellable menus across BBQ 9, DISH 3, MEAL 13, and SIDE 7, using supplied selling prices/costs. 기본 제공 찬 summary represents 11 configured components and IDR 27,759.13 current 1회 총 원가.
+
+COACH — REFERENCE DATE, PERIODS, AND TENANT-SAFE DISPLAY
+- Header selectedDate is Coach reference “today”; completed analysis ends at selectedDate - 1. Do not describe presets as always based on browser-local yesterday.
+- 어제, 이번 주, 이번 달, and 선택 기간 show their analysis and comparison ranges visibly. Labels remain 전일 비교, 전주 동일 기간, 전월 동일 기간, 직전 동일 기간.
+- Monday keeps 이번 주 unavailable; first day of month keeps 이번 달 unavailable; custom end is capped at selectedDate - 1.
+- The same period scope powers the KPI cards, Period Analysis, daily trend, Top 5 menus, Food Cost, AI Operating Coaching, Menu Engineering, and Boost Plan. Store change clears period-derived UI before the new store loads; old asynchronous results must not reappear.
+- Sales KPI prefers stored total Sales, then POS + Delivery. Conversion stays Orders / Visitors × 100 and its footer is muted explanatory text `주문수/방문객`, never a delta. Other KPI footers retain delta behavior.
+
+MENU — 기본 제공 찬 CURRENT PRESENTATION
+- The management editor is a compact table-like list: one shared header row, compact one-line editable rows, and no repeated item cards or labels.
+- Existing explicit save behavior, read-only history modal, current summary, and six-month review display remain unchanged.
+
+HOME / MORE
+- Home is connected to selected-date saved Sales, same-store prior-day comparison, and same-store monthly cumulative Sales. Greeting follows the accessing device/browser local clock rather than store timezone metadata.
+- More contains only Store information; Sales Coach AI 둘러보기 with 현재 화면 가이드 and 처음부터 둘러보기; 빠른 도움말; and Logout. Quick Help contains 매출 입력, 영수증 OCR, AI Coach, 메뉴 엔지니어링, AI 부스트 플랜, 메뉴 관리. AI Coach uses `fa-robot`. AI 분석 안내 and 앱 정보 are not displayed.
+
+PILOT TEST DATA NOTICE
+- The two exact continuity profiles are Demo store 5 / DEMO / DEMO and ID_SAE store 1789955524607 / ID / SAEMAEUL. Indonesia's rolling 60-day deterministic data is pilot/test data; it is not presented as real history. Existing saved/manual rows remain authoritative.
+
+==============================================================================
+END CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.4
+==============================================================================
 ==============================================================================
 CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.3
 ==============================================================================
