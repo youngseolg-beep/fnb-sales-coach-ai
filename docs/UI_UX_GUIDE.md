@@ -2,15 +2,46 @@
 https://drive.google.com/drive/folders/1fXlcQqT8SQvA1GUKSr6-WuywbFvrxWOo?usp=drive_link
 SALES COACH AI
 DESIGN LANGUAGE & UI/UX GUIDELINE
-VERSION 4.2 — CODEX IMPLEMENTATION MASTER
+VERSION 4.3 — CODEX IMPLEMENTATION MASTER
 Document Type: Product Design Language / UIUX Specification / Implementation Guide
 Primary Platform: Mobile-first Responsive Web
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: Input → Analysis → Action
 Visual Reference Set: 11 approved UI/UX reference images
 Implementation Target: Existing Sales Coach AI codebase
-Document Status: Official V4.2 UI/UX Master — Pilot Implementation Integrated
-Last Updated: 2026-09-18
+Document Status: Official V4.3 UI/UX Master — Pilot Implementation Integrated
+Last Updated: 2026-09-21
+==============================================================================
+CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.3
+==============================================================================
+
+This section overrides older conflicting implementation-status statements. The existing V4 visual language remains authoritative.
+
+MENU — 기본 제공 찬
+- The 기본 제공 찬 card sits within Menu management but remains separate from sellable-menu editing.
+- It supports loading, error/retry, empty/not-configured, configured, review-overdue, edit/manage, and read-only-history states.
+- Configured summary shows 1회 총 원가, item count, effective-date context, and next review date.
+- Editing is compact and mobile-first: item name, 1회 기준 원가, add/delete, derived total, and an explicit independent Save.
+- Read-only history opens in a modal, newest effective date first, showing effective date, total, item count, expandable item detail, and a current-applied badge where appropriate.
+- Styling stays within warm V4 neutral/brown surfaces.
+
+SALES — 기본 제공 찬 제공 횟수
+- Inside 메뉴 판매량, after category/menu quantity rows, display: 기본 제공 찬 / 제공 횟수 [ ] 회.
+- Display only when configuration applies to the selected Sales date. Do not list child component items in Sales.
+- Keep the count visually separate from 총 판매수량: it is a food-cost operating quantity, not a sellable-menu quantity.
+- Validation and error copy remain concise Korean.
+
+COACH — 원가 기준 수익성
+- Place the compact panel after 선택 기간 KPI and before expandable 매출 분석, AI 운영 코칭 리포트, Menu Engineering, and Boost Plan sections.
+- Use a mobile-first warm-white/neutral surface and two-column metric grid; do not use an oversized finance dashboard or AI-purple emphasis.
+- Metrics are exactly: 매출, 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, 원가 기준 이익.
+- Quiet disclaimer: 인건비, 임차료, 카드·배달 수수료, 세금 등 기타 비용은 포함하지 않습니다. 원가 기준 이익은 순이익이 아닙니다.
+- Loading, error + retry, and empty-range states are local to this panel.
+- Do not introduce food-cost comparison arrows or benchmarks; they are not implemented.
+
+==============================================================================
+END CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.3
+==============================================================================
 ==============================================================================
 CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-18 / V4.2
 ==============================================================================

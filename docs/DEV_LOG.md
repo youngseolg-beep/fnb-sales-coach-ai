@@ -2,9 +2,85 @@
 
 # Complete Development Handover / Extended Context Prompt
 
-# Version V2.2.0
+# Version V2.3.0
 
-# Date: 2026-09-18
+# Date: 2026-09-21
+
+---
+
+# 2026-09-21 LATEST AUTHORITATIVE STATE — V2.3.0
+
+> **IMPORTANT — READ THIS SECTION FIRST**
+>
+> This section supersedes V2.2.0 and older historical sections whenever they conflict. Current verified code remains the final source of truth.
+
+## A. Completed Shared Side Dish / Food Cost capability
+
+Status: **DONE**. This is a generic store-scoped product capability, not an Indonesia-only implementation.
+
+Architecture:
+
+```text
+Menu
+MenuSettingsPage → sharedSideDishService → shared_side_dish_configs
+
+Sales
+SalesReportData.sharedSideDishCount → sales_daily.payload.sharedSideDishCount
+→ DataInput / SalesV4Page → centralized Sales save validation
+
+Food Cost
+foodCostService.calculateFoodCostForRange()
+
+Coach
+DetailPage → FoodCostSummary → CoachV4Page profitability panel
+→ geminiService Operating Coaching context → coach_reports.input_snapshot.foodCost
+```
+
+Completed stages:
+- configuration/history foundation
+- Menu management UI
+- Sales persistence
+- Sales input, recommendation, and validation
+- deterministic period profitability
+- Coach UI
+- AI Operating Coaching context
+- final terminology and integration audit
+
+## B. Data and business rules
+
+- Table: shared_side_dish_configs
+- Unique key: (store_id, effective_date)
+- Menu configuration date: browser-local today
+- Sales configuration lookup: selected Sales date
+- Serving count: sales_daily.payload.sharedSideDishCount
+- FoodCostSummary: periodSales, directMenuCost, sharedSideDishCost, totalFoodCost, foodCostRate, grossProfitBeforeOtherExpenses, analyzedDays
+- No fees are deducted. 기본 제공 찬 cost is not allocated into Menu Engineering.
+- Official terminology: 기본 제공 찬, 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, 원가 기준 이익.
+
+## C. Indonesia feedback status
+
+- Sales operational Note → AI Operating Coaching context is implemented.
+- Shared Side Dish / Food Cost request is implemented as a generic store-scoped capability; it is not hardcoded to Indonesia.
+- This work did not create or configure ID_SAE, an Indonesia account/store, menu, or side-dish source data. Those remain separate operational/data setup work if requested.
+
+## D. Verification and current priorities
+
+- Final integration audit found no blocking behavioral issue; terminology mismatches were corrected.
+- TypeScript, production build, and git diff --check passed.
+- Production deployment succeeded for the final feature commit.
+- Integration boundaries reviewed: Menu, Sales, OCR, Food Cost, Coach, AI, Menu Engineering, and Boost.
+- No manual production-data smoke test or live ID_SAE verification is claimed.
+
+DONE:
+- Sales Note → AI Operating Coaching context
+- Shared Side Dish configuration/history
+- Shared Side Dish daily serving count
+- deterministic Food Cost profitability
+- Coach profitability panel
+- Food Cost → AI Operating Coaching context
+- integration audit / terminology alignment
+
+Optional technical work remains: bundle splitting, regression-test expansion, observability, and legacy cleanup where applicable. Indonesia account creation is not an automatic next engineering blocker.
 
 ---
 

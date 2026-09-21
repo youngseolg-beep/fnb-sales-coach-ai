@@ -1,16 +1,84 @@
 SALES COACH AI
 PRODUCT BIBLE
-VERSION 4.2 — CODEX / PRODUCT MASTER
+VERSION 4.3 — CODEX / PRODUCT MASTER
 
 Product Type: Mobile-First Store Operating Coach
-Status: V4.2 Pilot Ready / Pilot Readiness Closed
+Status: V4.3 Pilot Ready / Pilot Readiness Closed
 Primary Platform: Responsive Web (Mobile First)
 Primary User: Restaurant Store Owner / Store Operator
 Secondary User: HQ / Brand Operations via active Master workspace
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: INPUT → ANALYSIS → ACTION
 UI Reference: 11 Approved V4 UI/UX Reference Images
-Companion Document: Sales Coach AI UI/UX Guideline V4.2
+Companion Document: Sales Coach AI UI/UX Guideline V4.3
+
+==============================================================================
+2026-09-21 AUTHORITATIVE PRODUCT UPDATE — V4.3
+==============================================================================
+
+This is the latest Product Bible state and overrides older conflicting product-status statements. Current verified application behavior remains the final source of truth.
+
+SYSTEM calculates deterministic facts. AI interprets those facts. INTERFACE clarifies what matters. OPERATOR makes the final decision.
+
+SHARED SIDE DISH / FOOD COST PRODUCT CONTRACT
+
+Official product term: 기본 제공 찬. It is not a sellable menu item.
+
+MENU
+- Menu supports a store-scoped 기본 제공 찬 cost configuration, separate from sellable Menu CRUD.
+- Configuration uses browser-local current date as its effective date; Menu selectedDate does not control it.
+- A configuration has multiple component items, each with a name and 1회 기준 원가. 1회 총 원가 is derived, never manually stored.
+- 기본 제공 찬 저장 is explicit and independent from regular Menu Save. A same-local-calendar-day save updates that date's snapshot; a later local date creates a new effective-date snapshot.
+- History is read-only and preserves effective-date snapshots.
+- Storage is public.shared_side_dish_configs, scoped by store_id with RLS.
+
+SALES
+- Sales additionally captures 기본 제공 찬 제공 횟수 in sales_daily.payload.sharedSideDishCount; there is no dedicated sales_daily column.
+- Missing legacy values normalize to 0.
+- Input appears only when a configuration effective on or before the selected Sales date applies.
+- New unsaved dates recommend count = Orders. A manual edit prevents later Orders changes from overwriting the count; saved historical dates preserve their saved count.
+- OCR file/image count never controls this value.
+- The count is a food-cost operating quantity: it is not part of menu quantity total and does not change sales, orders, visitors, AOV, or conversion.
+- With an applicable configuration and sales > 0 or orders > 0, count must be an integer >= 1. With sales = 0 and orders = 0, 0 is allowed. Stores without configuration retain previous Sales behavior.
+- OCR authority and reconciliation rules remain unchanged.
+
+DETERMINISTIC FOOD COST PROFITABILITY
+
+Official UI terms: 매출, 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, 원가 기준 이익.
+
+periodSales = sum(saved POS sales + saved delivery sales)
+
+directMenuCost = sum(each saved day's sold menu qty × that same saved day's unitCost)
+
+sharedSideDishCost = sum(saved sharedSideDishCount × 기본 제공 찬 configuration total effective on that Sales date)
+
+totalFoodCost = directMenuCost + sharedSideDishCost
+
+foodCostRate = periodSales > 0 ? totalFoodCost / periodSales × 100 : 0
+
+grossProfitBeforeOtherExpenses = periodSales - totalFoodCost
+
+- Historical menu cost comes from the saved Sales row; current Menu master cost is not used to recalculate history.
+- Missing or invalid menu unitCost is not invented.
+- Effective dates are respected per Sales day; the newest configuration is never applied retroactively to all history.
+- 기본 제공 찬 cost stays a store/period cost and is never allocated to an individual sellable menu item. Menu Engineering classifications remain direct-menu-cost based.
+- Labor, rent, card/payment fees, delivery commission, tax, utilities, and other operating expenses are excluded.
+- 원가 기준 이익 is not 순이익, 영업이익, or EBITDA. No default target or industry food-cost benchmark exists.
+
+COACH / AI
+- Coach V4 displays deterministic 원가 기준 수익성 after 선택 기간 KPI and before expandable analysis sections, using all six official metrics.
+- FoodCostSummary is application-calculated deterministic data. AI Operating Coaching may receive the exact period summary only as supporting evidence.
+- AI interprets rather than recalculates; it must not invent missing costs, excluded expenses, food-cost targets, industry benchmarks, or per-menu 기본 제공 찬 allocations. Food-cost context need not appear in every report.
+- Operational notes remain user-entered context, not verified causality.
+- Completed reports store the resolved summary at coach_reports.input_snapshot.foodCost. An empty range may retain its exact zero summary in the snapshot while AI receives no food-cost context. Food-cost calculation failure must not block AI Operating Coaching.
+
+CURRENT STATUS
+- Shared Side Dish / Food Cost is completed Store Owner functionality, store-scoped for any configured store; it is not Indonesia-only.
+- This feature did not create ID_SAE or seed actual Indonesia account, menu, side-dish, or production sales data.
+
+==============================================================================
+END 2026-09-21 AUTHORITATIVE PRODUCT UPDATE
+==============================================================================
 
 ==============================================================================
 2026-09-18 AUTHORITATIVE PRODUCT UPDATE — V4.2
