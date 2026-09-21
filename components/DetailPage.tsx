@@ -44,18 +44,23 @@ const calcChangeRate = (current: number, previous: number) => {
   return ((current - previous) / previous) * 100;
 };
 
-const getLocalYesterday = () => formatLocalDate(subDays(new Date(), 1));
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
 
-const getPresetPeriodRange = (period: "yesterday" | "week" | "month") => {
-  const yesterday = getLocalYesterday();
-  const end = new Date(yesterday);
-  if (period === "yesterday") return { start: yesterday, end: yesterday };
+const getReferenceCompletedEnd = (referenceDate: string) => formatLocalDate(subDays(parseLocalDate(referenceDate), 1));
+
+const getPresetPeriodRange = (period: "yesterday" | "week" | "month", referenceDate: string) => {
+  const completedEnd = getReferenceCompletedEnd(referenceDate);
+  const end = parseLocalDate(completedEnd);
+  if (period === "yesterday") return { start: completedEnd, end: completedEnd };
   if (period === "week") {
     const monday = new Date(end);
     monday.setDate(end.getDate() - ((end.getDay() + 6) % 7));
-    return { start: formatLocalDate(monday), end: yesterday };
+    return { start: formatLocalDate(monday), end: completedEnd };
   }
-  return { start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: yesterday };
+  return { start: formatLocalDate(new Date(end.getFullYear(), end.getMonth(), 1)), end: completedEnd };
 };
 
 const aggregateMenusFromRows = (rows: any[]): PeriodMenuRow[] => {
@@ -123,7 +128,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
   const [v4Period, setV4Period] = useState<"yesterday" | "week" | "month" | "custom">("yesterday");
 
-  const [periodRange, setPeriodRange] = useState(() => getPresetPeriodRange("yesterday"));
+  const [periodRange, setPeriodRange] = useState(() => getPresetPeriodRange("yesterday", selectedDate));
 
   const [currentPeriodStats, setCurrentPeriodStats] = useState<any>(null);
   const [comparisonStats, setComparisonStats] = useState<any>(null);
@@ -273,8 +278,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   useEffect(() => {
     if (v4Period === "custom") return;
-    setPeriodRange(getPresetPeriodRange(v4Period));
-  }, [v4Period]);
+    setPeriodRange(getPresetPeriodRange(v4Period, selectedDate));
+  }, [v4Period, selectedDate]);
 
   useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
@@ -336,7 +341,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   }, [data]);
 
   const handleGenerateReport = async () => {
-    if (periodRange.end > getLocalYesterday()) {
+    if (periodRange.end > getReferenceCompletedEnd(selectedDate)) {
       showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
       return;
     }
@@ -861,7 +866,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const deterministicMenuEngineeringScopeKey = `${storeId}:${periodRange.start}:${periodRange.end}`;
 
   const handleGenerateAiBoostPlan = async () => {
-    if (periodRange.end > getLocalYesterday()) {
+    if (periodRange.end > getReferenceCompletedEnd(selectedDate)) {
       showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
       return;
     }
@@ -987,14 +992,14 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   const handleV4PeriodChange = (period: "yesterday" | "week" | "month" | "custom") => {
     if (period === "yesterday") {
-      setPeriodRange(getPresetPeriodRange("yesterday"));
+      setPeriodRange(getPresetPeriodRange("yesterday", selectedDate));
       setV4Period(period);
       setComparisonMode("MANUAL");
       return;
     }
 
     if (period === "week") {
-      setPeriodRange(getPresetPeriodRange("week"));
+      setPeriodRange(getPresetPeriodRange("week", selectedDate));
       setV4Period(period);
       setComparisonMode("WOW");
       return;
@@ -1006,14 +1011,14 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       return;
     }
 
-    setPeriodRange(getPresetPeriodRange("month"));
+    setPeriodRange(getPresetPeriodRange("month", selectedDate));
     setV4Period(period);
     setComparisonMode("MOM");
   };
 
   const handleCustomRangeChange = (next: { start: string; end: string }) => {
-    const yesterday = getLocalYesterday();
-    const end = next.end > yesterday ? yesterday : next.end;
+    const completedEnd = getReferenceCompletedEnd(selectedDate);
+    const end = next.end > completedEnd ? completedEnd : next.end;
     const start = next.start > end ? end : next.start;
     setV4Period("custom");
     setComparisonMode("MANUAL");
@@ -1025,7 +1030,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     menuEngineeringAiScopeKey === menuEngineeringScopeKey && !!menuEngineeringAiResult;
 
   const handleGenerateMenuEngineeringAi = async () => {
-    if (periodRange.end > getLocalYesterday()) {
+    if (periodRange.end > getReferenceCompletedEnd(selectedDate)) {
       showToast("오늘 데이터는 영업 중일 수 있어 AI 분석에서 제외됩니다. 어제까지의 기간을 선택해 주세요.");
       return;
     }

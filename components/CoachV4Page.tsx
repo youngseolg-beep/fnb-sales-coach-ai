@@ -88,7 +88,7 @@ const CoachV4Page: React.FC<Props> = ({
   ];
 
   return <main className="mx-auto w-full max-w-[430px] space-y-4 pb-32 text-[#1f1f1f] lg:max-w-[1180px] lg:space-y-6 lg:pb-10">
-    <CoachGlobalPeriodSelector activePeriod={activePeriod} periodRange={periodRange} comparisonRange={comparisonRange} onPeriodChange={onPeriodChange} onCustomRangeChange={onCustomRangeChange} />
+    <CoachGlobalPeriodSelector selectedDate={selectedDate} activePeriod={activePeriod} periodRange={periodRange} comparisonRange={comparisonRange} onPeriodChange={onPeriodChange} onCustomRangeChange={onCustomRangeChange} />
 
     <section ref={insightRef} data-tour="coach-analysis" className="overflow-hidden rounded-[18px] border border-[#e5ddff] bg-[linear-gradient(135deg,#fcfbff_0%,#f3efff_100%)] p-5 shadow-[0_5px_16px_rgba(101,78,171,0.08)]">
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-semibold text-[#6d55df]"><i className="fa-solid fa-robot mr-1" />AI Coach · 기간 분석</p><h2 className="mt-5 max-w-[235px] text-[21px] font-bold leading-[1.3] tracking-[-0.055em]">{insight}</h2></div><div className="relative mt-1 flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/75 shadow-[0_8px_18px_rgba(96,76,152,0.12)]"><i className="fa-solid fa-robot text-[34px] text-[#2b2635]" /><i className="fa-solid fa-sparkles absolute -bottom-1 -left-2 text-[15px] text-[#9b7cff]" /></div></div>
@@ -166,12 +166,13 @@ const V4Report: React.FC<{ report: string; reportMatchesScope: boolean; loading:
 };
 
 const CoachGlobalPeriodSelector: React.FC<{
+  selectedDate: string;
   activePeriod: PeriodKey;
   periodRange: { start: string; end: string };
   comparisonRange: { start: string; end: string } | null;
   onPeriodChange: (period: PeriodKey) => void;
   onCustomRangeChange: (range: { start: string; end: string }) => void;
-}> = ({ activePeriod, periodRange, comparisonRange, onPeriodChange, onCustomRangeChange }) => {
+}> = ({ selectedDate, activePeriod, periodRange, comparisonRange, onPeriodChange, onCustomRangeChange }) => {
   const periodDays = Math.max(0, getInclusiveDayCount(periodRange.start, periodRange.end));
   const confidence = periodDays <= 6
     ? { label: "신뢰도 낮음", message: "데이터가 적어 결과 변동성이 클 수 있습니다." }
@@ -182,11 +183,11 @@ const CoachGlobalPeriodSelector: React.FC<{
         : periodDays <= 60
           ? { label: "신뢰도 매우 높음", message: "" }
           : { label: "신뢰도 매우 높음", message: "메뉴 분석은 최근 최대 60일 기준으로 분석합니다." };
-  const localYesterday = formatLocalDate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1));
-  const currentWeekStart = new Date(localYesterday);
-  currentWeekStart.setDate(currentWeekStart.getDate() - ((currentWeekStart.getDay() + 6) % 7));
-  const weekUnavailable = new Date().getDay() === 1;
-  const monthUnavailable = new Date().getDate() === 1;
+  const [year, month, day] = selectedDate.split("-").map(Number);
+  const referenceDate = new Date(year, month - 1, day);
+  const localYesterday = formatLocalDate(new Date(year, month - 1, day - 1));
+  const weekUnavailable = referenceDate.getDay() === 1;
+  const monthUnavailable = referenceDate.getDate() === 1;
   const presets = ["yesterday", "week", "month", "custom"] as const;
   const labels: Record<typeof presets[number], string> = { yesterday: "어제", week: "이번 주", month: "이번 달", custom: "선택 기간" };
   const comparisonLabels: Record<PeriodKey, string> = { yesterday: "전일 비교", week: "전주 동일 기간", month: "전월 동일 기간", custom: "직전 동일 기간" };
