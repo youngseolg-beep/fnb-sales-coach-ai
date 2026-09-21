@@ -14,7 +14,7 @@ import {
   saveMenuPriceHistory,
 } from "./services/menuPriceService";
 import { loadMenuMaster } from "./services/menuMasterService";
-import { ensureDemoSalesContinuity } from "./services/demoSalesService";
+import { ensureDemoSalesContinuity, isSyntheticSalesContinuityStore } from "./services/demoSalesService";
 import { formatLocalDate } from "./utils2/date";
 import { getCurrencyByCountry } from "./utils2/currency";
 
@@ -151,6 +151,7 @@ const App: React.FC = () => {
   const [menuMasterCategories, setMenuMasterCategories] = useState<MenuCategory[]>([]);
   const [menuMasterLoading, setMenuMasterLoading] = useState(true);
   const [menuMasterError, setMenuMasterError] = useState<string | null>(null);
+  const [syntheticContinuityToday, setSyntheticContinuityToday] = useState(() => formatLocalDate(new Date()));
 
   const { monthlyTarget, setMonthlyTarget, handleSaveMonthlyTarget } = useMonthlyTarget(storeId);
   const monthlyStatsRequestRef = useRef("");
@@ -560,10 +561,35 @@ const App: React.FC = () => {
   }, [isLoggedIn, storeId, userRole]);
 
   useEffect(() => {
-    if (!isLoggedIn || storeId !== 5 || data.country !== "DEMO" || data.brand !== "DEMO") return;
+    if (
+      !isLoggedIn ||
+      storeId == null ||
+      !isSyntheticSalesContinuityStore({ storeId, country: data.country, brand: data.brand })
+    ) {
+      return;
+    }
+
+    const checkLocalDateRollover = () => {
+      const localToday = formatLocalDate(new Date());
+      setSyntheticContinuityToday((current) => current === localToday ? current : localToday);
+    };
+
+    checkLocalDateRollover();
+    const intervalId = window.setInterval(checkLocalDateRollover, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [isLoggedIn, storeId, data.country, data.brand]);
+
+  useEffect(() => {
+    if (
+      !isLoggedIn ||
+      storeId == null ||
+      !isSyntheticSalesContinuityStore({ storeId, country: data.country, brand: data.brand })
+    ) {
+      return;
+    }
     if (menuMasterLoading || menuMasterCategories.length === 0) return;
 
-    const today = formatLocalDate(new Date());
+    const today = syntheticContinuityToday;
     const requestKey = `${storeId}:${today}`;
     if (demoContinuityRequestRef.current === requestKey) return;
     demoContinuityRequestRef.current = requestKey;
@@ -575,6 +601,7 @@ const App: React.FC = () => {
           storeId,
           country: data.country,
           brand: data.brand,
+          today: parseLocalDate(today),
         });
         if (cancelled || result.createdDates.length === 0) return;
 
@@ -592,7 +619,7 @@ const App: React.FC = () => {
 
     void ensureContinuity();
     return () => { cancelled = true; };
-  }, [isLoggedIn, storeId, data.country, data.brand, menuMasterLoading, menuMasterCategories, refreshDatesInMonth, fetchData, refreshMonthlyStats, setSelectedDate]);
+  }, [isLoggedIn, storeId, data.country, data.brand, syntheticContinuityToday, menuMasterLoading, menuMasterCategories, refreshDatesInMonth, fetchData, refreshMonthlyStats, setSelectedDate]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
