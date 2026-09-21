@@ -45,6 +45,13 @@ const INDONESIA_MONTHLY_QUANTITY_BASELINES: Record<string, number> = {
   "콘치즈": 290,
 };
 
+const INDONESIA_BBQ_MENU_NAMES = new Set([
+  "열탄불고기(매운맛)", "열탄불고기(간장맛)", "오겹살", "삼겹살", "목살", "양념돼지구이", "항정살", "돼지껍데기", "바싹불고기",
+]);
+const INDONESIA_SEPTEMBER_FOCUS_MENU_NAMES = new Set([
+  "열탄불고기(매운맛)", "7분 돼지김치", "순두부찌개", "열탄볶음밥", "치즈계란찜",
+]);
+
 type DemoMenu = { id: string; name: string; category: string; displayOrder: number; price: number; unitCost?: number };
 type PriceHistoryRow = { menu_id: string; price: number | null; unit_cost: number | null; effective_date: string; created_at?: string | null };
 
@@ -201,6 +208,30 @@ const deterministicQuantity = (value: number, date: string, salt: number) => {
   return whole + (hashDate(date, salt) % 1000 < Math.round(fraction * 1000) ? 1 : 0);
 };
 
+const getIndonesiaPilotTrendFactor = (date: string) => {
+  if (date <= "2026-07-31") return 0.72;
+  if (date <= "2026-08-20") return 0.85;
+  if (date <= "2026-08-31") return 1;
+  if (date <= "2026-09-14") return 1.25;
+  return 1.55;
+};
+
+const getIndonesiaPilotMenuMixFactor = (date: string, menuName: string) => {
+  if (date <= "2026-08-20") {
+    if (INDONESIA_BBQ_MENU_NAMES.has(menuName)) return 1.1;
+    if (INDONESIA_SEPTEMBER_FOCUS_MENU_NAMES.has(menuName)) return 0.9;
+    return 1;
+  }
+  if (date <= "2026-08-31") {
+    if (INDONESIA_BBQ_MENU_NAMES.has(menuName)) return 1.05;
+    if (INDONESIA_SEPTEMBER_FOCUS_MENU_NAMES.has(menuName)) return 0.96;
+    return 1;
+  }
+  if (INDONESIA_SEPTEMBER_FOCUS_MENU_NAMES.has(menuName)) return date <= "2026-09-14" ? 1.18 : 1.28;
+  if (INDONESIA_BBQ_MENU_NAMES.has(menuName)) return 0.94;
+  return 1;
+};
+
 const buildDemoPayload = (date: string, menus: DemoMenu[]): DailyPayload => {
   const dayHash = hashDate(date);
   const targetSales = isWeekend(date) ? 1000 + (dayHash % 501) : 700 + (dayHash % 401);
@@ -259,7 +290,10 @@ const buildIndonesiaPilotPayload = (date: string, menus: DemoMenu[]): DailyPaylo
   const baseQuantities = menus.map((menu, index) => ({
     menu,
     quantity: deterministicQuantity(
-      ((INDONESIA_MONTHLY_QUANTITY_BASELINES[menu.name] ?? 0) / daysInMonth(date)) * weekdayFactor * dailyVariation,
+      ((INDONESIA_MONTHLY_QUANTITY_BASELINES[menu.name] ?? 0) / daysInMonth(date)) *
+        weekdayFactor *
+        dailyVariation *
+        getIndonesiaPilotMenuMixFactor(date, menu.name),
       date,
       index + 701,
     ),
@@ -267,9 +301,10 @@ const buildIndonesiaPilotPayload = (date: string, menus: DemoMenu[]): DailyPaylo
   const baseSales = baseQuantities.reduce((sum, entry) => sum + entry.menu.price * entry.quantity, 0);
   if (baseSales <= 0) throw new Error("Indonesia Pilot has no menu quantity baselines with prices");
 
-  const targetSales = isWeekend(date)
+  const baselineTargetSales = isWeekend(date)
     ? 41_000_000 + (hashDate(date, 809) % 4_000_001)
     : 37_000_000 + (hashDate(date, 809) % 4_000_001);
+  const targetSales = baselineTargetSales * getIndonesiaPilotTrendFactor(date);
   const multiplier = targetSales / baseSales;
   const quantities = new Map(baseQuantities.map((entry) => [
     entry.menu.id,

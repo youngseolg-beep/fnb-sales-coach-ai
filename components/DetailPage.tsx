@@ -462,7 +462,21 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       return { sales: 0, orders: 0, visitors: 0, aov: 0 };
     }
 
-    const sales = rows.reduce((sum, row) => sum + Number(row?.posSales ?? row?.sales ?? row?.total_sales ?? row?.totalSales ?? 0), 0);
+    const getFiniteNumber = (value: unknown) => {
+      if (value === null || value === undefined || value === "") return null;
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue) ? numericValue : null;
+    };
+    const sales = rows.reduce((sum, row) => {
+      const storedTotalSales = getFiniteNumber(row?.sales);
+      if (storedTotalSales !== null) return sum + storedTotalSales;
+
+      const posSales = getFiniteNumber(row?.posSales);
+      const deliverySales = getFiniteNumber(row?.deliverySales);
+      if (posSales !== null && deliverySales !== null) return sum + posSales + deliverySales;
+
+      return sum + (getFiniteNumber(row?.total_sales) ?? getFiniteNumber(row?.totalSales) ?? 0);
+    }, 0);
     const orders = rows.reduce((sum, row) => sum + Number(row?.orders ?? row?.orderCount ?? 0), 0);
     const visitors = rows.reduce((sum, row) => sum + Number(row?.visitCount ?? row?.visitors ?? row?.guests ?? row?.guestCount ?? 0), 0);
 
