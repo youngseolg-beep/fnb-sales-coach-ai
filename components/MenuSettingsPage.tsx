@@ -1033,40 +1033,39 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
 
               {sharedSideDishExpanded && (
                 <div className="mt-3 border-t border-[#eee7e1] pt-3">
-                  <div className="space-y-2">
-                    {sharedSideDishDraft.map((item, index) => (
-                      <div key={item.id} className="rounded-[10px] border border-[#ece4de] bg-[#fdfbf9] p-2.5">
-                        <div className="grid gap-1.5 sm:grid-cols-[minmax(0,1fr)_130px_auto] sm:items-end">
-                          <label className="block">
-                            <span className="mb-1 block text-[8px] font-medium text-[#756961]">항목명</span>
-                            <input
-                              type="text"
-                              value={item.name}
-                              onChange={(event) => updateSharedSideDishDraftItem(item.id, { name: event.target.value })}
-                              className="h-8 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-[10px] outline-none focus:border-[#8b5e3c]"
-                              placeholder="예: 김치"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-[8px] font-medium text-[#756961]">1회 기준 원가</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.unitCost}
-                              onChange={(event) => updateSharedSideDishDraftItem(item.id, { unitCost: Number(event.target.value) })}
-                              className="h-8 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2 text-[10px] outline-none focus:border-[#8b5e3c]"
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => removeSharedSideDishDraftItem(item.id)}
-                            className="h-8 rounded-[8px] border border-[#efcfc9] px-2.5 text-[9px] font-semibold text-[#d83c35]"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                        <p className="mt-1.5 text-right text-[8px] text-[#9a8d85]">항목 {index + 1}</p>
+                  <div className="overflow-hidden rounded-[8px] border border-[#ece4de] bg-[#fdfbf9]">
+                    <div className="grid grid-cols-[minmax(0,1fr)_100px_42px] gap-1.5 px-2 pb-1.5 pt-2 text-[9px] font-medium text-[#756961] sm:grid-cols-[minmax(0,1fr)_130px_48px]">
+                      <span>항목명</span>
+                      <span>1회 기준 원가</span>
+                    </div>
+                    {sharedSideDishDraft.map((item) => (
+                      <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_100px_42px] items-center gap-1.5 border-t border-[#ece4de] px-2 py-1 sm:grid-cols-[minmax(0,1fr)_130px_48px]">
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(event) => updateSharedSideDishDraftItem(item.id, { name: event.target.value })}
+                          className="h-8 w-full rounded-[6px] border border-[#e5ddd7] bg-white px-2 text-[10px] outline-none focus:border-[#8b5e3c]"
+                          style={{ fontSize: "10px" }}
+                          placeholder="예: 김치"
+                          aria-label="항목명"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitCost}
+                          onChange={(event) => updateSharedSideDishDraftItem(item.id, { unitCost: Number(event.target.value) })}
+                          className="h-8 w-full rounded-[6px] border border-[#e5ddd7] bg-white px-2 text-[10px] outline-none focus:border-[#8b5e3c]"
+                          style={{ fontSize: "10px" }}
+                          aria-label="1회 기준 원가"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSharedSideDishDraftItem(item.id)}
+                          className="h-8 w-full rounded-[6px] border border-[#efcfc9] text-[9px] font-semibold text-[#d83c35]"
+                        >
+                          삭제
+                        </button>
                       </div>
                     ))}
                   </div>
