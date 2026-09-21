@@ -972,7 +972,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <button
                     type="button"
                     onClick={openSharedSideDishHistory}
-                    className="text-[11px] font-semibold text-[#766c66]"
+                    className="text-[10px] font-semibold text-[#766c66]"
                   >
                     변경 이력
                   </button>
@@ -980,7 +980,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                 <button
                   type="button"
                   onClick={sharedSideDishExpanded ? closeSharedSideDishEditor : openSharedSideDishEditor}
-                  className="text-[11px] font-semibold text-[#8b5e3c]"
+                  className="text-[10px] font-semibold text-[#8b5e3c]"
                 >
                   {sharedSideDishExpanded ? "닫기" : "관리"}
                 </button>
@@ -1038,35 +1038,35 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       <div key={item.id} className="rounded-[10px] border border-[#ece4de] bg-[#fdfbf9] p-3">
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_130px_auto] sm:items-end">
                           <label className="block">
-                            <span className="mb-1 block text-[10px] font-medium text-[#756961]">항목명</span>
+                            <span className="mb-1 block text-[9px] font-medium text-[#756961]">항목명</span>
                             <input
                               type="text"
                               value={item.name}
                               onChange={(event) => updateSharedSideDishDraftItem(item.id, { name: event.target.value })}
-                              className="h-10 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[12px] outline-none focus:border-[#8b5e3c]"
+                              className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[11px] outline-none focus:border-[#8b5e3c]"
                               placeholder="예: 김치"
                             />
                           </label>
                           <label className="block">
-                            <span className="mb-1 block text-[10px] font-medium text-[#756961]">1회 기준 원가</span>
+                            <span className="mb-1 block text-[9px] font-medium text-[#756961]">1회 기준 원가</span>
                             <input
                               type="number"
                               min="0"
                               step="0.01"
                               value={item.unitCost}
                               onChange={(event) => updateSharedSideDishDraftItem(item.id, { unitCost: Number(event.target.value) })}
-                              className="h-10 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[12px] outline-none focus:border-[#8b5e3c]"
+                              className="h-9 w-full rounded-[8px] border border-[#e5ddd7] bg-white px-2.5 text-[11px] outline-none focus:border-[#8b5e3c]"
                             />
                           </label>
                           <button
                             type="button"
                             onClick={() => removeSharedSideDishDraftItem(item.id)}
-                            className="h-10 rounded-[8px] border border-[#efcfc9] px-3 text-[11px] font-semibold text-[#d83c35]"
+                            className="h-9 rounded-[8px] border border-[#efcfc9] px-3 text-[10px] font-semibold text-[#d83c35]"
                           >
                             삭제
                           </button>
                         </div>
-                        <p className="mt-1.5 text-right text-[9px] text-[#9a8d85]">항목 {index + 1}</p>
+                        <p className="mt-1.5 text-right text-[8px] text-[#9a8d85]">항목 {index + 1}</p>
                       </div>
                     ))}
                   </div>
@@ -1074,14 +1074,14 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                   <button
                     type="button"
                     onClick={addSharedSideDishDraftItem}
-                    className="mt-3 text-[11px] font-semibold text-[#8b5e3c]"
+                    className="mt-3 text-[10px] font-semibold text-[#8b5e3c]"
                   >
                     + 항목 추가
                   </button>
 
                   <div className="mt-3 flex items-center justify-between rounded-[9px] bg-[#f8f4f0] px-3 py-2.5">
-                    <span className="text-[10px] font-medium text-[#756961]">1회 총 원가</span>
-                    <strong className="text-[13px] text-[#302722]">{formatCurrencyValue(sharedSideDishDraftTotal, country)}</strong>
+                    <span className="text-[9px] font-medium text-[#756961]">1회 총 원가</span>
+                    <strong className="text-[12px] text-[#302722]">{formatCurrencyValue(sharedSideDishDraftTotal, country)}</strong>
                   </div>
 
                   {sharedSideDishSaveError && (
@@ -1093,7 +1093,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       type="button"
                       onClick={closeSharedSideDishEditor}
                       disabled={sharedSideDishSaving}
-                      className="h-10 rounded-[8px] px-3 text-[11px] font-semibold text-[#766c66] disabled:opacity-50"
+                      className="h-9 rounded-[8px] px-3 text-[10px] font-semibold text-[#766c66] disabled:opacity-50"
                     >
                       취소
                     </button>
@@ -1101,7 +1101,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                       type="button"
                       onClick={() => void saveCurrentSharedSideDishConfig()}
                       disabled={!sharedSideDishDirty || sharedSideDishSaving}
-                      className="h-10 rounded-[8px] bg-[#8b5e3c] px-3 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-9 rounded-[8px] bg-[#8b5e3c] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {sharedSideDishSaving ? "저장 중..." : "기본 제공 찬 저장"}
                     </button>
@@ -1597,26 +1597,26 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="shrink-0 border-b border-[#eee8e3] bg-[#fdfaf8] px-5 py-4">
-              <h3 className="text-[16px] font-semibold text-[#211c19]">기본 제공 찬 변경 이력</h3>
+              <h3 className="text-[14px] font-semibold text-[#211c19]">기본 제공 찬 변경 이력</h3>
               <p className="mt-1 text-[10px] text-[#8c817a]">저장일 기준 원가 구성 이력입니다.</p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               {sharedSideDishHistoryLoading ? (
-                <p className="py-8 text-center text-[12px] text-[#766c66]">변경 이력을 불러오는 중...</p>
+                <p className="py-8 text-center text-[10px] text-[#766c66]">변경 이력을 불러오는 중...</p>
               ) : sharedSideDishHistoryError ? (
                 <div className="py-8 text-center">
-                  <p className="text-[12px] text-[#a55345]">{sharedSideDishHistoryError}</p>
+                  <p className="text-[10px] text-[#a55345]">{sharedSideDishHistoryError}</p>
                   <button
                     type="button"
                     onClick={() => void loadCurrentSharedSideDishHistory()}
-                    className="mt-3 text-[11px] font-semibold text-[#8b5e3c]"
+                    className="mt-3 text-[10px] font-semibold text-[#8b5e3c]"
                   >
                     다시 시도
                   </button>
                 </div>
               ) : sharedSideDishHistory.length === 0 ? (
-                <p className="py-8 text-center text-[12px] text-[#766c66]">변경 이력이 없습니다.</p>
+                <p className="py-8 text-center text-[10px] text-[#766c66]">변경 이력이 없습니다.</p>
               ) : (
                 <div className="space-y-2.5">
                   {sharedSideDishHistory.map((snapshot) => {
@@ -1633,23 +1633,23 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <strong className="text-[12px] text-[#302722]">{format(parseISO(snapshot.effectiveDate), "yyyy.MM.dd")}</strong>
+                                <strong className="text-[11px] text-[#302722]">{format(parseISO(snapshot.effectiveDate), "yyyy.MM.dd")}</strong>
                                 {snapshot.effectiveDate === sharedSideDishConfig?.effectiveDate && (
                                   <span className="rounded-full bg-[#eee8e3] px-1.5 py-0.5 text-[8px] font-semibold text-[#756961]">현재 적용</span>
                                 )}
                               </div>
-                              <p className="mt-1 text-[10px] text-[#766c66]">
+                              <p className="mt-1 text-[9px] text-[#766c66]">
                                 1회 총 원가 {formatCurrencyValue(deriveSharedSideDishTotal(snapshot.items), country)} · 구성 항목 {snapshot.items.length}개
                               </p>
                             </div>
-                            <span className="shrink-0 text-[10px] font-semibold text-[#8b5e3c]">{expanded ? "닫기" : "보기"}</span>
+                            <span className="shrink-0 text-[9px] font-semibold text-[#8b5e3c]">{expanded ? "닫기" : "보기"}</span>
                           </div>
                         </button>
                         {expanded && (
                           <div className="border-t border-[#eee7e1] px-3.5 py-2.5">
                             <div className="space-y-1.5">
                               {items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between gap-3 text-[11px]">
+                                <div key={item.id} className="flex items-center justify-between gap-3 text-[10px]">
                                   <span className="min-w-0 truncate text-[#4b413b]">{item.name}</span>
                                   <strong className="shrink-0 font-semibold text-[#302722]">{formatCurrencyValue(item.unitCost, country)}</strong>
                                 </div>
@@ -1668,7 +1668,7 @@ const MenuSettingsPage: React.FC<MenuSettingsPageProps> = ({
               <button
                 type="button"
                 onClick={closeSharedSideDishHistory}
-                className="rounded-[9px] px-4 py-2 text-[12px] font-semibold text-[#766c66] hover:bg-[#f7f3ef]"
+                className="rounded-[9px] px-4 py-2 text-[10px] font-semibold text-[#766c66] hover:bg-[#f7f3ef]"
               >
                 닫기
               </button>
