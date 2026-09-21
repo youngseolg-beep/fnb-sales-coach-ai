@@ -19,7 +19,7 @@ type GuideItem = {
 const guideItems: GuideItem[] = [
   { title: "매출 입력", description: "일일 매출과 메뉴 판매량을 기록합니다.", icon: "fa-pen-to-square", details: ["POS 매출, 배달 매출, 주문 수, 방문객을 입력합니다.", "메뉴별 판매 수량을 입력합니다.", "입력 매출과 메뉴 매출 차이를 확인한 뒤 저장합니다.", "과거 날짜도 캘린더에서 선택해 입력할 수 있습니다."] },
   { title: "영수증 OCR", description: "영수증 이미지에서 메뉴와 수량을 인식합니다.", icon: "fa-camera", details: ["영수증 이미지를 업로드하면 메뉴와 수량을 자동 인식합니다.", "인식 결과와 메뉴 매칭을 확인한 뒤 입력창에 적용합니다.", "매장명 차이는 경고만 표시됩니다.", "메뉴 미확정, 통화 불일치, 미래 날짜, 합계 불일치는 적용이 제한될 수 있습니다.", "OCR 실패 시에도 수동 입력은 계속 사용할 수 있습니다."] },
-  { title: "AI Coach", description: "선택 기간의 흐름과 운영 인사이트를 확인합니다.", icon: "fa-sparkles", details: ["선택 기간의 매출, 주문, 방문객, 객단가 흐름을 분석합니다.", "기간 비교와 운영 인사이트를 확인할 수 있습니다.", "AI 분석이 실패해도 기본 데이터 분석은 계속 볼 수 있습니다."] },
+  { title: "AI Coach", description: "선택 기간의 흐름과 운영 인사이트를 확인합니다.", icon: "fa-robot", details: ["선택 기간의 매출, 주문, 방문객, 객단가 흐름을 분석합니다.", "기간 비교와 운영 인사이트를 확인할 수 있습니다.", "AI 분석이 실패해도 기본 데이터 분석은 계속 볼 수 있습니다."] },
   { title: "메뉴 엔지니어링", description: "메뉴별 판매량과 수익성을 분석합니다.", icon: "fa-chart-pie", details: ["메뉴 판매량과 수익성을 기준으로 메뉴 상태를 분석합니다.", "STAR / CASH_COW / PUZZLE / DOG 분류를 제공합니다.", "AI 전략은 이 계산 결과를 바탕으로 개선 방법을 설명합니다.", "충분한 기간과 메뉴 데이터가 필요할 수 있습니다."] },
   { title: "AI 부스트 플랜", description: "분석 결과를 바탕으로 다음 실행 방법을 정리합니다.", icon: "fa-rocket", details: ["매출과 메뉴 분석 결과를 바탕으로 최대 3개의 실행 방법을 제안합니다.", "추천할 내용이 2개면 2개, 1개면 1개만 표시될 수 있습니다.", "할인율, 쿠폰, 증정, 세트 가격 등은 근거 없이 자동 확정하지 않습니다.", "가격 또는 세트 관련 제안은 원가와 공헌이익 확인을 우선합니다.", "AI가 실행안을 만들지 못하면 화면에 실패 사유가 표시됩니다."] },
   { title: "메뉴 관리", description: "판매가와 원가를 최신 상태로 관리합니다.", icon: "fa-utensils", details: ["메뉴 판매가와 원가를 관리합니다.", "변경된 가격과 원가는 이후 분석에 반영됩니다.", "정확한 수익성 분석을 위해 원가를 최신 상태로 유지하는 것이 좋습니다."] },
@@ -65,16 +65,6 @@ export default function MorePage({ onLogout, storeName, brand, country, currency
             </div>;
           })}
         </div>
-      </section>
-
-      <section>
-        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">AI 분석 안내</h2>
-        <div data-tour="more-ai-notice" className="mt-3 rounded-[18px] border border-[#e8e0f4] bg-[#fcfaff] px-4 py-3.5 text-[12px] leading-5 text-[#625b70]"><div className="flex gap-2.5"><i className="fa-solid fa-wand-magic-sparkles mt-1 text-[#8067a8]" /><div><p>AI 분석은 입력된 매출·메뉴 데이터를 기반으로 운영 참고안을 제공합니다. 데이터가 부족하거나 AI 응답을 확인할 수 없는 경우 분석이 제한될 수 있으며, 화면에 사유가 표시됩니다.</p><p className="mt-2 font-medium text-[#51475e]">최종 가격·프로모션 결정은 매장의 실제 원가와 운영 상황을 확인한 뒤 진행해 주세요.</p></div></div></div>
-      </section>
-
-      <section>
-        <h2 className="px-2 text-[16px] font-semibold tracking-[-0.03em] text-[#654633]">앱 정보</h2>
-        <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-[#ece7e1] bg-white px-4 py-3.5 shadow-[0_5px_16px_rgba(70,54,42,0.035)]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#a8866b_0%,#6f4027_100%)] text-white"><i className="fa-solid fa-chart-simple" /></span><span className="min-w-0"><span className="block text-[14px] font-semibold text-[#28221e]">Sales Coach AI</span><span className="mt-0.5 block text-[11px] leading-4 text-[#857970]">Store Owner Pilot · 매출 입력부터 메뉴 분석과 실행 플랜까지 연결하는 매장 운영 지원 도구</span></span></div>
       </section>
 
       <button type="button" data-tour="more-logout" onClick={onLogout} className="flex h-14 w-full items-center justify-center gap-2 rounded-[14px] border border-[#f1d8d3] bg-white text-[15px] font-semibold text-[#d83a32] transition hover:bg-[#fff7f5]"><i className="fa-solid fa-right-from-bracket" /> 로그아웃</button>
