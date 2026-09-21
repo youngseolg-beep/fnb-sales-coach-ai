@@ -100,8 +100,8 @@ const CoachV4Page: React.FC<Props> = ({
       ["fa-bag-shopping", "주문수", `${orders}건`, ordersChangeRate, "bg-[#e9f8e8] text-[#43a353]"],
       ["fa-user", "객단가", formatCurrencyValue(aov, country), aovChangeRate, "bg-[#fff3d9] text-[#e49d22]"],
       ["fa-users", "방문객", `${visitors}명`, visitorsChangeRate, "bg-[#e7f3ff] text-[#5a9ddd]"],
-      ["fa-chart-pie", "전환율", visitors > 0 ? `${conversion.toFixed(1)}%` : "-", 0, "bg-[#e3f8f6] text-[#47afa9]"],
-    ].map(([icon, label, value, delta, color]) => <KpiCard key={String(label)} icon={String(icon)} label={String(label)} value={String(value)} delta={Number(delta)} color={String(color)} />)}</div></section>
+      ["fa-chart-pie", "전환율", visitors > 0 ? `${conversion.toFixed(1)}%` : "-", 0, "bg-[#e3f8f6] text-[#47afa9]", "주문수/방문객"],
+    ].map(([icon, label, value, delta, color, footerText]) => <KpiCard key={String(label)} icon={String(icon)} label={String(label)} value={String(value)} delta={Number(delta)} color={String(color)} footerText={footerText ? String(footerText) : undefined} />)}</div></section>
 
     <FoodCostProfitability
       summary={foodCostSummary}
@@ -229,6 +229,6 @@ const DailyTrendChart: React.FC<{ rows: Array<{ date: string; total_sales: numbe
 const PeriodDate: React.FC<{ label: string; value: string }> = ({ label, value }) => <div className="rounded-lg bg-[#faf8f6] p-2"><p className="text-[#7a7069]">{label}</p><b className="mt-1 block text-[10px] text-[#302a26]">{value}</b></div>;
 const Arrow = () => <div className="flex items-center justify-center text-[11px] text-[#453c36]"><i className="fa-solid fa-arrow-right" /></div>;
 const ReasonCard: React.FC<{ title: string; main: string; sub: string }> = ({ title, main, sub }) => <div className="rounded-[10px] border border-[#ece6f7] bg-white/70 px-2 py-3 text-center"><p className="text-[10px] font-semibold">{title}</p><b className="mt-3 block text-[12px] text-[#332a38]">{main}</b><small className="mt-1 block text-[10px] text-[#6b615c]">{sub}</small></div>;
-const KpiCard: React.FC<{ icon: string; label: string; value: string; delta: number; color: string }> = ({ icon, label, value, delta, color }) => <div className="min-w-0 rounded-[12px] border border-[#eee8e3] bg-white p-2 shadow-[0_2px_7px_rgba(70,54,42,0.025)]"><span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] ${color}`}><i className={`fa-solid ${icon}`} /></span><p className="mt-2 truncate text-[9px] text-[#665d57]">{label}</p><b className="mt-1 block truncate text-[11px] tracking-[-0.06em]">{value}</b><small className={`mt-2 block text-[9px] ${delta < 0 ? "text-[#ef5a5a]" : "text-[#36a160]"}`}>{delta === 0 ? "비교 없음" : `${delta > 0 ? "+" : ""}${delta.toFixed(0)}%`}</small></div>;
+const KpiCard: React.FC<{ icon: string; label: string; value: string; delta: number; color: string; footerText?: string }> = ({ icon, label, value, delta, color, footerText }) => <div className="min-w-0 rounded-[12px] border border-[#eee8e3] bg-white p-2 shadow-[0_2px_7px_rgba(70,54,42,0.025)]"><span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] ${color}`}><i className={`fa-solid ${icon}`} /></span><p className="mt-2 truncate text-[9px] text-[#665d57]">{label}</p><b className="mt-1 block truncate text-[11px] tracking-[-0.06em]">{value}</b><small className={`mt-2 block text-[9px] ${footerText ? "text-[#766c65]" : delta < 0 ? "text-[#ef5a5a]" : "text-[#36a160]"}`}>{footerText ?? (delta === 0 ? "비교 없음" : `${delta > 0 ? "+" : ""}${delta.toFixed(0)}%`)}</small></div>;
 
 export default CoachV4Page;
