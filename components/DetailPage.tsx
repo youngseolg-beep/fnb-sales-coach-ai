@@ -124,9 +124,9 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const [boostPlanAiError, setBoostPlanAiError] = useState("");
   const [boostPlanAiStatus, setBoostPlanAiStatus] = useState<"generating" | "completed" | "failed" | null>(null);
 
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("WOW");
   const [comparisonRange, setComparisonRange] = useState<{ start: string; end: string } | null>(null);
   const [v4Period, setV4Period] = useState<"yesterday" | "week" | "month" | "custom">("yesterday");
+  const comparisonMode: ComparisonMode = v4Period === "week" ? "WOW" : v4Period === "month" ? "MOM" : "MANUAL";
 
   const [periodRange, setPeriodRange] = useState(() => getPresetPeriodRange("yesterday", selectedDate));
 
@@ -283,11 +283,6 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
 
   useEffect(() => {
     if (!periodRange.start || !periodRange.end) return;
-
-    if (comparisonMode === "MANUAL") {
-      setComparisonRange(getComparisonRange(periodRange, "MANUAL"));
-      return;
-    }
 
     setComparisonRange(getComparisonRange(periodRange, comparisonMode));
   }, [periodRange.start, periodRange.end, comparisonMode]);
@@ -994,26 +989,22 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     if (period === "yesterday") {
       setPeriodRange(getPresetPeriodRange("yesterday", selectedDate));
       setV4Period(period);
-      setComparisonMode("MANUAL");
       return;
     }
 
     if (period === "week") {
       setPeriodRange(getPresetPeriodRange("week", selectedDate));
       setV4Period(period);
-      setComparisonMode("WOW");
       return;
     }
 
     if (period === "custom") {
       setV4Period(period);
-      setComparisonMode("MANUAL");
       return;
     }
 
     setPeriodRange(getPresetPeriodRange("month", selectedDate));
     setV4Period(period);
-    setComparisonMode("MOM");
   };
 
   const handleCustomRangeChange = (next: { start: string; end: string }) => {
@@ -1021,7 +1012,6 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     const end = next.end > completedEnd ? completedEnd : next.end;
     const start = next.start > end ? end : next.start;
     setV4Period("custom");
-    setComparisonMode("MANUAL");
     setPeriodRange({ start, end });
   };
 
