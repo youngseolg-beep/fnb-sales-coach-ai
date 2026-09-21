@@ -72,6 +72,14 @@ COACH / AI
 - Operational notes remain user-entered context, not verified causality.
 - Completed reports store the resolved summary at coach_reports.input_snapshot.foodCost. An empty range may retain its exact zero summary in the snapshot while AI receives no food-cost context. Food-cost calculation failure must not block AI Operating Coaching.
 
+COACH PERIOD COMPARISON CONTRACT
+- Coach excludes today because the operating day may still be in progress; all preset analysis uses completed data through browser-local yesterday.
+- 어제: analyze yesterday; compare the immediately preceding day; label 전일 비교.
+- 이번 주: analyze current calendar-week Monday through yesterday; compare prior Monday through the same elapsed weekday; label 전주 동일 기간. On Monday, 이번 주 is unavailable because there are no completed current-week days; do not fall back to the previous full week.
+- 이번 달: analyze current-month day 1 through yesterday; compare previous-month day 1 through the same elapsed day; label 전월 동일 기간. On the first day of a month, 이번 달 is unavailable. Previous-month dates are capped to that month's valid final day.
+- 선택 기간: analyze the user-selected inclusive range; compare the immediately preceding equal-length inclusive range; label 직전 동일 기간. The end date cannot exceed browser-local yesterday.
+- Period KPI deltas, Period Analysis, and AI Operating Coaching comparison context use the same comparisonRange. These Store Owner rules are separate from Master Dashboard comparison rules.
+
 CURRENT STATUS
 - Shared Side Dish / Food Cost is completed Store Owner functionality, store-scoped for any configured store; it is not Indonesia-only.
 - This feature did not create ID_SAE or seed actual Indonesia account, menu, side-dish, or production sales data.

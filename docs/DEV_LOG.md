@@ -57,13 +57,22 @@ Completed stages:
 - No fees are deducted. 기본 제공 찬 cost is not allocated into Menu Engineering.
 - Official terminology: 기본 제공 찬, 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, 원가 기준 이익.
 
-## C. Indonesia feedback status
+## C. Coach period-comparison clarification
+
+- Completed-day Coach semantics are finalized through browser-local yesterday; today remains excluded.
+- 어제 compares with the previous day. 이번 주 compares current Monday→yesterday with prior Monday→the same elapsed weekday. 이번 달 compares current month day 1→yesterday with previous month day 1→the same elapsed day. 선택 기간 compares with the immediately preceding equal-length inclusive range.
+- Monday keeps 이번 주 unavailable; the first day of a month keeps 이번 달 unavailable. Neither falls back to a prior full period.
+- MOM month-end comparison is clamped to the previous month's final valid date.
+- Coach visibly shows analysis and comparison ranges, with the same comparisonRange used by KPI deltas, Period Analysis, and AI Operating Coaching context.
+- Historical Master Dashboard comparison records remain unchanged.
+
+## D. Indonesia feedback status
 
 - Sales operational Note → AI Operating Coaching context is implemented.
 - Shared Side Dish / Food Cost request is implemented as a generic store-scoped capability; it is not hardcoded to Indonesia.
 - This work did not create or configure ID_SAE, an Indonesia account/store, menu, or side-dish source data. Those remain separate operational/data setup work if requested.
 
-## D. Verification and current priorities
+## E. Verification and current priorities
 
 - Final integration audit found no blocking behavioral issue; terminology mismatches were corrected.
 - TypeScript, production build, and git diff --check passed.

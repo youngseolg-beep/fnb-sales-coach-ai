@@ -39,6 +39,14 @@ COACH — 원가 기준 수익성
 - Loading, error + retry, and empty-range states are local to this panel.
 - Do not introduce food-cost comparison arrows or benchmarks; they are not implemented.
 
+COACH — 분석 기간 비교 표시
+- The Analysis Period card visibly shows both ranges without opening 매출 분석.
+- 분석 기간: YYYY.MM.DD ~ YYYY.MM.DD.
+- 비교 기간 · 전일 비교 / 전주 동일 기간 / 전월 동일 기간 / 직전 동일 기간: YYYY.MM.DD ~ YYYY.MM.DD.
+- This display uses the same comparisonRange used by KPI changes, Period Analysis, and AI Operating Coaching context; it does not calculate a separate display-only range.
+- 이번 주 remains disabled on Monday with the existing 이번 주 완료 데이터가 아직 없습니다. copy. 이번 달 remains disabled on the first day of a month with the existing 이번 달 완료 데이터가 아직 없습니다. copy.
+- Visible dates use YYYY.MM.DD; HTML date inputs retain their normal date-input format.
+
 ==============================================================================
 END CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.3
 ==============================================================================
