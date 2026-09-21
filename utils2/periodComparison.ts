@@ -24,10 +24,13 @@ const addDays = (date: Date, days: number) => {
   return d;
 };
 
-const addMonths = (date: Date, months: number) => {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
+const addMonthsClamped = (date: Date, months: number) => {
+  const targetMonth = date.getMonth() + months;
+  const targetYear = date.getFullYear() + Math.floor(targetMonth / 12);
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+  const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+
+  return new Date(targetYear, normalizedMonth, Math.min(date.getDate(), lastDay));
 };
 
 const addYears = (date: Date, years: number) => {
@@ -57,8 +60,8 @@ export const getComparisonRange = (
 
   if (mode === "MOM") {
     return {
-      start: formatDate(addMonths(start, -1)),
-      end: formatDate(addMonths(end, -1)),
+      start: formatDate(addMonthsClamped(start, -1)),
+      end: formatDate(addMonthsClamped(end, -1)),
     };
   }
 
