@@ -491,7 +491,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const loadComparisonData = async (force = false) => {
     if (!comparisonRange?.start || !comparisonRange?.end) return;
 
-    const requestKey = makeRangeKey(comparisonRange.start, comparisonRange.end);
+    const requestKey = `${storeId}:${makeRangeKey(comparisonRange.start, comparisonRange.end)}`;
     if (!force && comparisonRangeRequestRef.current === requestKey) return;
     comparisonRangeRequestRef.current = requestKey;
 
@@ -510,7 +510,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
   const loadCurrentPeriodData = async (force = false) => {
     if (!periodRange.start || !periodRange.end) return;
 
-    const requestKey = makeRangeKey(periodRange.start, periodRange.end);
+    const requestKey = `${storeId}:${makeRangeKey(periodRange.start, periodRange.end)}`;
     if (!force && currentRangeRequestRef.current === requestKey) return;
     currentRangeRequestRef.current = requestKey;
 
@@ -525,6 +525,16 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
       setCurrentPeriodStats({ sales: 0, orders: 0, visitors: 0, aov: 0, rows: 0, rawRows: [] });
     }
   };
+
+  useEffect(() => {
+    currentRangeRequestRef.current = "";
+    comparisonRangeRequestRef.current = "";
+    periodStatsRequestRef.current = "";
+    setCurrentPeriodStats(null);
+    setComparisonStats(null);
+    setPeriodStats(null);
+    setPeriodLoading(false);
+  }, [storeId]);
 
   useEffect(() => {
     void loadComparisonData();
@@ -568,7 +578,7 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
         ? makeRangeKey(comparisonRange.start, comparisonRange.end)
         : "no_comparison";
 
-    const requestKey = `${makeRangeKey(periodRange.start, periodRange.end)}__${comparisonKey}`;
+    const requestKey = `${storeId}:${makeRangeKey(periodRange.start, periodRange.end)}__${comparisonKey}`;
 
     if (!force && periodStatsRequestRef.current === requestKey) return;
     periodStatsRequestRef.current = requestKey;
