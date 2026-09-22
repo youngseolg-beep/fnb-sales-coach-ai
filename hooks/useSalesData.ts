@@ -262,28 +262,91 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   const [datesWithData, setDatesWithData] = useState<string[]>([]);
   const monthDotsCacheRef = useRef<Record<string, string[]>>({});
   const lastDotsMonthRef = useRef<string>("");
-  const fetchRequestIdRef = useRef(0);
+  const storeGenerationRef = useRef(0);
+  const salesRequestIdRef = useRef(0);
+  const monthDotsRequestIdRef = useRef(0);
+  const activeStoreScopeRef = useRef({
+    storeId,
+    country: storeCountry,
+    brand: storeBrand,
+    generation: storeGenerationRef.current,
+  });
   const menuMasterCategoriesRef = useRef<MenuCategory[]>(menuMasterCategories);
 
   useEffect(() => {
     menuMasterCategoriesRef.current = menuMasterCategories;
   }, [menuMasterCategories]);
 
+  const isActiveStoreScope = (scope: typeof activeStoreScopeRef.current) => {
+    const active = activeStoreScopeRef.current;
+    return (
+      active.generation === scope.generation &&
+      active.storeId === scope.storeId &&
+      active.country === scope.country &&
+      active.brand === scope.brand
+    );
+  };
+
   useLayoutEffect(() => {
+    const previousScope = activeStoreScopeRef.current;
+    const didStoreChange = previousScope.storeId !== storeId;
+    const nextScope = {
+      storeId,
+      country: storeCountry,
+      brand: storeBrand,
+      generation: storeGenerationRef.current + 1,
+    };
+
+    storeGenerationRef.current = nextScope.generation;
+    activeStoreScopeRef.current = nextScope;
+
+    if (didStoreChange) {
+      monthDotsCacheRef.current = {};
+      lastDotsMonthRef.current = "";
+      setDatesWithData([]);
+      setOriginalCategories([]);
+    }
+
     setData((prev: any) => {
-      if (prev.country === storeCountry && prev.brand === storeBrand) return prev;
-      return { ...prev, country: storeCountry, brand: storeBrand };
+      const nextMetadata = { country: storeCountry, brand: storeBrand };
+      if (!didStoreChange) {
+        if (prev.country === nextMetadata.country && prev.brand === nextMetadata.brand) return prev;
+        return { ...prev, ...nextMetadata };
+      }
+
+      return {
+        ...prev,
+        ...nextMetadata,
+        posSales: 0,
+        deliverySales: 0,
+        orders: 0,
+        visitCount: 0,
+        toppingQty: 0,
+        sharedSideDishCount: 0,
+        note: "",
+        monthlyTarget: 0,
+        mtdSales: 0,
+        menuSales: {},
+        categories: [],
+      };
     });
-  }, [storeCountry, storeBrand]);
+  }, [storeId, storeCountry, storeBrand]);
 
   const loadDatesInMonthWithCache = useCallback(
     async (dateStr: string, forceRefresh = false) => {
       if (storeId == null) return [];
 
+      const requestScope = activeStoreScopeRef.current;
+      if (requestScope.storeId !== storeId) return [];
+      const requestId = ++monthDotsRequestIdRef.current;
+      const isCurrentRequest = () =>
+        requestId === monthDotsRequestIdRef.current && isActiveStoreScope(requestScope);
+
       const monthKey = getMonthKey(dateStr);
       const cached = monthDotsCacheRef.current[monthKey];
 
       if (!forceRefresh && cached) {
+        if (!isCurrentRequest()) return [];
         setDatesWithData(cached);
         lastDotsMonthRef.current = monthKey;
         return cached;
@@ -293,12 +356,14 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         const nextDates = await listDatesInMonth(monthKey, storeId);
         const safeDates = Array.isArray(nextDates) ? nextDates : [];
 
+        if (!isCurrentRequest()) return [];
         monthDotsCacheRef.current[monthKey] = safeDates;
         setDatesWithData(safeDates);
         lastDotsMonthRef.current = monthKey;
 
         return safeDates;
       } catch (error) {
+        if (!isCurrentRequest()) return [];
         const fallbackDates = monthDotsCacheRef.current[monthKey] ?? [];
         if (fallbackDates.length > 0) {
           setDatesWithData(fallbackDates);
@@ -327,13 +392,6 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   );
 
   useEffect(() => {
-    monthDotsCacheRef.current = {};
-    lastDotsMonthRef.current = "";
-    fetchRequestIdRef.current = 0;
-    setDatesWithData([]);
-  }, [storeId]);
-
-  useEffect(() => {
     if (storeId == null) return;
 
     const monthKey = getMonthKey(selectedDate);
@@ -348,13 +406,17 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     async (dateStr: string, nextMenuMasterCategories?: MenuCategory[]) => {
       if (storeId == null) return;
 
-      const requestId = ++fetchRequestIdRef.current;
+      const requestScope = activeStoreScopeRef.current;
+      if (requestScope.storeId !== storeId) return;
+      const requestId = ++salesRequestIdRef.current;
+      const isCurrentRequest = () =>
+        requestId === salesRequestIdRef.current && isActiveStoreScope(requestScope);
 
       try {
         const dbData = await loadDaily(dateStr, storeId);
         const priceMap = await getMenuPricesForDate(dateStr, storeId);
 
-        if (requestId !== fetchRequestIdRef.current) return;
+        if (!isCurrentRequest()) return;
 
         const activeBaseCategories = normalizeMenuMasterCategories(
           nextMenuMasterCategories ?? menuMasterCategoriesRef.current
@@ -410,13 +472,13 @@ export const useSalesData = (params?: UseSalesDataParams) => {
           }),
         }));
 
-        if (requestId !== fetchRequestIdRef.current) return;
+        if (!isCurrentRequest()) return;
 
         setData((prev: any) => ({
   ...prev,
   date: dateStr,
-  country: storeCountry,
-  brand: storeBrand,
+  country: requestScope.country,
+  brand: requestScope.brand,
           posSales: nextPosSales,
           deliverySales: nextDeliverySales,
           orders: nextOrders,
@@ -428,11 +490,11 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
         setOriginalCategories(cloneCategories(nextCategories));
       } catch (error) {
-        if (requestId !== fetchRequestIdRef.current) return;
+        if (!isCurrentRequest()) return;
         console.error("fetchData error:", error);
       }
     },
-    [storeId, storeCountry, storeBrand]
+    [storeId]
   );
 
   return {
