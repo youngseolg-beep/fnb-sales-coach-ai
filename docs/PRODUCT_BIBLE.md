@@ -24,6 +24,15 @@ CURRENT HANDOFF STATUS
 - Production deployment is successful. The audited final handoff commit is `66f52311f919b81746e4460c838481239714be18`.
 - This is a controlled Pilot baseline, not a claim of unrestricted multi-store production readiness.
 
+POST-HANDOFF SECURITY HARDENING BASELINE
+- Pilot behavior and tenant-race audited baseline remains `66f52311f919b81746e4460c838481239714be18`. The subsequent production dependency/security hardening baseline is `8b3774281703be469f659fae1edc43266b9815fe` (`chore: harden production dependencies`); it does not change the frozen Pilot product behavior or UI contract.
+- The hardening removed the unused Next runtime dependency and its `index.html` import-map entry, deleted the public simple test route `app/api/test-save/route.ts`, upgraded `@supabase/supabase-js` from 2.48.1 to 2.116.0, aligned the browser import map to 2.116.0, and included a safe transitive refresh including protobufjs 7.6.6 and ws 8.21.3.
+- Post-upgrade checks passed: `npm audit --omit=dev` reported 0 production runtime vulnerabilities; TypeScript, production build, and `git diff --check` passed; the tree was clean and `main` synchronized with `origin/main`. GitHub reported the production deployment completed successfully.
+- Supabase v2.116.0 compatibility was confirmed for persisted sessions and token refresh, `signInWithPassword`, `getSession`, `signOut`, authenticated profile bootstrap, current PostgREST queries, and Store Owner metadata resolution. No confirmed upgrade incompatibility was found.
+- ID_SAE source/build flow remains `1789955524607` / ID / IDR / SAEMAEUL across Home, Sales, Menu, More, Coach, OCR, and synthetic continuity. Sales authority remains POS + Delivery; menu Sales stays reconciliation only; manual save, pre-date-change auto-save, sharedSideDishCount, active-store async protection, and calendar/month-dot async protection are unchanged.
+- Coach/OCR authorization behavior is unchanged: bearer-token verification and authenticated-store matching remain required; absent Store Owner metadata fails closed with no KH or PAIK_NOODLE fallback; Japan OCR mode uses server-verified authenticated email, so request-body email cannot enable it, and `※` / `★` parsing remains intact.
+- Full `npm audit` development/build-tool findings remain separate from production runtime findings and were not changed here. AI/OCR/account/signup rate limiting was not added: unreliable per-instance in-memory limiting is not appropriate for Vercel serverless. A future implementation requires a shared/platform mechanism such as Vercel rate limiting/firewall capability or Redis/durable shared state; it is not a current Pilot blocker.
+
 PILOT CONTEXT
 - Active Indonesia Pilot profile: `ID_SAE` / `id_sae@tbk.com` / storeId `1789955524607` / country `ID` / currency `IDR` / brand `SAEMAEUL`.
 - `SAEMAEUL INDONESIA PILOT` remains a placeholder display name, not a final real-store identity.

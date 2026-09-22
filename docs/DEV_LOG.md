@@ -2,9 +2,43 @@
 
 # Complete Development Handover / Extended Context Prompt
 
-# Version V2.5.0
+# Version V2.5.1
 
 # Date: 2026-09-22
+
+---
+
+# 2026-09-22 POST-HANDOFF SECURITY HARDENING — V2.5.1
+
+> **IMPORTANT — READ THIS SECTION FIRST**
+>
+> V2.5.1 supersedes V2.5.0 only for the current code/security-baseline record.
+> V2.5.0 remains the authoritative final Pilot product-handoff history. The
+> Pilot behavior baseline remains frozen; this update does not change product
+> behavior, UI contracts, or the Pilot handoff decision.
+
+## A. Baseline and completed hardening
+
+- Final Pilot behavior / tenant-race audited baseline: `66f52311f919b81746e4460c838481239714be18` (`fix: guard sales loads by active store`).
+- Current production dependency/security baseline: `8b3774281703be469f659fae1edc43266b9815fe` (`chore: harden production dependencies`).
+- The hardening removed the unused Next runtime dependency and its `index.html` import-map entry, and deleted the public simple test route `app/api/test-save/route.ts`.
+- `@supabase/supabase-js` was upgraded from 2.48.1 to 2.116.0 and the browser import map was aligned to 2.116.0. A safe transitive dependency refresh included protobufjs 7.6.6 and ws 8.21.3; this record intentionally does not enumerate every lockfile change.
+
+## B. Security and regression verification
+
+- `npm audit --omit=dev`: **0 vulnerabilities**.
+- TypeScript, production build, and `git diff --check` passed. The working tree was clean and `main` synchronized with `origin/main`.
+- GitHub reported the production deployment for `8b3774281703be469f659fae1edc43266b9815fe` completed successfully.
+- No confirmed Supabase v2.116.0 incompatibility was found in the current use of `persistSession: true`, `autoRefreshToken: true`, `signInWithPassword`, `getSession`, `signOut`, authenticated profile bootstrap, PostgREST queries, or Store Owner metadata resolution.
+- The ID_SAE source/build flow remains intact: storeId `1789955524607`, country `ID`, currency `IDR`, brand `SAEMAEUL`; Home, Sales, Menu, More, Coach, OCR, and synthetic continuity retain their verified flow. No new manual browser smoke test is claimed.
+- No Sales or tenant behavior changed: `total_sales` remains POS + Delivery authority; menu Sales remains reconciliation only; manual save, pre-date-change auto-save, sharedSideDishCount, active-store async protection, and month-dot/calendar async protection are unchanged.
+- Coach/OCR authorization behavior remains unchanged: bearer-token verification, authenticated-store matching, missing-metadata fail-closed behavior, no Store Owner KH/PAIK_NOODLE fallback, server-verified-email Japan mode, request-body-email protection, and `※` / `★` parsing all remain intact.
+
+## C. Audit boundary and future operating work
+
+- Full `npm audit` still reports development/build-tool findings. They are not production runtime vulnerabilities and were not fixed in this task. Any dev-tool dependency modernization must be a separate validated task; do not use `npm audit fix --force` as an authoritative recommendation.
+- AI/OCR/account/signup rate limiting was not added. Per-instance in-memory rate limiting is not reliable for Vercel serverless deployment. A future solution should use an appropriate shared/platform mechanism such as Vercel rate limiting/firewall capability or Redis/durable shared state. This is not a current Pilot blocker.
+- Current status: production runtime dependency vulnerabilities 0; BLOCKING security regressions none confirmed; MAJOR security regressions none confirmed; Vercel production deployment successful; Pilot baseline remains frozen. Do not begin speculative feature or UI work solely because this hardening completed.
 
 ---
 
