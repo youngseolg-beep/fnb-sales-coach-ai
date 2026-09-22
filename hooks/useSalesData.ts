@@ -264,9 +264,9 @@ export const useSalesData = (params?: UseSalesDataParams) => {
 
   useEffect(() => {
     if (storeId == null || !supabase) {
-      setStoreCountry("KH");
+      setStoreCountry("");
       setStoreName("");
-      setData((prev: any) => ({ ...prev, country: "KH" }));
+      setData((prev: any) => ({ ...prev, country: "", brand: "" }));
       return;
     }
 
@@ -283,13 +283,22 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         if (cancelled) return;
 
         if (error) {
-          setStoreCountry("KH");
+          console.error("loadStoreCountry error:", error);
+          setStoreCountry("");
           setStoreName("");
-          setData((prev: any) => ({ ...prev, country: "KH" }));
+          setData((prev: any) => ({ ...prev, country: "", brand: "" }));
           return;
         }
 
-        const nextCountry = String(storeData?.country || "KH");
+        const nextCountry = String(storeData?.country || "").trim();
+        if (!nextCountry) {
+          console.error("loadStoreCountry error: store country is missing");
+          setStoreCountry("");
+          setStoreName("");
+          setData((prev: any) => ({ ...prev, country: "", brand: "" }));
+          return;
+        }
+
         setStoreCountry(nextCountry);
         setStoreName(String(storeData?.store_name || ""));
         setData((prev: any) => ({
@@ -300,9 +309,9 @@ export const useSalesData = (params?: UseSalesDataParams) => {
       } catch (error) {
         if (cancelled) return;
         console.error("loadStoreCountry error:", error);
-        setStoreCountry("KH");
+        setStoreCountry("");
         setStoreName("");
-        setData((prev: any) => ({ ...prev, country: "KH" }));
+        setData((prev: any) => ({ ...prev, country: "", brand: "" }));
       }
     };
 

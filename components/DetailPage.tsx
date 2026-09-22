@@ -918,6 +918,15 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
     const comparisonVisitors = Number(comparisonStats?.visitors || 0);
     const comparisonAov = comparisonOrders > 0 ? comparisonSales / comparisonOrders : 0;
     const comparisonConversion = comparisonVisitors > 0 ? (comparisonOrders / comparisonVisitors) * 100 : 0;
+    const isCurrentMonthScope =
+      v4Period === "month" &&
+      periodRange.start === `${selectedDate.slice(0, 7)}-01` &&
+      periodRange.end === getReferenceCompletedEnd(selectedDate) &&
+      periodRange.start <= periodRange.end;
+    const scopedMonthlyTarget =
+      isCurrentMonthScope && Number(data.monthlyTarget || 0) > 0
+        ? Number(data.monthlyTarget)
+        : null;
     const classificationMap: Record<string, "STAR" | "CASH_COW" | "PUZZLE" | "DOG"> = {
       Stars: "STAR", "Cash Cows": "CASH_COW", Puzzles: "PUZZLE", Dogs: "DOG",
     };
@@ -944,8 +953,8 @@ const DetailPage: React.FC<Props> = ({ selectedDate, data, showToast, storeId, u
           aovDelta: calcChangeRate(currentAov, comparisonAov),
           conversion: currentConversion,
           conversionDelta: calcChangeRate(currentConversion, comparisonConversion),
-          monthlyTarget: Number(data.monthlyTarget || 0) > 0 ? Number(data.monthlyTarget) : null,
-          targetGap: Number(data.monthlyTarget || 0) > 0 ? Math.max(0, Number(data.monthlyTarget) - Number(data.mtdSales || 0)) : null,
+          monthlyTarget: scopedMonthlyTarget,
+          targetGap: scopedMonthlyTarget === null ? null : Math.max(0, scopedMonthlyTarget - currentSales),
         },
         menuEngineering: {
           popularityThreshold: Number(deterministicMenuEngineering.popularityThreshold || 0),

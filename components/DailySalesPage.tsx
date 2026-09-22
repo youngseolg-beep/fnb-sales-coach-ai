@@ -729,18 +729,10 @@ const DailySalesPage: React.FC<Props> = ({
             baseFieldsChanged;
 
           if (hasUnsavedCurrent && hasMeaningfulInput(currentData)) {
-            let calcSales = 0;
-            currentData.categories.forEach((cat) => {
-              cat.items.forEach((item) => {
-                calcSales += Number(item.price || 0) * Number(item.qty || 0);
-              });
-            });
-
             const savePayload: any = {
               ...currentData,
               deliverySales: Number(currentData.deliverySales || 0),
               toppingQty: Number(currentData.toppingQty || 0),
-              totalSales: Math.round(calcSales * 100) / 100,
             };
 
             const res = await saveDailyData(
@@ -835,18 +827,10 @@ const DailySalesPage: React.FC<Props> = ({
         return false;
       }
 
-      let calcSales = 0;
-      data.categories.forEach((cat) => {
-        cat.items.forEach((item) => {
-          calcSales += Number(item.price || 0) * Number(item.qty || 0);
-        });
-      });
-
       const payload: any = {
         ...data,
         deliverySales: Number(data.deliverySales || 0),
         toppingQty: Number(data.toppingQty || 0),
-        totalSales: Math.round(calcSales * 100) / 100,
       };
 
       const res = await saveDailyData(payload, storeId);

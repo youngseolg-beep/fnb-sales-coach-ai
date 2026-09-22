@@ -1417,7 +1417,7 @@ const callOcrWithRetry = async (
             Number.isFinite(unitPrice) ? unitPrice : 0,
             Boolean(item?.needs_review)
           );
-          const isTakeout = /[?삘쁾]/.test(receiptName);
+          const isTakeout = /[※★]/.test(receiptName);
           return {
             matched_id: resolvedMatch.matched_id,
             item_original: receiptName,

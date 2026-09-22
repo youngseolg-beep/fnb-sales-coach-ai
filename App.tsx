@@ -242,18 +242,23 @@ const App: React.FC = () => {
       return { ok: false, message: "계정 권한 정보가 설정되지 않았습니다. 관리자에게 문의해 주세요." };
     }
 
-    const { data: storeData } = await supabase
+    const { data: storeData, error: storeError } = await supabase
       .from("stores")
       .select("country")
       .eq("id", resolvedStoreId)
       .maybeSingle();
+
+    const storeCountry = String(storeData?.country || "").trim();
+    if (storeError || !storeData || !storeCountry) {
+      return { ok: false, message: "매장 정보를 확인하지 못했습니다. 관리자에게 문의해 주세요." };
+    }
 
     return {
       ok: true,
       profile: {
         role: "store_user",
         storeId: resolvedStoreId,
-        storeCountry: storeData?.country || "KH",
+        storeCountry,
       },
     };
   }, []);

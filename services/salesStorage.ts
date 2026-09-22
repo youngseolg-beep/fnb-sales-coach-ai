@@ -124,10 +124,7 @@ const buildDbRow = (payload: DailyPayload, storeId: number) => {
   const toppingQty = toNumber(payload.toppingQty, 0);
   const sharedSideDishCount = toNumber(payload.sharedSideDishCount, 0);
   const note = String(payload.note ?? "");
-  const totalSales =
-    payload.totalSales !== undefined
-      ? toNumber(payload.totalSales, 0)
-      : posSales + deliverySales;
+  const totalSales = posSales + deliverySales;
 
   return {
     date: safeDate,

@@ -6,11 +6,12 @@ type ApplicationRole = "master" | "store_user";
 type AuthenticatedApplicationUser = {
   ok: true;
   userId: string;
+  email: string;
   role: ApplicationRole;
   storeId: number | null;
 };
 type MasterAuthorization = { ok: true; admin: SupabaseClient } | AuthorizationFailure;
-type StoreUserAuthorization = { ok: true; userId: string; storeId: number } | AuthorizationFailure;
+type StoreUserAuthorization = { ok: true; userId: string; email: string; storeId: number } | AuthorizationFailure;
 type ServerSupabaseConfig = { url: string; anonKey: string; serviceRoleKey: string };
 
 const getBearerToken = (authorization: string | string[] | undefined) => {
@@ -65,6 +66,7 @@ export async function requireAuthenticatedAppUser(
     return {
       ok: true,
       userId: authData.user.id,
+      email: String(authData.user.email || ""),
       role,
       storeId: Number.isInteger(storeId) ? storeId : null,
     };
@@ -91,7 +93,7 @@ export async function requireStoreUserAuthorization(
     return { ok: false, status: 403, error: "Forbidden" };
   }
 
-  return { ok: true, userId: authenticated.userId, storeId };
+  return { ok: true, userId: authenticated.userId, email: authenticated.email, storeId };
 }
 
 export async function requireMasterAuthorization(req: VercelRequest): Promise<MasterAuthorization> {

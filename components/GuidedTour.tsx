@@ -51,7 +51,6 @@ const currentPageSteps: Record<StoreOwnerPageKey, TourStep[]> = {
   more: [
     { id: "more-store", page: "more", target: "more-store-info", title: "매장 정보", description: "현재 연결된 매장과 브랜드·국가·통화를 확인합니다." },
     { id: "more-help", page: "more", target: "more-quick-help", title: "빠른 도움말", description: "기능별 사용 방법을 필요할 때 확인할 수 있습니다." },
-    { id: "more-ai", page: "more", target: "more-ai-notice", title: "AI 분석 안내", description: "AI 분석 기준과 사용 시 참고할 내용을 확인합니다." },
     { id: "more-tour", page: "more", target: "more-onboarding", title: "전체 둘러보기", description: "처음 사용한다면 주요 화면을 순서대로 살펴볼 수 있습니다." },
     { id: "more-logout", page: "more", target: "more-logout", title: "로그아웃", description: "사용이 끝나면 계정에서 로그아웃합니다." },
   ],

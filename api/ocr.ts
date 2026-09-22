@@ -196,7 +196,6 @@ export default async function handler(req: any, res: any) {
       mimeType,
       images,
       storeId,
-      userEmail,
       country,
       brand,
       menuCandidates,
@@ -224,7 +223,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const normalizedEmail = String(userEmail || "").trim().toUpperCase();
+    const normalizedEmail = authorization.email.trim().toUpperCase();
     const isJapanPilot = normalizedEmail === "JP_PN@THEBORN.CO.KR";
 
     const defaultModel = process.env.GEMINI_MODEL_OCR || "gemini-2.5-flash";
