@@ -2,9 +2,51 @@
 
 # Complete Development Handover / Extended Context Prompt
 
-# Version V2.4.0
+# Version V2.5.0
 
-# Date: 2026-09-21
+# Date: 2026-09-22
+
+---
+
+# 2026-09-22 FINAL PILOT HANDOFF STATE — V2.5.0
+
+> **IMPORTANT — READ THIS SECTION FIRST**
+>
+> V2.5.0 is the final Pilot Handoff baseline and supersedes conflicting V2.4.0
+> and older historical records. Store Owner Core is **READY FOR PILOT HANDOFF**:
+> no confirmed Pilot blockers, no confirmed Pilot majors, and successful
+> production deployment. This is not a claim of unrestricted multi-store
+> production readiness.
+
+## A. Audited handoff baseline
+
+- Audited final handoff commit: `66f52311f919b81746e4460c838481239714be18` (`fix: guard sales loads by active store`).
+- Indonesia Pilot identity: `ID_SAE` / `id_sae@tbk.com` / storeId `1789955524607` / `ID` / `IDR` / `SAEMAEUL`; `SAEMAEUL INDONESIA PILOT` is a placeholder, not a final real-store identity.
+- Pilot configuration: 32 active sellable menus (BBQ 9, DISH 3, MEAL 13, SIDE 7); 11 기본 제공 찬 items; current total IDR 27,759.13.
+- Synthetic continuity remains exact-profile TEST/PILOT behavior only: Demo `5 / DEMO / DEMO` and Indonesia `1789955524607 / ID / SAEMAEUL`; rolling 60 days; `insertDailyIfMissing` only; no update, upsert, or delete of existing authoritative rows; POS + Delivery equals generated total; Indonesia rows include nonzero 기본 제공 찬 serving count. Browser-local midnight/login/reopen fills missing eligible days.
+
+## B. Final correctness hardening chronology
+
+- `b03b7c9` — `fix: harden pilot data integrity`: persisted Sales authority is POS + Delivery. Menu quantity × price is reconciliation only. Manual save and pre-date-change auto-save share that authority; `sales_daily.total_sales` and payload `totalSales` align to `pos_sales + delivery_sales`.
+- Controlled database validation on 2026-09-22 for date `2026-06-15`: POS IDR 1,000,000, Delivery IDR 100,000, Menu IDR 0; expected and actual persisted total/payload were IDR 1,100,000. The controlled row was deleted after verification; the menu mismatch did not overwrite entered Sales.
+- `c628cb8` — `fix: preserve verified store metadata`: authenticated profile bootstrap resolves storeId, country, brand, and optional store name together. Country/brand are required; absent mapped metadata fails safely. No Store Owner KH/PAIK fallback, blank-to-USD fallback, or later duplicate metadata query remains.
+- OCR verifies Auth email server-side; request body cannot activate Japan mode. Verified Japan behavior for `※` / `★` parsing remains unchanged. Missing country/brand blocks OCR safely rather than inventing context.
+- Coach returns `STORE_METADATA_MISSING` safe behavior when country/brand are absent and sends no invented Cambodia/Paik prompt. Known PAIK_NOODLE and SAEMAEUL guidance remains specific; unknown non-empty brands receive generic restaurant guidance.
+- Boost Plan target/gap is null for YESTERDAY, WEEK, and CUSTOM. Only exact selectedDate current-month completed scope may use a target; remaining gap is `max(monthlyTarget - currentPeriodSales, 0)`, never `data.mtdSales`.
+- `66f5231` — `fix: guard sales loads by active store`: `useSalesData` captures active store scope, generation, Sales request sequence, and monotonic month-dot sequence. These sequences are not reset into a collision. A late Store A result cannot update Store B Sales, country, brand, categories, original categories, dates, calendar cache, or last-dots month. Same-store latest date/month request wins; a store switch clears transient store-specific Sales/calendar/category state while selected date may remain.
+- Coach tenant keys separately include storeId for current, comparison, and period results, and clear derived state on store change.
+
+## C. Final feature contracts
+
+- Coach uses selectedDate as reference “today” and analyzes completed days only. Yesterday/custom compare immediately preceding equal-length ranges; week compares prior Monday through same elapsed weekday; month compares previous-month same elapsed range. Monday week and first-of-month month are unavailable. The same comparison range feeds KPIs, Period Analysis, and AI Coach context.
+- Food Cost: period Sales are saved authoritative Sales; direct menu cost = saved quantity × saved same-day unit cost; 기본 제공 찬 cost = saved serving count × effective-date configuration cost; total food cost = direct + 기본 제공 찬. It excludes labor, rent, delivery, card fees, tax, utilities, and other expenses. 원가 기준 이익 is not net profit, operating profit, or EBITDA; no individual allocation is inferred.
+- More contains Store information, guided tour actions, six-item quick help, and Logout. The guided tour is user initiated only. Removed AI analysis/app-info content does not return.
+
+## D. Validation, retained work, and operating rule
+
+- Manual verification covers ID_SAE Home, Sales, note/date reload, Menu, 기본 제공 찬, Coach periods/KPI/conversion, Food Cost, More, and the controlled database Sales test above. No claim is made for full OCR smoke, multi-device/browser, or full automated E2E coverage.
+- Retained non-blocking work: bundle splitting/lazy loading, automated regression-test expansion, observability, broader legacy DailySales cleanup, long-lived cache refinement, broader historical price snapshots, and minor continuity console-failure handling.
+- Freeze the Pilot baseline: no speculative feature or cosmetic work before feedback. Classify real feedback as discomfort, bug, AI quality, feature request, or usage pattern.
 
 ---
 

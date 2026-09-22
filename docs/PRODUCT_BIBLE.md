@@ -1,16 +1,57 @@
 SALES COACH AI
 PRODUCT BIBLE
-VERSION 4.4 — CODEX / PRODUCT MASTER
+VERSION 4.5 — CODEX / PRODUCT MASTER
 
 Product Type: Mobile-First Store Operating Coach
-Status: V4.4 Pilot Ready / Pilot Readiness Closed
+Status: V4.5 Ready for Pilot Handoff
 Primary Platform: Responsive Web (Mobile First)
 Primary User: Restaurant Store Owner / Store Operator
 Secondary User: HQ / Brand Operations via active Master workspace
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: INPUT → ANALYSIS → ACTION
 UI Reference: 11 Approved V4 UI/UX Reference Images
-Companion Document: Sales Coach AI UI/UX Guideline V4.4
+Companion Document: Sales Coach AI UI/UX Guideline V4.5
+
+==============================================================================
+2026-09-22 AUTHORITATIVE PRODUCT UPDATE — V4.5
+==============================================================================
+
+This is the final Pilot Handoff baseline. It supersedes conflicting V4.4 and
+older product statements; all older sections remain historical records.
+
+CURRENT HANDOFF STATUS
+- Store Owner Core is **READY FOR PILOT HANDOFF**. No Pilot blockers are confirmed and no Pilot majors are confirmed.
+- Production deployment is successful. The audited final handoff commit is `66f52311f919b81746e4460c838481239714be18`.
+- This is a controlled Pilot baseline, not a claim of unrestricted multi-store production readiness.
+
+PILOT CONTEXT
+- Active Indonesia Pilot profile: `ID_SAE` / `id_sae@tbk.com` / storeId `1789955524607` / country `ID` / currency `IDR` / brand `SAEMAEUL`.
+- `SAEMAEUL INDONESIA PILOT` remains a placeholder display name, not a final real-store identity.
+- The pilot has 32 active sellable menus: BBQ 9, DISH 3, MEAL 13, SIDE 7. 기본 제공 찬 has 11 configured items with current total IDR 27,759.13.
+- Synthetic Sales continuity is TEST/PILOT-only, not real historical sales. It is limited to the exact eligible Demo and Indonesia Pilot profiles, maintains a rolling 60-day window, and only inserts missing days; existing rows remain authoritative.
+
+SALES AUTHORITY AND STORE METADATA CONTRACT
+- Persisted Sales authority is `POS + Delivery`. Menu quantity × price is a reconciliation check only, not the persisted Sales authority.
+- Manual save and pre-date-change auto-save use the same authority. `sales_daily.total_sales` and the saved `totalSales` payload are aligned to `pos_sales + delivery_sales`.
+- Authenticated Store Owner profile resolution validates storeId, country, brand, and optional store name together. Country and brand are required; missing mapped store metadata fails safely.
+- Store Owner flows do not invent Cambodia, Paik's Noodle, or USD context from missing metadata. The verified Indonesia profile remains ID / IDR / SAEMAEUL.
+- Receipt OCR and Coach use verified metadata. Missing country or brand blocks OCR safely and yields safe Coach metadata-missing handling; an unknown non-empty brand receives generic restaurant guidance, while known brands retain their specific guidance.
+
+TENANT, PERIOD, AND ANALYSIS SAFETY
+- Store changes invalidate prior store Sales, categories, calendar dots, and derived state before the new store becomes usable. Late responses from a previous store cannot populate the active store.
+- Coach current/comparison/period keys include storeId and clear derived state on store change. Coach tenant safety remains separate from the Sales loading guard.
+- Coach analyses completed days only, with selectedDate as the reference “today”: yesterday and custom compare the immediately prior equal-length range; week compares prior same elapsed weekdays; month compares the previous-month same elapsed range. Monday week and first-of-month month remain unavailable.
+- Boost Plan targets are available only for the exact selectedDate current-month completed scope. Yesterday, week, and custom use no target/gap; a valid month gap is `max(monthlyTarget - currentPeriodSales, 0)`, never live MTD state.
+
+FOOD COST CONTRACT
+- Period Sales are authoritative saved Sales. Direct menu cost = saved quantity × that date's saved unit cost; 기본 제공 찬 cost = saved serving count × the effective-date configuration cost; total food cost is their sum.
+- Food Cost excludes labor, rent, delivery-platform cost, card fees, tax, utilities, and other operating expenses. 원가 기준 이익 is not net profit, operating profit, or EBITDA, and no individual menu allocation is inferred.
+
+PILOT OPERATING BASELINE
+- More presents Store information, Sales Coach AI 둘러보기, six-item 빠른 도움말, and Logout. The guided tour is user initiated only; it does not run automatically, mutate data, or revive removed More AI content.
+- Manual verification covered ID_SAE Home, Sales, note/date reload, Menu, 기본 제공 찬, Coach periods/KPIs/conversion, Food Cost, and More, plus a controlled database Sales-authority check. Full OCR smoke testing, device-browser coverage, and full automated E2E coverage are not claimed.
+- The visual and interaction baseline is frozen for Pilot handoff. Do not add speculative features or cosmetic changes before Pilot feedback. Classify feedback as discomfort, bug, AI quality, feature request, or usage pattern.
+- Retained non-blocking future work: bundle splitting/lazy loading, regression-test expansion, observability, broader legacy DailySales cleanup, long-lived cache refinement, broader historical price snapshots, and minor continuity console-failure handling.
 
 ==============================================================================
 2026-09-21 AUTHORITATIVE PRODUCT UPDATE — V4.4

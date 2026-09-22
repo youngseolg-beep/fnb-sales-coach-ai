@@ -2,15 +2,43 @@
 https://drive.google.com/drive/folders/1fXlcQqT8SQvA1GUKSr6-WuywbFvrxWOo?usp=drive_link
 SALES COACH AI
 DESIGN LANGUAGE & UI/UX GUIDELINE
-VERSION 4.4 — CODEX IMPLEMENTATION MASTER
+VERSION 4.5 — CODEX IMPLEMENTATION MASTER
 Document Type: Product Design Language / UIUX Specification / Implementation Guide
 Primary Platform: Mobile-first Responsive Web
 Primary Navigation: Coach / Sales / Home / Menu / More
 Core Product Flow: Input → Analysis → Action
 Visual Reference Set: 11 approved UI/UX reference images
 Implementation Target: Existing Sales Coach AI codebase
-Document Status: Official V4.4 UI/UX Master — Pilot Implementation Integrated
-Last Updated: 2026-09-21
+Document Status: Official V4.5 UI/UX Master — Pilot Handoff Baseline
+Last Updated: 2026-09-22
+==============================================================================
+CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-22 / V4.5
+==============================================================================
+
+This final Pilot Handoff section supersedes conflicting V4.4 and older UI/UX
+statements. Historical sections remain unchanged records.
+
+PILOT HANDOFF BASELINE
+- Store Owner Core is READY FOR PILOT HANDOFF. No Pilot blockers or majors are confirmed. This status describes the controlled Pilot baseline, not unrestricted multi-store production readiness.
+- The visible Indonesia Pilot context is ID_SAE / `id_sae@tbk.com` / ID / IDR / SAEMAEUL. `SAEMAEUL INDONESIA PILOT` is a placeholder store name, not a final real-store identity.
+- Menu presentation remains 32 active sellable menus (BBQ 9, DISH 3, MEAL 13, SIDE 7). 기본 제공 찬 remains 11 configured items with IDR 27,759.13 current total.
+
+VISIBLE STORE-SAFE EXPERIENCE
+- Sales presents entered POS + Delivery as the authoritative total. Menu quantities remain a reconciliation aid; they do not replace entered Sales.
+- A Store Owner metadata failure must be visible and safe: no invented currency, no wrong-country display, and no invented brand context. The normal Indonesia experience remains ID / IDR / SAEMAEUL.
+- On a store change, previous-store Sales, categories, and calendar state clear before new-store content is displayed. The UI must not flash usable previous-store data.
+- OCR remains strict for its existing menu, date, currency, and reconciliation protections. Missing country or brand is shown as a safe metadata-blocking state rather than attempting OCR with invented context.
+
+COACH AND COST PRESENTATION
+- Coach keeps the completed-day period contract: selectedDate anchors the reference day; yesterday/custom use an immediately preceding equal-length comparison, week uses prior same elapsed weekdays, and month uses the previous-month same elapsed range. Monday week and first-of-month month remain visibly unavailable.
+- The same selected store and period drives KPI, Period Analysis, AI Coach, Menu Engineering, Boost Plan, and Food Cost displays. No stale prior-store result may be presented.
+- Food Cost labels retain their product meaning: 메뉴 원가, 기본 제공 찬 원가, 총 식재료 원가, 실질 원가율, and 원가 기준 이익. The UI does not present 원가 기준 이익 as net or operating profit.
+
+MORE AND PILOT FREEZE
+- More contains Store information, Sales Coach AI 둘러보기, 빠른 도움말 with six items, and Logout. AI 분석 안내 and 앱 정보 are absent. The AI Coach quick-help icon is `fa-robot`.
+- The guided tour is user initiated; it is not automatic and does not change data.
+- Keep this visual baseline frozen until real Pilot feedback arrives. Record feedback as discomfort, bug, AI quality, feature request, or usage pattern before proposing UI changes.
+
 ==============================================================================
 CURRENT AUTHORITATIVE IMPLEMENTATION UPDATE — 2026-09-21 / V4.4
 ==============================================================================
