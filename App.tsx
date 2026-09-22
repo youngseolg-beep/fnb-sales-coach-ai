@@ -50,6 +50,8 @@ type ResolvedApplicationProfile = {
   role: "master" | "store_user";
   storeId: number | null;
   storeCountry: string;
+  storeBrand: string;
+  storeName: string;
 };
 
 type ProfileResolution =
@@ -123,7 +125,9 @@ const persistMenuPriceHistory = async (
 const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<number | null>(null);
-  const [storeCountry, setStoreCountry] = useState("KH");
+  const [storeCountry, setStoreCountry] = useState("");
+  const [storeBrand, setStoreBrand] = useState("");
+  const [verifiedStoreName, setVerifiedStoreName] = useState("");
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
@@ -181,6 +185,9 @@ const App: React.FC = () => {
   } = useSalesData({
     storeId,
     menuMasterCategories,
+    verifiedStoreCountry: storeCountry,
+    verifiedStoreBrand: storeBrand,
+    verifiedStoreName,
   });
 
   const targetMonthKey =
@@ -194,7 +201,9 @@ const App: React.FC = () => {
     setIsLoggedIn(false);
     setUserRole(null);
     setStoreId(null);
-    setStoreCountry("KH");
+    setStoreCountry("");
+    setStoreBrand("");
+    setVerifiedStoreName("");
     setAuthScreen("login");
     setMenuMasterCategories([]);
     setMenuMasterLoading(false);
@@ -234,7 +243,10 @@ const App: React.FC = () => {
     }
 
     if (userData.role === "master") {
-      return { ok: true, profile: { role: "master", storeId: null, storeCountry: "KH" } };
+      return {
+        ok: true,
+        profile: { role: "master", storeId: null, storeCountry: "KH", storeBrand: "", storeName: "" },
+      };
     }
 
     const resolvedStoreId = Number(userData.store_id);
@@ -244,12 +256,13 @@ const App: React.FC = () => {
 
     const { data: storeData, error: storeError } = await supabase
       .from("stores")
-      .select("country")
+      .select("country, brand, store_name")
       .eq("id", resolvedStoreId)
       .maybeSingle();
 
     const storeCountry = String(storeData?.country || "").trim();
-    if (storeError || !storeData || !storeCountry) {
+    const storeBrand = String(storeData?.brand || "").trim();
+    if (storeError || !storeData || !storeCountry || !storeBrand) {
       return { ok: false, message: "매장 정보를 확인하지 못했습니다. 관리자에게 문의해 주세요." };
     }
 
@@ -259,6 +272,8 @@ const App: React.FC = () => {
         role: "store_user",
         storeId: resolvedStoreId,
         storeCountry,
+        storeBrand,
+        storeName: String(storeData.store_name || "").trim(),
       },
     };
   }, []);
@@ -267,6 +282,8 @@ const App: React.FC = () => {
     setUserRole(profile.role);
     setStoreId(profile.storeId);
     setStoreCountry(profile.storeCountry);
+    setStoreBrand(profile.storeBrand);
+    setVerifiedStoreName(profile.storeName);
     setMenuMasterCategories([]);
     setMenuMasterError(null);
     setMenuMasterLoading(profile.role === "store_user");
@@ -323,7 +340,9 @@ const App: React.FC = () => {
     setIsLoggedIn(false);
     setUserRole(null);
     setStoreId(null);
-    setStoreCountry("KH");
+    setStoreCountry("");
+    setStoreBrand("");
+    setVerifiedStoreName("");
     setEmail("");
     setPassword("");
     setAuthError("");

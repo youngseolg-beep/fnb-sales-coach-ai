@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatLocalDate } from "../utils2/date";
 import { loadDaily, listDatesInMonth } from "../services/salesStorage";
 import { getMenuPricesForDate } from "../services/menuPriceService";
-import { supabase } from "../services/supabaseClient";
 import type { MenuCategory as MenuMasterCategory } from "../services/menuMasterService";
 import type { MenuCategory, SalesReportData } from "../types";
 
@@ -221,15 +220,23 @@ const getMonthKey = (dateStr: string) => String(dateStr).slice(0, 7);
 type UseSalesDataParams = {
   storeId?: number | null;
   menuMasterCategories?: MenuCategory[];
+  verifiedStoreCountry?: string;
+  verifiedStoreBrand?: string;
+  verifiedStoreName?: string;
 };
 
 export const useSalesData = (params?: UseSalesDataParams) => {
   const storeId = params?.storeId ?? null;
   const menuMasterCategories = params?.menuMasterCategories ?? cloneCategories(INITIAL_CATEGORIES);
+  const verifiedStoreCountry = String(params?.verifiedStoreCountry || "").trim();
+  const verifiedStoreBrand = String(params?.verifiedStoreBrand || "").trim();
+  const verifiedStoreName = String(params?.verifiedStoreName || "").trim();
+  const hasVerifiedStoreMetadata = storeId != null && Boolean(verifiedStoreCountry && verifiedStoreBrand);
+  const storeCountry = hasVerifiedStoreMetadata ? verifiedStoreCountry : "";
+  const storeBrand = hasVerifiedStoreMetadata ? verifiedStoreBrand : "";
+  const storeName = hasVerifiedStoreMetadata ? verifiedStoreName : "";
 
   const [selectedDate, setSelectedDate] = useState<string>(() => formatLocalDate(new Date()));
-  const [storeCountry, setStoreCountry] = useState<string>("KH");
-  const [storeName, setStoreName] = useState<string>("");
 
   const [data, setData] = useState<SalesReportData>(() => {
     const today = formatLocalDate(new Date());
@@ -262,65 +269,12 @@ export const useSalesData = (params?: UseSalesDataParams) => {
     menuMasterCategoriesRef.current = menuMasterCategories;
   }, [menuMasterCategories]);
 
-  useEffect(() => {
-    if (storeId == null || !supabase) {
-      setStoreCountry("");
-      setStoreName("");
-      setData((prev: any) => ({ ...prev, country: "", brand: "" }));
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadStoreCountry = async () => {
-      try {
-        const { data: storeData, error } = await supabase
-          .from("stores")
-          .select("country, brand, store_name")
-          .eq("id", storeId)
-          .single();
-
-        if (cancelled) return;
-
-        if (error) {
-          console.error("loadStoreCountry error:", error);
-          setStoreCountry("");
-          setStoreName("");
-          setData((prev: any) => ({ ...prev, country: "", brand: "" }));
-          return;
-        }
-
-        const nextCountry = String(storeData?.country || "").trim();
-        if (!nextCountry) {
-          console.error("loadStoreCountry error: store country is missing");
-          setStoreCountry("");
-          setStoreName("");
-          setData((prev: any) => ({ ...prev, country: "", brand: "" }));
-          return;
-        }
-
-        setStoreCountry(nextCountry);
-        setStoreName(String(storeData?.store_name || ""));
-        setData((prev: any) => ({
-  ...prev,
-  country: nextCountry,
-  brand: storeData?.brand || ""
-}));
-      } catch (error) {
-        if (cancelled) return;
-        console.error("loadStoreCountry error:", error);
-        setStoreCountry("");
-        setStoreName("");
-        setData((prev: any) => ({ ...prev, country: "", brand: "" }));
-      }
-    };
-
-    void loadStoreCountry();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [storeId]);
+  useLayoutEffect(() => {
+    setData((prev: any) => {
+      if (prev.country === storeCountry && prev.brand === storeBrand) return prev;
+      return { ...prev, country: storeCountry, brand: storeBrand };
+    });
+  }, [storeCountry, storeBrand]);
 
   const loadDatesInMonthWithCache = useCallback(
     async (dateStr: string, forceRefresh = false) => {
@@ -462,7 +416,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
   ...prev,
   date: dateStr,
   country: storeCountry,
-  brand: prev.brand || "",
+  brand: storeBrand,
           posSales: nextPosSales,
           deliverySales: nextDeliverySales,
           orders: nextOrders,
@@ -478,7 +432,7 @@ export const useSalesData = (params?: UseSalesDataParams) => {
         console.error("fetchData error:", error);
       }
     },
-    [storeId, storeCountry]
+    [storeId, storeCountry, storeBrand]
   );
 
   return {

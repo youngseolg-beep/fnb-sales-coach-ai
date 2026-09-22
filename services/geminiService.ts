@@ -241,12 +241,17 @@ const getBrandGuide = (brand: string) => {
 - 메인 메뉴와 사이드/음료 조합 중심으로 분석할 것.
 `;
     case "PAIK_NOODLE":
-    default:
       return `
 [브랜드 운영 기준 - 홍콩반점]
 - 중식 단품, 탕수육, 짬뽕/짜장, 토핑, 음료/주류 조합이 핵심이다.
 - 고기집, 카페 관점으로 해석하지 말 것.
 - 대표 중식 메뉴 노출, 세트 제안, 토핑/사이드 업셀 중심으로 분석할 것.
+`;
+    default:
+      return `
+[브랜드 운영 기준 - 공통]
+- 특정 브랜드나 업종의 운영 규칙을 가정하지 않는다.
+- 메뉴 구성, 판매량, 수익성, 객단가, 주문 전환을 바탕으로 일반적인 식음 매장 실행안을 제시한다.
 `;
   }
 };
@@ -296,8 +301,14 @@ export const generateCoachingReport = async (
   menuEngineeringResult: MenuEngineeringResult | null,
   options: CoachingReportOptions = {}
 ): Promise<string> => {
-  const country = String(data.country || "KH");
-  const brand = String(data.brand || "PAIK_NOODLE");
+  const country = String(data.country || "").trim();
+  const brand = String(data.brand || "").trim();
+  if (!country || !brand) {
+    const error = new Error("STORE_METADATA_MISSING");
+    console.error("Coach report metadata validation failed:", error.message);
+    if (options.throwOnError) throw error;
+    return "매장 정보를 확인하지 못했습니다. 다시 로그인해 주세요.";
+  }
   const isDemoCountry = country === "DEMO";
   const isDemoBrand = brand === "DEMO";
   const countryLabel = getCountryLabel(country);

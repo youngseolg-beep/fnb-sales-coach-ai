@@ -620,7 +620,9 @@ const DataInput: React.FC<DataInputProps> = ({
   onHomeLandingHandled,
   renderV4,
 }) => {
-  const currency = getCurrencyByCountry((data as any).country);
+  const storeCountry = String((data as any).country || "").trim();
+  const storeBrand = String((data as any).brand || "").trim();
+  const currency = storeCountry ? getCurrencyByCountry(storeCountry) : "";
   const [sharedSideDishConfig, setSharedSideDishConfig] = useState<SharedSideDishConfig | null>(null);
   const [sharedSideDishConfigLoading, setSharedSideDishConfigLoading] = useState(false);
   const [sharedSideDishConfigError, setSharedSideDishConfigError] = useState("");
@@ -1220,6 +1222,10 @@ const callOcrWithRetry = async (
   const filesToProcess = ocrFiles;
   if (filesToProcess.length === 0) return;
   if (!validateOcrFiles(filesToProcess)) return;
+  if (!storeCountry || !storeBrand) {
+    showOcrPreflightError("매장 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
+    return;
+  }
 
   setOcrLoading(true);
   setOcrError("");
@@ -1249,8 +1255,8 @@ const callOcrWithRetry = async (
   name: m.name,
   jp_name: (m as any).jp_name || null,
 }));
-  const ocrCountry = String((data as any)?.country || "").trim();
-  const ocrBrand = String((data as any)?.brand || "").trim();
+  const ocrCountry = storeCountry;
+  const ocrBrand = storeBrand;
 
   let completedCount = 0;
 
